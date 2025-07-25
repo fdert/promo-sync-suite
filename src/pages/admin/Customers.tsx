@@ -201,10 +201,10 @@ const Customers = () => {
   };
 
   const handleAddCustomer = async () => {
-    if (!newCustomer.name || !newCustomer.email) {
+    if (!newCustomer.name) {
       toast({
         title: "خطأ",
-        description: "يرجى ملء الحقول المطلوبة",
+        description: "يرجى ملء اسم العميل",
         variant: "destructive",
       });
       return;
@@ -271,10 +271,10 @@ const Customers = () => {
   };
 
   const handleUpdateCustomer = async () => {
-    if (!newCustomer.name || !newCustomer.email) {
+    if (!newCustomer.name) {
       toast({
         title: "خطأ",
-        description: "يرجى ملء الحقول المطلوبة",
+        description: "يرجى ملء اسم العميل",
         variant: "destructive",
       });
       return;
@@ -413,7 +413,7 @@ const Customers = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="email">البريد الإلكتروني</Label>
+                  <Label htmlFor="email">البريد الإلكتروني (اختياري)</Label>
                   <Input 
                     id="email" 
                     type="email" 
@@ -441,7 +441,7 @@ const Customers = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="city">المدينة</Label>
+                  <Label htmlFor="city">المدينة (اختياري)</Label>
                   <Input 
                     id="city" 
                     value={newCustomer.city}
@@ -494,7 +494,7 @@ const Customers = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="edit-email">البريد الإلكتروني</Label>
+                  <Label htmlFor="edit-email">البريد الإلكتروني (اختياري)</Label>
                   <Input 
                     id="edit-email" 
                     type="email" 
@@ -522,7 +522,7 @@ const Customers = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="edit-city">المدينة</Label>
+                  <Label htmlFor="edit-city">المدينة (اختياري)</Label>
                   <Input 
                     id="edit-city" 
                     value={newCustomer.city}
