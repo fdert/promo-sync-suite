@@ -67,10 +67,10 @@ const UserDashboard = () => {
 
   const orderStatuses = [
     { value: "pending", label: "في الانتظار", color: "bg-warning/10 text-warning-foreground" },
-    { value: "in_progress", label: "قيد التنفيذ", color: "bg-blue-100 text-blue-800" },
-    { value: "review", label: "مراجعة", color: "bg-purple-100 text-purple-800" },
-    { value: "completed", label: "مكتمل", color: "bg-green-100 text-green-800" },
-    { value: "cancelled", label: "ملغي", color: "bg-red-100 text-red-800" }
+    { value: "in_progress", label: "قيد التنفيذ", color: "bg-primary/10 text-primary" },
+    { value: "review", label: "مراجعة", color: "bg-accent/10 text-accent" },
+    { value: "completed", label: "مكتمل", color: "bg-success/10 text-success" },
+    { value: "cancelled", label: "ملغي", color: "bg-destructive/10 text-destructive" }
   ];
 
   const getStatusBadge = (status: string) => {

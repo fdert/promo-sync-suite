@@ -43,11 +43,11 @@ const Invoices = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "paid":
-        return <Badge className="bg-green-100 text-green-800">مدفوع</Badge>;
+        return <Badge className="bg-success/10 text-success">مدفوع</Badge>;
       case "pending":
         return <Badge className="bg-warning/10 text-warning-foreground">قيد الانتظار</Badge>;
       case "overdue":
-        return <Badge className="bg-red-100 text-red-800">متأخر</Badge>;
+        return <Badge className="bg-destructive/10 text-destructive">متأخر</Badge>;
       default:
         return <Badge>غير محدد</Badge>;
     }

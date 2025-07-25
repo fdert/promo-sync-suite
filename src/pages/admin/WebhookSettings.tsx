@@ -185,9 +185,9 @@ const WebhookSettings = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "success":
-        return <Badge className="bg-green-100 text-green-800"><Check className="w-3 h-3 mr-1" />نجح</Badge>;
+        return <Badge className="bg-success/10 text-success"><Check className="w-3 h-3 mr-1" />نجح</Badge>;
       case "failed":
-        return <Badge className="bg-red-100 text-red-800"><X className="w-3 h-3 mr-1" />فشل</Badge>;
+        return <Badge className="bg-destructive/10 text-destructive"><X className="w-3 h-3 mr-1" />فشل</Badge>;
       case "pending":
         return <Badge className="bg-warning/10 text-warning-foreground"><Clock className="w-3 h-3 mr-1" />معلق</Badge>;
       default:

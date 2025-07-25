@@ -207,7 +207,7 @@ const Accounts = () => {
               <div key={transaction.id} className="flex items-center justify-between p-3 border-b">
                 <div className="flex items-center gap-3">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                    transaction.type === "income" ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"
+                    transaction.type === "income" ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"
                   }`}>
                     {transaction.type === "income" ? "+" : "-"}
                   </div>

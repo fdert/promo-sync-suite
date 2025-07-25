@@ -62,11 +62,11 @@ const WhatsApp = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "unread":
-        return <Badge className="bg-red-100 text-red-800">غير مقروء</Badge>;
+        return <Badge className="bg-destructive/10 text-destructive">غير مقروء</Badge>;
       case "read":
         return <Badge className="bg-warning/10 text-warning-foreground">مقروء</Badge>;
       case "replied":
-        return <Badge className="bg-green-100 text-green-800">تم الرد</Badge>;
+        return <Badge className="bg-success/10 text-success">تم الرد</Badge>;
       default:
         return <Badge>غير محدد</Badge>;
     }
@@ -176,8 +176,8 @@ const WhatsApp = () => {
             <div className="space-y-4">
               {recentMessages.map((message) => (
                 <div key={message.id} className="flex items-start gap-3 p-3 border rounded-lg">
-                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                    <MessageCircle className="h-5 w-5 text-green-600" />
+                  <div className="w-10 h-10 bg-success/10 rounded-full flex items-center justify-center">
+                    <MessageCircle className="h-5 w-5 text-success" />
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center justify-between mb-1">
