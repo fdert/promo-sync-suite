@@ -8,6 +8,7 @@ import AdminLayout from "./components/layout/AdminLayout";
 import Dashboard from "./pages/admin/Dashboard";
 import Customers from "./pages/admin/Customers";
 import Orders from "./pages/admin/Orders";
+import WebsiteContent from "./pages/admin/WebsiteContent";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,7 +29,7 @@ const App = () => (
             <Route path="accounts" element={<div className="p-6">صفحة الحسابات قيد التطوير</div>} />
             <Route path="reports" element={<div className="p-6">صفحة التقارير قيد التطوير</div>} />
             <Route path="whatsapp" element={<div className="p-6">صفحة WhatsApp قيد التطوير</div>} />
-            <Route path="website" element={<div className="p-6">صفحة إدارة الموقع قيد التطوير</div>} />
+            <Route path="website" element={<WebsiteContent />} />
             <Route path="settings" element={<div className="p-6">صفحة الإعدادات قيد التطوير</div>} />
           </Route>
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
