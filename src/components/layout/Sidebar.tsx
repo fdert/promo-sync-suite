@@ -12,6 +12,7 @@ import {
   Palette,
   ChevronLeft,
   Building2,
+  Cog,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -56,6 +57,11 @@ const menuItems = [
     title: "التقارير",
     icon: BarChart3,
     href: "/admin/reports",
+  },
+  {
+    title: "أنواع الخدمات",
+    icon: Cog,
+    href: "/admin/services",
   },
   {
     title: "رسائل WhatsApp",

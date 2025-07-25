@@ -88,7 +88,17 @@ const Accounts = () => {
     }
 
     try {
-      const { data: expenseNumber } = await supabase.rpc('generate_expense_number');
+      const { data: expenseNumber, error: expenseError } = await supabase.rpc('generate_expense_number');
+      
+      if (expenseError) {
+        console.error('Error generating expense number:', expenseError);
+        toast({
+          title: "خطأ",
+          description: "حدث خطأ في إنشاء رقم المصروف",
+          variant: "destructive",
+        });
+        return;
+      }
       
       const { error } = await supabase
         .from('expenses')
@@ -99,7 +109,8 @@ const Accounts = () => {
           category: newExpense.category,
           date: newExpense.date,
           payment_method: newExpense.payment_method,
-          notes: newExpense.notes
+          notes: newExpense.notes,
+          created_by: (await supabase.auth.getUser()).data.user?.id
         });
 
       if (error) {

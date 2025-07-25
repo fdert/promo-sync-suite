@@ -41,6 +41,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { CustomerSearchSelect } from "@/components/ui/customer-search-select";
 
 const Orders = () => {
   const [orders, setOrders] = useState([]);
@@ -351,18 +352,12 @@ const Orders = () => {
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="customer">العميل</Label>
-                  <Select value={newOrder.customer_id} onValueChange={(value) => setNewOrder({ ...newOrder, customer_id: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="اختر العميل" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {customers.map((customer) => (
-                        <SelectItem key={customer.id} value={customer.id}>
-                          {customer.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <CustomerSearchSelect
+                    customers={customers}
+                    value={newOrder.customer_id}
+                    onValueChange={(value) => setNewOrder({ ...newOrder, customer_id: value })}
+                    placeholder="ابحث واختر العميل..."
+                  />
                 </div>
                 <div>
                   <Label htmlFor="service">نوع الخدمة</Label>
@@ -457,18 +452,12 @@ const Orders = () => {
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="edit-customer">العميل</Label>
-                  <Select value={newOrder.customer_id} onValueChange={(value) => setNewOrder({ ...newOrder, customer_id: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="اختر العميل" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {customers.map((customer) => (
-                        <SelectItem key={customer.id} value={customer.id}>
-                          {customer.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <CustomerSearchSelect
+                    customers={customers}
+                    value={newOrder.customer_id}
+                    onValueChange={(value) => setNewOrder({ ...newOrder, customer_id: value })}
+                    placeholder="ابحث واختر العميل..."
+                  />
                 </div>
                 <div>
                   <Label htmlFor="edit-service">نوع الخدمة</Label>
