@@ -21,11 +21,11 @@ const Reports = () => {
   ];
 
   const serviceDistribution = [
-    { name: "تطوير المواقع", value: 35, color: "#8884d8" },
-    { name: "التسويق الرقمي", value: 25, color: "#82ca9d" },
-    { name: "الاستشارات", value: 20, color: "#ffc658" },
-    { name: "التصميم", value: 15, color: "#ff7300" },
-    { name: "أخرى", value: 5, color: "#0088fe" },
+    { name: "تطوير المواقع", value: 35, color: "hsl(var(--primary))" },
+    { name: "التسويق الرقمي", value: 25, color: "hsl(var(--success))" },
+    { name: "الاستشارات", value: 20, color: "hsl(var(--warning))" },
+    { name: "التصميم", value: 15, color: "hsl(var(--accent))" },
+    { name: "أخرى", value: 5, color: "hsl(var(--secondary))" },
   ];
 
   const customerGrowth = [
@@ -137,8 +137,8 @@ const Reports = () => {
               <XAxis dataKey="month" />
               <YAxis />
               <Tooltip />
-              <Bar dataKey="revenue" fill="#8884d8" name="الإيرادات" />
-              <Bar dataKey="expenses" fill="#82ca9d" name="المصروفات" />
+              <Bar dataKey="revenue" fill="hsl(var(--primary))" name="الإيرادات" />
+              <Bar dataKey="expenses" fill="hsl(var(--success))" name="المصروفات" />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
@@ -159,7 +159,7 @@ const Reports = () => {
                   cx="50%"
                   cy="50%"
                   outerRadius={80}
-                  fill="#8884d8"
+                  fill="hsl(var(--primary))"
                   dataKey="value"
                   label={({ name, value }) => `${name}: ${value}%`}
                 >
@@ -186,7 +186,7 @@ const Reports = () => {
                 <XAxis dataKey="month" />
                 <YAxis />
                 <Tooltip />
-                <Line type="monotone" dataKey="customers" stroke="#8884d8" strokeWidth={2} />
+                <Line type="monotone" dataKey="customers" stroke="hsl(var(--primary))" strokeWidth={2} />
               </LineChart>
             </ResponsiveContainer>
           </CardContent>
