@@ -105,13 +105,12 @@ const Users = () => {
       return;
     }
 
-    const selectedRole = roles.find(r => r.value === newUser.role);
     const userWithId = {
       ...newUser,
       id: users.length + 1,
       status: "active",
       lastLogin: "لم يدخل بعد",
-      permissions: selectedRole?.permissions || []
+      permissions: newUser.permissions
     };
 
     setUsers([...users, userWithId]);
@@ -122,6 +121,23 @@ const Users = () => {
       title: "تم إضافة المستخدم",
       description: "تم إضافة المستخدم الجديد بنجاح",
     });
+  };
+
+  const togglePermission = (permission: string) => {
+    const currentPermissions = newUser.permissions;
+    const hasPermission = currentPermissions.includes(permission);
+    
+    if (hasPermission) {
+      setNewUser({
+        ...newUser,
+        permissions: currentPermissions.filter(p => p !== permission)
+      });
+    } else {
+      setNewUser({
+        ...newUser,
+        permissions: [...currentPermissions, permission]
+      });
+    }
   };
 
   const toggleUserStatus = (userId: number) => {
@@ -170,7 +186,7 @@ const Users = () => {
             name: newUser.name,
             email: newUser.email,
             role: newUser.role,
-            permissions: selectedRole?.permissions || []
+            permissions: newUser.permissions
           }
         : user
     ));
@@ -183,6 +199,17 @@ const Users = () => {
       title: "تم تحديث المستخدم",
       description: "تم تحديث بيانات المستخدم بنجاح",
     });
+  };
+
+  const applyRolePermissions = (roleValue: string) => {
+    const selectedRole = roles.find(r => r.value === roleValue);
+    if (selectedRole) {
+      setNewUser({
+        ...newUser,
+        role: roleValue,
+        permissions: selectedRole.permissions
+      });
+    }
   };
 
   return (
@@ -235,7 +262,7 @@ const Users = () => {
               </div>
               <div className="space-y-2">
                 <Label>الدور الوظيفي</Label>
-                <Select value={newUser.role} onValueChange={(value) => setNewUser({ ...newUser, role: value })}>
+                <Select value={newUser.role} onValueChange={applyRolePermissions}>
                   <SelectTrigger>
                     <SelectValue placeholder="اختر الدور الوظيفي" />
                   </SelectTrigger>
@@ -247,6 +274,28 @@ const Users = () => {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="space-y-3">
+                <Label>الصلاحيات المخصصة</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {allPermissions.map((permission) => (
+                    <div key={permission.key} className="flex items-center space-x-2 space-x-reverse">
+                      <input
+                        type="checkbox"
+                        id={`perm-${permission.key}`}
+                        checked={newUser.permissions.includes(permission.key)}
+                        onChange={() => togglePermission(permission.key)}
+                        className="rounded border-border"
+                      />
+                      <Label htmlFor={`perm-${permission.key}`} className="text-sm">
+                        {permission.label}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  يمكنك اختيار صلاحيات مخصصة أو تطبيق صلاحيات الدور المحدد أعلاه
+                </p>
               </div>
               <div className="flex gap-2">
                 <Button onClick={handleAddUser} className="flex-1">
@@ -298,7 +347,7 @@ const Users = () => {
               </div>
               <div className="space-y-2">
                 <Label>الدور الوظيفي</Label>
-                <Select value={newUser.role} onValueChange={(value) => setNewUser({ ...newUser, role: value })}>
+                <Select value={newUser.role} onValueChange={applyRolePermissions}>
                   <SelectTrigger>
                     <SelectValue placeholder="اختر الدور الوظيفي" />
                   </SelectTrigger>
@@ -310,6 +359,28 @@ const Users = () => {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="space-y-3">
+                <Label>الصلاحيات المخصصة</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {allPermissions.map((permission) => (
+                    <div key={permission.key} className="flex items-center space-x-2 space-x-reverse">
+                      <input
+                        type="checkbox"
+                        id={`edit-perm-${permission.key}`}
+                        checked={newUser.permissions.includes(permission.key)}
+                        onChange={() => togglePermission(permission.key)}
+                        className="rounded border-border"
+                      />
+                      <Label htmlFor={`edit-perm-${permission.key}`} className="text-sm">
+                        {permission.label}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  يمكنك تخصيص الصلاحيات أو استخدام صلاحيات الدور المحدد
+                </p>
               </div>
               <div className="flex gap-2">
                 <Button onClick={handleUpdateUser} className="flex-1">
