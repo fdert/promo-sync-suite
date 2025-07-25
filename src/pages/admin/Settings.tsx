@@ -21,7 +21,7 @@ const Settings = () => {
   const [primaryColor, setPrimaryColor] = useState("#8b5cf6");
   const [accentColor, setAccentColor] = useState("#0ea5e9");
   const [successColor, setSuccessColor] = useState("#16a34a");
-  const [warningColor, setWarningColor] = useState("#f97316");
+  const [warningColor, setWarningColor] = useState("#ea580c");
   const [errorColor, setErrorColor] = useState("#dc2626");
 
   return (
@@ -486,7 +486,7 @@ const Settings = () => {
                     <Input
                       value={warningColor}
                       onChange={(e) => setWarningColor(e.target.value)}
-                      placeholder="#f97316"
+                      placeholder="#ea580c"
                       className="flex-1"
                     />
                   </div>

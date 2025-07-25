@@ -33,7 +33,7 @@ All colors MUST be HSL.
     --success: 142 76% 36%;
     --success-foreground: 0 0% 100%;
 
-    --warning: 21 100% 56%;
+    --warning: 17 88% 58%;
     --warning-foreground: 0 0% 100%;
 
     --destructive: 0 74% 42%;
@@ -105,7 +105,7 @@ All colors MUST be HSL.
     --success: 142 76% 46%;
     --success-foreground: 0 0% 100%;
 
-    --warning: 21 100% 56%;
+    --warning: 17 88% 58%;
     --warning-foreground: 0 0% 100%;
 
     --destructive: 0 74% 52%;
@@ -134,19 +134,56 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
   }
   
-  /* إزالة أي ألوان صفراء من المكونات */
+  /* إزالة جميع الألوان الصفراء نهائياً */
+  *:focus,
+  *:focus-visible,
   input:focus,
   textarea:focus,
   select:focus,
-  button:focus {
+  button:focus,
+  a:focus,
+  [tabindex]:focus {
     outline: 2px solid hsl(var(--ring)) !important;
     outline-offset: 2px !important;
     box-shadow: 0 0 0 2px hsl(var(--ring) / 0.2) !important;
+    border-color: hsl(var(--ring)) !important;
   }
   
-  /* التأكد من عدم ظهور ألوان صفراء في التركيز */
-  *:focus-visible {
-    outline: 2px solid hsl(var(--ring)) !important;
-    outline-offset: 2px !important;
+  /* منع أي ألوان صفراء من المكتبات الخارجية */
+  *[style*="yellow"], 
+  *[style*="#ff"], 
+  *[style*="#fe"], 
+  *[style*="#fd"],
+  *[class*="yellow"],
+  *[class*="amber"] {
+    color: hsl(var(--warning)) !important;
+    background-color: hsl(var(--warning) / 0.1) !important;
+    border-color: hsl(var(--warning) / 0.3) !important;
   }
+  
+  /* إعادة تعريف ألوان Tailwind الصفراء */
+  .text-yellow-50, .text-yellow-100, .text-yellow-200, .text-yellow-300, 
+  .text-yellow-400, .text-yellow-500, .text-yellow-600, .text-yellow-700, 
+  .text-yellow-800, .text-yellow-900 { color: hsl(var(--warning)) !important; }
+  
+  .bg-yellow-50, .bg-yellow-100, .bg-yellow-200, .bg-yellow-300, 
+  .bg-yellow-400, .bg-yellow-500, .bg-yellow-600, .bg-yellow-700, 
+  .bg-yellow-800, .bg-yellow-900 { background-color: hsl(var(--warning) / 0.1) !important; }
+  
+  .border-yellow-50, .border-yellow-100, .border-yellow-200, .border-yellow-300, 
+  .border-yellow-400, .border-yellow-500, .border-yellow-600, .border-yellow-700, 
+  .border-yellow-800, .border-yellow-900 { border-color: hsl(var(--warning) / 0.3) !important; }
+  
+  /* إعادة تعريف ألوان Amber */
+  .text-amber-50, .text-amber-100, .text-amber-200, .text-amber-300, 
+  .text-amber-400, .text-amber-500, .text-amber-600, .text-amber-700, 
+  .text-amber-800, .text-amber-900 { color: hsl(var(--warning)) !important; }
+  
+  .bg-amber-50, .bg-amber-100, .bg-amber-200, .bg-amber-300, 
+  .bg-amber-400, .bg-amber-500, .bg-amber-600, .bg-amber-700, 
+  .bg-amber-800, .bg-amber-900 { background-color: hsl(var(--warning) / 0.1) !important; }
+  
+  .border-amber-50, .border-amber-100, .border-amber-200, .border-amber-300, 
+  .border-amber-400, .border-amber-500, .border-amber-600, .border-amber-700, 
+  .border-amber-800, .border-amber-900 { border-color: hsl(var(--warning) / 0.3) !important; }
 }
