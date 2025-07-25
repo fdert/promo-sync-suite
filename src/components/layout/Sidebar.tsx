@@ -28,6 +28,11 @@ const menuItems = [
     href: "/admin",
   },
   {
+    title: "المستخدمين",
+    icon: Users,
+    href: "/admin/users",
+  },
+  {
     title: "العملاء",
     icon: Users,
     href: "/admin/customers",
@@ -56,6 +61,11 @@ const menuItems = [
     title: "رسائل WhatsApp",
     icon: MessageSquare,
     href: "/admin/whatsapp",
+  },
+  {
+    title: "ويب هوك",
+    icon: Settings,
+    href: "/admin/webhooks",
   },
   {
     title: "موقع الوكالة",

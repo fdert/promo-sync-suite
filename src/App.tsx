@@ -6,14 +6,17 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Home from "./pages/Home";
 import AdminLayout from "./components/layout/AdminLayout";
 import Dashboard from "./pages/admin/Dashboard";
+import Users from "./pages/admin/Users";
 import Customers from "./pages/admin/Customers";
 import Orders from "./pages/admin/Orders";
 import Invoices from "./pages/admin/Invoices";
 import Accounts from "./pages/admin/Accounts";
 import Reports from "./pages/admin/Reports";
 import WhatsApp from "./pages/admin/WhatsApp";
+import WebhookSettings from "./pages/admin/WebhookSettings";
 import WebsiteContent from "./pages/admin/WebsiteContent";
 import Settings from "./pages/admin/Settings";
+import UserDashboard from "./pages/user/UserDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,14 +29,17 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/user" element={<UserDashboard />} />
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<Dashboard />} />
+            <Route path="users" element={<Users />} />
             <Route path="customers" element={<Customers />} />
             <Route path="orders" element={<Orders />} />
             <Route path="invoices" element={<Invoices />} />
             <Route path="accounts" element={<Accounts />} />
             <Route path="reports" element={<Reports />} />
             <Route path="whatsapp" element={<WhatsApp />} />
+            <Route path="webhooks" element={<WebhookSettings />} />
             <Route path="website" element={<WebsiteContent />} />
             <Route path="settings" element={<Settings />} />
           </Route>
