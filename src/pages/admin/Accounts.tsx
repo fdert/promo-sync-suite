@@ -246,6 +246,96 @@ const Accounts = () => {
               إضافة مصروف جديد
             </Button>
           </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>إضافة مصروف جديد</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="description">وصف المصروف</Label>
+                  <Input
+                    id="description"
+                    value={newExpense.description}
+                    onChange={(e) => setNewExpense({...newExpense, description: e.target.value})}
+                    placeholder="وصف المصروف..."
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="amount">المبلغ (ر.س)</Label>
+                  <Input
+                    id="amount"
+                    type="number"
+                    value={newExpense.amount}
+                    onChange={(e) => setNewExpense({...newExpense, amount: e.target.value})}
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="category">الفئة</Label>
+                  <Select value={newExpense.category} onValueChange={(value) => setNewExpense({...newExpense, category: value})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="اختر الفئة" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="مكتبية">مصروفات مكتبية</SelectItem>
+                      <SelectItem value="تشغيلية">مصروفات تشغيلية</SelectItem>
+                      <SelectItem value="تسويق">تسويق وإعلان</SelectItem>
+                      <SelectItem value="صيانة">صيانة وإصلاح</SelectItem>
+                      <SelectItem value="مواصلات">مواصلات</SelectItem>
+                      <SelectItem value="أخرى">أخرى</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="date">التاريخ</Label>
+                  <Input
+                    id="date"
+                    type="date"
+                    value={newExpense.date}
+                    onChange={(e) => setNewExpense({...newExpense, date: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="payment_method">طريقة الدفع</Label>
+                <Select value={newExpense.payment_method} onValueChange={(value) => setNewExpense({...newExpense, payment_method: value})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="اختر طريقة الدفع" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="نقدي">نقدي</SelectItem>
+                    <SelectItem value="بنكي">تحويل بنكي</SelectItem>
+                    <SelectItem value="بطاقة ائتمان">بطاقة ائتمان</SelectItem>
+                    <SelectItem value="شيك">شيك</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="notes">ملاحظات</Label>
+                <Textarea
+                  id="notes"
+                  value={newExpense.notes}
+                  onChange={(e) => setNewExpense({...newExpense, notes: e.target.value})}
+                  placeholder="ملاحظات إضافية..."
+                />
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setIsAddExpenseOpen(false)}>
+                  إلغاء
+                </Button>
+                <Button onClick={handleAddExpense}>
+                  إضافة المصروف
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
         </Dialog>
       </div>
 
@@ -353,97 +443,6 @@ const Accounts = () => {
         </CardContent>
       </Card>
 
-      {/* Add Expense Dialog */}
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>إضافة مصروف جديد</DialogTitle>
-        </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="description">وصف المصروف</Label>
-              <Input
-                id="description"
-                value={newExpense.description}
-                onChange={(e) => setNewExpense({...newExpense, description: e.target.value})}
-                placeholder="وصف المصروف..."
-              />
-            </div>
-            <div>
-              <Label htmlFor="amount">المبلغ (ر.س)</Label>
-              <Input
-                id="amount"
-                type="number"
-                value={newExpense.amount}
-                onChange={(e) => setNewExpense({...newExpense, amount: e.target.value})}
-                placeholder="0.00"
-              />
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="category">الفئة</Label>
-              <Select value={newExpense.category} onValueChange={(value) => setNewExpense({...newExpense, category: value})}>
-                <SelectTrigger>
-                  <SelectValue placeholder="اختر الفئة" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="مكتبية">مصروفات مكتبية</SelectItem>
-                  <SelectItem value="تشغيلية">مصروفات تشغيلية</SelectItem>
-                  <SelectItem value="تسويق">تسويق وإعلان</SelectItem>
-                  <SelectItem value="صيانة">صيانة وإصلاح</SelectItem>
-                  <SelectItem value="مواصلات">مواصلات</SelectItem>
-                  <SelectItem value="أخرى">أخرى</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="date">التاريخ</Label>
-              <Input
-                id="date"
-                type="date"
-                value={newExpense.date}
-                onChange={(e) => setNewExpense({...newExpense, date: e.target.value})}
-              />
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor="payment_method">طريقة الدفع</Label>
-            <Select value={newExpense.payment_method} onValueChange={(value) => setNewExpense({...newExpense, payment_method: value})}>
-              <SelectTrigger>
-                <SelectValue placeholder="اختر طريقة الدفع" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="نقدي">نقدي</SelectItem>
-                <SelectItem value="بنكي">تحويل بنكي</SelectItem>
-                <SelectItem value="بطاقة ائتمان">بطاقة ائتمان</SelectItem>
-                <SelectItem value="شيك">شيك</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <Label htmlFor="notes">ملاحظات</Label>
-            <Textarea
-              id="notes"
-              value={newExpense.notes}
-              onChange={(e) => setNewExpense({...newExpense, notes: e.target.value})}
-              placeholder="ملاحظات إضافية..."
-            />
-          </div>
-
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setIsAddExpenseOpen(false)}>
-              إلغاء
-            </Button>
-            <Button onClick={handleAddExpense}>
-              إضافة المصروف
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
     </div>
   );
 };
