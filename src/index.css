@@ -33,14 +33,14 @@ All colors MUST be HSL.
     --success: 142 76% 36%;
     --success-foreground: 0 0% 100%;
 
-    --warning: 25 95% 53%;
+    --warning: 21 100% 56%;
     --warning-foreground: 0 0% 100%;
 
     --destructive: 0 74% 42%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 210 20% 88%;
-    --input: 210 20% 88%;
+    --border: 215 16% 86%;
+    --input: 215 16% 86%;
     --ring: 258 90% 66%;
 
     /* تدرجات لونية جميلة */
@@ -74,7 +74,7 @@ All colors MUST be HSL.
 
     --sidebar-accent-foreground: 240 5.9% 10%;
 
-    --sidebar-border: 210 20% 88%;
+    --sidebar-border: 215 16% 86%;
 
     --sidebar-ring: 258 90% 66%;
   }
@@ -105,7 +105,7 @@ All colors MUST be HSL.
     --success: 142 76% 46%;
     --success-foreground: 0 0% 100%;
 
-    --warning: 25 95% 53%;
+    --warning: 21 100% 56%;
     --warning-foreground: 0 0% 100%;
 
     --destructive: 0 74% 52%;
@@ -132,5 +132,21 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+  }
+  
+  /* إزالة أي ألوان صفراء من المكونات */
+  input:focus,
+  textarea:focus,
+  select:focus,
+  button:focus {
+    outline: 2px solid hsl(var(--ring)) !important;
+    outline-offset: 2px !important;
+    box-shadow: 0 0 0 2px hsl(var(--ring) / 0.2) !important;
+  }
+  
+  /* التأكد من عدم ظهور ألوان صفراء في التركيز */
+  *:focus-visible {
+    outline: 2px solid hsl(var(--ring)) !important;
+    outline-offset: 2px !important;
   }
 }
