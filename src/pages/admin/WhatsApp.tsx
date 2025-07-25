@@ -96,7 +96,7 @@ const WhatsApp = () => {
         <CardContent>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+              <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-success' : 'bg-destructive'}`}></div>
               <span className="font-medium">
                 {isConnected ? "متصل بـ WhatsApp Business" : "غير متصل"}
               </span>

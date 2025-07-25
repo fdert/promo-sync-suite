@@ -103,30 +103,30 @@ const Orders = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "مكتمل":
-        return "bg-green-50 text-green-600 border-green-200";
+        return "bg-success/10 text-success border-success/20";
       case "قيد التنفيذ":
-        return "bg-blue-50 text-blue-600 border-blue-200";
+        return "bg-primary/10 text-primary border-primary/20";
       case "قيد المراجعة":
-        return "bg-orange-50 text-orange-600 border-orange-200";
+        return "bg-warning/10 text-warning border-warning/20";
       case "جديد":
-        return "bg-purple-50 text-purple-600 border-purple-200";
+        return "bg-accent/10 text-accent border-accent/20";
       case "معلق":
-        return "bg-red-50 text-red-600 border-red-200";
+        return "bg-destructive/10 text-destructive border-destructive/20";
       default:
-        return "bg-gray-50 text-gray-600 border-gray-200";
+        return "bg-muted/50 text-muted-foreground border-border";
     }
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case "عالية":
-        return "bg-red-50 text-red-600";
+        return "bg-destructive/10 text-destructive";
       case "متوسطة":
         return "bg-warning/10 text-warning-foreground";
       case "منخفضة":
-        return "bg-green-50 text-green-600";
+        return "bg-success/10 text-success";
       default:
-        return "bg-gray-50 text-gray-600";
+        return "bg-muted/50 text-muted-foreground";
     }
   };
 
@@ -272,8 +272,8 @@ const Orders = () => {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="bg-blue-50 p-2 rounded-lg">
-                <ClipboardList className="h-5 w-5 text-blue-600" />
+              <div className="bg-primary/10 p-2 rounded-lg">
+                <ClipboardList className="h-5 w-5 text-primary" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">إجمالي الطلبات</p>
@@ -286,8 +286,8 @@ const Orders = () => {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="bg-purple-50 p-2 rounded-lg">
-                <Clock className="h-5 w-5 text-purple-600" />
+              <div className="bg-accent/10 p-2 rounded-lg">
+                <Clock className="h-5 w-5 text-accent" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">جديد</p>
@@ -300,8 +300,8 @@ const Orders = () => {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="bg-orange-50 p-2 rounded-lg">
-                <Clock className="h-5 w-5 text-orange-600" />
+              <div className="bg-warning/10 p-2 rounded-lg">
+                <Clock className="h-5 w-5 text-warning" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">قيد التنفيذ</p>
@@ -314,8 +314,8 @@ const Orders = () => {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="bg-green-50 p-2 rounded-lg">
-                <ClipboardList className="h-5 w-5 text-green-600" />
+              <div className="bg-success/10 p-2 rounded-lg">
+                <ClipboardList className="h-5 w-5 text-success" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">مكتمل</p>
@@ -328,8 +328,8 @@ const Orders = () => {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="bg-red-50 p-2 rounded-lg">
-                <Clock className="h-5 w-5 text-red-600" />
+              <div className="bg-destructive/10 p-2 rounded-lg">
+                <Clock className="h-5 w-5 text-destructive" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">متأخر</p>
@@ -391,7 +391,7 @@ const Orders = () => {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div className="w-full bg-muted rounded-full h-2">
                         <div
                           className="bg-primary h-2 rounded-full"
                           style={{ width: `${order.progress}%` }}

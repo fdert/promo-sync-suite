@@ -110,7 +110,7 @@ const Invoices = () => {
             <CardTitle className="text-sm font-medium">الفواتير المتأخرة</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">3</div>
+            <div className="text-2xl font-bold text-destructive">3</div>
             <p className="text-xs text-muted-foreground">تحتاج متابعة فورية</p>
           </CardContent>
         </Card>

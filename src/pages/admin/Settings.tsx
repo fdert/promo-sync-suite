@@ -284,7 +284,7 @@ const Settings = () => {
                       <p className="font-medium">Chrome على Windows</p>
                       <p className="text-sm text-muted-foreground">الرياض، السعودية • الجلسة الحالية</p>
                     </div>
-                    <Badge variant="outline" className="text-green-600">نشط</Badge>
+                    <Badge variant="outline" className="text-success">نشط</Badge>
                   </div>
                   <div className="flex items-center justify-between p-3 border rounded-lg">
                     <div>

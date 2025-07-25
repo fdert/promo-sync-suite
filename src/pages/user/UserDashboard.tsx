@@ -306,8 +306,8 @@ const UserDashboard = () => {
                     <TableCell>{order.service}</TableCell>
                     <TableCell>{getStatusBadge(order.status)}</TableCell>
                     <TableCell>{order.amount.toLocaleString()} ريال</TableCell>
-                    <TableCell className="text-green-600">{order.paid.toLocaleString()} ريال</TableCell>
-                    <TableCell className="text-orange-600">{order.remaining.toLocaleString()} ريال</TableCell>
+                    <TableCell className="text-success">{order.paid.toLocaleString()} ريال</TableCell>
+                    <TableCell className="text-warning">{order.remaining.toLocaleString()} ريال</TableCell>
                     <TableCell>{order.deadline}</TableCell>
                     <TableCell>
                       <div className="flex gap-1">

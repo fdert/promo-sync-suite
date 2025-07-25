@@ -166,8 +166,8 @@ const Customers = () => {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="bg-blue-50 p-2 rounded-lg">
-                <Users className="h-5 w-5 text-blue-600" />
+              <div className="bg-primary/10 p-2 rounded-lg">
+                <Users className="h-5 w-5 text-primary" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">إجمالي العملاء</p>
@@ -180,8 +180,8 @@ const Customers = () => {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="bg-green-50 p-2 rounded-lg">
-                <Users className="h-5 w-5 text-green-600" />
+              <div className="bg-success/10 p-2 rounded-lg">
+                <Users className="h-5 w-5 text-success" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">عملاء نشطون</p>
@@ -194,8 +194,8 @@ const Customers = () => {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="bg-purple-50 p-2 rounded-lg">
-                <Users className="h-5 w-5 text-purple-600" />
+              <div className="bg-accent/10 p-2 rounded-lg">
+                <Users className="h-5 w-5 text-accent" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">عملاء جدد هذا الشهر</p>
@@ -208,8 +208,8 @@ const Customers = () => {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="bg-orange-50 p-2 rounded-lg">
-                <Users className="h-5 w-5 text-orange-600" />
+              <div className="bg-warning/10 p-2 rounded-lg">
+                <Users className="h-5 w-5 text-warning" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">متوسط القيمة</p>
@@ -272,7 +272,7 @@ const Customers = () => {
                   <TableCell>{customer.totalOrders}</TableCell>
                   <TableCell className="font-medium">{customer.totalSpent}</TableCell>
                   <TableCell>
-                    <span className="px-2 py-1 bg-green-50 text-green-600 rounded-full text-xs font-medium">
+                    <span className="px-2 py-1 bg-success/10 text-success rounded-full text-xs font-medium">
                       {customer.status}
                     </span>
                   </TableCell>

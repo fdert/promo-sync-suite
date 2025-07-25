@@ -81,7 +81,7 @@ const Reports = () => {
           <CardContent>
             <div className="text-2xl font-bold">328,000 ر.س</div>
             <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <TrendingUp className="h-3 w-3 text-green-600" />
+              <TrendingUp className="h-3 w-3 text-success" />
               +18% من الشهر الماضي
             </p>
           </CardContent>
@@ -95,7 +95,7 @@ const Reports = () => {
           <CardContent>
             <div className="text-2xl font-bold">127</div>
             <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <TrendingUp className="h-3 w-3 text-green-600" />
+              <TrendingUp className="h-3 w-3 text-success" />
               +12 عميل جديد
             </p>
           </CardContent>

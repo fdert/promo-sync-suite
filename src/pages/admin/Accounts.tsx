@@ -123,10 +123,10 @@ const Accounts = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">الإيرادات الشهرية</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600" />
+            <TrendingUp className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{monthlyIncome.toLocaleString()} ر.س</div>
+            <div className="text-2xl font-bold text-success">{monthlyIncome.toLocaleString()} ر.س</div>
             <p className="text-xs text-muted-foreground">+12% من الشهر الماضي</p>
           </CardContent>
         </Card>
@@ -134,10 +134,10 @@ const Accounts = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">المصروفات الشهرية</CardTitle>
-            <TrendingDown className="h-4 w-4 text-red-600" />
+            <TrendingDown className="h-4 w-4 text-destructive" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{monthlyExpenses.toLocaleString()} ر.س</div>
+            <div className="text-2xl font-bold text-destructive">{monthlyExpenses.toLocaleString()} ر.س</div>
             <p className="text-xs text-muted-foreground">-5% من الشهر الماضي</p>
           </CardContent>
         </Card>
@@ -175,7 +175,7 @@ const Accounts = () => {
                 </div>
                 <div className="text-right">
                   <p className="font-bold text-lg">{account.balance.toLocaleString()} {account.currency}</p>
-                  <Badge variant="outline" className="text-green-600 border-green-600">نشط</Badge>
+                  <Badge variant="outline" className="text-success border-success/20">نشط</Badge>
                 </div>
               </div>
             ))}
@@ -217,7 +217,7 @@ const Accounts = () => {
                   </div>
                 </div>
                 <div className={`font-bold ${
-                  transaction.type === "income" ? "text-green-600" : "text-red-600"
+                  transaction.type === "income" ? "text-success" : "text-destructive"
                 }`}>
                   {transaction.amount > 0 ? "+" : ""}{transaction.amount.toLocaleString()} ر.س
                 </div>
