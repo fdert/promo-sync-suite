@@ -20,7 +20,12 @@ const Users = () => {
       role: "admin",
       status: "active",
       lastLogin: "منذ ساعة",
-      permissions: ["orders", "customers", "invoices", "reports"]
+      permissions: [
+        "orders_view", "orders_create", "orders_edit", "orders_delete",
+        "customers_view", "customers_create", "customers_edit", "customers_delete",
+        "invoices_view", "invoices_create", "invoices_edit", "invoices_delete",
+        "reports_view", "reports_create", "reports_export"
+      ]
     },
     {
       id: 2,
@@ -29,7 +34,11 @@ const Users = () => {
       role: "employee",
       status: "active",
       lastLogin: "منذ يومين",
-      permissions: ["orders", "customers", "invoices"]
+      permissions: [
+        "orders_view", "orders_create", "orders_edit",
+        "customers_view", "customers_create", "customers_edit",
+        "invoices_view", "invoices_create"
+      ]
     },
     {
       id: 3,
@@ -38,7 +47,10 @@ const Users = () => {
       role: "accountant",
       status: "inactive",
       lastLogin: "منذ أسبوع",
-      permissions: ["invoices", "accounts"]
+      permissions: [
+        "invoices_view", "invoices_create", "invoices_edit", "invoices_delete",
+        "accounts_view", "accounts_create", "accounts_edit"
+      ]
     }
   ]);
 
@@ -56,20 +68,117 @@ const Users = () => {
   const { toast } = useToast();
 
   const roles = [
-    { value: "admin", label: "مدير عام", permissions: ["orders", "customers", "invoices", "reports", "users", "settings"] },
-    { value: "manager", label: "مدير قسم", permissions: ["orders", "customers", "invoices", "reports"] },
-    { value: "employee", label: "موظف", permissions: ["orders", "customers", "invoices"] },
-    { value: "accountant", label: "محاسب", permissions: ["invoices", "accounts"] }
+    { 
+      value: "admin", 
+      label: "مدير عام", 
+      permissions: [
+        "orders_view", "orders_create", "orders_edit", "orders_delete",
+        "customers_view", "customers_create", "customers_edit", "customers_delete",
+        "invoices_view", "invoices_create", "invoices_edit", "invoices_delete",
+        "accounts_view", "accounts_create", "accounts_edit", "accounts_delete",
+        "reports_view", "reports_create", "reports_export",
+        "users_view", "users_create", "users_edit", "users_delete",
+        "settings_view", "settings_edit"
+      ]
+    },
+    { 
+      value: "manager", 
+      label: "مدير قسم", 
+      permissions: [
+        "orders_view", "orders_create", "orders_edit",
+        "customers_view", "customers_create", "customers_edit",
+        "invoices_view", "invoices_create", "invoices_edit",
+        "reports_view", "reports_create", "reports_export"
+      ]
+    },
+    { 
+      value: "employee", 
+      label: "موظف", 
+      permissions: [
+        "orders_view", "orders_create", "orders_edit",
+        "customers_view", "customers_create", "customers_edit",
+        "invoices_view", "invoices_create"
+      ]
+    },
+    { 
+      value: "accountant", 
+      label: "محاسب", 
+      permissions: [
+        "invoices_view", "invoices_create", "invoices_edit", "invoices_delete",
+        "accounts_view", "accounts_create", "accounts_edit", "accounts_delete",
+        "reports_view", "reports_create", "reports_export"
+      ]
+    }
   ];
 
   const allPermissions = [
-    { key: "orders", label: "الطلبات" },
-    { key: "customers", label: "العملاء" },
-    { key: "invoices", label: "الفواتير" },
-    { key: "accounts", label: "الحسابات" },
-    { key: "reports", label: "التقارير" },
-    { key: "users", label: "المستخدمين" },
-    { key: "settings", label: "الإعدادات" }
+    { 
+      key: "orders", 
+      label: "الطلبات",
+      actions: [
+        { key: "orders_view", label: "عرض الطلبات" },
+        { key: "orders_create", label: "إضافة طلب" },
+        { key: "orders_edit", label: "تعديل طلب" },
+        { key: "orders_delete", label: "حذف طلب" }
+      ]
+    },
+    { 
+      key: "customers", 
+      label: "العملاء",
+      actions: [
+        { key: "customers_view", label: "عرض العملاء" },
+        { key: "customers_create", label: "إضافة عميل" },
+        { key: "customers_edit", label: "تعديل عميل" },
+        { key: "customers_delete", label: "حذف عميل" }
+      ]
+    },
+    { 
+      key: "invoices", 
+      label: "الفواتير",
+      actions: [
+        { key: "invoices_view", label: "عرض الفواتير" },
+        { key: "invoices_create", label: "إنشاء فاتورة" },
+        { key: "invoices_edit", label: "تعديل فاتورة" },
+        { key: "invoices_delete", label: "حذف فاتورة" }
+      ]
+    },
+    { 
+      key: "accounts", 
+      label: "الحسابات",
+      actions: [
+        { key: "accounts_view", label: "عرض الحسابات" },
+        { key: "accounts_create", label: "إضافة حساب" },
+        { key: "accounts_edit", label: "تعديل حساب" },
+        { key: "accounts_delete", label: "حذف حساب" }
+      ]
+    },
+    { 
+      key: "reports", 
+      label: "التقارير",
+      actions: [
+        { key: "reports_view", label: "عرض التقارير" },
+        { key: "reports_create", label: "إنشاء تقرير" },
+        { key: "reports_export", label: "تصدير التقارير" }
+      ]
+    },
+    { 
+      key: "users", 
+      label: "المستخدمين",
+      actions: [
+        { key: "users_view", label: "عرض المستخدمين" },
+        { key: "users_create", label: "إضافة مستخدم" },
+        { key: "users_edit", label: "تعديل مستخدم" },
+        { key: "users_delete", label: "حذف مستخدم" }
+      ]
+    },
+    { 
+      key: "settings", 
+      label: "الإعدادات",
+      actions: [
+        { key: "settings_view", label: "عرض الإعدادات" },
+        { key: "settings_edit", label: "تعديل الإعدادات" }
+      ]
+    }
   ];
 
   const getRoleBadge = (role: string) => {
@@ -275,26 +384,66 @@ const Users = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-3">
-                <Label>الصلاحيات المخصصة</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  {allPermissions.map((permission) => (
-                    <div key={permission.key} className="flex items-center space-x-2 space-x-reverse">
-                      <input
-                        type="checkbox"
-                        id={`perm-${permission.key}`}
-                        checked={newUser.permissions.includes(permission.key)}
-                        onChange={() => togglePermission(permission.key)}
-                        className="rounded border-border"
-                      />
-                      <Label htmlFor={`perm-${permission.key}`} className="text-sm">
-                        {permission.label}
-                      </Label>
+              <div className="space-y-4 max-h-60 overflow-y-auto">
+                <Label>الصلاحيات المفصلة</Label>
+                {allPermissions.map((permissionGroup) => (
+                  <div key={permissionGroup.key} className="border rounded-lg p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="font-medium">{permissionGroup.label}</Label>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const allGroupActions = permissionGroup.actions.map(a => a.key);
+                            const hasAll = allGroupActions.every(action => newUser.permissions.includes(action));
+                            
+                            if (hasAll) {
+                              // إزالة جميع صلاحيات هذه المجموعة
+                              setNewUser({
+                                ...newUser,
+                                permissions: newUser.permissions.filter(p => !allGroupActions.includes(p))
+                              });
+                            } else {
+                              // إضافة جميع صلاحيات هذه المجموعة
+                              const newPermissions = [...newUser.permissions];
+                              allGroupActions.forEach(action => {
+                                if (!newPermissions.includes(action)) {
+                                  newPermissions.push(action);
+                                }
+                              });
+                              setNewUser({
+                                ...newUser,
+                                permissions: newPermissions
+                              });
+                            }
+                          }}
+                        >
+                          {permissionGroup.actions.every(action => newUser.permissions.includes(action.key)) ? 'إلغاء الكل' : 'تحديد الكل'}
+                        </Button>
+                      </div>
                     </div>
-                  ))}
-                </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {permissionGroup.actions.map((action) => (
+                        <div key={action.key} className="flex items-center space-x-2 space-x-reverse">
+                          <input
+                            type="checkbox"
+                            id={`perm-${action.key}`}
+                            checked={newUser.permissions.includes(action.key)}
+                            onChange={() => togglePermission(action.key)}
+                            className="rounded border-border"
+                          />
+                          <Label htmlFor={`perm-${action.key}`} className="text-sm">
+                            {action.label}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
                 <p className="text-xs text-muted-foreground">
-                  يمكنك اختيار صلاحيات مخصصة أو تطبيق صلاحيات الدور المحدد أعلاه
+                  يمكنك اختيار صلاحيات مفصلة لكل قسم أو تطبيق صلاحيات الدور المحدد أعلاه
                 </p>
               </div>
               <div className="flex gap-2">
@@ -360,26 +509,64 @@ const Users = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-3">
-                <Label>الصلاحيات المخصصة</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  {allPermissions.map((permission) => (
-                    <div key={permission.key} className="flex items-center space-x-2 space-x-reverse">
-                      <input
-                        type="checkbox"
-                        id={`edit-perm-${permission.key}`}
-                        checked={newUser.permissions.includes(permission.key)}
-                        onChange={() => togglePermission(permission.key)}
-                        className="rounded border-border"
-                      />
-                      <Label htmlFor={`edit-perm-${permission.key}`} className="text-sm">
-                        {permission.label}
-                      </Label>
+              <div className="space-y-4 max-h-60 overflow-y-auto">
+                <Label>الصلاحيات المفصلة</Label>
+                {allPermissions.map((permissionGroup) => (
+                  <div key={permissionGroup.key} className="border rounded-lg p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="font-medium">{permissionGroup.label}</Label>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const allGroupActions = permissionGroup.actions.map(a => a.key);
+                            const hasAll = allGroupActions.every(action => newUser.permissions.includes(action));
+                            
+                            if (hasAll) {
+                              setNewUser({
+                                ...newUser,
+                                permissions: newUser.permissions.filter(p => !allGroupActions.includes(p))
+                              });
+                            } else {
+                              const newPermissions = [...newUser.permissions];
+                              allGroupActions.forEach(action => {
+                                if (!newPermissions.includes(action)) {
+                                  newPermissions.push(action);
+                                }
+                              });
+                              setNewUser({
+                                ...newUser,
+                                permissions: newPermissions
+                              });
+                            }
+                          }}
+                        >
+                          {permissionGroup.actions.every(action => newUser.permissions.includes(action.key)) ? 'إلغاء الكل' : 'تحديد الكل'}
+                        </Button>
+                      </div>
                     </div>
-                  ))}
-                </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {permissionGroup.actions.map((action) => (
+                        <div key={action.key} className="flex items-center space-x-2 space-x-reverse">
+                          <input
+                            type="checkbox"
+                            id={`edit-perm-${action.key}`}
+                            checked={newUser.permissions.includes(action.key)}
+                            onChange={() => togglePermission(action.key)}
+                            className="rounded border-border"
+                          />
+                          <Label htmlFor={`edit-perm-${action.key}`} className="text-sm">
+                            {action.label}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
                 <p className="text-xs text-muted-foreground">
-                  يمكنك تخصيص الصلاحيات أو استخدام صلاحيات الدور المحدد
+                  يمكنك تخصيص الصلاحيات بشكل مفصل لكل قسم
                 </p>
               </div>
               <div className="flex gap-2">
@@ -469,15 +656,32 @@ const Users = () => {
                   <TableCell>{getStatusBadge(user.status)}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">{user.lastLogin}</TableCell>
                   <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {user.permissions.slice(0, 3).map((permission) => (
-                        <Badge key={permission} variant="outline" className="text-xs">
-                          {allPermissions.find(p => p.key === permission)?.label}
-                        </Badge>
-                      ))}
-                      {user.permissions.length > 3 && (
+                    <div className="flex flex-wrap gap-1 max-w-xs">
+                      {allPermissions.map((permissionGroup) => {
+                        const userGroupPermissions = user.permissions.filter(p => 
+                          permissionGroup.actions.some(action => action.key === p)
+                        );
+                        
+                        if (userGroupPermissions.length === 0) return null;
+                        
+                        return (
+                          <Badge key={permissionGroup.key} variant="outline" className="text-xs">
+                            {permissionGroup.label} ({userGroupPermissions.length})
+                          </Badge>
+                        );
+                      }).filter(Boolean).slice(0, 3)}
+                      
+                      {allPermissions.filter(permissionGroup => 
+                        user.permissions.some(p => 
+                          permissionGroup.actions.some(action => action.key === p)
+                        )
+                      ).length > 3 && (
                         <Badge variant="outline" className="text-xs">
-                          +{user.permissions.length - 3}
+                          +{allPermissions.filter(permissionGroup => 
+                            user.permissions.some(p => 
+                              permissionGroup.actions.some(action => action.key === p)
+                            )
+                          ).length - 3}
                         </Badge>
                       )}
                     </div>
