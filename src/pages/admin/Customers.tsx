@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,8 +29,12 @@ import {
   Mail,
   MapPin,
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const Customers = () => {
+  const [customers, setCustomers] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -44,52 +48,93 @@ const Customers = () => {
     notes: ""
   });
 
-  const customers = [
-    {
-      id: 1,
-      name: "أحمد محمد السالم",
-      email: "ahmed@example.com",
-      phone: "+966501234567",
-      company: "شركة النجاح للتجارة",
-      city: "الرياض",
-      joinDate: "2024-01-15",
-      totalOrders: 5,
-      totalSpent: "12,500 ر.س",
-      status: "نشط",
-    },
-    {
-      id: 2,
-      name: "فاطمة علي الأحمد",
-      email: "fatima@example.com",
-      phone: "+966507654321",
-      company: "مؤسسة الأمل",
-      city: "جدة",
-      joinDate: "2024-01-10",
-      totalOrders: 3,
-      totalSpent: "8,200 ر.س",
-      status: "نشط",
-    },
-    {
-      id: 3,
-      name: "محمد عبدالله",
-      email: "mohammed@example.com",
-      phone: "+966501111111",
-      company: "متجر الإلكترونيات",
-      city: "الدمام",
-      joinDate: "2024-01-05",
-      totalOrders: 8,
-      totalSpent: "25,800 ر.س",
-      status: "نشط",
-    },
-  ];
+  const { toast } = useToast();
+
+  // جلب العملاء من قاعدة البيانات
+  const fetchCustomers = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('customers')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching customers:', error);
+        toast({
+          title: "خطأ",
+          description: "حدث خطأ في جلب بيانات العملاء",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setCustomers(data || []);
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // تحميل البيانات عند تحميل الصفحة
+  useEffect(() => {
+    fetchCustomers();
+  }, []);
 
   const filteredCustomers = customers.filter(customer =>
-    customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.email.toLowerCase().includes(searchTerm.toLowerCase())
+    customer.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    customer.company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    customer.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleEditCustomer = (customer: any) => {
+  const handleAddCustomer = async () => {
+    if (!newCustomer.name || !newCustomer.email) {
+      toast({
+        title: "خطأ",
+        description: "يرجى ملء الحقول المطلوبة",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('customers')
+        .insert([{
+          name: newCustomer.name,
+          email: newCustomer.email,
+          phone: newCustomer.phone,
+          company: newCustomer.company,
+          address: newCustomer.city,
+          city: newCustomer.city,
+          notes: newCustomer.notes
+        }]);
+
+      if (error) {
+        console.error('Error adding customer:', error);
+        toast({
+          title: "خطأ",
+          description: "حدث خطأ في إضافة العميل",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      await fetchCustomers();
+      setNewCustomer({ name: "", email: "", phone: "", company: "", city: "", notes: "" });
+      setIsAddDialogOpen(false);
+      
+      toast({
+        title: "تم إضافة العميل",
+        description: "تم إضافة العميل بنجاح",
+      });
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
+  const handleEditCustomer = (customer) => {
     setEditingCustomer(customer);
     setNewCustomer({
       name: customer.name,
@@ -97,10 +142,97 @@ const Customers = () => {
       phone: customer.phone,
       company: customer.company,
       city: customer.city,
-      notes: ""
+      notes: customer.notes || ""
     });
     setIsEditDialogOpen(true);
   };
+
+  const handleUpdateCustomer = async () => {
+    if (!newCustomer.name || !newCustomer.email) {
+      toast({
+        title: "خطأ",
+        description: "يرجى ملء الحقول المطلوبة",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('customers')
+        .update({
+          name: newCustomer.name,
+          email: newCustomer.email,
+          phone: newCustomer.phone,
+          company: newCustomer.company,
+          address: newCustomer.city,
+          city: newCustomer.city,
+          notes: newCustomer.notes
+        })
+        .eq('id', editingCustomer.id);
+
+      if (error) {
+        console.error('Error updating customer:', error);
+        toast({
+          title: "خطأ",
+          description: "حدث خطأ في تحديث العميل",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      await fetchCustomers();
+      setNewCustomer({ name: "", email: "", phone: "", company: "", city: "", notes: "" });
+      setIsEditDialogOpen(false);
+      setEditingCustomer(null);
+      
+      toast({
+        title: "تم تحديث العميل",
+        description: "تم تحديث بيانات العميل بنجاح",
+      });
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
+  const handleDeleteCustomer = async (customerId) => {
+    try {
+      const { error } = await supabase
+        .from('customers')
+        .delete()
+        .eq('id', customerId);
+
+      if (error) {
+        console.error('Error deleting customer:', error);
+        toast({
+          title: "خطأ",
+          description: "حدث خطأ في حذف العميل",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      await fetchCustomers();
+      
+      toast({
+        title: "تم حذف العميل",
+        description: "تم حذف العميل بنجاح",
+      });
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">جاري تحميل العملاء...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -141,33 +273,64 @@ const Customers = () => {
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="name">اسم العميل</Label>
-                  <Input id="name" placeholder="أدخل اسم العميل" />
+                  <Input 
+                    id="name" 
+                    value={newCustomer.name}
+                    onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
+                    placeholder="أدخل اسم العميل" 
+                  />
                 </div>
                 <div>
                   <Label htmlFor="email">البريد الإلكتروني</Label>
-                  <Input id="email" type="email" placeholder="example@domain.com" />
+                  <Input 
+                    id="email" 
+                    type="email" 
+                    value={newCustomer.email}
+                    onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
+                    placeholder="example@domain.com" 
+                  />
                 </div>
                 <div>
                   <Label htmlFor="phone">رقم الجوال</Label>
-                  <Input id="phone" placeholder="+966501234567" />
+                  <Input 
+                    id="phone" 
+                    value={newCustomer.phone}
+                    onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
+                    placeholder="+966501234567" 
+                  />
                 </div>
                 <div>
                   <Label htmlFor="company">اسم الشركة/المؤسسة</Label>
-                  <Input id="company" placeholder="اختياري" />
+                  <Input 
+                    id="company" 
+                    value={newCustomer.company}
+                    onChange={(e) => setNewCustomer({ ...newCustomer, company: e.target.value })}
+                    placeholder="اختياري" 
+                  />
                 </div>
                 <div>
                   <Label htmlFor="city">المدينة</Label>
-                  <Input id="city" placeholder="الرياض" />
+                  <Input 
+                    id="city" 
+                    value={newCustomer.city}
+                    onChange={(e) => setNewCustomer({ ...newCustomer, city: e.target.value })}
+                    placeholder="الرياض" 
+                  />
                 </div>
                 <div>
                   <Label htmlFor="notes">ملاحظات</Label>
-                  <Textarea id="notes" placeholder="أي ملاحظات إضافية..." />
+                  <Textarea 
+                    id="notes" 
+                    value={newCustomer.notes}
+                    onChange={(e) => setNewCustomer({ ...newCustomer, notes: e.target.value })}
+                    placeholder="أي ملاحظات إضافية..." 
+                  />
                 </div>
                 <div className="flex gap-2 pt-4">
                   <Button 
                     variant="hero" 
                     className="flex-1"
-                    onClick={() => setIsAddDialogOpen(false)}
+                    onClick={handleAddCustomer}
                   >
                     حفظ العميل
                   </Button>
@@ -248,7 +411,7 @@ const Customers = () => {
                   <Button 
                     variant="hero" 
                     className="flex-1"
-                    onClick={() => setIsEditDialogOpen(false)}
+                    onClick={handleUpdateCustomer}
                   >
                     تحديث البيانات
                   </Button>
@@ -275,7 +438,7 @@ const Customers = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">إجمالي العملاء</p>
-                <p className="text-xl font-bold">248</p>
+                <p className="text-xl font-bold">{customers.length}</p>
               </div>
             </div>
           </CardContent>
@@ -289,7 +452,7 @@ const Customers = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">عملاء نشطون</p>
-                <p className="text-xl font-bold">186</p>
+                <p className="text-xl font-bold">{customers.filter(c => c.status === 'نشط').length}</p>
               </div>
             </div>
           </CardContent>
@@ -303,7 +466,11 @@ const Customers = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">عملاء جدد هذا الشهر</p>
-                <p className="text-xl font-bold">23</p>
+                <p className="text-xl font-bold">{customers.filter(c => {
+                  const created = new Date(c.created_at);
+                  const now = new Date();
+                  return created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear();
+                }).length}</p>
               </div>
             </div>
           </CardContent>
@@ -316,8 +483,8 @@ const Customers = () => {
                 <Users className="h-5 w-5 text-warning" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">متوسط القيمة</p>
-                <p className="text-xl font-bold">15,250 ر.س</p>
+                <p className="text-sm text-muted-foreground">متوسط الطلبات</p>
+                <p className="text-xl font-bold">{customers.length > 0 ? Math.round(customers.reduce((sum, c) => sum + (c.total_orders || 0), 0) / customers.length) : 0}</p>
               </div>
             </div>
           </CardContent>
@@ -350,34 +517,34 @@ const Customers = () => {
                     <div>
                       <p className="font-medium">{customer.name}</p>
                       <p className="text-sm text-muted-foreground">
-                        انضم في {customer.joinDate}
+                        انضم في {new Date(customer.created_at).toLocaleDateString('ar-SA')}
                       </p>
                     </div>
                   </TableCell>
-                  <TableCell>{customer.company}</TableCell>
+                  <TableCell>{customer.company || 'غير محدد'}</TableCell>
                   <TableCell>
                     <div className="space-y-1">
                       <div className="flex items-center gap-1 text-sm">
                         <Phone className="h-3 w-3" />
-                        {customer.phone}
+                        {customer.phone || 'غير محدد'}
                       </div>
                       <div className="flex items-center gap-1 text-sm">
                         <Mail className="h-3 w-3" />
-                        {customer.email}
+                        {customer.email || 'غير محدد'}
                       </div>
                     </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
                       <MapPin className="h-3 w-3" />
-                      {customer.city}
+                      {customer.city || 'غير محدد'}
                     </div>
                   </TableCell>
-                  <TableCell>{customer.totalOrders}</TableCell>
-                  <TableCell className="font-medium">{customer.totalSpent}</TableCell>
+                  <TableCell>{customer.total_orders || 0}</TableCell>
+                  <TableCell className="font-medium">{customer.total_spent || '0 ر.س'}</TableCell>
                   <TableCell>
                     <span className="px-2 py-1 bg-success/10 text-success rounded-full text-xs font-medium">
-                      {customer.status}
+                      {customer.status || 'نشط'}
                     </span>
                   </TableCell>
                   <TableCell>
@@ -385,7 +552,7 @@ const Customers = () => {
                       <Button variant="ghost" size="icon" onClick={() => handleEditCustomer(customer)}>
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon">
+                      <Button variant="ghost" size="icon" onClick={() => handleDeleteCustomer(customer.id)}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </div>

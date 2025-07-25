@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,76 +39,93 @@ import {
   User,
   Clock,
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const Orders = () => {
+  const [orders, setOrders] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [services, setServices] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
   const [newOrder, setNewOrder] = useState({
-    customer: "",
-    service: "",
+    customer_id: "",
+    service_id: "",
+    service_name: "",
     description: "",
-    dueDate: "",
+    due_date: "",
     amount: "",
-    priority: ""
+    priority: "متوسطة"
   });
 
-  const orders = [
-    {
-      id: "ORD-001",
-      customer: "أحمد محمد السالم",
-      service: "تصميم شعار",
-      description: "تصميم شعار احترافي لشركة تجارية",
-      status: "قيد التنفيذ",
-      priority: "عالية",
-      startDate: "2024-01-15",
-      dueDate: "2024-01-25",
-      amount: "2,500 ر.س",
-      progress: 60,
-      assignedTo: "سارة أحمد",
-    },
-    {
-      id: "ORD-002",
-      customer: "مؤسسة الأمل",
-      service: "حملة إعلانية",
-      description: "حملة إعلانية شاملة على وسائل التواصل",
-      status: "مكتمل",
-      priority: "متوسطة",
-      startDate: "2024-01-10",
-      dueDate: "2024-01-20",
-      amount: "8,500 ر.س",
-      progress: 100,
-      assignedTo: "محمد علي",
-    },
-    {
-      id: "ORD-003",
-      customer: "شركة النجاح",
-      service: "موقع إلكتروني",
-      description: "تطوير موقع إلكتروني تجاري متكامل",
-      status: "قيد المراجعة",
-      priority: "عالية",
-      startDate: "2024-01-08",
-      dueDate: "2024-02-08",
-      amount: "15,000 ر.س",
-      progress: 85,
-      assignedTo: "فاطمة محمد",
-    },
-    {
-      id: "ORD-004",
-      customer: "متجر الإلكترونيات",
-      service: "هوية بصرية",
-      description: "تصميم هوية بصرية متكاملة للمتجر",
-      status: "جديد",
-      priority: "متوسطة",
-      startDate: "2024-01-16",
-      dueDate: "2024-01-30",
-      amount: "5,200 ر.س",
-      progress: 0,
-      assignedTo: "غير محدد",
-    },
-  ];
+  const { toast } = useToast();
+
+  // جلب البيانات من قاعدة البيانات
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      
+      // جلب الطلبات مع بيانات العملاء والخدمات
+      const { data: ordersData, error: ordersError } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          customers (name),
+          services (name)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (ordersError) {
+        console.error('Error fetching orders:', ordersError);
+      } else {
+        setOrders(ordersData || []);
+      }
+
+      // جلب العملاء
+      const { data: customersData, error: customersError } = await supabase
+        .from('customers')
+        .select('id, name')
+        .order('name');
+
+      if (customersError) {
+        console.error('Error fetching customers:', customersError);
+      } else {
+        setCustomers(customersData || []);
+      }
+
+      // جلب الخدمات
+      const { data: servicesData, error: servicesError } = await supabase
+        .from('services')
+        .select('id, name, base_price')
+        .eq('is_active', true)
+        .order('name');
+
+      if (servicesError) {
+        console.error('Error fetching services:', servicesError);
+      } else {
+        setServices(servicesData || []);
+      }
+
+    } catch (error) {
+      console.error('Error:', error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ في جلب البيانات",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // تحميل البيانات عند تحميل الصفحة
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -142,27 +159,144 @@ const Orders = () => {
 
   const filteredOrders = orders.filter(order => {
     const matchesSearch = 
-      order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.service.toLowerCase().includes(searchTerm.toLowerCase());
+      order.order_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.customers?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.service_name?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === "all" || order.status === statusFilter;
     
     return matchesSearch && matchesStatus;
   });
 
-  const handleEditOrder = (order: any) => {
+  const handleAddOrder = async () => {
+    if (!newOrder.customer_id || !newOrder.service_name || !newOrder.amount) {
+      toast({
+        title: "خطأ",
+        description: "يرجى ملء جميع الحقول المطلوبة",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // استخدام الدالة لتوليد رقم الطلب
+      const { data: orderNumber, error: numberError } = await supabase
+        .rpc('generate_order_number');
+
+      if (numberError) {
+        console.error('Error generating order number:', numberError);
+        return;
+      }
+
+      const { error } = await supabase
+        .from('orders')
+        .insert({
+          order_number: orderNumber,
+          customer_id: newOrder.customer_id,
+          service_id: newOrder.service_id,
+          service_name: newOrder.service_name,
+          description: newOrder.description,
+          due_date: newOrder.due_date,
+          amount: parseFloat(newOrder.amount),
+          priority: newOrder.priority,
+          status: 'جديد'
+        });
+
+      if (error) {
+        console.error('Error adding order:', error);
+        toast({
+          title: "خطأ",
+          description: "حدث خطأ في إضافة الطلب",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      await fetchData();
+      setNewOrder({ customer_id: "", service_id: "", service_name: "", description: "", due_date: "", amount: "", priority: "متوسطة" });
+      setIsAddDialogOpen(false);
+      
+      toast({
+        title: "تم إضافة الطلب",
+        description: "تم إضافة الطلب بنجاح",
+      });
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
+  const handleEditOrder = (order) => {
     setEditingOrder(order);
     setNewOrder({
-      customer: order.customer,
-      service: order.service,
+      customer_id: order.customer_id,
+      service_id: order.service_id,
+      service_name: order.service_name,
       description: order.description,
-      dueDate: order.dueDate,
-      amount: order.amount,
+      due_date: order.due_date,
+      amount: order.amount.toString(),
       priority: order.priority
     });
     setIsEditDialogOpen(true);
   };
+
+  const handleUpdateOrder = async () => {
+    if (!newOrder.customer_id || !newOrder.service_name || !newOrder.amount) {
+      toast({
+        title: "خطأ",
+        description: "يرجى ملء جميع الحقول المطلوبة",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({
+          customer_id: newOrder.customer_id,
+          service_id: newOrder.service_id,
+          service_name: newOrder.service_name,
+          description: newOrder.description,
+          due_date: newOrder.due_date,
+          amount: parseFloat(newOrder.amount),
+          priority: newOrder.priority
+        })
+        .eq('id', editingOrder.id);
+
+      if (error) {
+        console.error('Error updating order:', error);
+        toast({
+          title: "خطأ",
+          description: "حدث خطأ في تحديث الطلب",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      await fetchData();
+      setNewOrder({ customer_id: "", service_id: "", service_name: "", description: "", due_date: "", amount: "", priority: "متوسطة" });
+      setIsEditDialogOpen(false);
+      setEditingOrder(null);
+      
+      toast({
+        title: "تم تحديث الطلب",
+        description: "تم تحديث الطلب بنجاح",
+      });
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">جاري تحميل الطلبات...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -217,55 +351,81 @@ const Orders = () => {
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="customer">العميل</Label>
-                  <Select>
+                  <Select value={newOrder.customer_id} onValueChange={(value) => setNewOrder({ ...newOrder, customer_id: value })}>
                     <SelectTrigger>
                       <SelectValue placeholder="اختر العميل" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="ahmed">أحمد محمد السالم</SelectItem>
-                      <SelectItem value="fatima">فاطمة علي الأحمد</SelectItem>
-                      <SelectItem value="mohammed">محمد عبدالله</SelectItem>
+                      {customers.map((customer) => (
+                        <SelectItem key={customer.id} value={customer.id}>
+                          {customer.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
                   <Label htmlFor="service">نوع الخدمة</Label>
-                  <Select>
+                  <Select value={newOrder.service_id} onValueChange={(value) => {
+                    const selectedService = services.find(s => s.id === value);
+                    setNewOrder({ 
+                      ...newOrder, 
+                      service_id: value, 
+                      service_name: selectedService?.name || "",
+                      amount: selectedService?.base_price?.toString() || ""
+                    });
+                  }}>
                     <SelectTrigger>
                       <SelectValue placeholder="اختر نوع الخدمة" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="logo">تصميم شعار</SelectItem>
-                      <SelectItem value="website">موقع إلكتروني</SelectItem>
-                      <SelectItem value="campaign">حملة إعلانية</SelectItem>
-                      <SelectItem value="branding">هوية بصرية</SelectItem>
+                      {services.map((service) => (
+                        <SelectItem key={service.id} value={service.id}>
+                          {service.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
                   <Label htmlFor="description">وصف الطلب</Label>
-                  <Textarea id="description" placeholder="تفاصيل الطلب..." />
+                  <Textarea 
+                    id="description" 
+                    value={newOrder.description}
+                    onChange={(e) => setNewOrder({ ...newOrder, description: e.target.value })}
+                    placeholder="تفاصيل الطلب..." 
+                  />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="dueDate">تاريخ التسليم</Label>
-                    <Input id="dueDate" type="date" />
+                    <Input 
+                      id="dueDate" 
+                      type="date" 
+                      value={newOrder.due_date}
+                      onChange={(e) => setNewOrder({ ...newOrder, due_date: e.target.value })}
+                    />
                   </div>
                   <div>
                     <Label htmlFor="amount">المبلغ</Label>
-                    <Input id="amount" placeholder="0.00 ر.س" />
+                    <Input 
+                      id="amount" 
+                      value={newOrder.amount}
+                      onChange={(e) => setNewOrder({ ...newOrder, amount: e.target.value })}
+                      placeholder="0.00 ر.س" 
+                    />
                   </div>
                 </div>
                 <div>
                   <Label htmlFor="priority">الأولوية</Label>
-                  <Select>
+                  <Select value={newOrder.priority} onValueChange={(value) => setNewOrder({ ...newOrder, priority: value })}>
                     <SelectTrigger>
                       <SelectValue placeholder="اختر الأولوية" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="high">عالية</SelectItem>
-                      <SelectItem value="medium">متوسطة</SelectItem>
-                      <SelectItem value="low">منخفضة</SelectItem>
+                      <SelectItem value="عالية">عالية</SelectItem>
+                      <SelectItem value="متوسطة">متوسطة</SelectItem>
+                      <SelectItem value="منخفضة">منخفضة</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -273,7 +433,7 @@ const Orders = () => {
                   <Button 
                     variant="hero" 
                     className="flex-1"
-                    onClick={() => setIsAddDialogOpen(false)}
+                    onClick={handleAddOrder}
                   >
                     إنشاء الطلب
                   </Button>
@@ -297,28 +457,38 @@ const Orders = () => {
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="edit-customer">العميل</Label>
-                  <Select value={newOrder.customer} onValueChange={(value) => setNewOrder({ ...newOrder, customer: value })}>
+                  <Select value={newOrder.customer_id} onValueChange={(value) => setNewOrder({ ...newOrder, customer_id: value })}>
                     <SelectTrigger>
                       <SelectValue placeholder="اختر العميل" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="أحمد محمد السالم">أحمد محمد السالم</SelectItem>
-                      <SelectItem value="فاطمة علي الأحمد">فاطمة علي الأحمد</SelectItem>
-                      <SelectItem value="محمد عبدالله">محمد عبدالله</SelectItem>
+                      {customers.map((customer) => (
+                        <SelectItem key={customer.id} value={customer.id}>
+                          {customer.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
                   <Label htmlFor="edit-service">نوع الخدمة</Label>
-                  <Select value={newOrder.service} onValueChange={(value) => setNewOrder({ ...newOrder, service: value })}>
+                  <Select value={newOrder.service_id} onValueChange={(value) => {
+                    const selectedService = services.find(s => s.id === value);
+                    setNewOrder({ 
+                      ...newOrder, 
+                      service_id: value, 
+                      service_name: selectedService?.name || ""
+                    });
+                  }}>
                     <SelectTrigger>
                       <SelectValue placeholder="اختر نوع الخدمة" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="تصميم شعار">تصميم شعار</SelectItem>
-                      <SelectItem value="موقع إلكتروني">موقع إلكتروني</SelectItem>
-                      <SelectItem value="حملة إعلانية">حملة إعلانية</SelectItem>
-                      <SelectItem value="هوية بصرية">هوية بصرية</SelectItem>
+                      {services.map((service) => (
+                        <SelectItem key={service.id} value={service.id}>
+                          {service.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -337,8 +507,8 @@ const Orders = () => {
                     <Input 
                       id="edit-dueDate" 
                       type="date" 
-                      value={newOrder.dueDate}
-                      onChange={(e) => setNewOrder({ ...newOrder, dueDate: e.target.value })}
+                      value={newOrder.due_date}
+                      onChange={(e) => setNewOrder({ ...newOrder, due_date: e.target.value })}
                     />
                   </div>
                   <div>
@@ -368,7 +538,7 @@ const Orders = () => {
                   <Button 
                     variant="hero" 
                     className="flex-1"
-                    onClick={() => setIsEditDialogOpen(false)}
+                    onClick={handleUpdateOrder}
                   >
                     تحديث الطلب
                   </Button>
@@ -395,7 +565,7 @@ const Orders = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">إجمالي الطلبات</p>
-                <p className="text-xl font-bold">127</p>
+                <p className="text-xl font-bold">{orders.length}</p>
               </div>
             </div>
           </CardContent>
@@ -409,7 +579,7 @@ const Orders = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">جديد</p>
-                <p className="text-xl font-bold">8</p>
+                <p className="text-xl font-bold">{orders.filter(o => o.status === 'جديد').length}</p>
               </div>
             </div>
           </CardContent>
@@ -423,7 +593,7 @@ const Orders = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">قيد التنفيذ</p>
-                <p className="text-xl font-bold">23</p>
+                <p className="text-xl font-bold">{orders.filter(o => o.status === 'قيد التنفيذ').length}</p>
               </div>
             </div>
           </CardContent>
@@ -437,7 +607,7 @@ const Orders = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">مكتمل</p>
-                <p className="text-xl font-bold">86</p>
+                <p className="text-xl font-bold">{orders.filter(o => o.status === 'مكتمل').length}</p>
               </div>
             </div>
           </CardContent>
@@ -451,7 +621,7 @@ const Orders = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">متأخر</p>
-                <p className="text-xl font-bold">3</p>
+                <p className="text-xl font-bold">{orders.filter(o => o.status === 'معلق').length}</p>
               </div>
             </div>
           </CardContent>
@@ -475,25 +645,24 @@ const Orders = () => {
                 <TableHead>التقدم</TableHead>
                 <TableHead>تاريخ التسليم</TableHead>
                 <TableHead>المبلغ</TableHead>
-                <TableHead>المسؤول</TableHead>
                 <TableHead>الإجراءات</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredOrders.map((order) => (
                 <TableRow key={order.id}>
-                  <TableCell className="font-medium">{order.id}</TableCell>
+                  <TableCell className="font-medium">{order.order_number || order.id}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <User className="h-4 w-4 text-muted-foreground" />
-                      {order.customer}
+                      {order.customers?.name || 'غير محدد'}
                     </div>
                   </TableCell>
                   <TableCell>
                     <div>
-                      <p className="font-medium">{order.service}</p>
+                      <p className="font-medium">{order.service_name || order.services?.name || 'غير محدد'}</p>
                       <p className="text-sm text-muted-foreground">
-                        {order.description.substring(0, 40)}...
+                        {order.description ? order.description.substring(0, 40) + '...' : 'لا يوجد وصف'}
                       </p>
                     </div>
                   </TableCell>
@@ -512,27 +681,26 @@ const Orders = () => {
                       <div className="w-full bg-muted rounded-full h-2">
                         <div
                           className="bg-primary h-2 rounded-full"
-                          style={{ width: `${order.progress}%` }}
+                          style={{ width: `${order.progress || 0}%` }}
                         />
                       </div>
                       <span className="text-sm text-muted-foreground">
-                        {order.progress}%
+                        {order.progress || 0}%
                       </span>
                     </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
                       <Calendar className="h-3 w-3" />
-                      {order.dueDate}
+                      {order.due_date ? new Date(order.due_date).toLocaleDateString('ar-SA') : 'غير محدد'}
                     </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
                       <DollarSign className="h-3 w-3" />
-                      {order.amount}
+                      {order.amount ? `${order.amount} ر.س` : 'غير محدد'}
                     </div>
                   </TableCell>
-                  <TableCell>{order.assignedTo}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Button variant="ghost" size="icon">
