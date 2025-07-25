@@ -1,74 +1,256 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from "recharts";
-import { Download, TrendingUp, Users, DollarSign, FileText } from "lucide-react";
+import { Download, TrendingUp, TrendingDown, Users, DollarSign, FileText, Calendar, Filter } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const Reports = () => {
   const [selectedPeriod, setSelectedPeriod] = useState("month");
   const [selectedReport, setSelectedReport] = useState("overview");
+  const [startDate, setStartDate] = useState(new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [loading, setLoading] = useState(false);
+  const [reportData, setReportData] = useState({
+    totalRevenue: 0,
+    totalCustomers: 0,
+    completedProjects: 0,
+    averageProjectValue: 0,
+    monthlyRevenue: [],
+    topCustomers: [],
+    expenses: []
+  });
 
-  // Mock data for charts
-  const monthlyRevenue = [
-    { month: "يناير", revenue: 45000, expenses: 25000 },
-    { month: "فبراير", revenue: 52000, expenses: 28000 },
-    { month: "مارس", revenue: 48000, expenses: 26000 },
-    { month: "أبريل", revenue: 61000, expenses: 32000 },
-    { month: "مايو", revenue: 55000, expenses: 29000 },
-    { month: "يونيو", revenue: 67000, expenses: 35000 },
-  ];
+  const { toast } = useToast();
 
-  const serviceDistribution = [
-    { name: "تطوير المواقع", value: 35, color: "hsl(var(--primary))" },
-    { name: "التسويق الرقمي", value: 25, color: "hsl(var(--success))" },
-    { name: "الاستشارات", value: 20, color: "hsl(var(--warning))" },
-    { name: "التصميم", value: 15, color: "hsl(var(--accent))" },
-    { name: "أخرى", value: 5, color: "hsl(var(--secondary))" },
-  ];
+  // جلب البيانات من قاعدة البيانات
+  const fetchReportData = async () => {
+    try {
+      setLoading(true);
 
-  const customerGrowth = [
-    { month: "يناير", customers: 12 },
-    { month: "فبراير", customers: 15 },
-    { month: "مارس", customers: 18 },
-    { month: "أبريل", customers: 22 },
-    { month: "مايو", customers: 28 },
-    { month: "يونيو", customers: 32 },
-  ];
+      // جلب الفواتير المدفوعة
+      const { data: invoices, error: invoicesError } = await supabase
+        .from('invoices')
+        .select(`
+          *,
+          customers(name, id)
+        `)
+        .eq('status', 'مدفوع')
+        .gte('payment_date', startDate)
+        .lte('payment_date', endDate);
 
-  const topCustomers = [
-    { name: "شركة الرائد للتجارة", revenue: 25000, projects: 3 },
-    { name: "مؤسسة النجاح", revenue: 18000, projects: 2 },
-    { name: "متجر الأناقة الإلكتروني", revenue: 15000, projects: 4 },
-    { name: "شركة الابتكار التقني", revenue: 12000, projects: 2 },
-    { name: "مكتب المحاماة المتقدم", revenue: 10000, projects: 1 },
-  ];
+      if (invoicesError) throw invoicesError;
+
+      // جلب المصروفات
+      const { data: expenses, error: expensesError } = await supabase
+        .from('expenses')
+        .select('*')
+        .gte('date', startDate)
+        .lte('date', endDate);
+
+      if (expensesError) throw expensesError;
+
+      // جلب الطلبات المكتملة
+      const { data: orders, error: ordersError } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('status', 'مكتمل')
+        .gte('completion_date', startDate)
+        .lte('completion_date', endDate);
+
+      if (ordersError) throw ordersError;
+
+      // حساب الإحصائيات
+      const totalRevenue = invoices?.reduce((sum, inv) => sum + (inv.total_amount || 0), 0) || 0;
+      const totalExpenses = expenses?.reduce((sum, exp) => sum + (exp.amount || 0), 0) || 0;
+      const uniqueCustomers = new Set(invoices?.map(inv => inv.customer_id)).size;
+      const completedProjects = orders?.length || 0;
+      const averageProjectValue = completedProjects > 0 ? totalRevenue / completedProjects : 0;
+
+      // تجميع البيانات الشهرية
+      const monthlyData = {};
+      invoices?.forEach(invoice => {
+        const month = new Date(invoice.payment_date).toLocaleDateString('ar-SA', { month: 'long' });
+        if (!monthlyData[month]) {
+          monthlyData[month] = { month, revenue: 0, expenses: 0 };
+        }
+        monthlyData[month].revenue += invoice.total_amount || 0;
+      });
+
+      expenses?.forEach(expense => {
+        const month = new Date(expense.date).toLocaleDateString('ar-SA', { month: 'long' });
+        if (!monthlyData[month]) {
+          monthlyData[month] = { month, revenue: 0, expenses: 0 };
+        }
+        monthlyData[month].expenses += expense.amount || 0;
+      });
+
+      // أفضل العملاء
+      const customerRevenue = {};
+      invoices?.forEach(invoice => {
+        const customerId = invoice.customer_id;
+        const customerName = invoice.customers?.name || 'غير محدد';
+        if (!customerRevenue[customerId]) {
+          customerRevenue[customerId] = { name: customerName, revenue: 0, projects: 0 };
+        }
+        customerRevenue[customerId].revenue += invoice.total_amount || 0;
+        customerRevenue[customerId].projects += 1;
+      });
+
+      const topCustomers = Object.values(customerRevenue)
+        .sort((a: any, b: any) => b.revenue - a.revenue)
+        .slice(0, 5);
+
+      setReportData({
+        totalRevenue,
+        totalCustomers: uniqueCustomers,
+        completedProjects,
+        averageProjectValue,
+        monthlyRevenue: Object.values(monthlyData),
+        topCustomers,
+        expenses: expenses || []
+      });
+
+    } catch (error) {
+      console.error('Error fetching report data:', error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ في جلب بيانات التقرير",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchReportData();
+  }, [startDate, endDate]);
+
+  // تصدير التقرير إلى CSV
+  const exportToCSV = () => {
+    try {
+      const csvData = [
+        ['التقرير المالي'],
+        ['الفترة:', `${startDate} إلى ${endDate}`],
+        [''],
+        ['الإحصائيات العامة'],
+        ['إجمالي الإيرادات', `${reportData.totalRevenue.toLocaleString()} ر.س`],
+        ['عدد العملاء', reportData.totalCustomers],
+        ['المشاريع المكتملة', reportData.completedProjects],
+        ['متوسط قيمة المشروع', `${reportData.averageProjectValue.toLocaleString()} ر.س`],
+        [''],
+        ['أفضل العملاء'],
+        ['اسم العميل', 'الإيرادات', 'عدد المشاريع']
+      ];
+
+      reportData.topCustomers.forEach((customer: any) => {
+        csvData.push([customer.name, `${customer.revenue.toLocaleString()} ر.س`, customer.projects]);
+      });
+
+      const csvContent = "data:text/csv;charset=utf-8," + csvData.map(row => row.join(',')).join('\n');
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `financial_report_${startDate}_to_${endDate}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast({
+        title: "نجح التصدير",
+        description: "تم تصدير التقرير بنجاح",
+      });
+    } catch (error) {
+      toast({
+        title: "خطأ في التصدير",
+        description: "حدث خطأ أثناء تصدير التقرير",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // تصدير إلى PDF
+  const exportToPDF = () => {
+    try {
+      window.print();
+      toast({
+        title: "طباعة/تصدير PDF",
+        description: "تم فتح نافذة الطباعة لحفظ التقرير كـ PDF",
+      });
+    } catch (error) {
+      toast({
+        title: "خطأ في الطباعة",
+        description: "حدث خطأ أثناء فتح نافذة الطباعة",
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">جاري تحميل التقرير...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-6 print:bg-white">
+      <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4 print:hidden">
         <div>
           <h1 className="text-3xl font-bold text-foreground">التقارير والإحصائيات</h1>
           <p className="text-muted-foreground">تحليل شامل لأداء الأعمال والإيرادات</p>
         </div>
-        <div className="flex gap-2">
-          <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="اختر الفترة" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="week">آخر أسبوع</SelectItem>
-              <SelectItem value="month">آخر شهر</SelectItem>
-              <SelectItem value="quarter">آخر ربع</SelectItem>
-              <SelectItem value="year">آخر سنة</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button className="gap-2">
-            <Download className="h-4 w-4" />
-            تصدير التقرير
-          </Button>
+        
+        <div className="flex flex-col sm:flex-row gap-2">
+          <div className="flex gap-2">
+            <div>
+              <Label htmlFor="start-date" className="text-xs">من تاريخ</Label>
+              <Input
+                id="start-date"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-40"
+              />
+            </div>
+            <div>
+              <Label htmlFor="end-date" className="text-xs">إلى تاريخ</Label>
+              <Input
+                id="end-date"
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-40"
+              />
+            </div>
+          </div>
+          
+          <div className="flex gap-2 items-end">
+            <Button onClick={exportToCSV} variant="outline" className="gap-2">
+              <Download className="h-4 w-4" />
+              تصدير Excel
+            </Button>
+            <Button onClick={exportToPDF} className="gap-2">
+              <FileText className="h-4 w-4" />
+              تصدير PDF
+            </Button>
+          </div>
         </div>
+      </div>
+
+      <div className="print:block hidden">
+        <h1 className="text-2xl font-bold text-center mb-4">التقرير المالي</h1>
+        <p className="text-center text-gray-600 mb-6">من {startDate} إلى {endDate}</p>
       </div>
 
       {/* Key Metrics */}
@@ -79,10 +261,10 @@ const Reports = () => {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">328,000 ر.س</div>
+            <div className="text-2xl font-bold">{reportData.totalRevenue.toLocaleString()} ر.س</div>
             <p className="text-xs text-muted-foreground flex items-center gap-1">
               <TrendingUp className="h-3 w-3 text-success" />
-              +18% من الشهر الماضي
+              خلال الفترة المحددة
             </p>
           </CardContent>
         </Card>
@@ -93,10 +275,10 @@ const Reports = () => {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">127</div>
+            <div className="text-2xl font-bold">{reportData.totalCustomers}</div>
             <p className="text-xs text-muted-foreground flex items-center gap-1">
               <TrendingUp className="h-3 w-3 text-success" />
-              +12 عميل جديد
+              عملاء نشطون
             </p>
           </CardContent>
         </Card>
@@ -107,8 +289,8 @@ const Reports = () => {
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">45</div>
-            <p className="text-xs text-muted-foreground">معدل إنجاز 95%</p>
+            <div className="text-2xl font-bold">{reportData.completedProjects}</div>
+            <p className="text-xs text-muted-foreground">خلال الفترة</p>
           </CardContent>
         </Card>
         
@@ -118,8 +300,8 @@ const Reports = () => {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">7,289 ر.س</div>
-            <p className="text-xs text-muted-foreground">+5% من المتوسط السابق</p>
+            <div className="text-2xl font-bold">{reportData.averageProjectValue.toLocaleString()} ر.س</div>
+            <p className="text-xs text-muted-foreground">متوسط الإيرادات</p>
           </CardContent>
         </Card>
       </div>
@@ -132,7 +314,7 @@ const Reports = () => {
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={monthlyRevenue}>
+            <BarChart data={reportData.monthlyRevenue}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="month" />
               <YAxis />
@@ -144,51 +326,43 @@ const Reports = () => {
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Service Distribution */}
+      <div className="grid gap-6 md:grid-cols-1">
+        {/* Revenue vs Expenses Summary */}
         <Card>
           <CardHeader>
-            <CardTitle>توزيع الخدمات</CardTitle>
-            <CardDescription>نسبة الإيرادات حسب نوع الخدمة</CardDescription>
+            <CardTitle>ملخص الأداء المالي</CardTitle>
+            <CardDescription>مقارنة الإيرادات والمصروفات خلال الفترة المحددة</CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie
-                  data={serviceDistribution}
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={80}
-                  fill="hsl(var(--primary))"
-                  dataKey="value"
-                  label={({ name, value }) => `${name}: ${value}%`}
-                >
-                  {serviceDistribution.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        {/* Customer Growth */}
-        <Card>
-          <CardHeader>
-            <CardTitle>نمو العملاء</CardTitle>
-            <CardDescription>عدد العملاء الجدد شهرياً</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={customerGrowth}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip />
-                <Line type="monotone" dataKey="customers" stroke="hsl(var(--primary))" strokeWidth={2} />
-              </LineChart>
-            </ResponsiveContainer>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="flex items-center justify-between p-4 border rounded-lg bg-success/5">
+                <div>
+                  <p className="text-sm text-muted-foreground">إجمالي الإيرادات</p>
+                  <p className="text-2xl font-bold text-success">{reportData.totalRevenue.toLocaleString()} ر.س</p>
+                </div>
+                <TrendingUp className="h-8 w-8 text-success" />
+              </div>
+              <div className="flex items-center justify-between p-4 border rounded-lg bg-destructive/5">
+                <div>
+                  <p className="text-sm text-muted-foreground">إجمالي المصروفات</p>
+                  <p className="text-2xl font-bold text-destructive">
+                    {reportData.expenses.reduce((sum: number, exp: any) => sum + (exp.amount || 0), 0).toLocaleString()} ر.س
+                  </p>
+                </div>
+                <TrendingDown className="h-8 w-8 text-destructive" />
+              </div>
+            </div>
+            <div className="mt-4 p-4 border rounded-lg bg-primary/5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">صافي الربح</p>
+                  <p className="text-2xl font-bold text-primary">
+                    {(reportData.totalRevenue - reportData.expenses.reduce((sum: number, exp: any) => sum + (exp.amount || 0), 0)).toLocaleString()} ر.س
+                  </p>
+                </div>
+                <DollarSign className="h-8 w-8 text-primary" />
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -201,7 +375,7 @@ const Reports = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {topCustomers.map((customer, index) => (
+            {reportData.topCustomers.map((customer: any, index) => (
               <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold">
@@ -215,11 +389,14 @@ const Reports = () => {
                 <div className="text-right">
                   <p className="font-bold">{customer.revenue.toLocaleString()} ر.س</p>
                   <Badge variant="outline">
-                    {((customer.revenue / 100000) * 100).toFixed(1)}% من الإجمالي
+                    {reportData.totalRevenue > 0 ? ((customer.revenue / reportData.totalRevenue) * 100).toFixed(1) : 0}% من الإجمالي
                   </Badge>
                 </div>
               </div>
             ))}
+            {reportData.topCustomers.length === 0 && (
+              <p className="text-center text-muted-foreground py-4">لا توجد بيانات عملاء في الفترة المحددة</p>
+            )}
           </div>
         </CardContent>
       </Card>
