@@ -320,7 +320,7 @@ const Reports = () => {
               <YAxis />
               <Tooltip />
               <Bar dataKey="revenue" fill="hsl(var(--primary))" name="الإيرادات" />
-              <Bar dataKey="expenses" fill="hsl(var(--success))" name="المصروفات" />
+              <Bar dataKey="expenses" fill="hsl(var(--destructive))" name="المصروفات" />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
