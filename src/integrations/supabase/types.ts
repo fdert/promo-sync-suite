@@ -278,7 +278,10 @@ export type Database = {
           created_at: string
           full_name: string | null
           id: string
+          last_login: string | null
           phone: string | null
+          role: string | null
+          status: string | null
           updated_at: string
         }
         Insert: {
@@ -287,7 +290,10 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id: string
+          last_login?: string | null
           phone?: string | null
+          role?: string | null
+          status?: string | null
           updated_at?: string
         }
         Update: {
@@ -296,7 +302,10 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+          last_login?: string | null
           phone?: string | null
+          role?: string | null
+          status?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -333,6 +342,35 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      user_permissions: {
+        Row: {
+          created_at: string | null
+          id: string
+          permission: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          permission: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          permission?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_permissions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -371,12 +409,20 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      has_permission: {
+        Args: { _user_id: string; _permission: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _user_id: string
           _role: Database["public"]["Enums"]["app_role"]
         }
         Returns: boolean
+      }
+      update_last_login: {
+        Args: { _user_id: string }
+        Returns: undefined
       }
     }
     Enums: {

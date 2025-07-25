@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,68 +10,11 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Users as UsersIcon, UserPlus, Settings, Shield, Edit, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const Users = () => {
-  const [users, setUsers] = useState([
-    {
-      id: 1,
-      name: "أحمد محمد السعيد",
-      email: "ahmed.admin@company.com",
-      role: "admin",
-      status: "active",
-      lastLogin: "منذ 10 دقائق",
-      permissions: [
-        "orders_view", "orders_create", "orders_edit", "orders_delete",
-        "customers_view", "customers_create", "customers_edit", "customers_delete",
-        "invoices_view", "invoices_create", "invoices_edit", "invoices_delete",
-        "accounts_view", "accounts_create", "accounts_edit", "accounts_delete",
-        "reports_view", "reports_create", "reports_export",
-        "users_view", "users_create", "users_edit", "users_delete",
-        "settings_view", "settings_edit"
-      ]
-    },
-    {
-      id: 2,
-      name: "سارة أحمد المدير",
-      email: "sara.manager@company.com", 
-      role: "manager",
-      status: "active",
-      lastLogin: "منذ ساعة",
-      permissions: [
-        "orders_view", "orders_create", "orders_edit",
-        "customers_view", "customers_create", "customers_edit", 
-        "invoices_view", "invoices_create", "invoices_edit",
-        "reports_view", "reports_create", "reports_export"
-      ]
-    },
-    {
-      id: 3,
-      name: "محمد علي المحاسب",
-      email: "mohammed.accountant@company.com",
-      role: "accountant", 
-      status: "active",
-      lastLogin: "منذ 30 دقيقة",
-      permissions: [
-        "invoices_view", "invoices_create", "invoices_edit", "invoices_delete",
-        "accounts_view", "accounts_create", "accounts_edit", 
-        "reports_view", "reports_export"
-      ]
-    },
-    {
-      id: 4,
-      name: "فاطمة النجار الموظف",
-      email: "fatima.employee@company.com",
-      role: "employee",
-      status: "active", 
-      lastLogin: "منذ يومين",
-      permissions: [
-        "orders_view", "orders_create",
-        "customers_view", "customers_edit",
-        "invoices_view"
-      ]
-    }
-  ]);
-
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [isEditUserOpen, setIsEditUserOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
@@ -84,6 +27,103 @@ const Users = () => {
   });
 
   const { toast } = useToast();
+
+  // جلب المستخدمين من قاعدة البيانات
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      
+      // جلب بيانات المستخدمين من جدول profiles 
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select(`
+          id,
+          full_name,
+          avatar_url,
+          phone,
+          company,
+          status,
+          last_login,
+          role
+        `);
+
+      if (profilesError) {
+        console.error('Error fetching profiles:', profilesError);
+        return;
+      }
+
+      // جلب صلاحيات كل مستخدم
+      const usersWithPermissions = await Promise.all(
+        profilesData.map(async (profile) => {
+          // جلب الدور من جدول user_roles
+          const { data: roleData, error: roleError } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', profile.id)
+            .single();
+
+          const { data: permissionsData, error: permissionsError } = await supabase
+            .from('user_permissions')
+            .select('permission')
+            .eq('user_id', profile.id);
+
+          if (permissionsError) {
+            console.error('Error fetching permissions:', permissionsError);
+          }
+
+          // جلب البريد الإلكتروني من جدول auth (للقراءة فقط)
+          let email = 'غير محدد';
+          try {
+            const { data: authData, error: authError } = await supabase.auth.admin.getUserById(profile.id);
+            email = authData?.user?.email || 'غير محدد';
+          } catch (authError) {
+            console.error('Error fetching auth data:', authError);
+          }
+          
+          return {
+            id: profile.id,
+            name: profile.full_name || 'غير محدد',
+            email: email,
+            role: roleData?.role || 'user',
+            status: profile.status || 'pending',
+            lastLogin: profile.last_login ? formatRelativeTime(profile.last_login) : 'لم يدخل بعد',
+            permissions: permissionsData?.map(p => p.permission) || []
+          };
+        })
+      );
+
+      setUsers(usersWithPermissions);
+    } catch (error) {
+      console.error('Error:', error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ في جلب بيانات المستخدمين",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // تنسيق الوقت النسبي
+  const formatRelativeTime = (timestamp: string) => {
+    const now = new Date();
+    const date = new Date(timestamp);
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+    
+    if (diffInMinutes < 60) {
+      return `منذ ${diffInMinutes} دقيقة`;
+    } else if (diffInMinutes < 1440) {
+      return `منذ ${Math.floor(diffInMinutes / 60)} ساعة`;
+    } else {
+      return `منذ ${Math.floor(diffInMinutes / 1440)} يوم`;
+    }
+  };
+
+  // تحميل البيانات عند تحميل الصفحة
+  useEffect(() => {
+    fetchUsers();
+  }, []);
 
   const roles = [
     { 
@@ -218,11 +258,11 @@ const Users = () => {
     return status === "active" ? (
       <Badge variant="default">نشط</Badge>
     ) : (
-      <Badge variant="outline">غير نشط</Badge>
+      <Badge variant="outline">قيد الانتظار</Badge>
     );
   };
 
-  const handleAddUser = () => {
+  const handleAddUser = async () => {
     if (!newUser.name || !newUser.email || !newUser.role) {
       toast({
         title: "خطأ",
@@ -232,22 +272,47 @@ const Users = () => {
       return;
     }
 
-    const userWithId = {
-      ...newUser,
-      id: users.length + 1,
-      status: "active",
-      lastLogin: "لم يدخل بعد",
-      permissions: newUser.permissions
-    };
+    try {
+      // إنشاء مستخدم جديد في Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: newUser.email,
+        password: newUser.password || 'TempPass123!',
+        email_confirm: true,
+        user_metadata: {
+          full_name: newUser.name
+        }
+      });
 
-    setUsers([...users, userWithId]);
-    setNewUser({ name: "", email: "", password: "", role: "", permissions: [] });
-    setIsAddUserOpen(false);
-    
-    toast({
-      title: "تم إضافة المستخدم",
-      description: "تم إضافة المستخدم الجديد بنجاح",
-    });
+      if (authError) {
+        toast({
+          title: "خطأ",
+          description: `خطأ في إنشاء المستخدم: ${authError.message}`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // تحديث الدور والصلاحيات
+      await updateUserRoleAndPermissions(authData.user.id, newUser.role, newUser.permissions);
+      
+      // إعادة جلب البيانات
+      await fetchUsers();
+      
+      setNewUser({ name: "", email: "", password: "", role: "", permissions: [] });
+      setIsAddUserOpen(false);
+      
+      toast({
+        title: "تم إضافة المستخدم",
+        description: "تم إضافة المستخدم الجديد بنجاح",
+      });
+    } catch (error) {
+      console.error('Error creating user:', error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ في إضافة المستخدم",
+        variant: "destructive",
+      });
+    }
   };
 
   const togglePermission = (permission: string) => {
@@ -267,23 +332,61 @@ const Users = () => {
     }
   };
 
-  const toggleUserStatus = (userId: number) => {
-    setUsers(users.map(user => 
-      user.id === userId 
-        ? { ...user, status: user.status === "active" ? "inactive" : "active" }
-        : user
-    ));
+  const toggleUserStatus = async (userId) => {
+    try {
+      const user = users.find(u => u.id === userId);
+      const newStatus = user.status === "active" ? "pending" : "active";
+      
+      const { error } = await supabase
+        .from('profiles')
+        .update({ status: newStatus })
+        .eq('id', userId);
+
+      if (error) {
+        toast({
+          title: "خطأ",
+          description: "حدث خطأ في تحديث حالة المستخدم",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      await fetchUsers();
+      
+      toast({
+        title: "تم التحديث",
+        description: `تم ${newStatus === 'active' ? 'تفعيل' : 'إلغاء تفعيل'} المستخدم`,
+      });
+    } catch (error) {
+      console.error('Error toggling user status:', error);
+    }
   };
 
-  const deleteUser = (userId: number) => {
-    setUsers(users.filter(user => user.id !== userId));
-    toast({
-      title: "تم حذف المستخدم",
-      description: "تم حذف المستخدم بنجاح",
-    });
+  const deleteUser = async (userId) => {
+    try {
+      const { error } = await supabase.auth.admin.deleteUser(userId);
+      
+      if (error) {
+        toast({
+          title: "خطأ",
+          description: "حدث خطأ في حذف المستخدم",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      await fetchUsers();
+      
+      toast({
+        title: "تم حذف المستخدم",
+        description: "تم حذف المستخدم بنجاح",
+      });
+    } catch (error) {
+      console.error('Error deleting user:', error);
+    }
   };
 
-  const handleEditUser = (user: any) => {
+  const handleEditUser = (user) => {
     setEditingUser(user);
     setNewUser({
       name: user.name,
@@ -295,7 +398,51 @@ const Users = () => {
     setIsEditUserOpen(true);
   };
 
-  const handleUpdateUser = () => {
+  const updateUserRoleAndPermissions = async (userId, role, permissions) => {
+    try {
+      // تحديث الدور
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .update({ role })
+        .eq('user_id', userId);
+
+      if (roleError) {
+        console.error('Error updating role:', roleError);
+        return;
+      }
+
+      // حذف الصلاحيات الحالية
+      const { error: deleteError } = await supabase
+        .from('user_permissions')
+        .delete()
+        .eq('user_id', userId);
+
+      if (deleteError) {
+        console.error('Error deleting permissions:', deleteError);
+        return;
+      }
+
+      // إضافة الصلاحيات الجديدة
+      if (permissions.length > 0) {
+        const permissionsData = permissions.map(permission => ({
+          user_id: userId,
+          permission
+        }));
+
+        const { error: insertError } = await supabase
+          .from('user_permissions')
+          .insert(permissionsData);
+
+        if (insertError) {
+          console.error('Error inserting permissions:', insertError);
+        }
+      }
+    } catch (error) {
+      console.error('Error updating user role and permissions:', error);
+    }
+  };
+
+  const handleUpdateUser = async () => {
     if (!newUser.name || !newUser.email || !newUser.role) {
       toast({
         title: "خطأ",
@@ -305,27 +452,43 @@ const Users = () => {
       return;
     }
 
-    const selectedRole = roles.find(r => r.value === newUser.role);
-    setUsers(users.map(user => 
-      user.id === editingUser?.id 
-        ? { 
-            ...user, 
-            name: newUser.name,
-            email: newUser.email,
-            role: newUser.role,
-            permissions: newUser.permissions
-          }
-        : user
-    ));
-    
-    setNewUser({ name: "", email: "", password: "", role: "", permissions: [] });
-    setIsEditUserOpen(false);
-    setEditingUser(null);
-    
-    toast({
-      title: "تم تحديث المستخدم",
-      description: "تم تحديث بيانات المستخدم بنجاح",
-    });
+    try {
+      // تحديث البيانات الشخصية
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ 
+          full_name: newUser.name,
+          status: 'active' // تفعيل المستخدم بعد التحديث
+        })
+        .eq('id', editingUser.id);
+
+      if (profileError) {
+        console.error('Error updating profile:', profileError);
+        return;
+      }
+
+      // تحديث الدور والصلاحيات
+      await updateUserRoleAndPermissions(editingUser.id, newUser.role, newUser.permissions);
+      
+      // إعادة جلب البيانات
+      await fetchUsers();
+      
+      setNewUser({ name: "", email: "", password: "", role: "", permissions: [] });
+      setIsEditUserOpen(false);
+      setEditingUser(null);
+      
+      toast({
+        title: "تم تحديث المستخدم",
+        description: "تم تحديث بيانات المستخدم وتفعيله بنجاح",
+      });
+    } catch (error) {
+      console.error('Error updating user:', error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ في تحديث المستخدم",
+        variant: "destructive",
+      });
+    }
   };
 
   const applyRolePermissions = (roleValue: string) => {
@@ -338,6 +501,17 @@ const Users = () => {
       });
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">جاري تحميل المستخدمين...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -353,7 +527,7 @@ const Users = () => {
               إضافة مستخدم جديد
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>إضافة مستخدم جديد</DialogTitle>
               <DialogDescription>
@@ -418,13 +592,11 @@ const Users = () => {
                             const hasAll = allGroupActions.every(action => newUser.permissions.includes(action));
                             
                             if (hasAll) {
-                              // إزالة جميع صلاحيات هذه المجموعة
                               setNewUser({
                                 ...newUser,
                                 permissions: newUser.permissions.filter(p => !allGroupActions.includes(p))
                               });
                             } else {
-                              // إضافة جميع صلاحيات هذه المجموعة
                               const newPermissions = [...newUser.permissions];
                               allGroupActions.forEach(action => {
                                 if (!newPermissions.includes(action)) {
@@ -478,7 +650,7 @@ const Users = () => {
 
         {/* Edit User Dialog */}
         <Dialog open={isEditUserOpen} onOpenChange={setIsEditUserOpen}>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>تعديل بيانات المستخدم</DialogTitle>
               <DialogDescription>
@@ -501,6 +673,7 @@ const Users = () => {
                   value={newUser.email}
                   onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
                   placeholder="أدخل البريد الإلكتروني"
+                  disabled
                 />
               </div>
               <div className="space-y-2">
