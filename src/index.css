@@ -17,9 +17,9 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 226 14% 12%;
 
-    --primary: 258 86% 60%;
+    --primary: 258 90% 66%;
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 258 86% 70%;
+    --primary-glow: 258 90% 76%;
 
     --secondary: 226 14% 93%;
     --secondary-foreground: 226 14% 12%;
@@ -27,7 +27,7 @@ All colors MUST be HSL.
     --muted: 226 14% 96%;
     --muted-foreground: 226 14% 46%;
 
-    --accent: 196 88% 55%;
+    --accent: 200 100% 60%;
     --accent-foreground: 0 0% 100%;
 
     --success: 142 76% 36%;
@@ -45,10 +45,10 @@ All colors MUST be HSL.
 
     /* تدرجات لونية جميلة */
     --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)));
-    --gradient-hero: linear-gradient(135deg, hsl(258 86% 60%), hsl(196 88% 55%), hsl(258 86% 70%));
+    --gradient-hero: linear-gradient(135deg, hsl(258 90% 66%), hsl(200 100% 60%), hsl(258 90% 76%));
     --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(226 14% 98%));
     --gradient-subtle: linear-gradient(180deg, hsl(var(--background)), hsl(226 14% 98%));
-    --gradient-accent: linear-gradient(135deg, hsl(196 88% 55%), hsl(258 86% 60%));
+    --gradient-accent: linear-gradient(135deg, hsl(200 100% 60%), hsl(258 90% 66%));
     
     /* ظلال أنيقة */
     --shadow-elegant: 0 10px 30px -10px hsl(var(--primary) / 0.15);
@@ -89,9 +89,9 @@ All colors MUST be HSL.
     --popover: 225 39% 5%;
     --popover-foreground: 226 14% 96%;
 
-    --primary: 258 86% 70%;
+    --primary: 258 90% 75%;
     --primary-foreground: 225 39% 5%;
-    --primary-glow: 258 86% 80%;
+    --primary-glow: 258 90% 85%;
 
     --secondary: 225 39% 12%;
     --secondary-foreground: 226 14% 96%;
@@ -99,7 +99,7 @@ All colors MUST be HSL.
     --muted: 225 39% 12%;
     --muted-foreground: 226 14% 65%;
 
-    --accent: 196 88% 65%;
+    --accent: 200 100% 70%;
     --accent-foreground: 225 39% 5%;
 
     --success: 142 76% 46%;

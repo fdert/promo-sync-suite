@@ -9,13 +9,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Settings as SettingsIcon, User, Building2, Bell, Shield, Palette, Database } from "lucide-react";
+import { Settings as SettingsIcon, User, Building2, Bell, Shield, Palette, Database, Paintbrush } from "lucide-react";
 
 const Settings = () => {
   const [notifications, setNotifications] = useState(true);
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
   const [autoBackup, setAutoBackup] = useState(true);
+  
+  // Color settings states
+  const [primaryColor, setPrimaryColor] = useState("#8b5cf6");
+  const [accentColor, setAccentColor] = useState("#0ea5e9");
+  const [successColor, setSuccessColor] = useState("#16a34a");
+  const [warningColor, setWarningColor] = useState("#f97316");
+  const [errorColor, setErrorColor] = useState("#dc2626");
 
   return (
     <div className="space-y-6">
@@ -27,7 +34,7 @@ const Settings = () => {
       </div>
 
       <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="profile" className="gap-2">
             <User className="h-4 w-4" />
             الملف الشخصي
@@ -51,6 +58,10 @@ const Settings = () => {
           <TabsTrigger value="system" className="gap-2">
             <Database className="h-4 w-4" />
             النظام
+          </TabsTrigger>
+          <TabsTrigger value="colors" className="gap-2">
+            <Paintbrush className="h-4 w-4" />
+            الألوان
           </TabsTrigger>
         </TabsList>
 
@@ -388,6 +399,195 @@ const Settings = () => {
               <div className="flex gap-2 justify-end">
                 <Button variant="outline">إنشاء نسخة احتياطية</Button>
                 <Button variant="outline">تحقق من التحديثات</Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Color Settings */}
+        <TabsContent value="colors">
+          <Card>
+            <CardHeader>
+              <CardTitle>إعدادات الألوان</CardTitle>
+              <CardDescription>تخصيص ألوان النظام الأساسية</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid gap-6 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="primaryColor">اللون الأساسي</Label>
+                  <div className="flex items-center gap-3">
+                    <Input
+                      id="primaryColor"
+                      type="color"
+                      value={primaryColor}
+                      onChange={(e) => setPrimaryColor(e.target.value)}
+                      className="w-16 h-10 p-1 border rounded"
+                    />
+                    <Input
+                      value={primaryColor}
+                      onChange={(e) => setPrimaryColor(e.target.value)}
+                      placeholder="#8b5cf6"
+                      className="flex-1"
+                    />
+                  </div>
+                  <p className="text-sm text-muted-foreground">اللون الرئيسي للأزرار والروابط</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="accentColor">اللون المميز</Label>
+                  <div className="flex items-center gap-3">
+                    <Input
+                      id="accentColor"
+                      type="color"
+                      value={accentColor}
+                      onChange={(e) => setAccentColor(e.target.value)}
+                      className="w-16 h-10 p-1 border rounded"
+                    />
+                    <Input
+                      value={accentColor}
+                      onChange={(e) => setAccentColor(e.target.value)}
+                      placeholder="#0ea5e9"
+                      className="flex-1"
+                    />
+                  </div>
+                  <p className="text-sm text-muted-foreground">لون مميز للتدرجات والتأكيدات</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="successColor">لون النجاح</Label>
+                  <div className="flex items-center gap-3">
+                    <Input
+                      id="successColor"
+                      type="color"
+                      value={successColor}
+                      onChange={(e) => setSuccessColor(e.target.value)}
+                      className="w-16 h-10 p-1 border rounded"
+                    />
+                    <Input
+                      value={successColor}
+                      onChange={(e) => setSuccessColor(e.target.value)}
+                      placeholder="#16a34a"
+                      className="flex-1"
+                    />
+                  </div>
+                  <p className="text-sm text-muted-foreground">لون رسائل النجاح والحالات الإيجابية</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="warningColor">لون التحذير</Label>
+                  <div className="flex items-center gap-3">
+                    <Input
+                      id="warningColor"
+                      type="color"
+                      value={warningColor}
+                      onChange={(e) => setWarningColor(e.target.value)}
+                      className="w-16 h-10 p-1 border rounded"
+                    />
+                    <Input
+                      value={warningColor}
+                      onChange={(e) => setWarningColor(e.target.value)}
+                      placeholder="#f97316"
+                      className="flex-1"
+                    />
+                  </div>
+                  <p className="text-sm text-muted-foreground">لون رسائل التحذير والحالات المعلقة</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="errorColor">لون الخطأ</Label>
+                  <div className="flex items-center gap-3">
+                    <Input
+                      id="errorColor"
+                      type="color"
+                      value={errorColor}
+                      onChange={(e) => setErrorColor(e.target.value)}
+                      className="w-16 h-10 p-1 border rounded"
+                    />
+                    <Input
+                      value={errorColor}
+                      onChange={(e) => setErrorColor(e.target.value)}
+                      placeholder="#dc2626"
+                      className="flex-1"
+                    />
+                  </div>
+                  <p className="text-sm text-muted-foreground">لون رسائل الخطأ والحالات السلبية</p>
+                </div>
+              </div>
+
+              <div className="border-t pt-6">
+                <h4 className="font-medium mb-4">معاينة الألوان</h4>
+                <div className="grid gap-4 md:grid-cols-5">
+                  <div className="text-center">
+                    <div 
+                      className="w-full h-16 rounded-lg mb-2 flex items-center justify-center text-white font-medium"
+                      style={{ backgroundColor: primaryColor }}
+                    >
+                      أساسي
+                    </div>
+                    <p className="text-sm text-muted-foreground">Primary</p>
+                  </div>
+                  <div className="text-center">
+                    <div 
+                      className="w-full h-16 rounded-lg mb-2 flex items-center justify-center text-white font-medium"
+                      style={{ backgroundColor: accentColor }}
+                    >
+                      مميز
+                    </div>
+                    <p className="text-sm text-muted-foreground">Accent</p>
+                  </div>
+                  <div className="text-center">
+                    <div 
+                      className="w-full h-16 rounded-lg mb-2 flex items-center justify-center text-white font-medium"
+                      style={{ backgroundColor: successColor }}
+                    >
+                      نجاح
+                    </div>
+                    <p className="text-sm text-muted-foreground">Success</p>
+                  </div>
+                  <div className="text-center">
+                    <div 
+                      className="w-full h-16 rounded-lg mb-2 flex items-center justify-center text-white font-medium"
+                      style={{ backgroundColor: warningColor }}
+                    >
+                      تحذير
+                    </div>
+                    <p className="text-sm text-muted-foreground">Warning</p>
+                  </div>
+                  <div className="text-center">
+                    <div 
+                      className="w-full h-16 rounded-lg mb-2 flex items-center justify-center text-white font-medium"
+                      style={{ backgroundColor: errorColor }}
+                    >
+                      خطأ
+                    </div>
+                    <p className="text-sm text-muted-foreground">Error</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t pt-6">
+                <h4 className="font-medium mb-4">إعدادات متقدمة</h4>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-base">تطبيق الألوان تلقائياً</Label>
+                      <p className="text-sm text-muted-foreground">تطبيق التغييرات فور التعديل</p>
+                    </div>
+                    <Switch defaultChecked />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-base">حفظ الإعدادات محلياً</Label>
+                      <p className="text-sm text-muted-foreground">حفظ تفضيلات الألوان في المتصفح</p>
+                    </div>
+                    <Switch defaultChecked />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline">إعادة تعيين</Button>
+                <Button>حفظ الألوان</Button>
               </div>
             </CardContent>
           </Card>
