@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Search, Eye, Printer, MessageCircle, Calendar, Filter } from "lucide-react";
+import { Plus, Search, Eye, Printer, MessageCircle, Calendar, Filter, Trash2, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -30,6 +30,9 @@ const Invoices = () => {
     notes: "",
     payment_method: ""
   });
+  const [invoiceItems, setInvoiceItems] = useState([
+    { item_name: "", description: "", quantity: 1, unit_price: 0, total_amount: 0 }
+  ]);
 
   const { toast } = useToast();
 
@@ -88,39 +91,87 @@ const Invoices = () => {
     fetchCustomers();
   }, []);
 
+  // إضافة بند جديد
+  const addInvoiceItem = () => {
+    setInvoiceItems([...invoiceItems, { item_name: "", description: "", quantity: 1, unit_price: 0, total_amount: 0 }]);
+  };
+
+  // حذف بند
+  const removeInvoiceItem = (index: number) => {
+    if (invoiceItems.length > 1) {
+      setInvoiceItems(invoiceItems.filter((_, i) => i !== index));
+    }
+  };
+
+  // تحديث بند
+  const updateInvoiceItem = (index: number, field: string, value: any) => {
+    const updatedItems = [...invoiceItems];
+    updatedItems[index] = { ...updatedItems[index], [field]: value };
+    
+    // حساب الإجمالي التلقائي
+    if (field === 'quantity' || field === 'unit_price') {
+      updatedItems[index].total_amount = updatedItems[index].quantity * updatedItems[index].unit_price;
+    }
+    
+    setInvoiceItems(updatedItems);
+    updateInvoiceTotal(updatedItems);
+  };
+
+  // تحديث إجمالي الفاتورة
+  const updateInvoiceTotal = (items: any[]) => {
+    const subtotal = items.reduce((sum, item) => sum + item.total_amount, 0);
+    const tax = parseFloat(newInvoice.tax_amount) || 0;
+    const total = subtotal + tax;
+    setNewInvoice({ ...newInvoice, amount: total.toString() });
+  };
+
   // إضافة فاتورة جديدة
   const handleAddInvoice = async () => {
-    if (!newInvoice.customer_id || !newInvoice.amount || !newInvoice.due_date) {
+    if (!newInvoice.customer_id || !newInvoice.due_date || invoiceItems.some(item => !item.item_name || item.unit_price <= 0)) {
       toast({
         title: "خطأ",
-        description: "يرجى ملء الحقول المطلوبة",
+        description: "يرجى ملء جميع الحقول المطلوبة وإضافة بنود صالحة",
         variant: "destructive",
       });
       return;
     }
 
     try {
-      const { data: invoiceNumber } = await supabase.rpc('generate_invoice_number');
-      
-      const total_amount = parseFloat(newInvoice.amount) + (parseFloat(newInvoice.tax_amount) || 0);
-      
-      const { error } = await supabase
+      // حساب الإجماليات
+      const subtotal = invoiceItems.reduce((sum, item) => sum + item.total_amount, 0);
+      const taxAmount = parseFloat(newInvoice.tax_amount) || 0;
+      const totalAmount = subtotal + taxAmount;
+
+      // إنشاء رقم الفاتورة
+      const { data: invoiceNumber, error: numberError } = await supabase
+        .rpc('generate_invoice_number');
+
+      if (numberError) {
+        console.error('Error generating invoice number:', numberError);
+        return;
+      }
+
+      // إضافة الفاتورة
+      const { data: invoice, error: invoiceError } = await supabase
         .from('invoices')
         .insert({
           invoice_number: invoiceNumber,
           customer_id: newInvoice.customer_id,
-          amount: parseFloat(newInvoice.amount),
-          tax_amount: parseFloat(newInvoice.tax_amount) || 0,
-          total_amount: total_amount,
+          amount: subtotal,
+          tax_amount: taxAmount,
+          total_amount: totalAmount,
           due_date: newInvoice.due_date,
           is_deferred: newInvoice.is_deferred,
-          notes: newInvoice.notes,
           payment_method: newInvoice.payment_method,
-          status: 'قيد الانتظار'
-        });
+          notes: newInvoice.notes,
+          status: 'قيد الانتظار',
+          created_by: (await supabase.auth.getUser()).data.user?.id
+        })
+        .select()
+        .single();
 
-      if (error) {
-        console.error('Error adding invoice:', error);
+      if (invoiceError) {
+        console.error('Error adding invoice:', invoiceError);
         toast({
           title: "خطأ",
           description: "حدث خطأ في إضافة الفاتورة",
@@ -129,12 +180,33 @@ const Invoices = () => {
         return;
       }
 
-      toast({
-        title: "نجح",
-        description: "تم إضافة الفاتورة بنجاح",
-      });
+      // إضافة بنود الفاتورة
+      const itemsToInsert = invoiceItems.map(item => ({
+        invoice_id: invoice.id,
+        item_name: item.item_name,
+        description: item.description,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        total_amount: item.total_amount
+      }));
 
-      setIsAddDialogOpen(false);
+      const { error: itemsError } = await supabase
+        .from('invoice_items')
+        .insert(itemsToInsert);
+
+      if (itemsError) {
+        console.error('Error adding invoice items:', itemsError);
+        // حذف الفاتورة إذا فشلت إضافة البنود
+        await supabase.from('invoices').delete().eq('id', invoice.id);
+        toast({
+          title: "خطأ",
+          description: "حدث خطأ في إضافة بنود الفاتورة",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      await fetchInvoices();
       setNewInvoice({
         customer_id: "",
         amount: "",
@@ -144,7 +216,13 @@ const Invoices = () => {
         notes: "",
         payment_method: ""
       });
-      fetchInvoices();
+      setInvoiceItems([{ item_name: "", description: "", quantity: 1, unit_price: 0, total_amount: 0 }]);
+      setIsAddDialogOpen(false);
+      
+      toast({
+        title: "تم إنشاء الفاتورة",
+        description: "تم إنشاء الفاتورة بنجاح",
+      });
     } catch (error) {
       console.error('Error:', error);
     }
@@ -269,15 +347,109 @@ const Invoices = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
-                  <Label htmlFor="amount">المبلغ (ر.س)</Label>
-                  <Input
-                    id="amount"
-                    type="number"
-                    value={newInvoice.amount}
-                    onChange={(e) => setNewInvoice({...newInvoice, amount: e.target.value})}
-                    placeholder="0.00"
-                  />
+              </div>
+
+              {/* بنود الفاتورة */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label className="text-base font-semibold">بنود الفاتورة</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addInvoiceItem}
+                    className="gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    إضافة بند
+                  </Button>
+                </div>
+
+                <div className="space-y-3">
+                  {invoiceItems.map((item, index) => (
+                    <div key={index} className="grid grid-cols-12 gap-2 items-end p-3 border rounded-lg">
+                      <div className="col-span-3">
+                        <Label htmlFor={`item_name_${index}`} className="text-xs">اسم البند</Label>
+                        <Input
+                          id={`item_name_${index}`}
+                          value={item.item_name}
+                          onChange={(e) => updateInvoiceItem(index, 'item_name', e.target.value)}
+                          placeholder="اسم البند"
+                          className="text-sm"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <Label htmlFor={`description_${index}`} className="text-xs">الوصف</Label>
+                        <Input
+                          id={`description_${index}`}
+                          value={item.description}
+                          onChange={(e) => updateInvoiceItem(index, 'description', e.target.value)}
+                          placeholder="الوصف"
+                          className="text-sm"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <Label htmlFor={`quantity_${index}`} className="text-xs">الكمية</Label>
+                        <Input
+                          id={`quantity_${index}`}
+                          type="number"
+                          value={item.quantity}
+                          onChange={(e) => updateInvoiceItem(index, 'quantity', parseFloat(e.target.value) || 0)}
+                          min="0"
+                          step="0.01"
+                          className="text-sm"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <Label htmlFor={`unit_price_${index}`} className="text-xs">السعر الفردي</Label>
+                        <Input
+                          id={`unit_price_${index}`}
+                          type="number"
+                          value={item.unit_price}
+                          onChange={(e) => updateInvoiceItem(index, 'unit_price', parseFloat(e.target.value) || 0)}
+                          min="0"
+                          step="0.01"
+                          className="text-sm"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <Label className="text-xs">الإجمالي</Label>
+                        <Input
+                          value={item.total_amount.toFixed(2)}
+                          readOnly
+                          className="text-sm bg-muted"
+                        />
+                      </div>
+                      <div className="col-span-1">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => removeInvoiceItem(index)}
+                          disabled={invoiceItems.length === 1}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* ملخص المبالغ */}
+                <div className="border-t pt-4 space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>المجموع الفرعي:</span>
+                    <span>{invoiceItems.reduce((sum, item) => sum + item.total_amount, 0).toFixed(2)} ر.س</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>الضريبة:</span>
+                    <span>{parseFloat(newInvoice.tax_amount) || 0} ر.س</span>
+                  </div>
+                  <div className="flex justify-between text-base font-semibold border-t pt-2">
+                    <span>الإجمالي النهائي:</span>
+                    <span>{(invoiceItems.reduce((sum, item) => sum + item.total_amount, 0) + (parseFloat(newInvoice.tax_amount) || 0)).toFixed(2)} ر.س</span>
+                  </div>
                 </div>
               </div>
               
@@ -288,7 +460,10 @@ const Invoices = () => {
                     id="tax_amount"
                     type="number"
                     value={newInvoice.tax_amount}
-                    onChange={(e) => setNewInvoice({...newInvoice, tax_amount: e.target.value})}
+                    onChange={(e) => {
+                      setNewInvoice({...newInvoice, tax_amount: e.target.value});
+                      updateInvoiceTotal(invoiceItems);
+                    }}
                     placeholder="0.00"
                   />
                 </div>
