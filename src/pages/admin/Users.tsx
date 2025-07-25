@@ -15,41 +15,59 @@ const Users = () => {
   const [users, setUsers] = useState([
     {
       id: 1,
-      name: "أحمد محمد",
-      email: "ahmed@example.com",
+      name: "أحمد محمد السعيد",
+      email: "ahmed.admin@company.com",
       role: "admin",
       status: "active",
-      lastLogin: "منذ ساعة",
+      lastLogin: "منذ 10 دقائق",
       permissions: [
         "orders_view", "orders_create", "orders_edit", "orders_delete",
         "customers_view", "customers_create", "customers_edit", "customers_delete",
         "invoices_view", "invoices_create", "invoices_edit", "invoices_delete",
-        "reports_view", "reports_create", "reports_export"
+        "accounts_view", "accounts_create", "accounts_edit", "accounts_delete",
+        "reports_view", "reports_create", "reports_export",
+        "users_view", "users_create", "users_edit", "users_delete",
+        "settings_view", "settings_edit"
       ]
     },
     {
       id: 2,
-      name: "فاطمة علي",
-      email: "fatima@example.com",
-      role: "employee",
+      name: "سارة أحمد المدير",
+      email: "sara.manager@company.com", 
+      role: "manager",
       status: "active",
-      lastLogin: "منذ يومين",
+      lastLogin: "منذ ساعة",
       permissions: [
         "orders_view", "orders_create", "orders_edit",
-        "customers_view", "customers_create", "customers_edit",
-        "invoices_view", "invoices_create"
+        "customers_view", "customers_create", "customers_edit", 
+        "invoices_view", "invoices_create", "invoices_edit",
+        "reports_view", "reports_create", "reports_export"
       ]
     },
     {
       id: 3,
-      name: "محمد حسن",
-      email: "mohammed@example.com",
-      role: "accountant",
-      status: "inactive",
-      lastLogin: "منذ أسبوع",
+      name: "محمد علي المحاسب",
+      email: "mohammed.accountant@company.com",
+      role: "accountant", 
+      status: "active",
+      lastLogin: "منذ 30 دقيقة",
       permissions: [
         "invoices_view", "invoices_create", "invoices_edit", "invoices_delete",
-        "accounts_view", "accounts_create", "accounts_edit"
+        "accounts_view", "accounts_create", "accounts_edit", 
+        "reports_view", "reports_export"
+      ]
+    },
+    {
+      id: 4,
+      name: "فاطمة النجار الموظف",
+      email: "fatima.employee@company.com",
+      role: "employee",
+      status: "active", 
+      lastLogin: "منذ يومين",
+      permissions: [
+        "orders_view", "orders_create",
+        "customers_view", "customers_edit",
+        "invoices_view"
       ]
     }
   ]);
