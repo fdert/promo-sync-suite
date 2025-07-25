@@ -543,7 +543,7 @@ const WebsiteContent = () => {
                               <Star
                                 className={`h-4 w-4 ${
                                   star <= testimonial.rating
-                                    ? "fill-yellow-400 text-yellow-400"
+                                    ? "fill-accent text-accent"
                                     : "text-gray-300"
                                 }`}
                               />

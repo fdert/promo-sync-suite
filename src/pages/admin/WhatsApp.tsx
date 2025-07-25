@@ -64,7 +64,7 @@ const WhatsApp = () => {
       case "unread":
         return <Badge className="bg-red-100 text-red-800">غير مقروء</Badge>;
       case "read":
-        return <Badge className="bg-yellow-100 text-yellow-800">مقروء</Badge>;
+        return <Badge className="bg-warning/10 text-warning-foreground">مقروء</Badge>;
       case "replied":
         return <Badge className="bg-green-100 text-green-800">تم الرد</Badge>;
       default:
@@ -109,8 +109,8 @@ const WhatsApp = () => {
             </Button>
           </div>
           {!isConnected && (
-            <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <p className="text-sm text-yellow-800">
+            <div className="mt-4 p-4 bg-warning/10 border border-warning/20 rounded-lg">
+              <p className="text-sm text-warning-foreground">
                 لربط حساب WhatsApp Business، يرجى مسح رمز QR باستخدام تطبيق واتساب.
               </p>
             </div>

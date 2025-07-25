@@ -122,7 +122,7 @@ const Orders = () => {
       case "عالية":
         return "bg-red-50 text-red-600";
       case "متوسطة":
-        return "bg-yellow-50 text-yellow-600";
+        return "bg-warning/10 text-warning-foreground";
       case "منخفضة":
         return "bg-green-50 text-green-600";
       default:

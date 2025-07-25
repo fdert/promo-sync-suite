@@ -189,7 +189,7 @@ const WebhookSettings = () => {
       case "failed":
         return <Badge className="bg-red-100 text-red-800"><X className="w-3 h-3 mr-1" />فشل</Badge>;
       case "pending":
-        return <Badge className="bg-yellow-100 text-yellow-800"><Clock className="w-3 h-3 mr-1" />معلق</Badge>;
+        return <Badge className="bg-warning/10 text-warning-foreground"><Clock className="w-3 h-3 mr-1" />معلق</Badge>;
       default:
         return <Badge>{status}</Badge>;
     }

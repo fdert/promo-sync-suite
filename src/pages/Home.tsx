@@ -205,7 +205,7 @@ const Home = () => {
                 <CardContent className="p-6">
                   <div className="flex items-center gap-1 mb-4">
                     {[...Array(testimonial.rating)].map((_, i) => (
-                      <Star key={i} className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+                      <Star key={i} className="h-5 w-5 fill-accent text-accent" />
                     ))}
                   </div>
                   <p className="text-muted-foreground mb-4 italic">

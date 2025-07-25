@@ -45,7 +45,7 @@ const Invoices = () => {
       case "paid":
         return <Badge className="bg-green-100 text-green-800">مدفوع</Badge>;
       case "pending":
-        return <Badge className="bg-yellow-100 text-yellow-800">قيد الانتظار</Badge>;
+        return <Badge className="bg-warning/10 text-warning-foreground">قيد الانتظار</Badge>;
       case "overdue":
         return <Badge className="bg-red-100 text-red-800">متأخر</Badge>;
       default:
