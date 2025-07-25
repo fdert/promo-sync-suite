@@ -101,9 +101,6 @@ const Home = () => {
               <a href="#contact" className="text-muted-foreground hover:text-primary transition-colors">
                 تواصل معنا
               </a>
-              <Link to="/admin">
-                <Button variant="outline">لوحة الإدارة</Button>
-              </Link>
               <Link to="/auth">
                 <Button>تسجيل الدخول</Button>
               </Link>
