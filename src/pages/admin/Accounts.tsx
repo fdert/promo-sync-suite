@@ -1,16 +1,136 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, TrendingUp, TrendingDown, DollarSign, CreditCard } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Plus, TrendingUp, TrendingDown, DollarSign, CreditCard, Receipt, CalendarRange } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const Accounts = () => {
+  const [expenses, setExpenses] = useState([]);
+  const [invoices, setInvoices] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState("month");
+  const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
+  const [newExpense, setNewExpense] = useState({
+    description: "",
+    amount: "",
+    category: "",
+    date: new Date().toISOString().split('T')[0],
+    payment_method: "",
+    notes: ""
+  });
 
-  // Mock data - في التطبيق الحقيقي سيأتي من قاعدة البيانات
+  const { toast } = useToast();
+
+  // جلب المصروفات من قاعدة البيانات
+  const fetchExpenses = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('expenses')
+        .select('*')
+        .order('date', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching expenses:', error);
+        return;
+      }
+
+      setExpenses(data || []);
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
+  // جلب الفواتير للحصول على الإيرادات
+  const fetchInvoices = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('invoices')
+        .select('*')
+        .eq('status', 'مدفوع')
+        .order('payment_date', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching invoices:', error);
+        return;
+      }
+
+      setInvoices(data || []);
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      await Promise.all([fetchExpenses(), fetchInvoices()]);
+      setLoading(false);
+    };
+    loadData();
+  }, []);
+
+  // إضافة مصروف جديد
+  const handleAddExpense = async () => {
+    if (!newExpense.description || !newExpense.amount || !newExpense.category) {
+      toast({
+        title: "خطأ",
+        description: "يرجى ملء الحقول المطلوبة",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { data: expenseNumber } = await supabase.rpc('generate_expense_number');
+      
+      const { error } = await supabase
+        .from('expenses')
+        .insert({
+          expense_number: expenseNumber,
+          description: newExpense.description,
+          amount: parseFloat(newExpense.amount),
+          category: newExpense.category,
+          date: newExpense.date,
+          payment_method: newExpense.payment_method,
+          notes: newExpense.notes
+        });
+
+      if (error) {
+        console.error('Error adding expense:', error);
+        toast({
+          title: "خطأ",
+          description: "حدث خطأ في إضافة المصروف",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "نجح",
+        description: "تم إضافة المصروف بنجاح",
+      });
+
+      setIsAddExpenseOpen(false);
+      setNewExpense({
+        description: "",
+        amount: "",
+        category: "",
+        date: new Date().toISOString().split('T')[0],
+        payment_method: "",
+        notes: ""
+      });
+      fetchExpenses();
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
   const accounts = [
     {
       id: 1,
@@ -86,13 +206,31 @@ const Accounts = () => {
     }
   };
 
-  const totalBalance = accounts.reduce((sum, account) => sum + account.balance, 0);
-  const monthlyIncome = transactions
-    .filter(t => t.type === "income")
-    .reduce((sum, t) => sum + t.amount, 0);
-  const monthlyExpenses = transactions
-    .filter(t => t.type === "expense")
-    .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+  // حساب الإحصائيات
+  const monthlyIncome = invoices
+    .filter(invoice => {
+      const paymentDate = new Date(invoice.payment_date);
+      const currentMonth = new Date();
+      return paymentDate.getMonth() === currentMonth.getMonth() && 
+             paymentDate.getFullYear() === currentMonth.getFullYear();
+    })
+    .reduce((sum, invoice) => sum + (invoice.total_amount || 0), 0);
+
+  const monthlyExpenses = expenses
+    .filter(expense => {
+      const expenseDate = new Date(expense.date);
+      const currentMonth = new Date();
+      return expenseDate.getMonth() === currentMonth.getMonth() && 
+             expenseDate.getFullYear() === currentMonth.getFullYear();
+    })
+    .reduce((sum, expense) => sum + (expense.amount || 0), 0);
+
+  const totalBalance = monthlyIncome - monthlyExpenses;
+  const netProfit = monthlyIncome - monthlyExpenses;
+
+  if (loading) {
+    return <div className="flex justify-center items-center h-64">جاري التحميل...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -101,10 +239,14 @@ const Accounts = () => {
           <h1 className="text-3xl font-bold text-foreground">إدارة الحسابات</h1>
           <p className="text-muted-foreground">متابعة الحسابات المالية والمعاملات</p>
         </div>
-        <Button className="gap-2">
-          <Plus className="h-4 w-4" />
-          إضافة حساب جديد
-        </Button>
+        <Dialog open={isAddExpenseOpen} onOpenChange={setIsAddExpenseOpen}>
+          <DialogTrigger asChild>
+            <Button className="gap-2">
+              <Plus className="h-4 w-4" />
+              إضافة مصروف جديد
+            </Button>
+          </DialogTrigger>
+        </Dialog>
       </div>
 
       {/* Financial Overview */}
@@ -116,7 +258,7 @@ const Accounts = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalBalance.toLocaleString()} ر.س</div>
-            <p className="text-xs text-muted-foreground">جميع الحسابات</p>
+            <p className="text-xs text-muted-foreground">صافي الرصيد</p>
           </CardContent>
         </Card>
         
@@ -148,34 +290,34 @@ const Accounts = () => {
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{(monthlyIncome - monthlyExpenses).toLocaleString()} ر.س</div>
+            <div className="text-2xl font-bold">{netProfit.toLocaleString()} ر.س</div>
             <p className="text-xs text-muted-foreground">هذا الشهر</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Accounts List */}
+      {/* Expenses List */}
       <Card>
         <CardHeader>
-          <CardTitle>الحسابات المالية</CardTitle>
-          <CardDescription>جميع الحسابات المسجلة في النظام</CardDescription>
+          <CardTitle>المصروفات الأخيرة</CardTitle>
+          <CardDescription>آخر المصروفات المسجلة</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {accounts.map((account) => (
-              <div key={account.id} className="flex items-center justify-between p-4 border rounded-lg">
+            {expenses.slice(0, 5).map((expense) => (
+              <div key={expense.id} className="flex items-center justify-between p-4 border rounded-lg">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                    <DollarSign className="h-6 w-6 text-primary" />
+                  <div className="w-12 h-12 bg-destructive/10 rounded-full flex items-center justify-center">
+                    <Receipt className="h-6 w-6 text-destructive" />
                   </div>
                   <div>
-                    <h3 className="font-medium">{account.name}</h3>
-                    <p className="text-sm text-muted-foreground">{getAccountTypeLabel(account.type)}</p>
+                    <h3 className="font-medium">{expense.description}</h3>
+                    <p className="text-sm text-muted-foreground">{expense.category} • {expense.date}</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="font-bold text-lg">{account.balance.toLocaleString()} {account.currency}</p>
-                  <Badge variant="outline" className="text-success border-success/20">نشط</Badge>
+                  <p className="font-bold text-lg text-destructive">-{expense.amount?.toLocaleString()} ر.س</p>
+                  <p className="text-sm text-muted-foreground">{expense.expense_number}</p>
                 </div>
               </div>
             ))}
@@ -183,49 +325,125 @@ const Accounts = () => {
         </CardContent>
       </Card>
 
-      {/* Recent Transactions */}
+      {/* Deferred Invoices */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>المعاملات الأخيرة</CardTitle>
-            <CardDescription>آخر العمليات المالية</CardDescription>
-          </div>
-          <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="اختر الفترة" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="week">آخر أسبوع</SelectItem>
-              <SelectItem value="month">آخر شهر</SelectItem>
-              <SelectItem value="quarter">آخر ربع</SelectItem>
-            </SelectContent>
-          </Select>
+        <CardHeader>
+          <CardTitle>الفواتير الآجلة</CardTitle>
+          <CardDescription>الفواتير المؤجلة الدفع</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {transactions.map((transaction) => (
-              <div key={transaction.id} className="flex items-center justify-between p-3 border-b">
+            {invoices.filter(invoice => invoice.is_deferred).slice(0, 5).map((invoice) => (
+              <div key={invoice.id} className="flex items-center justify-between p-3 border-b">
                 <div className="flex items-center gap-3">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                    transaction.type === "income" ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"
-                  }`}>
-                    {transaction.type === "income" ? "+" : "-"}
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center bg-warning/10 text-warning">
+                    <CalendarRange className="h-4 w-4" />
                   </div>
                   <div>
-                    <p className="font-medium">{transaction.description}</p>
-                    <p className="text-sm text-muted-foreground">{transaction.account} • {transaction.date}</p>
+                    <p className="font-medium">{invoice.invoice_number}</p>
+                    <p className="text-sm text-muted-foreground">تاريخ الاستحقاق: {invoice.due_date}</p>
                   </div>
                 </div>
-                <div className={`font-bold ${
-                  transaction.type === "income" ? "text-success" : "text-destructive"
-                }`}>
-                  {transaction.amount > 0 ? "+" : ""}{transaction.amount.toLocaleString()} ر.س
+                <div className="font-bold text-warning">
+                  {invoice.total_amount?.toLocaleString()} ر.س
                 </div>
               </div>
             ))}
           </div>
         </CardContent>
       </Card>
+
+      {/* Add Expense Dialog */}
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>إضافة مصروف جديد</DialogTitle>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="description">وصف المصروف</Label>
+              <Input
+                id="description"
+                value={newExpense.description}
+                onChange={(e) => setNewExpense({...newExpense, description: e.target.value})}
+                placeholder="وصف المصروف..."
+              />
+            </div>
+            <div>
+              <Label htmlFor="amount">المبلغ (ر.س)</Label>
+              <Input
+                id="amount"
+                type="number"
+                value={newExpense.amount}
+                onChange={(e) => setNewExpense({...newExpense, amount: e.target.value})}
+                placeholder="0.00"
+              />
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="category">الفئة</Label>
+              <Select value={newExpense.category} onValueChange={(value) => setNewExpense({...newExpense, category: value})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="اختر الفئة" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="مكتبية">مصروفات مكتبية</SelectItem>
+                  <SelectItem value="تشغيلية">مصروفات تشغيلية</SelectItem>
+                  <SelectItem value="تسويق">تسويق وإعلان</SelectItem>
+                  <SelectItem value="صيانة">صيانة وإصلاح</SelectItem>
+                  <SelectItem value="مواصلات">مواصلات</SelectItem>
+                  <SelectItem value="أخرى">أخرى</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="date">التاريخ</Label>
+              <Input
+                id="date"
+                type="date"
+                value={newExpense.date}
+                onChange={(e) => setNewExpense({...newExpense, date: e.target.value})}
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="payment_method">طريقة الدفع</Label>
+            <Select value={newExpense.payment_method} onValueChange={(value) => setNewExpense({...newExpense, payment_method: value})}>
+              <SelectTrigger>
+                <SelectValue placeholder="اختر طريقة الدفع" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="نقدي">نقدي</SelectItem>
+                <SelectItem value="بنكي">تحويل بنكي</SelectItem>
+                <SelectItem value="بطاقة ائتمان">بطاقة ائتمان</SelectItem>
+                <SelectItem value="شيك">شيك</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="notes">ملاحظات</Label>
+            <Textarea
+              id="notes"
+              value={newExpense.notes}
+              onChange={(e) => setNewExpense({...newExpense, notes: e.target.value})}
+              placeholder="ملاحظات إضافية..."
+            />
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setIsAddExpenseOpen(false)}>
+              إلغاء
+            </Button>
+            <Button onClick={handleAddExpense}>
+              إضافة المصروف
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
     </div>
   );
 };

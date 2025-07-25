@@ -28,6 +28,9 @@ import {
   Phone,
   Mail,
   MapPin,
+  Upload,
+  Download,
+  FileText,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -38,13 +41,17 @@ const Customers = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
+  const [importFile, setImportFile] = useState(null);
   const [newCustomer, setNewCustomer] = useState({
     name: "",
     email: "",
     phone: "",
+    whatsapp_number: "",
     company: "",
     city: "",
+    address: "",
     notes: ""
   });
 
@@ -88,6 +95,111 @@ const Customers = () => {
     customer.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // تصدير بيانات العملاء
+  const handleExportCustomers = () => {
+    try {
+      const csvContent = "data:text/csv;charset=utf-8," 
+        + "الاسم,البريد الإلكتروني,الهاتف,واتس آب,الشركة,المدينة,العنوان,الملاحظات,تاريخ الإنشاء\n"
+        + customers.map(customer => 
+          `${customer.name || ''},${customer.email || ''},${customer.phone || ''},${customer.whatsapp_number || ''},${customer.company || ''},${customer.city || ''},${customer.address || ''},${customer.notes || ''},${customer.created_at || ''}`
+        ).join("\n");
+
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `customers_export_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast({
+        title: "نجح",
+        description: "تم تصدير بيانات العملاء بنجاح",
+      });
+    } catch (error) {
+      console.error('Export error:', error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ في تصدير البيانات",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // استيراد بيانات العملاء
+  const handleImportCustomers = async () => {
+    if (!importFile) {
+      toast({
+        title: "خطأ",
+        description: "يرجى اختيار ملف للاستيراد",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const text = await importFile.text();
+      const rows = text.split('\n').slice(1); // تجاهل السطر الأول (العناوين)
+      
+      const customers = rows
+        .filter(row => row.trim())
+        .map(row => {
+          const [name, email, phone, whatsapp_number, company, city, address, notes] = row.split(',');
+          return {
+            name: name?.trim(),
+            email: email?.trim(),
+            phone: phone?.trim(),
+            whatsapp_number: whatsapp_number?.trim(),
+            company: company?.trim(),
+            city: city?.trim(),
+            address: address?.trim(),
+            notes: notes?.trim(),
+            import_source: 'CSV Import'
+          };
+        })
+        .filter(customer => customer.name && customer.email);
+
+      if (customers.length === 0) {
+        toast({
+          title: "خطأ",
+          description: "لم يتم العثور على بيانات صالحة في الملف",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const { error } = await supabase
+        .from('customers')
+        .insert(customers);
+
+      if (error) {
+        console.error('Import error:', error);
+        toast({
+          title: "خطأ",
+          description: "حدث خطأ في استيراد البيانات",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "نجح",
+        description: `تم استيراد ${customers.length} عميل بنجاح`,
+      });
+
+      setIsImportDialogOpen(false);
+      setImportFile(null);
+      fetchCustomers();
+    } catch (error) {
+      console.error('Import error:', error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ في قراءة الملف",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleAddCustomer = async () => {
     if (!newCustomer.name || !newCustomer.email) {
       toast({
@@ -122,7 +234,16 @@ const Customers = () => {
       }
 
       await fetchCustomers();
-      setNewCustomer({ name: "", email: "", phone: "", company: "", city: "", notes: "" });
+      setNewCustomer({
+        name: "",
+        email: "",
+        phone: "",
+        whatsapp_number: "",
+        company: "",
+        city: "",
+        address: "",
+        notes: ""
+      });
       setIsAddDialogOpen(false);
       
       toast({
@@ -140,8 +261,10 @@ const Customers = () => {
       name: customer.name,
       email: customer.email,
       phone: customer.phone,
+      whatsapp_number: customer.whatsapp_number || "",
       company: customer.company,
       city: customer.city,
+      address: customer.address || "",
       notes: customer.notes || ""
     });
     setIsEditDialogOpen(true);
@@ -182,7 +305,16 @@ const Customers = () => {
       }
 
       await fetchCustomers();
-      setNewCustomer({ name: "", email: "", phone: "", company: "", city: "", notes: "" });
+      setNewCustomer({
+        name: "",
+        email: "",
+        phone: "",
+        whatsapp_number: "",
+        company: "",
+        city: "",
+        address: "",
+        notes: ""
+      });
       setIsEditDialogOpen(false);
       setEditingCustomer(null);
       

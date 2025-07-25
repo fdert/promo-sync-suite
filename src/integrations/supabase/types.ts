@@ -14,6 +14,81 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_logs: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          id: string
+          ip_address: string | null
+          resource_id: string | null
+          resource_type: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          resource_id?: string | null
+          resource_type: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          resource_id?: string | null
+          resource_type?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      backups: {
+        Row: {
+          backup_name: string
+          backup_type: string
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          file_size: number | null
+          file_url: string | null
+          id: string
+          notes: string | null
+          status: string
+        }
+        Insert: {
+          backup_name: string
+          backup_type?: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          file_size?: number | null
+          file_url?: string | null
+          id?: string
+          notes?: string | null
+          status?: string
+        }
+        Update: {
+          backup_name?: string
+          backup_type?: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          file_size?: number | null
+          file_url?: string | null
+          id?: string
+          notes?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       customers: {
         Row: {
           address: string | null
@@ -22,6 +97,8 @@ export type Database = {
           created_at: string | null
           email: string | null
           id: string
+          import_source: string | null
+          last_invoice_date: string | null
           name: string
           notes: string | null
           phone: string | null
@@ -29,6 +106,7 @@ export type Database = {
           total_orders: number | null
           total_spent: number | null
           updated_at: string | null
+          whatsapp_number: string | null
         }
         Insert: {
           address?: string | null
@@ -37,6 +115,8 @@ export type Database = {
           created_at?: string | null
           email?: string | null
           id?: string
+          import_source?: string | null
+          last_invoice_date?: string | null
           name: string
           notes?: string | null
           phone?: string | null
@@ -44,6 +124,7 @@ export type Database = {
           total_orders?: number | null
           total_spent?: number | null
           updated_at?: string | null
+          whatsapp_number?: string | null
         }
         Update: {
           address?: string | null
@@ -52,6 +133,8 @@ export type Database = {
           created_at?: string | null
           email?: string | null
           id?: string
+          import_source?: string | null
+          last_invoice_date?: string | null
           name?: string
           notes?: string | null
           phone?: string | null
@@ -59,6 +142,94 @@ export type Database = {
           total_orders?: number | null
           total_spent?: number | null
           updated_at?: string | null
+          whatsapp_number?: string | null
+        }
+        Relationships: []
+      }
+      data_imports: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          error_log: Json | null
+          failed_records: number | null
+          file_name: string
+          id: string
+          import_type: string
+          processed_records: number | null
+          status: string
+          total_records: number | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          error_log?: Json | null
+          failed_records?: number | null
+          file_name: string
+          id?: string
+          import_type: string
+          processed_records?: number | null
+          status?: string
+          total_records?: number | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          error_log?: Json | null
+          failed_records?: number | null
+          file_name?: string
+          id?: string
+          import_type?: string
+          processed_records?: number | null
+          status?: string
+          total_records?: number | null
+        }
+        Relationships: []
+      }
+      expenses: {
+        Row: {
+          amount: number
+          category: string | null
+          created_at: string
+          created_by: string | null
+          date: string
+          description: string
+          expense_number: string
+          id: string
+          notes: string | null
+          payment_method: string | null
+          receipt_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          description: string
+          expense_number: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          receipt_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          description?: string
+          expense_number?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          receipt_url?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -71,15 +242,20 @@ export type Database = {
           due_date: string
           id: string
           invoice_number: string
+          is_deferred: boolean | null
           issue_date: string | null
+          last_printed_at: string | null
           notes: string | null
           order_id: string | null
           payment_date: string | null
           payment_method: string | null
+          print_count: number | null
+          reminder_sent_at: string | null
           status: string | null
           tax_amount: number | null
           total_amount: number
           updated_at: string | null
+          whatsapp_sent_at: string | null
         }
         Insert: {
           amount: number
@@ -89,15 +265,20 @@ export type Database = {
           due_date: string
           id?: string
           invoice_number: string
+          is_deferred?: boolean | null
           issue_date?: string | null
+          last_printed_at?: string | null
           notes?: string | null
           order_id?: string | null
           payment_date?: string | null
           payment_method?: string | null
+          print_count?: number | null
+          reminder_sent_at?: string | null
           status?: string | null
           tax_amount?: number | null
           total_amount: number
           updated_at?: string | null
+          whatsapp_sent_at?: string | null
         }
         Update: {
           amount?: number
@@ -107,15 +288,20 @@ export type Database = {
           due_date?: string
           id?: string
           invoice_number?: string
+          is_deferred?: boolean | null
           issue_date?: string | null
+          last_printed_at?: string | null
           notes?: string | null
           order_id?: string | null
           payment_date?: string | null
           payment_method?: string | null
+          print_count?: number | null
+          reminder_sent_at?: string | null
           status?: string | null
           tax_amount?: number | null
           total_amount?: number
           updated_at?: string | null
+          whatsapp_sent_at?: string | null
         }
         Relationships: [
           {
@@ -401,6 +587,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_expense_number: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       generate_invoice_number: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -419,6 +609,16 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
         }
         Returns: boolean
+      }
+      log_activity: {
+        Args: {
+          _user_id: string
+          _action: string
+          _resource_type: string
+          _resource_id?: string
+          _details?: Json
+        }
+        Returns: undefined
       }
       update_last_login: {
         Args: { _user_id: string }
