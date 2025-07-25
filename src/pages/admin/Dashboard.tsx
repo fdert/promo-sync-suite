@@ -18,32 +18,32 @@ const Dashboard = () => {
       value: "248",
       change: "+12%",
       icon: Users,
-      color: "text-blue-600",
-      bgColor: "bg-blue-50",
+      color: "text-primary",
+      bgColor: "bg-primary/10",
     },
     {
       title: "الطلبات النشطة",
       value: "23",
       change: "+8%",
       icon: ClipboardList,
-      color: "text-green-600",
-      bgColor: "bg-green-50",
+      color: "text-success",
+      bgColor: "bg-success/10",
     },
     {
       title: "الإيرادات الشهرية",
       value: "45,230 ر.س",
       change: "+15%",
       icon: DollarSign,
-      color: "text-purple-600",
-      bgColor: "bg-purple-50",
+      color: "text-accent",
+      bgColor: "bg-accent/10",
     },
     {
       title: "معدل النمو",
       value: "18.5%",
       change: "+3%",
       icon: TrendingUp,
-      color: "text-orange-600",
-      bgColor: "bg-orange-50",
+      color: "text-warning",
+      bgColor: "bg-warning/10",
     },
   ];
 
@@ -74,13 +74,13 @@ const Dashboard = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "مكتمل":
-        return "text-green-600 bg-green-50";
+        return "text-success bg-success/10";
       case "قيد التنفيذ":
-        return "text-blue-600 bg-blue-50";
+        return "text-primary bg-primary/10";
       case "قيد المراجعة":
-        return "text-orange-600 bg-orange-50";
+        return "text-warning bg-warning/10";
       default:
-        return "text-gray-600 bg-gray-50";
+        return "text-muted-foreground bg-muted/50";
     }
   };
 
@@ -105,7 +105,7 @@ const Dashboard = () => {
                     {stat.title}
                   </p>
                   <p className="text-2xl font-bold">{stat.value}</p>
-                  <p className="text-sm text-green-600 mt-1">{stat.change}</p>
+                  <p className="text-sm text-success mt-1">{stat.change}</p>
                 </div>
                 <div className={`${stat.bgColor} p-3 rounded-lg`}>
                   <stat.icon className={`h-6 w-6 ${stat.color}`} />
@@ -165,24 +165,24 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex items-center gap-3 p-3 bg-yellow-50 rounded-lg">
-                <Clock className="h-5 w-5 text-yellow-600" />
+              <div className="flex items-center gap-3 p-3 bg-warning/10 rounded-lg">
+                <Clock className="h-5 w-5 text-warning" />
                 <div>
                   <p className="text-sm font-medium">3 طلبات تحتاج مراجعة</p>
                   <p className="text-xs text-muted-foreground">منذ ساعتين</p>
                 </div>
               </div>
               
-              <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
-                <CheckCircle className="h-5 w-5 text-green-600" />
+              <div className="flex items-center gap-3 p-3 bg-success/10 rounded-lg">
+                <CheckCircle className="h-5 w-5 text-success" />
                 <div>
                   <p className="text-sm font-medium">تم إرسال 15 فاتورة</p>
                   <p className="text-xs text-muted-foreground">اليوم</p>
                 </div>
               </div>
               
-              <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
-                <MessageSquare className="h-5 w-5 text-blue-600" />
+              <div className="flex items-center gap-3 p-3 bg-accent/10 rounded-lg">
+                <MessageSquare className="h-5 w-5 text-accent" />
                 <div>
                   <p className="text-sm font-medium">رسائل WhatsApp جديدة</p>
                   <p className="text-xs text-muted-foreground">منذ 30 دقيقة</p>
