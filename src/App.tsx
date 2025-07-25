@@ -19,7 +19,18 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Index />} />
+          <Route path="/" element={<Home />} />
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<Dashboard />} />
+            <Route path="customers" element={<Customers />} />
+            <Route path="orders" element={<Orders />} />
+            <Route path="invoices" element={<div className="p-6">صفحة الفواتير قيد التطوير</div>} />
+            <Route path="accounts" element={<div className="p-6">صفحة الحسابات قيد التطوير</div>} />
+            <Route path="reports" element={<div className="p-6">صفحة التقارير قيد التطوير</div>} />
+            <Route path="whatsapp" element={<div className="p-6">صفحة WhatsApp قيد التطوير</div>} />
+            <Route path="website" element={<div className="p-6">صفحة إدارة الموقع قيد التطوير</div>} />
+            <Route path="settings" element={<div className="p-6">صفحة الإعدادات قيد التطوير</div>} />
+          </Route>
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
