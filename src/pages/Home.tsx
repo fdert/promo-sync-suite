@@ -104,6 +104,9 @@ const Home = () => {
               <Link to="/admin">
                 <Button variant="outline">لوحة الإدارة</Button>
               </Link>
+              <Link to="/auth">
+                <Button>تسجيل الدخول</Button>
+              </Link>
             </nav>
           </div>
         </div>

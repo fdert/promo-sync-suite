@@ -1,6 +1,7 @@
-import { Bell, Search, User, Menu } from "lucide-react";
+import { Bell, Search, User, Menu, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,6 +17,12 @@ interface HeaderProps {
 }
 
 const Header = ({ onMenuClick, title }: HeaderProps) => {
+  const { user, signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
+
   return (
     <header className="bg-white border-b border-border shadow-sm sticky top-0 z-50">
       <div className="flex items-center justify-between px-6 py-4">
@@ -56,12 +63,21 @@ const Header = ({ onMenuClick, title }: HeaderProps) => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>حسابي</DropdownMenuLabel>
+              <DropdownMenuLabel>
+                <div>
+                  <p className="font-medium">{user?.user_metadata?.full_name || "المستخدم"}</p>
+                  <p className="text-sm text-muted-foreground">{user?.email}</p>
+                </div>
+              </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem>الملف الشخصي</DropdownMenuItem>
               <DropdownMenuItem>الإعدادات</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive">
+              <DropdownMenuItem 
+                className="text-destructive gap-2"
+                onClick={handleSignOut}
+              >
+                <LogOut className="h-4 w-4" />
                 تسجيل الخروج
               </DropdownMenuItem>
             </DropdownMenuContent>
