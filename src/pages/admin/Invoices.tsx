@@ -248,6 +248,106 @@ const Invoices = () => {
               إنشاء فاتورة جديدة
             </Button>
           </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>إنشاء فاتورة جديدة</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="customer">العميل</Label>
+                  <Select value={newInvoice.customer_id} onValueChange={(value) => setNewInvoice({...newInvoice, customer_id: value})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="اختر العميل" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {customers.map((customer) => (
+                        <SelectItem key={customer.id} value={customer.id}>
+                          {customer.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="amount">المبلغ (ر.س)</Label>
+                  <Input
+                    id="amount"
+                    type="number"
+                    value={newInvoice.amount}
+                    onChange={(e) => setNewInvoice({...newInvoice, amount: e.target.value})}
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="tax_amount">الضريبة (ر.س)</Label>
+                  <Input
+                    id="tax_amount"
+                    type="number"
+                    value={newInvoice.tax_amount}
+                    onChange={(e) => setNewInvoice({...newInvoice, tax_amount: e.target.value})}
+                    placeholder="0.00"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="due_date">تاريخ الاستحقاق</Label>
+                  <Input
+                    id="due_date"
+                    type="date"
+                    value={newInvoice.due_date}
+                    onChange={(e) => setNewInvoice({...newInvoice, due_date: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="payment_method">طريقة الدفع</Label>
+                  <Select value={newInvoice.payment_method} onValueChange={(value) => setNewInvoice({...newInvoice, payment_method: value})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="اختر طريقة الدفع" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="نقدي">نقدي</SelectItem>
+                      <SelectItem value="بنكي">تحويل بنكي</SelectItem>
+                      <SelectItem value="بطاقة ائتمان">بطاقة ائتمان</SelectItem>
+                      <SelectItem value="شيك">شيك</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="is_deferred"
+                    checked={newInvoice.is_deferred}
+                    onCheckedChange={(checked) => setNewInvoice({...newInvoice, is_deferred: checked})}
+                  />
+                  <Label htmlFor="is_deferred">فاتورة آجلة</Label>
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="notes">ملاحظات</Label>
+                <Textarea
+                  id="notes"
+                  value={newInvoice.notes}
+                  onChange={(e) => setNewInvoice({...newInvoice, notes: e.target.value})}
+                  placeholder="ملاحظات إضافية..."
+                />
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                  إلغاء
+                </Button>
+                <Button onClick={handleAddInvoice}>
+                  إنشاء الفاتورة
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
         </Dialog>
       </div>
 
@@ -375,107 +475,6 @@ const Invoices = () => {
         </CardContent>
       </Card>
 
-      {/* Add Invoice Dialog */}
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>إنشاء فاتورة جديدة</DialogTitle>
-        </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="customer">العميل</Label>
-              <Select value={newInvoice.customer_id} onValueChange={(value) => setNewInvoice({...newInvoice, customer_id: value})}>
-                <SelectTrigger>
-                  <SelectValue placeholder="اختر العميل" />
-                </SelectTrigger>
-                <SelectContent>
-                  {customers.map((customer) => (
-                    <SelectItem key={customer.id} value={customer.id}>
-                      {customer.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="amount">المبلغ (ر.س)</Label>
-              <Input
-                id="amount"
-                type="number"
-                value={newInvoice.amount}
-                onChange={(e) => setNewInvoice({...newInvoice, amount: e.target.value})}
-                placeholder="0.00"
-              />
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="tax_amount">الضريبة (ر.س)</Label>
-              <Input
-                id="tax_amount"
-                type="number"
-                value={newInvoice.tax_amount}
-                onChange={(e) => setNewInvoice({...newInvoice, tax_amount: e.target.value})}
-                placeholder="0.00"
-              />
-            </div>
-            <div>
-              <Label htmlFor="due_date">تاريخ الاستحقاق</Label>
-              <Input
-                id="due_date"
-                type="date"
-                value={newInvoice.due_date}
-                onChange={(e) => setNewInvoice({...newInvoice, due_date: e.target.value})}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="payment_method">طريقة الدفع</Label>
-              <Select value={newInvoice.payment_method} onValueChange={(value) => setNewInvoice({...newInvoice, payment_method: value})}>
-                <SelectTrigger>
-                  <SelectValue placeholder="اختر طريقة الدفع" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="نقدي">نقدي</SelectItem>
-                  <SelectItem value="بنكي">تحويل بنكي</SelectItem>
-                  <SelectItem value="بطاقة ائتمان">بطاقة ائتمان</SelectItem>
-                  <SelectItem value="شيك">شيك</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="is_deferred"
-                checked={newInvoice.is_deferred}
-                onCheckedChange={(checked) => setNewInvoice({...newInvoice, is_deferred: checked})}
-              />
-              <Label htmlFor="is_deferred">فاتورة آجلة</Label>
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor="notes">ملاحظات</Label>
-            <Textarea
-              id="notes"
-              value={newInvoice.notes}
-              onChange={(e) => setNewInvoice({...newInvoice, notes: e.target.value})}
-              placeholder="ملاحظات إضافية..."
-            />
-          </div>
-
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-              إلغاء
-            </Button>
-            <Button onClick={handleAddInvoice}>
-              إنشاء الفاتورة
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
     </div>
   );
 };
