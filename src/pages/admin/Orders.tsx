@@ -44,6 +44,16 @@ const Orders = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingOrder, setEditingOrder] = useState(null);
+  const [newOrder, setNewOrder] = useState({
+    customer: "",
+    service: "",
+    description: "",
+    dueDate: "",
+    amount: "",
+    priority: ""
+  });
 
   const orders = [
     {
@@ -140,6 +150,19 @@ const Orders = () => {
     
     return matchesSearch && matchesStatus;
   });
+
+  const handleEditOrder = (order: any) => {
+    setEditingOrder(order);
+    setNewOrder({
+      customer: order.customer,
+      service: order.service,
+      description: order.description,
+      dueDate: order.dueDate,
+      amount: order.amount,
+      priority: order.priority
+    });
+    setIsEditDialogOpen(true);
+  };
 
   return (
     <div className="space-y-6">
@@ -257,6 +280,101 @@ const Orders = () => {
                   <Button 
                     variant="outline" 
                     onClick={() => setIsAddDialogOpen(false)}
+                  >
+                    إلغاء
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Edit Order Dialog */}
+          <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>تعديل الطلب</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="edit-customer">العميل</Label>
+                  <Select value={newOrder.customer} onValueChange={(value) => setNewOrder({ ...newOrder, customer: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="اختر العميل" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="أحمد محمد السالم">أحمد محمد السالم</SelectItem>
+                      <SelectItem value="فاطمة علي الأحمد">فاطمة علي الأحمد</SelectItem>
+                      <SelectItem value="محمد عبدالله">محمد عبدالله</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="edit-service">نوع الخدمة</Label>
+                  <Select value={newOrder.service} onValueChange={(value) => setNewOrder({ ...newOrder, service: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="اختر نوع الخدمة" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="تصميم شعار">تصميم شعار</SelectItem>
+                      <SelectItem value="موقع إلكتروني">موقع إلكتروني</SelectItem>
+                      <SelectItem value="حملة إعلانية">حملة إعلانية</SelectItem>
+                      <SelectItem value="هوية بصرية">هوية بصرية</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="edit-description">وصف الطلب</Label>
+                  <Textarea 
+                    id="edit-description" 
+                    value={newOrder.description}
+                    onChange={(e) => setNewOrder({ ...newOrder, description: e.target.value })}
+                    placeholder="تفاصيل الطلب..." 
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="edit-dueDate">تاريخ التسليم</Label>
+                    <Input 
+                      id="edit-dueDate" 
+                      type="date" 
+                      value={newOrder.dueDate}
+                      onChange={(e) => setNewOrder({ ...newOrder, dueDate: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-amount">المبلغ</Label>
+                    <Input 
+                      id="edit-amount" 
+                      value={newOrder.amount}
+                      onChange={(e) => setNewOrder({ ...newOrder, amount: e.target.value })}
+                      placeholder="0.00 ر.س" 
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="edit-priority">الأولوية</Label>
+                  <Select value={newOrder.priority} onValueChange={(value) => setNewOrder({ ...newOrder, priority: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="اختر الأولوية" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="عالية">عالية</SelectItem>
+                      <SelectItem value="متوسطة">متوسطة</SelectItem>
+                      <SelectItem value="منخفضة">منخفضة</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex gap-2 pt-4">
+                  <Button 
+                    variant="hero" 
+                    className="flex-1"
+                    onClick={() => setIsEditDialogOpen(false)}
+                  >
+                    تحديث الطلب
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setIsEditDialogOpen(false)}
                   >
                     إلغاء
                   </Button>
@@ -420,7 +538,7 @@ const Orders = () => {
                       <Button variant="ghost" size="icon">
                         <Eye className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon">
+                      <Button variant="ghost" size="icon" onClick={() => handleEditOrder(order)}>
                         <Edit className="h-4 w-4" />
                       </Button>
                       <Button variant="ghost" size="icon">

@@ -43,6 +43,8 @@ const Users = () => {
   ]);
 
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
+  const [isEditUserOpen, setIsEditUserOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
   const [newUser, setNewUser] = useState({
     name: "",
     email: "",
@@ -138,6 +140,51 @@ const Users = () => {
     });
   };
 
+  const handleEditUser = (user: any) => {
+    setEditingUser(user);
+    setNewUser({
+      name: user.name,
+      email: user.email,
+      password: "",
+      role: user.role,
+      permissions: user.permissions
+    });
+    setIsEditUserOpen(true);
+  };
+
+  const handleUpdateUser = () => {
+    if (!newUser.name || !newUser.email || !newUser.role) {
+      toast({
+        title: "خطأ",
+        description: "يرجى ملء جميع الحقول المطلوبة",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const selectedRole = roles.find(r => r.value === newUser.role);
+    setUsers(users.map(user => 
+      user.id === editingUser?.id 
+        ? { 
+            ...user, 
+            name: newUser.name,
+            email: newUser.email,
+            role: newUser.role,
+            permissions: selectedRole?.permissions || []
+          }
+        : user
+    ));
+    
+    setNewUser({ name: "", email: "", password: "", role: "", permissions: [] });
+    setIsEditUserOpen(false);
+    setEditingUser(null);
+    
+    toast({
+      title: "تم تحديث المستخدم",
+      description: "تم تحديث بيانات المستخدم بنجاح",
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -206,6 +253,69 @@ const Users = () => {
                   إضافة المستخدم
                 </Button>
                 <Button variant="outline" onClick={() => setIsAddUserOpen(false)} className="flex-1">
+                  إلغاء
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit User Dialog */}
+        <Dialog open={isEditUserOpen} onOpenChange={setIsEditUserOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>تعديل بيانات المستخدم</DialogTitle>
+              <DialogDescription>
+                تعديل بيانات المستخدم وصلاحياته
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>الاسم الكامل</Label>
+                <Input
+                  value={newUser.name}
+                  onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                  placeholder="أدخل الاسم الكامل"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>البريد الإلكتروني</Label>
+                <Input
+                  type="email"
+                  value={newUser.email}
+                  onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                  placeholder="أدخل البريد الإلكتروني"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>كلمة المرور الجديدة (اختياري)</Label>
+                <Input
+                  type="password"
+                  value={newUser.password}
+                  onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                  placeholder="اتركها فارغة للاحتفاظ بالحالية"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>الدور الوظيفي</Label>
+                <Select value={newUser.role} onValueChange={(value) => setNewUser({ ...newUser, role: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="اختر الدور الوظيفي" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {roles.map((role) => (
+                      <SelectItem key={role.value} value={role.value}>
+                        {role.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={handleUpdateUser} className="flex-1">
+                  تحديث المستخدم
+                </Button>
+                <Button variant="outline" onClick={() => setIsEditUserOpen(false)} className="flex-1">
                   إلغاء
                 </Button>
               </div>
@@ -307,7 +417,7 @@ const Users = () => {
                         checked={user.status === "active"}
                         onCheckedChange={() => toggleUserStatus(user.id)}
                       />
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" onClick={() => handleEditUser(user)}>
                         <Edit className="h-4 w-4" />
                       </Button>
                       <Button variant="outline" size="sm" onClick={() => deleteUser(user.id)}>

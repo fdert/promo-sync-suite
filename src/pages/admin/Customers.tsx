@@ -33,6 +33,16 @@ import {
 const Customers = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState(null);
+  const [newCustomer, setNewCustomer] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    company: "",
+    city: "",
+    notes: ""
+  });
 
   const customers = [
     {
@@ -78,6 +88,19 @@ const Customers = () => {
     customer.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
     customer.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleEditCustomer = (customer: any) => {
+    setEditingCustomer(customer);
+    setNewCustomer({
+      name: customer.name,
+      email: customer.email,
+      phone: customer.phone,
+      company: customer.company,
+      city: customer.city,
+      notes: ""
+    });
+    setIsEditDialogOpen(true);
+  };
 
   return (
     <div className="space-y-6">
@@ -151,6 +174,87 @@ const Customers = () => {
                   <Button 
                     variant="outline" 
                     onClick={() => setIsAddDialogOpen(false)}
+                  >
+                    إلغاء
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Edit Customer Dialog */}
+          <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>تعديل بيانات العميل</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="edit-name">اسم العميل</Label>
+                  <Input 
+                    id="edit-name" 
+                    value={newCustomer.name}
+                    onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
+                    placeholder="أدخل اسم العميل" 
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-email">البريد الإلكتروني</Label>
+                  <Input 
+                    id="edit-email" 
+                    type="email" 
+                    value={newCustomer.email}
+                    onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
+                    placeholder="example@domain.com" 
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-phone">رقم الجوال</Label>
+                  <Input 
+                    id="edit-phone" 
+                    value={newCustomer.phone}
+                    onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
+                    placeholder="+966501234567" 
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-company">اسم الشركة/المؤسسة</Label>
+                  <Input 
+                    id="edit-company" 
+                    value={newCustomer.company}
+                    onChange={(e) => setNewCustomer({ ...newCustomer, company: e.target.value })}
+                    placeholder="اختياري" 
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-city">المدينة</Label>
+                  <Input 
+                    id="edit-city" 
+                    value={newCustomer.city}
+                    onChange={(e) => setNewCustomer({ ...newCustomer, city: e.target.value })}
+                    placeholder="الرياض" 
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-notes">ملاحظات</Label>
+                  <Textarea 
+                    id="edit-notes" 
+                    value={newCustomer.notes}
+                    onChange={(e) => setNewCustomer({ ...newCustomer, notes: e.target.value })}
+                    placeholder="أي ملاحظات إضافية..." 
+                  />
+                </div>
+                <div className="flex gap-2 pt-4">
+                  <Button 
+                    variant="hero" 
+                    className="flex-1"
+                    onClick={() => setIsEditDialogOpen(false)}
+                  >
+                    تحديث البيانات
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setIsEditDialogOpen(false)}
                   >
                     إلغاء
                   </Button>
@@ -277,8 +381,8 @@ const Customers = () => {
                     </span>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="icon">
+                  <div className="flex items-center gap-2">
+                      <Button variant="ghost" size="icon" onClick={() => handleEditCustomer(customer)}>
                         <Edit className="h-4 w-4" />
                       </Button>
                       <Button variant="ghost" size="icon">
