@@ -131,7 +131,7 @@ Deno.serve(async (req) => {
         'due_date': invoice?.due_date || invoice_data?.due_date || '',
         'payment_date': invoice?.payment_date || invoice_data?.payment_date || '',
         'status': invoice?.status || invoice_data?.status || '',
-        'invoice_link': `https://gcuqfxacnbxdldsbmgvf.supabase.co/preview/invoice/${invoice?.id || invoice_data?.invoice_id}`
+        'invoice_link': `https://e5a7747a-0935-46df-9ea9-1308e76636dc.lovableproject.com/invoice/${invoice?.id || invoice_data?.invoice_id}`
       };
 
       // استبدال جميع المتغيرات في الرسالة
@@ -157,7 +157,7 @@ Deno.serve(async (req) => {
 ${invoice?.notes || invoice_data?.notes ? `📝 *ملاحظات:* ${invoice?.notes || invoice_data?.notes}` : ''}
 
 🔗 *رابط الفاتورة:*
-https://gcuqfxacnbxdldsbmgvf.supabase.co/preview/invoice/${invoice?.id || invoice_data?.invoice_id}
+https://e5a7747a-0935-46df-9ea9-1308e76636dc.lovableproject.com/invoice/${invoice?.id || invoice_data?.invoice_id}
 
 نشكركم على ثقتكم بنا ونتطلع لخدمتكم دائماً.
 
@@ -173,7 +173,7 @@ https://gcuqfxacnbxdldsbmgvf.supabase.co/preview/invoice/${invoice?.id || invoic
 تاريخ الدفع: ${invoice?.payment_date ? new Date(invoice.payment_date).toLocaleDateString('ar-SA') : new Date().toLocaleDateString('ar-SA')}
 
 🔗 *رابط الفاتورة:*
-https://gcuqfxacnbxdldsbmgvf.supabase.co/preview/invoice/${invoice?.id || invoice_data?.invoice_id}
+https://e5a7747a-0935-46df-9ea9-1308e76636dc.lovableproject.com/invoice/${invoice?.id || invoice_data?.invoice_id}
 
 نشكركم على سرعة الدفع وحسن التعامل.`;
           break;
@@ -187,7 +187,7 @@ ${customer.name}،
 تاريخ الاستحقاق: ${invoice?.due_date ? new Date(invoice.due_date).toLocaleDateString('ar-SA') : invoice_data?.due_date}
 
 🔗 *رابط الفاتورة:*
-https://gcuqfxacnbxdldsbmgvf.supabase.co/preview/invoice/${invoice?.id || invoice_data?.invoice_id}
+https://e5a7747a-0935-46df-9ea9-1308e76636dc.lovableproject.com/invoice/${invoice?.id || invoice_data?.invoice_id}
 
 نرجو منكم المراجعة والدفع في أقرب وقت ممكن.
 
@@ -197,7 +197,7 @@ https://gcuqfxacnbxdldsbmgvf.supabase.co/preview/invoice/${invoice?.id || invoic
           message = `${customer.name}، تم تحديث الفاتورة رقم ${invoice?.invoice_number || invoice_data?.invoice_number}.
 
 🔗 *رابط الفاتورة:*
-https://gcuqfxacnbxdldsbmgvf.supabase.co/preview/invoice/${invoice?.id || invoice_data?.invoice_id}`;
+https://e5a7747a-0935-46df-9ea9-1308e76636dc.lovableproject.com/invoice/${invoice?.id || invoice_data?.invoice_id}`;
       }
     }
 
