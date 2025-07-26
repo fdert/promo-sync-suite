@@ -271,6 +271,132 @@ export type Database = {
         }
         Relationships: []
       }
+      evaluation_stats: {
+        Row: {
+          average_rating: number | null
+          communication_avg: number | null
+          created_at: string | null
+          delivery_time_avg: number | null
+          five_star_count: number | null
+          four_star_count: number | null
+          id: string
+          last_updated: string | null
+          one_star_count: number | null
+          price_value_avg: number | null
+          recommendation_percentage: number | null
+          service_quality_avg: number | null
+          three_star_count: number | null
+          total_evaluations: number | null
+          two_star_count: number | null
+        }
+        Insert: {
+          average_rating?: number | null
+          communication_avg?: number | null
+          created_at?: string | null
+          delivery_time_avg?: number | null
+          five_star_count?: number | null
+          four_star_count?: number | null
+          id?: string
+          last_updated?: string | null
+          one_star_count?: number | null
+          price_value_avg?: number | null
+          recommendation_percentage?: number | null
+          service_quality_avg?: number | null
+          three_star_count?: number | null
+          total_evaluations?: number | null
+          two_star_count?: number | null
+        }
+        Update: {
+          average_rating?: number | null
+          communication_avg?: number | null
+          created_at?: string | null
+          delivery_time_avg?: number | null
+          five_star_count?: number | null
+          four_star_count?: number | null
+          id?: string
+          last_updated?: string | null
+          one_star_count?: number | null
+          price_value_avg?: number | null
+          recommendation_percentage?: number | null
+          service_quality_avg?: number | null
+          three_star_count?: number | null
+          total_evaluations?: number | null
+          two_star_count?: number | null
+        }
+        Relationships: []
+      }
+      evaluations: {
+        Row: {
+          communication_rating: number | null
+          created_at: string | null
+          customer_id: string | null
+          delivery_time_rating: number | null
+          evaluation_token: string
+          feedback_text: string | null
+          id: string
+          is_public: boolean | null
+          order_id: string | null
+          price_value_rating: number | null
+          rating: number
+          service_quality_rating: number | null
+          submitted_at: string | null
+          suggestions: string | null
+          updated_at: string | null
+          would_recommend: boolean | null
+        }
+        Insert: {
+          communication_rating?: number | null
+          created_at?: string | null
+          customer_id?: string | null
+          delivery_time_rating?: number | null
+          evaluation_token: string
+          feedback_text?: string | null
+          id?: string
+          is_public?: boolean | null
+          order_id?: string | null
+          price_value_rating?: number | null
+          rating: number
+          service_quality_rating?: number | null
+          submitted_at?: string | null
+          suggestions?: string | null
+          updated_at?: string | null
+          would_recommend?: boolean | null
+        }
+        Update: {
+          communication_rating?: number | null
+          created_at?: string | null
+          customer_id?: string | null
+          delivery_time_rating?: number | null
+          evaluation_token?: string
+          feedback_text?: string | null
+          id?: string
+          is_public?: boolean | null
+          order_id?: string | null
+          price_value_rating?: number | null
+          rating?: number
+          service_quality_rating?: number | null
+          submitted_at?: string | null
+          suggestions?: string | null
+          updated_at?: string | null
+          would_recommend?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluations_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evaluations_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expenses: {
         Row: {
           amount: number
