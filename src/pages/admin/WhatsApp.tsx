@@ -645,14 +645,14 @@ const WhatsApp = () => {
                   <Label>رابط استقبال الرسائل (Webhook URL لـ n8n)</Label>
                   <div className="flex gap-2">
                     <Input
-                      value={`https://gcuqfxacnbxdldsbmgvf.functions.supabase.co/functions/v1/whatsapp-webhook`}
+                      value={`https://gcuqfxacnbxdldsbmgvf.supabase.co/functions/v1/whatsapp-webhook`}
                       readOnly
                       className="bg-muted"
                     />
                     <Button
                       variant="outline"
                       onClick={() => {
-                        navigator.clipboard.writeText('https://gcuqfxacnbxdldsbmgvf.functions.supabase.co/functions/v1/whatsapp-webhook');
+                        navigator.clipboard.writeText('https://gcuqfxacnbxdldsbmgvf.supabase.co/functions/v1/whatsapp-webhook');
                         toast({
                           title: "تم النسخ",
                           description: "تم نسخ الرابط إلى الحافظة",
@@ -662,20 +662,29 @@ const WhatsApp = () => {
                       نسخ
                     </Button>
                   </div>
+                  <div className="mt-2 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                    <p className="text-sm text-orange-800 font-medium mb-2">⚠️ تأكد من التكوين التالي:</p>
+                    <ul className="text-xs text-orange-700 space-y-1">
+                      <li>• استخدم هذا الرابط في n8n Webhook node كـ "Webhook URL"</li>
+                      <li>• تأكد من أن n8n يرسل POST requests إلى هذا الرابط</li>
+                      <li>• تحقق من أن WhatsApp Business API متصل بـ n8n بشكل صحيح</li>
+                      <li>• الرسائل الواردة يجب أن تمر عبر n8n ثم إلى هذا الرابط</li>
+                    </ul>
+                  </div>
                 </div>
 
                 <div>
                   <Label>رابط إرسال الرسائل (Internal API)</Label>
                   <div className="flex gap-2">
                     <Input
-                      value={`https://gcuqfxacnbxdldsbmgvf.functions.supabase.co/functions/v1/send-whatsapp`}
+                      value={`https://gcuqfxacnbxdldsbmgvf.supabase.co/functions/v1/send-whatsapp`}
                       readOnly
                       className="bg-muted"
                     />
                     <Button
                       variant="outline"
                       onClick={() => {
-                        navigator.clipboard.writeText('https://gcuqfxacnbxdldsbmgvf.functions.supabase.co/functions/v1/send-whatsapp');
+                        navigator.clipboard.writeText('https://gcuqfxacnbxdldsbmgvf.supabase.co/functions/v1/send-whatsapp');
                         toast({
                           title: "تم النسخ",
                           description: "تم نسخ الرابط إلى الحافظة",
