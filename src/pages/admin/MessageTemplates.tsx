@@ -46,18 +46,20 @@ const MessageTemplates = () => {
 
   const availableVariables = {
     order: [
-      "customer_name", "order_number", "progress", "amount", 
+      "customer_name", "customer_phone", "order_number", "progress", "amount", 
       "due_date", "service_name", "estimated_time", "paid_amount",
-      "remaining_amount", "payment_type", "payment_notes", 
-      "order_items", "order_items_count", "order_items_total"
+      "remaining_amount", "payment_type", "payment_notes", "status",
+      "order_items", "order_items_count", "order_items_total", "priority",
+      "description", "start_date", "completion_date"
     ],
     invoice: [
-      "customer_name", "invoice_number", "amount", "due_date", 
+      "customer_name", "customer_phone", "invoice_number", "amount", "due_date", 
       "payment_date", "status", "paid_amount", "remaining_amount",
-      "payment_type", "invoice_items", "invoice_items_count"
+      "payment_type", "invoice_items", "invoice_items_count", "total_amount",
+      "tax_amount", "issue_date", "notes"
     ],
     general: [
-      "customer_name", "company_name", "date", "time"
+      "customer_name", "customer_phone", "company_name", "date", "time"
     ]
   };
 
@@ -188,6 +190,9 @@ const MessageTemplates = () => {
         case 'customer_name':
           preview = preview.replace(regex, 'أحمد محمد');
           break;
+        case 'customer_phone':
+          preview = preview.replace(regex, '+966501234567');
+          break;
         case 'order_number':
           preview = preview.replace(regex, 'ORD-001');
           break;
@@ -195,13 +200,19 @@ const MessageTemplates = () => {
           preview = preview.replace(regex, 'INV-001');
           break;
         case 'amount':
-          preview = preview.replace(regex, '1,500 ر.س');
+          preview = preview.replace(regex, '1,500.00 ر.س');
+          break;
+        case 'total_amount':
+          preview = preview.replace(regex, '1,650.00 ر.س');
           break;
         case 'paid_amount':
-          preview = preview.replace(regex, '1,000 ر.س');
+          preview = preview.replace(regex, '1,000.00 ر.س');
           break;
         case 'remaining_amount':
-          preview = preview.replace(regex, '500 ر.س');
+          preview = preview.replace(regex, '500.00 ر.س');
+          break;
+        case 'tax_amount':
+          preview = preview.replace(regex, '150.00 ر.س');
           break;
         case 'payment_type':
           preview = preview.replace(regex, 'تحويل بنكي');
@@ -209,17 +220,29 @@ const MessageTemplates = () => {
         case 'payment_notes':
           preview = preview.replace(regex, 'تم الدفع جزئياً');
           break;
+        case 'status':
+          preview = preview.replace(regex, 'قيد التنفيذ');
+          break;
+        case 'priority':
+          preview = preview.replace(regex, 'عالية');
+          break;
+        case 'description':
+          preview = preview.replace(regex, 'تصميم شعار احترافي للشركة');
+          break;
+        case 'notes':
+          preview = preview.replace(regex, 'ملاحظات إضافية حول الطلب');
+          break;
         case 'order_items':
-          preview = preview.replace(regex, '1. تصميم شعار - الكمية: 1 - السعر: 500 ر.س\n2. تطوير موقع - الكمية: 1 - السعر: 1000 ر.س');
+          preview = preview.replace(regex, '1. تصميم شعار - الكمية: 1 - السعر: 500.00 ر.س\n2. تطوير موقع - الكمية: 1 - السعر: 1000.00 ر.س');
           break;
         case 'order_items_count':
           preview = preview.replace(regex, '2');
           break;
         case 'order_items_total':
-          preview = preview.replace(regex, '1,500 ر.س');
+          preview = preview.replace(regex, '1,500.00 ر.س');
           break;
         case 'invoice_items':
-          preview = preview.replace(regex, 'البند الأول، البند الثاني');
+          preview = preview.replace(regex, '1. تصميم شعار - الكمية: 1 - السعر: 500.00 ر.س\n2. تطوير موقع - الكمية: 1 - السعر: 1000.00 ر.س');
           break;
         case 'invoice_items_count':
           preview = preview.replace(regex, '2');
@@ -228,6 +251,18 @@ const MessageTemplates = () => {
           preview = preview.replace(regex, '75%');
           break;
         case 'due_date':
+          preview = preview.replace(regex, '2024-02-15');
+          break;
+        case 'issue_date':
+          preview = preview.replace(regex, '2024-02-01');
+          break;
+        case 'payment_date':
+          preview = preview.replace(regex, '2024-02-01');
+          break;
+        case 'start_date':
+          preview = preview.replace(regex, '2024-01-20');
+          break;
+        case 'completion_date':
           preview = preview.replace(regex, '2024-02-15');
           break;
         case 'service_name':

@@ -43,6 +43,8 @@ import {
   CreditCard,
   Trash2,
   Package,
+  Receipt,
+  TrendingUp,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -67,10 +69,15 @@ const Orders = () => {
     amount: "",
     priority: "متوسطة",
     paid_amount: "",
+    remaining_amount: "",
     payment_type: "دفع آجل",
     payment_notes: "",
     attachment_files: []
   });
+
+  const [showPayments, setShowPayments] = useState(false);
+  const [selectedOrderPayments, setSelectedOrderPayments] = useState(null);
+  const [payments, setPayments] = useState([]);
 
   const [orderItems, setOrderItems] = useState([
     { item_name: "", description: "", quantity: 1, unit_price: 0, total_amount: 0 }
@@ -106,14 +113,163 @@ const Orders = () => {
     
     setOrderItems(updatedItems);
     
-    // تحديث إجمالي مبلغ الطلب
+    // تحديث إجمالي مبلغ الطلب وحساب المبلغ المتبقي
     const totalAmount = updatedItems.reduce((sum, item) => sum + item.total_amount, 0);
-    setNewOrder({ ...newOrder, amount: totalAmount.toString() });
+    const paidAmount = parseFloat(newOrder.paid_amount) || 0;
+    const remainingAmount = totalAmount - paidAmount;
+    
+    setNewOrder({ 
+      ...newOrder, 
+      amount: totalAmount.toString(),
+      remaining_amount: remainingAmount.toString()
+    });
   };
 
   // إعادة تعيين البنود
   const resetOrderItems = () => {
     setOrderItems([{ item_name: "", description: "", quantity: 1, unit_price: 0, total_amount: 0 }]);
+  };
+
+  // جلب المدفوعات لطلب معين
+  const fetchOrderPayments = async (orderId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('payments')
+        .select('*')
+        .eq('order_id', orderId)
+        .order('payment_date', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching payments:', error);
+        return [];
+      }
+      return data || [];
+    } catch (error) {
+      console.error('Error:', error);
+      return [];
+    }
+  };
+
+  // إضافة دفعة جديدة
+  const addPayment = async (orderId: string, amount: number, paymentType: string, notes?: string) => {
+    try {
+      const { error } = await supabase
+        .from('payments')
+        .insert({
+          order_id: orderId,
+          amount: amount,
+          payment_type: paymentType,
+          notes: notes
+        });
+
+      if (error) {
+        console.error('Error adding payment:', error);
+        toast({
+          title: "خطأ",
+          description: "حدث خطأ في إضافة الدفعة",
+          variant: "destructive",
+        });
+        return false;
+      }
+
+      // تحديث المبلغ المدفوع في الطلب
+      const order = orders.find(o => o.id === orderId);
+      if (order) {
+        const newPaidAmount = (order.paid_amount || 0) + amount;
+        await supabase
+          .from('orders')
+          .update({ paid_amount: newPaidAmount })
+          .eq('id', orderId);
+      }
+
+      toast({
+        title: "تم إضافة الدفعة",
+        description: "تم إضافة الدفعة بنجاح",
+      });
+
+      await fetchData();
+      return true;
+    } catch (error) {
+      console.error('Error:', error);
+      return false;
+    }
+  };
+
+  // تحويل طلب إلى فاتورة
+  const convertToInvoice = async (orderId: string) => {
+    try {
+      const order = orders.find(o => o.id === orderId);
+      if (!order) return false;
+
+      // إنشاء رقم فاتورة
+      const { data: invoiceNumber, error: numberError } = await supabase
+        .rpc('generate_invoice_number');
+
+      if (numberError) {
+        console.error('Error generating invoice number:', numberError);
+        return false;
+      }
+
+      // إنشاء الفاتورة
+      const { data: invoiceData, error: invoiceError } = await supabase
+        .from('invoices')
+        .insert({
+          invoice_number: invoiceNumber,
+          customer_id: order.customer_id,
+          order_id: order.id,
+          amount: order.amount,
+          total_amount: order.amount,
+          paid_amount: order.paid_amount || 0,
+          status: (order.paid_amount || 0) >= order.amount ? 'مدفوعة' : 'قيد الانتظار',
+          issue_date: new Date().toISOString().split('T')[0],
+          due_date: order.due_date,
+          payment_type: order.payment_type,
+          notes: order.payment_notes
+        })
+        .select()
+        .single();
+
+      if (invoiceError) {
+        console.error('Error creating invoice:', invoiceError);
+        toast({
+          title: "خطأ",
+          description: "حدث خطأ في إنشاء الفاتورة",
+          variant: "destructive",
+        });
+        return false;
+      }
+
+      // نسخ بنود الطلب إلى بنود الفاتورة
+      const { data: orderItems, error: itemsError } = await supabase
+        .from('order_items')
+        .select('*')
+        .eq('order_id', orderId);
+
+      if (!itemsError && orderItems) {
+        const invoiceItems = orderItems.map(item => ({
+          invoice_id: invoiceData.id,
+          item_name: item.item_name,
+          description: item.description,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          total_amount: item.total_amount
+        }));
+
+        await supabase
+          .from('invoice_items')
+          .insert(invoiceItems);
+      }
+
+      toast({
+        title: "تم إنشاء الفاتورة",
+        description: `تم إنشاء الفاتورة رقم ${invoiceNumber} بنجاح`,
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error:', error);
+      return false;
+    }
   };
 
   // جلب البيانات من قاعدة البيانات
@@ -320,6 +476,7 @@ const Orders = () => {
         amount: "", 
         priority: "متوسطة",
         paid_amount: "",
+        remaining_amount: "",
         payment_type: "دفع آجل",
         payment_notes: "",
         attachment_files: []
@@ -338,6 +495,10 @@ const Orders = () => {
 
   const handleEditOrder = (order) => {
     setEditingOrder(order);
+    const paidAmount = parseFloat(order.paid_amount?.toString() || "0");
+    const totalAmount = parseFloat(order.amount.toString());
+    const remainingAmount = totalAmount - paidAmount;
+    
     setNewOrder({
       customer_id: order.customer_id,
       service_id: order.service_id,
@@ -347,6 +508,7 @@ const Orders = () => {
       amount: order.amount.toString(),
       priority: order.priority,
       paid_amount: order.paid_amount?.toString() || "",
+      remaining_amount: remainingAmount.toString(),
       payment_type: order.payment_type || "دفع آجل",
       payment_notes: order.payment_notes || "",
       attachment_files: order.attachment_urls || []
@@ -401,6 +563,7 @@ const Orders = () => {
         amount: "", 
         priority: "متوسطة",
         paid_amount: "",
+        remaining_amount: "",
         payment_type: "دفع آجل",
         payment_notes: "",
         attachment_files: []
@@ -739,41 +902,89 @@ const Orders = () => {
                 </div>
 
                 {/* معلومات الدفع */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 border-t pt-4">
-                  <div>
-                    <Label htmlFor="paidAmount">المبلغ المدفوع</Label>
-                    <Input 
-                      id="paidAmount" 
-                      type="number"
-                      step="0.01"
-                      value={newOrder.paid_amount}
-                      onChange={(e) => setNewOrder({ ...newOrder, paid_amount: e.target.value })}
-                      placeholder="0.00" 
-                    />
+                <div className="space-y-4 border-t pt-4">
+                  <h3 className="font-medium flex items-center gap-2">
+                    <CreditCard className="h-4 w-4" />
+                    معلومات الدفع
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                    <div>
+                      <Label htmlFor="paidAmount">المبلغ المدفوع (اختياري)</Label>
+                      <Input 
+                        id="paidAmount" 
+                        type="number"
+                        step="0.01"
+                        value={newOrder.paid_amount}
+                        onChange={(e) => {
+                          const paid = parseFloat(e.target.value) || 0;
+                          const total = parseFloat(newOrder.amount) || 0;
+                          const remaining = total - paid;
+                          setNewOrder({ 
+                            ...newOrder, 
+                            paid_amount: e.target.value,
+                            remaining_amount: remaining.toString()
+                          });
+                        }}
+                        placeholder="0.00" 
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="remainingAmount">المبلغ المتبقي</Label>
+                      <Input 
+                        id="remainingAmount" 
+                        type="number"
+                        step="0.01"
+                        value={newOrder.remaining_amount}
+                        onChange={(e) => setNewOrder({ ...newOrder, remaining_amount: e.target.value })}
+                        placeholder="يحسب تلقائياً" 
+                        className="bg-muted"
+                        readOnly
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="paymentType">نوع الدفع</Label>
+                      <Select value={newOrder.payment_type} onValueChange={(value) => setNewOrder({ ...newOrder, payment_type: value })}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="اختر نوع الدفع" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="كاش">كاش</SelectItem>
+                          <SelectItem value="تحويل بنكي">تحويل بنكي</SelectItem>
+                          <SelectItem value="شبكة">شبكة</SelectItem>
+                          <SelectItem value="دفع آجل">دفع آجل</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="paymentNotes">ملاحظات الدفع</Label>
+                      <Textarea 
+                        id="paymentNotes" 
+                        value={newOrder.payment_notes}
+                        onChange={(e) => setNewOrder({ ...newOrder, payment_notes: e.target.value })}
+                        placeholder="ملاحظات الدفع..." 
+                        className="min-h-[80px]"
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <Label htmlFor="paymentType">نوع الدفع</Label>
-                    <Select value={newOrder.payment_type} onValueChange={(value) => setNewOrder({ ...newOrder, payment_type: value })}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="اختر نوع الدفع" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="كاش">كاش</SelectItem>
-                        <SelectItem value="تحويل بنكي">تحويل بنكي</SelectItem>
-                        <SelectItem value="شبكة">شبكة</SelectItem>
-                        <SelectItem value="دفع آجل">دفع آجل</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="paymentNotes">ملاحظات الدفع</Label>
-                    <Textarea 
-                      id="paymentNotes" 
-                      value={newOrder.payment_notes}
-                      onChange={(e) => setNewOrder({ ...newOrder, payment_notes: e.target.value })}
-                      placeholder="ملاحظات الدفع..." 
-                      className="min-h-[80px]"
-                    />
+                  
+                  {/* عرض ملخص المبالغ */}
+                  <div className="grid grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg">
+                    <div className="text-center">
+                      <p className="text-sm text-muted-foreground">إجمالي المبلغ</p>
+                      <p className="text-lg font-semibold">{parseFloat(newOrder.amount || '0').toFixed(2)} ر.س</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm text-muted-foreground">المبلغ المدفوع</p>
+                      <p className="text-lg font-semibold text-success">{parseFloat(newOrder.paid_amount || '0').toFixed(2)} ر.س</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm text-muted-foreground">المبلغ المتبقي</p>
+                      <p className="text-lg font-semibold text-warning">{(parseFloat(newOrder.amount || '0') - parseFloat(newOrder.paid_amount || '0')).toFixed(2)} ر.س</p>
+                    </div>
                   </div>
                 </div>
 
@@ -1138,14 +1349,33 @@ const Orders = () => {
                      </div>
                    </TableCell>
                    <TableCell>
-                     <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="icon">
+                     <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="icon" title="عرض التفاصيل">
                         <Eye className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleEditOrder(order)}>
+                      <Button variant="ghost" size="icon" onClick={() => handleEditOrder(order)} title="تعديل">
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => {
+                          setSelectedOrderPayments(order);
+                          setShowPayments(true);
+                        }}
+                        title="إدارة المدفوعات"
+                      >
+                        <CreditCard className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => convertToInvoice(order.id)}
+                        title="تحويل إلى فاتورة"
+                      >
+                        <Receipt className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" title="إرسال رسالة">
                         <MessageSquare className="h-4 w-4" />
                       </Button>
                     </div>
@@ -1154,6 +1384,239 @@ const Orders = () => {
               ))}
             </TableBody>
           </Table>
+        </CardContent>
+      </Card>
+
+      {/* نافذة إدارة المدفوعات */}
+      <Dialog open={showPayments} onOpenChange={setShowPayments}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>إدارة مدفوعات الطلب {selectedOrderPayments?.order_number}</DialogTitle>
+          </DialogHeader>
+          
+          {selectedOrderPayments && (
+            <PaymentManagement 
+              order={selectedOrderPayments}
+              onPaymentAdded={() => {
+                fetchData();
+                setShowPayments(false);
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+// مكون إدارة المدفوعات
+const PaymentManagement = ({ order, onPaymentAdded }) => {
+  const [payments, setPayments] = useState([]);
+  const [newPayment, setNewPayment] = useState({
+    amount: "",
+    payment_type: "كاش",
+    notes: ""
+  });
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    fetchPayments();
+  }, [order.id]);
+
+  const fetchPayments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('payments')
+        .select('*')
+        .eq('order_id', order.id)
+        .order('payment_date', { ascending: false });
+
+      if (error) throw error;
+      setPayments(data || []);
+    } catch (error) {
+      console.error('Error fetching payments:', error);
+    }
+  };
+
+  const addPayment = async () => {
+    if (!newPayment.amount || parseFloat(newPayment.amount) <= 0) {
+      toast({
+        title: "خطأ",
+        description: "يرجى إدخال مبلغ صحيح",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const amount = parseFloat(newPayment.amount);
+    const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
+    const remainingAmount = order.amount - totalPaid;
+
+    if (amount > remainingAmount) {
+      toast({
+        title: "خطأ",
+        description: `المبلغ أكبر من المبلغ المتبقي (${remainingAmount.toFixed(2)} ر.س)`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // إضافة الدفعة
+      const { error: paymentError } = await supabase
+        .from('payments')
+        .insert({
+          order_id: order.id,
+          amount: amount,
+          payment_type: newPayment.payment_type,
+          notes: newPayment.notes
+        });
+
+      if (paymentError) throw paymentError;
+
+      // تحديث المبلغ المدفوع في الطلب
+      const newTotalPaid = totalPaid + amount;
+      const { error: orderError } = await supabase
+        .from('orders')
+        .update({ paid_amount: newTotalPaid })
+        .eq('id', order.id);
+
+      if (orderError) throw orderError;
+
+      toast({
+        title: "تم إضافة الدفعة",
+        description: "تم إضافة الدفعة بنجاح",
+      });
+
+      setNewPayment({ amount: "", payment_type: "كاش", notes: "" });
+      fetchPayments();
+      onPaymentAdded();
+    } catch (error) {
+      console.error('Error adding payment:', error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ في إضافة الدفعة",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
+  const remainingAmount = order.amount - totalPaid;
+
+  return (
+    <div className="space-y-6">
+      {/* ملخص المبالغ */}
+      <div className="grid grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg">
+        <div className="text-center">
+          <p className="text-sm text-muted-foreground">إجمالي المبلغ</p>
+          <p className="text-2xl font-bold">{order.amount.toFixed(2)} ر.س</p>
+        </div>
+        <div className="text-center">
+          <p className="text-sm text-muted-foreground">المبلغ المدفوع</p>
+          <p className="text-2xl font-bold text-success">{totalPaid.toFixed(2)} ر.س</p>
+        </div>
+        <div className="text-center">
+          <p className="text-sm text-muted-foreground">المبلغ المتبقي</p>
+          <p className="text-2xl font-bold text-warning">{remainingAmount.toFixed(2)} ر.س</p>
+        </div>
+      </div>
+
+      {/* إضافة دفعة جديدة */}
+      <Card>
+        <CardHeader>
+          <CardTitle>إضافة دفعة جديدة</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <Label htmlFor="payment-amount">المبلغ</Label>
+              <Input 
+                id="payment-amount"
+                type="number"
+                step="0.01"
+                value={newPayment.amount}
+                onChange={(e) => setNewPayment({ ...newPayment, amount: e.target.value })}
+                placeholder="0.00"
+                max={remainingAmount}
+              />
+            </div>
+            <div>
+              <Label htmlFor="payment-type">نوع الدفع</Label>
+              <Select value={newPayment.payment_type} onValueChange={(value) => setNewPayment({ ...newPayment, payment_type: value })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="كاش">كاش</SelectItem>
+                  <SelectItem value="تحويل بنكي">تحويل بنكي</SelectItem>
+                  <SelectItem value="شبكة">شبكة</SelectItem>
+                  <SelectItem value="دفع آجل">دفع آجل</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="payment-notes">ملاحظات</Label>
+              <Input 
+                id="payment-notes"
+                value={newPayment.notes}
+                onChange={(e) => setNewPayment({ ...newPayment, notes: e.target.value })}
+                placeholder="ملاحظات الدفعة..."
+              />
+            </div>
+          </div>
+          <Button onClick={addPayment} disabled={loading}>
+            <Plus className="h-4 w-4 mr-2" />
+            إضافة الدفعة
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* سجل المدفوعات */}
+      <Card>
+        <CardHeader>
+          <CardTitle>سجل المدفوعات</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {payments.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>التاريخ</TableHead>
+                  <TableHead>المبلغ</TableHead>
+                  <TableHead>نوع الدفع</TableHead>
+                  <TableHead>ملاحظات</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {payments.map((payment) => (
+                  <TableRow key={payment.id}>
+                    <TableCell>
+                      {new Date(payment.payment_date).toLocaleDateString('ar-SA')}
+                    </TableCell>
+                    <TableCell className="font-medium text-success">
+                      {payment.amount.toFixed(2)} ر.س
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{payment.payment_type}</Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {payment.notes || '-'}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <CreditCard className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>لا توجد مدفوعات لهذا الطلب</p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
