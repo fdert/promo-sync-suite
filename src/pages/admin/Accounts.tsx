@@ -167,18 +167,20 @@ const Accounts = () => {
   // جلب فواتير العملاء المدينين
   const fetchDebtorInvoices = async () => {
     try {
+      console.log('Fetching debtor invoices with search filters:', debtorSearch);
+      
       let query = supabase
         .from('invoices')
         .select(`
           *,
           customers(name, phone, whatsapp_number)
         `)
-        .in('status', ['قيد الانتظار', 'جزئي'])
         .order('issue_date', { ascending: false });
 
       // تطبيق فلاتر البحث
       if (debtorSearch.customerName) {
-        query = query.ilike('customers.name', `%${debtorSearch.customerName}%`);
+        // البحث في اسم العميل باستخدام فلترة JavaScript لأن Supabase تحتاج معالجة خاصة للجوين
+        // سنقوم بالفلترة بعد جلب البيانات
       }
 
       if (debtorSearch.dateFrom) {
@@ -195,12 +197,45 @@ const Accounts = () => {
 
       const { data, error } = await query;
 
+      console.log('All invoices data:', data);
+      console.log('Invoices error:', error);
+
       if (error) {
         console.error('Error fetching debtor invoices:', error);
         return;
       }
 
-      setDebtorInvoices(data || []);
+      // فلترة الفواتير التي لديها مبالغ متبقية (غير مسددة بالكامل)
+      let debtorInvoicesFiltered = (data || []).filter(invoice => {
+        const remainingAmount = invoice.total_amount - (invoice.paid_amount || 0);
+        return remainingAmount > 0;
+      });
+
+      // تطبيق فلتر البحث في اسم العميل
+      if (debtorSearch.customerName) {
+        debtorInvoicesFiltered = debtorInvoicesFiltered.filter(invoice => 
+          invoice.customers?.name?.toLowerCase().includes(debtorSearch.customerName.toLowerCase())
+        );
+      }
+
+      // تطبيق فلتر الحالة
+      if (debtorSearch.status !== 'all') {
+        debtorInvoicesFiltered = debtorInvoicesFiltered.filter(invoice => {
+          const remainingAmount = invoice.total_amount - (invoice.paid_amount || 0);
+          const paidAmount = invoice.paid_amount || 0;
+          
+          if (debtorSearch.status === 'partial') {
+            return paidAmount > 0 && remainingAmount > 0; // مدفوع جزئياً
+          } else if (debtorSearch.status === 'unpaid') {
+            return paidAmount === 0; // غير مدفوع نهائياً
+          }
+          return true;
+        });
+      }
+
+      console.log('Filtered debtor invoices:', debtorInvoicesFiltered);
+      setDebtorInvoices(debtorInvoicesFiltered);
+      
     } catch (error) {
       console.error('Error:', error);
     }
@@ -1061,16 +1096,16 @@ const Accounts = () => {
                 </div>
                 <div>
                   <Label htmlFor="status">حالة الفاتورة</Label>
-                  <Select value={debtorSearch.status} onValueChange={(value) => setDebtorSearch({...debtorSearch, status: value})}>
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="اختر الحالة" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">جميع الحالات</SelectItem>
-                      <SelectItem value="قيد الانتظار">قيد الانتظار</SelectItem>
-                      <SelectItem value="جزئي">مدفوع جزئياً</SelectItem>
-                    </SelectContent>
-                  </Select>
+                    <Select value={debtorSearch.status} onValueChange={(value) => setDebtorSearch({...debtorSearch, status: value})}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder="اختر الحالة" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">جميع الحالات</SelectItem>
+                        <SelectItem value="partial">مدفوع جزئياً</SelectItem>
+                        <SelectItem value="unpaid">غير مدفوع</SelectItem>
+                      </SelectContent>
+                    </Select>
                 </div>
               </div>
               
