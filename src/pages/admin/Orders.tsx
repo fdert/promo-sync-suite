@@ -199,7 +199,24 @@ const Orders = () => {
   const convertToInvoice = async (orderId: string) => {
     try {
       const order = orders.find(o => o.id === orderId);
-      if (!order) return false;
+      if (!order) {
+        toast({
+          title: "خطأ",
+          description: "لم يتم العثور على الطلب",
+          variant: "destructive",
+        });
+        return false;
+      }
+
+      // التحقق من أن الطلب مكتمل
+      if (order.status !== 'مكتمل') {
+        toast({
+          title: "تنبيه",
+          description: "يُفضل تحويل الطلبات المكتملة فقط إلى فواتير",
+          variant: "destructive",
+        });
+        // يمكن المتابعة لكن مع التحذير
+      }
 
       // إنشاء رقم فاتورة
       const { data: invoiceNumber, error: numberError } = await supabase
@@ -207,25 +224,32 @@ const Orders = () => {
 
       if (numberError) {
         console.error('Error generating invoice number:', numberError);
+        toast({
+          title: "خطأ",
+          description: "حدث خطأ في توليد رقم الفاتورة",
+          variant: "destructive",
+        });
         return false;
       }
 
       // إنشاء الفاتورة
-      const { data: invoiceData, error: invoiceError } = await supabase
+      const invoiceData = {
+        invoice_number: invoiceNumber,
+        customer_id: order.customer_id,
+        order_id: order.id,
+        amount: order.amount,
+        total_amount: order.amount,
+        tax_amount: 0, // يمكن حسابها لاحقاً
+        status: (order.paid_amount || 0) >= order.amount ? 'مدفوعة' : 'قيد الانتظار',
+        issue_date: new Date().toISOString().split('T')[0],
+        due_date: order.due_date,
+        payment_type: order.payment_type,
+        notes: order.payment_notes || `فاتورة الطلب ${order.order_number}`
+      };
+
+      const { data: newInvoice, error: invoiceError } = await supabase
         .from('invoices')
-        .insert({
-          invoice_number: invoiceNumber,
-          customer_id: order.customer_id,
-          order_id: order.id,
-          amount: order.amount,
-          total_amount: order.amount,
-          paid_amount: order.paid_amount || 0,
-          status: (order.paid_amount || 0) >= order.amount ? 'مدفوعة' : 'قيد الانتظار',
-          issue_date: new Date().toISOString().split('T')[0],
-          due_date: order.due_date,
-          payment_type: order.payment_type,
-          notes: order.payment_notes
-        })
+        .insert(invoiceData)
         .select()
         .single();
 
@@ -245,9 +269,9 @@ const Orders = () => {
         .select('*')
         .eq('order_id', orderId);
 
-      if (!itemsError && orderItems) {
+      if (!itemsError && orderItems && orderItems.length > 0) {
         const invoiceItems = orderItems.map(item => ({
-          invoice_id: invoiceData.id,
+          invoice_id: newInvoice.id,
           item_name: item.item_name,
           description: item.description,
           quantity: item.quantity,
@@ -255,9 +279,21 @@ const Orders = () => {
           total_amount: item.total_amount
         }));
 
-        await supabase
+        const { error: insertItemsError } = await supabase
           .from('invoice_items')
           .insert(invoiceItems);
+
+        if (insertItemsError) {
+          console.error('Error inserting invoice items:', insertItemsError);
+          // حذف الفاتورة إذا فشلت إضافة البنود
+          await supabase.from('invoices').delete().eq('id', newInvoice.id);
+          toast({
+            title: "خطأ",
+            description: "حدث خطأ في إضافة بنود الفاتورة",
+            variant: "destructive",
+          });
+          return false;
+        }
       }
 
       toast({
@@ -267,7 +303,12 @@ const Orders = () => {
 
       return true;
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error converting to invoice:', error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ غير متوقع",
+        variant: "destructive",
+      });
       return false;
     }
   };
