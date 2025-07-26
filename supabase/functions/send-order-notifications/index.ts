@@ -81,14 +81,33 @@ Deno.serve(async (req) => {
     // البحث عن إعدادات الويب هوك للإرسال
     const { data: webhookSettings } = await supabase
       .from('webhook_settings')
-      .select('webhook_url')
+      .select('webhook_url, order_statuses')
       .eq('webhook_type', 'outgoing')
-      .eq('is_active', true)
-      .limit(1)
-      .maybeSingle();
+      .eq('is_active', true);
 
-    if (!webhookSettings?.webhook_url) {
-      throw new Error('No active outgoing webhook configured');
+    console.log('Found webhooks:', webhookSettings);
+
+    // البحث عن webhook مناسب لهذا النوع من الإشعارات
+    let selectedWebhook = null;
+    
+    if (webhookSettings && webhookSettings.length > 0) {
+      // البحث عن webhook يحتوي على هذا النوع من الإشعارات أو webhook بدون تحديد حالات
+      for (const webhook of webhookSettings) {
+        if (!webhook.order_statuses || webhook.order_statuses.length === 0) {
+          // webhook لجميع الحالات
+          selectedWebhook = webhook;
+          break;
+        } else if (webhook.order_statuses.includes(type)) {
+          // webhook مخصص لهذا النوع
+          selectedWebhook = webhook;
+          break;
+        }
+      }
+    }
+
+    if (!selectedWebhook?.webhook_url) {
+      console.log('No matching webhook found for notification type:', type);
+      throw new Error(`No active webhook configured for notification type: ${type}`);
     }
 
     // إعداد بيانات الرسالة للإرسال عبر n8n
@@ -106,7 +125,7 @@ Deno.serve(async (req) => {
     console.log('Sending notification via webhook:', JSON.stringify(messagePayload, null, 2));
 
     // إرسال الرسالة عبر webhook إلى n8n
-    const response = await fetch(webhookSettings.webhook_url, {
+    const response = await fetch(selectedWebhook.webhook_url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
