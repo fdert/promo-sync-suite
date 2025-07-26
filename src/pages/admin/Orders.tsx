@@ -804,7 +804,7 @@ const Orders = () => {
         if (currentOrder && currentOrder.customers) {
           console.log('Customer data:', currentOrder.customers);
           
-          // تحديد نوع الإشعار بناءً على الحالة الجديدة
+          // تحديد نوع الإشعار بناءً على الحالة الجديدة (تجاهل "جاهز للتسليم" لأنه يتم إرساله أعلاه)
           let notificationType;
           switch (newStatus) {
             case 'قيد التنفيذ':
@@ -815,6 +815,9 @@ const Orders = () => {
               break;
             case 'جديد':
               notificationType = 'order_confirmed';
+              break;
+            case 'جاهز للتسليم':
+              notificationType = null; // تم إرساله بالفعل أعلاه
               break;
             default:
               notificationType = null;
