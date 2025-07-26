@@ -45,7 +45,22 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
   }
 }) => {
   return (
-    <div className="print-only invoice-print hidden" dir="rtl">
+    <div 
+      className="invoice-print-container" 
+      style={{ 
+        position: 'absolute',
+        left: '-9999px',
+        top: '0',
+        width: '100%',
+        height: 'auto',
+        backgroundColor: 'white',
+        color: 'black',
+        padding: '10px',
+        fontSize: '11px',
+        fontFamily: 'Arial, sans-serif',
+        direction: 'rtl'
+      }}
+    >
       
       {/* Header - مدمج ومبسط */}
       <div style={{ 

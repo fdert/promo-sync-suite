@@ -258,37 +258,41 @@ const Invoices = () => {
       setPrintInvoice(invoice);
       setPrintItems(items || []);
 
-      // إضافة فئة للجسم لإخفاء عناصر الشاشة
-      document.body.classList.add('printing');
-      
       // انتظار أطول لضمان تحديث DOM
       setTimeout(() => {
-        // تحديث عداد الطباعة
-        supabase
-          .from('invoices')
-          .update({ 
-            print_count: (invoice.print_count || 0) + 1,
-            last_printed_at: new Date().toISOString()
-          })
-          .eq('id', invoice.id);
+        // التحقق من وجود العنصر قبل الطباعة
+        const printElement = document.querySelector('.invoice-print-container');
+        if (printElement) {
+          console.log('Print element found, proceeding with print...');
+          
+          // تحديث عداد الطباعة
+          supabase
+            .from('invoices')
+            .update({ 
+              print_count: (invoice.print_count || 0) + 1,
+              last_printed_at: new Date().toISOString()
+            })
+            .eq('id', invoice.id);
 
-        // طباعة الفاتورة
-        window.print();
-        
-        // إزالة فئة الطباعة بعد الانتهاء
-        setTimeout(() => {
-          document.body.classList.remove('printing');
-        }, 1000);
-        
-        toast({
-          title: "نجح",
-          description: "تم إرسال الفاتورة للطباعة",
-        });
-      }, 300);
+          // طباعة الفاتورة
+          window.print();
+          
+          toast({
+            title: "نجح",
+            description: "تم إرسال الفاتورة للطباعة",
+          });
+        } else {
+          console.error('Print element not found');
+          toast({
+            title: "خطأ",
+            description: "لم يتم العثور على محتوى الطباعة",
+            variant: "destructive",
+          });
+        }
+      }, 500);
       
     } catch (error) {
       console.error('Error printing invoice:', error);
-      document.body.classList.remove('printing');
       toast({
         title: "خطأ",
         description: "حدث خطأ في طباعة الفاتورة",

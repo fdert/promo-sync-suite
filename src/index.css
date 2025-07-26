@@ -200,65 +200,47 @@ All colors MUST be HSL.
     print-color-adjust: exact !important;
   }
 
-  /* Hide all screen elements */
-  .screen-only {
-    display: none !important;
+  /* Hide everything by default */
+  body * {
+    visibility: hidden;
   }
 
-  /* Show only print content */
-  .print-only {
-    display: block !important;
-    width: 100% !important;
-    height: auto !important;
-    position: static !important;
-    left: auto !important;
-    top: auto !important;
-    visibility: visible !important;
+  /* Show print content and its children */
+  .invoice-print-container,
+  .invoice-print-container * {
+    visibility: visible;
+  }
+
+  /* Position print container */
+  .invoice-print-container {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
     background: white !important;
     color: black !important;
     font-size: 11px !important;
     line-height: 1.2 !important;
     font-family: Arial, sans-serif !important;
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-
-  /* Ensure proper print layout */
-  .invoice-print {
-    width: 100% !important;
-    height: auto !important;
-    max-width: none !important;
-    transform: scale(1) !important;
-    zoom: 1 !important;
   }
 
   /* Table styles for print */
-  .invoice-print table {
+  .invoice-print-container table {
     width: 100% !important;
     border-collapse: collapse !important;
     font-size: 10px !important;
-    page-break-inside: avoid !important;
   }
 
-  .invoice-print th,
-  .invoice-print td {
+  .invoice-print-container th,
+  .invoice-print-container td {
     border: 1px solid #000 !important;
     padding: 3px !important;
     font-size: 10px !important;
     line-height: 1.1 !important;
   }
 
-  .invoice-print th {
+  .invoice-print-container th {
     background-color: #f0f0f0 !important;
     font-weight: bold !important;
-  }
-
-  /* Prevent page breaks */
-  .invoice-print {
-    page-break-inside: avoid !important;
-  }
-
-  .invoice-print > div {
-    page-break-inside: avoid !important;
   }
 }
