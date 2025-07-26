@@ -20,8 +20,8 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { type, data } = await req.json();
-    console.log('Notification request:', { type, data });
+    const { type, order_id, data } = await req.json();
+    console.log('Notification request:', { type, order_id, data });
 
     let message = '';
     let customerPhone = '';
@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
 
     // جلب بيانات الطلب الكاملة مع بنود الطلب للطلبات الجديدة
     let orderDetails = null;
-    if (type === 'order_created' && data.order_id) {
+    if (type === 'order_created' && order_id) {
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .select(`
@@ -37,11 +37,12 @@ Deno.serve(async (req) => {
           customers(name, whatsapp_number),
           order_items(item_name, quantity, unit_price, total_amount, description)
         `)
-        .eq('id', data.order_id)
+        .eq('id', order_id)
         .single();
       
       if (!orderError && orderData) {
         orderDetails = orderData;
+        console.log('Order details loaded:', orderDetails);
       }
     }
 
@@ -162,24 +163,6 @@ Deno.serve(async (req) => {
 
         case 'order_cancelled':
           message = `عزيزي ${data.customer_name}، تم إلغاء طلبك رقم ${data.order_number}. للاستفسار يرجى التواصل معنا.`;
-          customerPhone = data.customer_phone;
-          customerName = data.customer_name;
-          break;
-
-        case 'invoice_created':
-          message = `${data.customer_name}، تم إنشاء فاتورة رقم ${data.invoice_number} بقيمة ${data.total_amount} ر.س. تاريخ الاستحقاق: ${data.due_date}. يرجى المراجعة والدفع.`;
-          customerPhone = data.customer_phone;
-          customerName = data.customer_name;
-          break;
-
-        case 'invoice_paid':
-          message = `شكراً لك ${data.customer_name}! تم استلام دفع فاتورة رقم ${data.invoice_number} بقيمة ${data.total_amount} ر.س بنجاح.`;
-          customerPhone = data.customer_phone;
-          customerName = data.customer_name;
-          break;
-
-        case 'invoice_overdue':
-          message = `${data.customer_name}، فاتورة رقم ${data.invoice_number} متأخرة السداد. القيمة: ${data.total_amount} ر.س. يرجى الدفع في أقرب وقت لتجنب أي رسوم إضافية.`;
           customerPhone = data.customer_phone;
           customerName = data.customer_name;
           break;
