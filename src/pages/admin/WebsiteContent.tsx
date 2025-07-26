@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,7 @@ import {
   MapPin,
   Star,
 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const WebsiteContent = () => {
   const { toast } = useToast();
@@ -107,12 +108,83 @@ const WebsiteContent = () => {
     contactDescription: "نحن هنا لمساعدتك في تحقيق أهدافك",
   });
 
-  const handleSave = () => {
-    toast({
-      title: "تم الحفظ بنجاح",
-      description: "تم حفظ تغييرات محتوى الموقع",
-    });
+  const handleSave = async () => {
+    try {
+      const websiteData = {
+        companyInfo,
+        heroSection,
+        stats,
+        services,
+        testimonials,
+        contactInfo,
+        sections
+      };
+
+      // حفظ البيانات في قاعدة البيانات
+      const { error } = await supabase
+        .from('website_settings')
+        .upsert({
+          setting_key: 'website_content',
+          setting_value: websiteData,
+          created_by: (await supabase.auth.getUser()).data.user?.id
+        });
+
+      if (error) {
+        console.error('Error saving website settings:', error);
+        toast({
+          title: "خطأ في الحفظ",
+          description: "حدث خطأ أثناء حفظ الإعدادات: " + error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "تم الحفظ بنجاح",
+        description: "تم حفظ تغييرات محتوى الموقع في قاعدة البيانات",
+      });
+    } catch (error) {
+      console.error('Error:', error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ غير متوقع",
+        variant: "destructive",
+      });
+    }
   };
+
+  // جلب البيانات المحفوظة عند تحميل الصفحة
+  const loadSavedData = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('website_settings')
+        .select('setting_value')
+        .eq('setting_key', 'website_content')
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error loading website settings:', error);
+        return;
+      }
+
+      if (data?.setting_value) {
+        const savedData = data.setting_value as any;
+        if (savedData.companyInfo) setCompanyInfo(savedData.companyInfo);
+        if (savedData.heroSection) setHeroSection(savedData.heroSection);
+        if (savedData.stats) setStats(savedData.stats);
+        if (savedData.services) setServices(savedData.services);
+        if (savedData.testimonials) setTestimonials(savedData.testimonials);
+        if (savedData.contactInfo) setContactInfo(savedData.contactInfo);
+        if (savedData.sections) setSections(savedData.sections);
+      }
+    } catch (error) {
+      console.error('Error loading data:', error);
+    }
+  };
+
+  useEffect(() => {
+    loadSavedData();
+  }, []);
 
   const addService = () => {
     setServices([
