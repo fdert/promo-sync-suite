@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Plus, Search, Eye, Printer, MessageCircle, Calendar, Filter, Trash2, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import InvoicePrint from "@/components/InvoicePrint";
 
 const Invoices = () => {
   const [invoices, setInvoices] = useState([]);
@@ -33,6 +34,8 @@ const Invoices = () => {
   const [invoiceItems, setInvoiceItems] = useState([
     { item_name: "", description: "", quantity: 1, unit_price: 0, total_amount: 0 }
   ]);
+  const [printInvoice, setPrintInvoice] = useState(null);
+  const [printItems, setPrintItems] = useState([]);
 
   const { toast } = useToast();
 
@@ -231,6 +234,26 @@ const Invoices = () => {
   // طباعة الفاتورة
   const handlePrintInvoice = async (invoice) => {
     try {
+      // جلب بنود الفاتورة
+      const { data: items, error: itemsError } = await supabase
+        .from('invoice_items')
+        .select('*')
+        .eq('invoice_id', invoice.id);
+
+      if (itemsError) {
+        console.error('Error fetching invoice items:', itemsError);
+        toast({
+          title: "خطأ",
+          description: "حدث خطأ في جلب بيانات الفاتورة",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // تحديث الحالة للطباعة
+      setPrintInvoice(invoice);
+      setPrintItems(items || []);
+
       // تحديث عداد الطباعة
       await supabase
         .from('invoices')
@@ -240,15 +263,22 @@ const Invoices = () => {
         })
         .eq('id', invoice.id);
 
-      // فتح نافذة الطباعة
-      window.print();
+      // انتظار قصير لضمان تحديث الحالة ثم الطباعة
+      setTimeout(() => {
+        window.print();
+        toast({
+          title: "نجح",
+          description: "تم إرسال الفاتورة للطباعة",
+        });
+      }, 100);
       
-      toast({
-        title: "نجح",
-        description: "تم إرسال الفاتورة للطباعة",
-      });
     } catch (error) {
       console.error('Error printing invoice:', error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ في طباعة الفاتورة",
+        variant: "destructive",
+      });
     }
   };
 
@@ -650,6 +680,13 @@ const Invoices = () => {
         </CardContent>
       </Card>
 
+      {/* Print Component */}
+      {printInvoice && (
+        <InvoicePrint 
+          invoice={printInvoice} 
+          items={printItems}
+        />
+      )}
     </div>
   );
 };
