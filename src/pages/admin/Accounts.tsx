@@ -208,6 +208,7 @@ const Accounts = () => {
       // فلترة الفواتير التي لديها مبالغ متبقية (غير مسددة بالكامل)
       let debtorInvoicesFiltered = (data || []).filter(invoice => {
         const remainingAmount = invoice.total_amount - (invoice.paid_amount || 0);
+        console.log(`Invoice ${invoice.invoice_number}: total=${invoice.total_amount}, paid=${invoice.paid_amount || 0}, remaining=${remainingAmount}`);
         return remainingAmount > 0;
       });
 
