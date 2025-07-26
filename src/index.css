@@ -191,8 +191,8 @@ All colors MUST be HSL.
 /* Print Styles */
 @media print {
   @page {
-    size: A4;
-    margin: 1cm;
+    size: A5;
+    margin: 0.5cm;
   }
 
   /* Hide everything by default when printing */
