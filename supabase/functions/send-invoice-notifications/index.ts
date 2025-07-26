@@ -130,7 +130,8 @@ Deno.serve(async (req) => {
         'amount': invoice?.total_amount?.toString() || invoice_data?.amount?.toString() || '',
         'due_date': invoice?.due_date || invoice_data?.due_date || '',
         'payment_date': invoice?.payment_date || invoice_data?.payment_date || '',
-        'status': invoice?.status || invoice_data?.status || ''
+        'status': invoice?.status || invoice_data?.status || '',
+        'invoice_link': `https://gcuqfxacnbxdldsbmgvf.supabase.co/preview/invoice/${invoice?.id || invoice_data?.invoice_id}`
       };
 
       // استبدال جميع المتغيرات في الرسالة

@@ -22,6 +22,7 @@ import Settings from "./pages/admin/Settings";
 import ServiceTypes from "./pages/admin/ServiceTypes";
 import MessageTemplates from "./pages/admin/MessageTemplates";
 import UserDashboard from "./pages/user/UserDashboard";
+import InvoicePreview from "./pages/InvoicePreview";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,7 +36,8 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Home />} />
-            <Route path="/auth" element={<Auth />} />
+          <Route path="/invoice/:invoiceId" element={<InvoicePreview />} />
+          <Route path="/auth" element={<Auth />} />
             <Route path="/user" element={
               <ProtectedRoute>
                 <UserDashboard />
