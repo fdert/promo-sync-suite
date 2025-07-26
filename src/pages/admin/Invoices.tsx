@@ -258,38 +258,38 @@ const Invoices = () => {
       setPrintInvoice(invoice);
       setPrintItems(items || []);
 
-      // انتظار أطول لضمان تحديث DOM
-      setTimeout(() => {
-        // التحقق من وجود العنصر قبل الطباعة
-        const printElement = document.querySelector('.invoice-print-container');
-        if (printElement) {
-          console.log('Print element found, proceeding with print...');
-          
-          // تحديث عداد الطباعة
-          supabase
-            .from('invoices')
-            .update({ 
-              print_count: (invoice.print_count || 0) + 1,
-              last_printed_at: new Date().toISOString()
-            })
-            .eq('id', invoice.id);
+      // إضافة فئة no-print للواجهة
+      const mainContent = document.querySelector('.screen-only');
+      if (mainContent) {
+        mainContent.classList.add('no-print');
+      }
 
-          // طباعة الفاتورة
-          window.print();
-          
-          toast({
-            title: "نجح",
-            description: "تم إرسال الفاتورة للطباعة",
-          });
-        } else {
-          console.error('Print element not found');
-          toast({
-            title: "خطأ",
-            description: "لم يتم العثور على محتوى الطباعة",
-            variant: "destructive",
-          });
-        }
-      }, 500);
+      // انتظار تحديث DOM
+      setTimeout(() => {
+        // تحديث عداد الطباعة
+        supabase
+          .from('invoices')
+          .update({ 
+            print_count: (invoice.print_count || 0) + 1,
+            last_printed_at: new Date().toISOString()
+          })
+          .eq('id', invoice.id);
+
+        // طباعة الفاتورة
+        window.print();
+        
+        // إزالة فئة no-print بعد الطباعة
+        setTimeout(() => {
+          if (mainContent) {
+            mainContent.classList.remove('no-print');
+          }
+        }, 1000);
+        
+        toast({
+          title: "نجح",
+          description: "تم إرسال الفاتورة للطباعة",
+        });
+      }, 300);
       
     } catch (error) {
       console.error('Error printing invoice:', error);

@@ -45,24 +45,9 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
   }
 }) => {
   return (
-    <div 
-      className="invoice-print-container" 
-      style={{ 
-        position: 'absolute',
-        left: '-9999px',
-        top: '0',
-        width: '100%',
-        height: 'auto',
-        backgroundColor: 'white',
-        color: 'black',
-        padding: '10px',
-        fontSize: '11px',
-        fontFamily: 'Arial, sans-serif',
-        direction: 'rtl'
-      }}
-    >
+    <div className="print-invoice" style={{ display: 'none' }} dir="rtl">
       
-      {/* Header - مدمج ومبسط */}
+      {/* Header */}
       <div style={{ 
         display: 'flex', 
         justifyContent: 'space-between', 
@@ -101,7 +86,7 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
         </div>
       </div>
 
-      {/* Customer Info - مدمج */}
+      {/* Customer Info */}
       <div style={{ 
         backgroundColor: '#f8f9fa', 
         padding: '4px', 
@@ -118,7 +103,7 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
         )}
       </div>
 
-      {/* Items Table - مضغوط */}
+      {/* Items Table */}
       <table style={{ 
         width: '100%', 
         borderCollapse: 'collapse',
@@ -131,8 +116,7 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
               border: '1px solid #555', 
               padding: '2px', 
               textAlign: 'right',
-              fontWeight: 'bold',
-              width: '45%'
+              fontWeight: 'bold'
             }}>
               البند
             </th>
@@ -201,7 +185,7 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
         </tbody>
       </table>
 
-      {/* Totals - مضغوط */}
+      {/* Totals */}
       <div style={{ 
         display: 'flex', 
         justifyContent: 'flex-end', 
@@ -240,7 +224,7 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
         </div>
       </div>
 
-      {/* Payment Info & Notes - في سطر واحد */}
+      {/* Payment Info */}
       <div style={{ 
         display: 'flex', 
         justifyContent: 'space-between',
@@ -254,7 +238,7 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
         <span><strong>الحالة:</strong> {invoice.status}</span>
       </div>
 
-      {/* Notes - إذا وجدت */}
+      {/* Notes */}
       {invoice.notes && (
         <div style={{ 
           fontSize: '8px',
@@ -267,7 +251,7 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
         </div>
       )}
 
-      {/* Footer - بسيط */}
+      {/* Footer */}
       <div style={{ 
         textAlign: 'center', 
         fontSize: '7px', 
@@ -276,7 +260,7 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
         paddingTop: '3px',
         marginTop: '5px'
       }}>
-        شكراً لثقتكم - تاريخ الطباعة: {new Date().toLocaleDateString('ar-SA')}
+        شكراً لثقتكم
       </div>
     </div>
   );
