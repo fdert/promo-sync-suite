@@ -155,6 +155,9 @@ Deno.serve(async (req) => {
 
 ${invoice?.notes || invoice_data?.notes ? `📝 *ملاحظات:* ${invoice?.notes || invoice_data?.notes}` : ''}
 
+🔗 *رابط الفاتورة:*
+https://gcuqfxacnbxdldsbmgvf.supabase.co/preview/invoice/${invoice?.id || invoice_data?.invoice_id}
+
 نشكركم على ثقتكم بنا ونتطلع لخدمتكم دائماً.
 
 للاستفسارات، يرجى التواصل معنا.`;
@@ -168,6 +171,9 @@ ${invoice?.notes || invoice_data?.notes ? `📝 *ملاحظات:* ${invoice?.not
 
 تاريخ الدفع: ${invoice?.payment_date ? new Date(invoice.payment_date).toLocaleDateString('ar-SA') : new Date().toLocaleDateString('ar-SA')}
 
+🔗 *رابط الفاتورة:*
+https://gcuqfxacnbxdldsbmgvf.supabase.co/preview/invoice/${invoice?.id || invoice_data?.invoice_id}
+
 نشكركم على سرعة الدفع وحسن التعامل.`;
           break;
         case 'invoice_overdue':
@@ -179,12 +185,18 @@ ${customer.name}،
 
 تاريخ الاستحقاق: ${invoice?.due_date ? new Date(invoice.due_date).toLocaleDateString('ar-SA') : invoice_data?.due_date}
 
+🔗 *رابط الفاتورة:*
+https://gcuqfxacnbxdldsbmgvf.supabase.co/preview/invoice/${invoice?.id || invoice_data?.invoice_id}
+
 نرجو منكم المراجعة والدفع في أقرب وقت ممكن.
 
 للاستفسارات، يرجى التواصل معنا.`;
           break;
         default:
-          message = `${customer.name}، تم تحديث الفاتورة رقم ${invoice?.invoice_number || invoice_data?.invoice_number}.`;
+          message = `${customer.name}، تم تحديث الفاتورة رقم ${invoice?.invoice_number || invoice_data?.invoice_number}.
+
+🔗 *رابط الفاتورة:*
+https://gcuqfxacnbxdldsbmgvf.supabase.co/preview/invoice/${invoice?.id || invoice_data?.invoice_id}`;
       }
     }
 
