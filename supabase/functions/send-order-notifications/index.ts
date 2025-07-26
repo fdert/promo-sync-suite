@@ -201,6 +201,12 @@ Deno.serve(async (req) => {
           break;
         }
       }
+      
+      // إذا لم نجد webhook مخصص، نستخدم الأول المتوفر
+      if (!selectedWebhook && webhookSettings.length > 0) {
+        selectedWebhook = webhookSettings[0];
+        console.log('Using first available webhook as fallback');
+      }
     }
 
     if (!selectedWebhook?.webhook_url) {
