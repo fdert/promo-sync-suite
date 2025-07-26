@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -22,108 +22,115 @@ import {
   Eye
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import WebhookManagement from "@/components/WebhookManagement";
 
 const WebhookSettings = () => {
-  const [whatsappConfig, setWhatsappConfig] = useState({
-    enabled: true,
-    apiUrl: "https://api.whatsapp.business/v1/",
-    token: "",
-    phoneNumberId: "",
-    businessAccountId: ""
-  });
-
-  const [orderWebhooks, setOrderWebhooks] = useState([
-    {
-      id: 1,
-      stage: "pending",
-      label: "طلب جديد",
-      url: "",
-      enabled: true,
-      message: "تم استلام طلب جديد من العميل {customer_name} بقيمة {amount} ريال"
-    },
-    {
-      id: 2,
-      stage: "in_progress",
-      label: "بدء التنفيذ",
-      url: "",
-      enabled: true,
-      message: "تم بدء تنفيذ الطلب #{order_id} للعميل {customer_name}"
-    },
-    {
-      id: 3,
-      stage: "review",
-      label: "مراجعة",
-      url: "",
-      enabled: true,
-      message: "الطلب #{order_id} جاهز للمراجعة من العميل {customer_name}"
-    },
-    {
-      id: 4,
-      stage: "completed",
-      label: "مكتمل",
-      url: "",
-      enabled: true,
-      message: "تم إنجاز الطلب #{order_id} للعميل {customer_name} بنجاح"
-    },
-    {
-      id: 5,
-      stage: "cancelled",
-      label: "ملغي",
-      url: "",
-      enabled: false,
-      message: "تم إلغاء الطلب #{order_id} للعميل {customer_name}"
-    }
-  ]);
-
-  const [invoiceWebhooks, setInvoiceWebhooks] = useState([
-    {
-      id: 1,
-      event: "invoice_created",
-      label: "إنشاء فاتورة",
-      url: "",
-      enabled: true,
-      message: "تم إنشاء فاتورة جديدة #{invoice_id} للعميل {customer_name} بقيمة {amount} ريال"
-    },
-    {
-      id: 2,
-      event: "payment_received",
-      label: "استلام دفعة",
-      url: "",
-      enabled: true,
-      message: "تم استلام دفعة بقيمة {amount} ريال للفاتورة #{invoice_id} من العميل {customer_name}"
-    },
-    {
-      id: 3,
-      event: "payment_overdue",
-      label: "تأخير في الدفع",
-      url: "",
-      enabled: true,
-      message: "تنبيه: تأخر في دفع الفاتورة #{invoice_id} للعميل {customer_name}"
-    }
-  ]);
-
-  const [webhookLogs, setWebhookLogs] = useState([
-    {
-      id: 1,
-      event: "order_completed",
-      url: "https://api.example.com/webhook",
-      status: "success",
-      response: "200 OK",
-      timestamp: "2024-01-15 14:30:22",
-      payload: { order_id: 123, customer_name: "شركة الإبداع" }
-    },
-    {
-      id: 2,
-      event: "invoice_created", 
-      url: "https://api.example.com/webhook",
-      status: "failed",
-      response: "500 Internal Server Error",
-      timestamp: "2024-01-15 14:25:15",
-      payload: { invoice_id: 456, customer_name: "مؤسسة النجاح" }
-    }
-  ]);
-
+  const [webhookSettings, setWebhookSettings] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+
+  useEffect(() => {
+    fetchWebhookSettings();
+  }, []);
+
+  const fetchWebhookSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('webhook_settings')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        throw error;
+      }
+
+      setWebhookSettings(data || []);
+    } catch (error) {
+      console.error('Error fetching webhook settings:', error);
+      toast({
+        title: "خطأ",
+        description: "فشل في تحميل إعدادات الويب هوك",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const saveWebhookSetting = async (webhookData: {
+    webhook_name: string;
+    webhook_url: string;
+    webhook_type: string;
+    is_active: boolean;
+    secret_key?: string;
+  }) => {
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      
+      const { data, error } = await supabase
+        .from('webhook_settings')
+        .insert({
+          ...webhookData,
+          created_by: user.user?.id
+        })
+        .select()
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      setWebhookSettings([data, ...webhookSettings]);
+      
+      toast({
+        title: "تم الحفظ",
+        description: "تم حفظ إعدادات الويب هوك بنجاح",
+      });
+
+      return data;
+    } catch (error) {
+      console.error('Error saving webhook settings:', error);
+      toast({
+        title: "خطأ",
+        description: "فشل في حفظ إعدادات الويب هوك",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
+  const updateWebhookSetting = async (id: string, updates: any) => {
+    try {
+      const { data, error } = await supabase
+        .from('webhook_settings')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      setWebhookSettings(webhookSettings.map(w => w.id === id ? data : w));
+      
+      toast({
+        title: "تم التحديث",
+        description: "تم تحديث إعدادات الويب هوك بنجاح",
+      });
+
+      return data;
+    } catch (error) {
+      console.error('Error updating webhook settings:', error);
+      toast({
+        title: "خطأ",
+        description: "فشل في تحديث إعدادات الويب هوك",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
 
   const testWebhook = async (url: string, event: string) => {
     if (!url) {
@@ -140,46 +147,40 @@ const WebhookSettings = () => {
       description: "يتم إرسال طلب اختبار للويب هوك",
     });
 
-    // Simulate webhook test
-    setTimeout(() => {
-      const newLog = {
-        id: webhookLogs.length + 1,
+    try {
+      const testData = {
         event: event + "_test",
-        url: url,
-        status: "success" as const,
-        response: "200 OK - Test successful",
-        timestamp: new Date().toLocaleString('ar-SA'),
-        payload: { order_id: 999, customer_name: "اختبار" }
+        data: {
+          test: true,
+          timestamp: new Date().toISOString(),
+          message: "هذا اختبار للويب هوك"
+        }
       };
 
-      setWebhookLogs([newLog, ...webhookLogs]);
-      
-      toast({
-        title: "نجح الاختبار",
-        description: "تم إرسال الويب هوك بنجاح",
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(testData)
       });
-    }, 2000);
-  };
 
-  const saveWhatsAppConfig = () => {
-    toast({
-      title: "تم حفظ الإعدادات",
-      description: "تم حفظ إعدادات واتساب بنجاح",
-    });
-  };
-
-  const saveOrderWebhooks = () => {
-    toast({
-      title: "تم حفظ الإعدادات",
-      description: "تم حفظ إعدادات ويب هوك الطلبات بنجاح",
-    });
-  };
-
-  const saveInvoiceWebhooks = () => {
-    toast({
-      title: "تم حفظ الإعدادات",
-      description: "تم حفظ إعدادات ويب هوك الفواتير بنجاح",
-    });
+      if (response.ok) {
+        toast({
+          title: "نجح الاختبار",
+          description: "تم إرسال الويب هوك بنجاح",
+        });
+      } else {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error('Webhook test failed:', error);
+      toast({
+        title: "فشل الاختبار",
+        description: `فشل في إرسال الويب هوك: ${error}`,
+        variant: "destructive",
+      });
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -226,76 +227,13 @@ const WebhookSettings = () => {
 
         {/* WhatsApp Configuration */}
         <TabsContent value="whatsapp">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MessageSquare className="h-5 w-5" />
-                إعدادات واتساب بيزنس
-              </CardTitle>
-              <CardDescription>
-                تكوين API واتساب لإرسال الرسائل التلقائية
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label className="text-base">تفعيل واتساب بيزنس</Label>
-                  <p className="text-sm text-muted-foreground">تفعيل إرسال الرسائل عبر واتساب</p>
-                </div>
-                <Switch 
-                  checked={whatsappConfig.enabled} 
-                  onCheckedChange={(checked) => setWhatsappConfig({...whatsappConfig, enabled: checked})}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>رابط API</Label>
-                  <Input
-                    value={whatsappConfig.apiUrl}
-                    onChange={(e) => setWhatsappConfig({...whatsappConfig, apiUrl: e.target.value})}
-                    placeholder="https://api.whatsapp.business/v1/"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>رمز الوصول (Access Token)</Label>
-                  <Input
-                    type="password"
-                    value={whatsappConfig.token}
-                    onChange={(e) => setWhatsappConfig({...whatsappConfig, token: e.target.value})}
-                    placeholder="أدخل رمز الوصول"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>معرف رقم الهاتف</Label>
-                  <Input
-                    value={whatsappConfig.phoneNumberId}
-                    onChange={(e) => setWhatsappConfig({...whatsappConfig, phoneNumberId: e.target.value})}
-                    placeholder="معرف رقم الهاتف"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>معرف الحساب التجاري</Label>
-                  <Input
-                    value={whatsappConfig.businessAccountId}
-                    onChange={(e) => setWhatsappConfig({...whatsappConfig, businessAccountId: e.target.value})}
-                    placeholder="معرف الحساب التجاري"
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-2">
-                <Button onClick={saveWhatsAppConfig}>
-                  <Settings className="h-4 w-4 mr-2" />
-                  حفظ الإعدادات
-                </Button>
-                <Button variant="outline" onClick={() => testWebhook("", "whatsapp_test")}>
-                  <TestTube className="h-4 w-4 mr-2" />
-                  اختبار الاتصال
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <WebhookManagement 
+            webhookSettings={webhookSettings}
+            onSave={saveWebhookSetting}
+            onUpdate={updateWebhookSetting}
+            onTest={testWebhook}
+            loading={loading}
+          />
         </TabsContent>
 
         {/* Order Webhooks */}
@@ -304,75 +242,21 @@ const WebhookSettings = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <ClipboardList className="h-5 w-5" />
-                ويب هوك مراحل الطلبات
+                ويب هوك الطلبات
               </CardTitle>
               <CardDescription>
-                تكوين الويب هوك لكل مرحلة من مراحل تنفيذ الطلب
+                إضافة وإدارة ويب هوك لإشعارات الطلبات
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-6">
-                {orderWebhooks.map((webhook) => (
-                  <div key={webhook.id} className="border rounded-lg p-4 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="font-medium">{webhook.label}</h4>
-                        <p className="text-sm text-muted-foreground">مرحلة: {webhook.stage}</p>
-                      </div>
-                      <Switch 
-                        checked={webhook.enabled}
-                        onCheckedChange={(checked) => {
-                          setOrderWebhooks(orderWebhooks.map(w => 
-                            w.id === webhook.id ? {...w, enabled: checked} : w
-                          ));
-                        }}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>رابط الويب هوك</Label>
-                      <div className="flex gap-2">
-                        <Input
-                          value={webhook.url}
-                          onChange={(e) => {
-                            setOrderWebhooks(orderWebhooks.map(w => 
-                              w.id === webhook.id ? {...w, url: e.target.value} : w
-                            ));
-                          }}
-                          placeholder="https://api.example.com/webhook"
-                          className="flex-1"
-                        />
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => testWebhook(webhook.url, webhook.stage)}
-                        >
-                          <TestTube className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>نص الرسالة</Label>
-                      <Textarea
-                        value={webhook.message}
-                        onChange={(e) => {
-                          setOrderWebhooks(orderWebhooks.map(w => 
-                            w.id === webhook.id ? {...w, message: e.target.value} : w
-                          ));
-                        }}
-                        placeholder="نص الرسالة التي سترسل"
-                        rows={2}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        المتغيرات المتاحة: {"{customer_name}, {order_id}, {amount}, {service}, {deadline}"}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-                <Button onClick={saveOrderWebhooks} className="w-full">
-                  <Settings className="h-4 w-4 mr-2" />
-                  حفظ إعدادات الطلبات
-                </Button>
-              </div>
+              <WebhookManagement 
+                webhookSettings={webhookSettings.filter(w => w.webhook_type === 'outgoing')}
+                onSave={saveWebhookSetting}
+                onUpdate={updateWebhookSetting}
+                onTest={testWebhook}
+                loading={loading}
+                webhookType="outgoing"
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -386,72 +270,18 @@ const WebhookSettings = () => {
                 ويب هوك الفواتير
               </CardTitle>
               <CardDescription>
-                تكوين الويب هوك لأحداث الفواتير والمدفوعات
+                إضافة وإدارة ويب هوك لإشعارات الفواتير
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-6">
-                {invoiceWebhooks.map((webhook) => (
-                  <div key={webhook.id} className="border rounded-lg p-4 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="font-medium">{webhook.label}</h4>
-                        <p className="text-sm text-muted-foreground">حدث: {webhook.event}</p>
-                      </div>
-                      <Switch 
-                        checked={webhook.enabled}
-                        onCheckedChange={(checked) => {
-                          setInvoiceWebhooks(invoiceWebhooks.map(w => 
-                            w.id === webhook.id ? {...w, enabled: checked} : w
-                          ));
-                        }}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>رابط الويب هوك</Label>
-                      <div className="flex gap-2">
-                        <Input
-                          value={webhook.url}
-                          onChange={(e) => {
-                            setInvoiceWebhooks(invoiceWebhooks.map(w => 
-                              w.id === webhook.id ? {...w, url: e.target.value} : w
-                            ));
-                          }}
-                          placeholder="https://api.example.com/webhook"
-                          className="flex-1"
-                        />
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => testWebhook(webhook.url, webhook.event)}
-                        >
-                          <TestTube className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>نص الرسالة</Label>
-                      <Textarea
-                        value={webhook.message}
-                        onChange={(e) => {
-                          setInvoiceWebhooks(invoiceWebhooks.map(w => 
-                            w.id === webhook.id ? {...w, message: e.target.value} : w
-                          ));
-                        }}
-                        placeholder="نص الرسالة التي سترسل"
-                        rows={2}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        المتغيرات المتاحة: {"{customer_name}, {invoice_id}, {amount}, {due_date}"}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-                <Button onClick={saveInvoiceWebhooks} className="w-full">
-                  <Settings className="h-4 w-4 mr-2" />
-                  حفظ إعدادات الفواتير
-                </Button>
-              </div>
+              <WebhookManagement 
+                webhookSettings={webhookSettings.filter(w => w.webhook_type === 'invoice')}
+                onSave={saveWebhookSetting}
+                onUpdate={updateWebhookSetting}
+                onTest={testWebhook}
+                loading={loading}
+                webhookType="invoice"
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -480,24 +310,13 @@ const WebhookSettings = () => {
                     <TableHead>البيانات</TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody>
-                  {webhookLogs.map((log) => (
-                    <TableRow key={log.id}>
-                      <TableCell className="font-medium">{log.event}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground max-w-xs truncate">
-                        {log.url}
-                      </TableCell>
-                      <TableCell>{getStatusBadge(log.status)}</TableCell>
-                      <TableCell className="text-sm">{log.response}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{log.timestamp}</TableCell>
-                      <TableCell>
-                        <Button variant="outline" size="sm">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
+                 <TableBody>
+                   <TableRow>
+                     <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                       لا توجد سجلات ويب هوك حتى الآن
+                     </TableCell>
+                   </TableRow>
+                 </TableBody>
               </Table>
             </CardContent>
           </Card>
