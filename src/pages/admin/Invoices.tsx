@@ -278,6 +278,44 @@ const Invoices = () => {
       }
 
       await fetchInvoices();
+      
+      // إرسال إشعار واتس آب تلقائياً للعميل
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const notificationResponse = await supabase.functions.invoke('send-invoice-notifications', {
+            body: {
+              type: 'invoice_created',
+              invoice_id: invoice.id,
+              customer_id: newInvoice.customer_id
+            }
+          });
+
+          if (notificationResponse.error) {
+            console.error('Error sending WhatsApp notification:', notificationResponse.error);
+            // لا نوقف العملية حتى لو فشل الإرسال
+            toast({
+              title: "تم إنشاء الفاتورة",
+              description: "تم إنشاء الفاتورة بنجاح، لكن فشل إرسال إشعار الواتس آب",
+              variant: "destructive",
+            });
+          } else {
+            console.log('WhatsApp notification sent successfully:', notificationResponse.data);
+            toast({
+              title: "تم إنشاء الفاتورة",
+              description: "تم إنشاء الفاتورة وإرسال إشعار الواتس آب بنجاح",
+            });
+          }
+        }
+      } catch (notificationError) {
+        console.error('Error sending notification:', notificationError);
+        toast({
+          title: "تم إنشاء الفاتورة",
+          description: "تم إنشاء الفاتورة بنجاح، لكن فشل إرسال إشعار الواتس آب",
+          variant: "destructive",
+        });
+      }
+
       setNewInvoice({
         customer_id: "",
         order_id: "",
@@ -750,16 +788,120 @@ const Invoices = () => {
       }
 
       await fetchInvoices();
+      
+      // إرسال إشعار واتس آب بالتعديل
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase.functions.invoke('send-invoice-notifications', {
+            body: {
+              type: 'invoice_updated',
+              invoice_id: editingInvoice.id,
+              customer_id: editingInvoice.customer_id
+            }
+          });
+        }
+      } catch (notificationError) {
+        console.error('Error sending update notification:', notificationError);
+      }
+
       setIsEditDialogOpen(false);
       setEditingInvoice(null);
       setEditingItems([{ item_name: "", description: "", quantity: 1, unit_price: 0, total_amount: 0 }]);
       
       toast({
         title: "تم التحديث",
-        description: "تم تحديث الفاتورة بنجاح",
+        description: "تم تحديث الفاتورة وإرسال إشعار الواتس آب بنجاح",
       });
     } catch (error) {
       console.error('Error updating invoice:', error);
+    }
+  };
+
+  // تحديث حالة الفاتورة مع إرسال إشعار
+  const handleUpdateInvoiceStatus = async (invoiceId: string, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('invoices')
+        .update({ 
+          status: newStatus,
+          payment_date: newStatus === 'مدفوع' ? new Date().toISOString().split('T')[0] : null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', invoiceId);
+
+      if (error) {
+        console.error('Error updating invoice status:', error);
+        toast({
+          title: "خطأ",
+          description: "حدث خطأ في تحديث حالة الفاتورة",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // إرسال إشعار إذا تم الدفع
+      if (newStatus === 'مدفوع') {
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            await supabase.functions.invoke('send-invoice-notifications', {
+              body: {
+                type: 'invoice_paid',
+                invoice_id: invoiceId
+              }
+            });
+          }
+        } catch (notificationError) {
+          console.error('Error sending payment notification:', notificationError);
+        }
+      }
+
+      await fetchInvoices();
+      toast({
+        title: "تم التحديث",
+        description: `تم تحديث حالة الفاتورة إلى ${newStatus}`,
+      });
+    } catch (error) {
+      console.error('Error updating invoice status:', error);
+    }
+  };
+
+  // إرسال تذكير للفواتير المتأخرة
+  const handleSendOverdueReminder = async (invoice) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data, error } = await supabase.functions.invoke('send-invoice-notifications', {
+          body: {
+            type: 'invoice_overdue',
+            invoice_id: invoice.id,
+            customer_id: invoice.customer_id
+          }
+        });
+
+        if (error) {
+          console.error('Error sending overdue reminder:', error);
+          toast({
+            title: "خطأ",
+            description: "فشل إرسال تذكير الدفع",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "تم الإرسال",
+            description: "تم إرسال تذكير الدفع بنجاح",
+          });
+          
+          // تحديث وقت إرسال التذكير
+          await supabase
+            .from('invoices')
+            .update({ reminder_sent_at: new Date().toISOString() })
+            .eq('id', invoice.id);
+        }
+      }
+    } catch (error) {
+      console.error('Error sending overdue reminder:', error);
     }
   };
 
@@ -1154,6 +1296,16 @@ const Invoices = () => {
                     <p className="text-sm text-muted-foreground">تاريخ الاستحقاق: {invoice.due_date}</p>
                   </div>
                   {getStatusBadge(invoice.status)}
+                  {invoice.status !== 'مدفوع' && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handleUpdateInvoiceStatus(invoice.id, 'مدفوع')}
+                      className="text-xs bg-green-50 text-green-700 hover:bg-green-100"
+                    >
+                      تأكيد الدفع
+                    </Button>
+                  )}
                   {invoice.is_deferred && (
                     <Badge variant="outline" className="text-warning border-warning/20">
                       آجل
@@ -1170,6 +1322,16 @@ const Invoices = () => {
                   <Button variant="outline" size="sm" onClick={() => handleSendWhatsApp(invoice)}>
                     <MessageCircle className="h-4 w-4" />
                   </Button>
+                  {(invoice.status === 'متأخر' || new Date(invoice.due_date) < new Date()) && invoice.status !== 'مدفوع' && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handleSendOverdueReminder(invoice)}
+                      className="text-orange-600 hover:text-orange-700"
+                    >
+                      تذكير
+                    </Button>
+                  )}
                   {userRole === 'admin' && (
                     <>
                       <Button variant="outline" size="sm" onClick={() => handleEditInvoice(invoice)}>
