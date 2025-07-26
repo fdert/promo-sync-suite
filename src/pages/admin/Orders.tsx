@@ -510,18 +510,26 @@ const Orders = () => {
       // إرسال إشعار واتساب للعميل
       console.log('بدء عملية إرسال الإشعار...');
       try {
-        const customer = customers.find(c => c.id === newOrder.customer_id);
-        console.log('بيانات العميل:', customer);
+        // جلب بيانات العميل مباشرة من قاعدة البيانات
+        const { data: customerData, error: customerError } = await supabase
+          .from('customers')
+          .select('id, name, phone, whatsapp_number')
+          .eq('id', newOrder.customer_id)
+          .single();
+
+        console.log('بيانات العميل:', customerData);
         
-        if (customer?.whatsapp_number) {
-          console.log('العميل لديه رقم واتساب:', customer.whatsapp_number);
+        if (customerError) {
+          console.error('خطأ في جلب بيانات العميل:', customerError);
+        } else if (customerData?.whatsapp_number) {
+          console.log('العميل لديه رقم واتساب:', customerData.whatsapp_number);
           
           const notificationData = {
             type: 'order_created',
             order_id: orderData.id,
             data: {
-              customer_name: customer.name,
-              customer_phone: customer.whatsapp_number,
+              customer_name: customerData.name,
+              customer_phone: customerData.whatsapp_number,
               order_number: orderNumber,
               service_name: newOrder.service_name,
               description: newOrder.description || 'غير محدد',
@@ -544,15 +552,33 @@ const Orders = () => {
           
           if (result.error) {
             console.error('خطأ في استدعاء edge function:', result.error);
-          } else {
+            toast({
+              title: "تحذير",
+              description: "تم إنشاء الطلب بنجاح لكن فشل إرسال إشعار الواتساب",
+              variant: "destructive",
+            });
+          } else if (result.data?.success) {
             console.log('تم إرسال إشعار واتساب للعميل بنجاح');
+            toast({
+              title: "نجح",
+              description: "تم إنشاء الطلب وإرسال إشعار الواتساب بنجاح",
+            });
           }
         } else {
           console.log('العميل ليس لديه رقم واتساب');
+          toast({
+            title: "تحذير", 
+            description: "تم إنشاء الطلب بنجاح لكن العميل لا يملك رقم واتساب",
+            variant: "destructive",
+          });
         }
       } catch (notificationError) {
         console.error('خطأ في إرسال إشعار واتساب:', notificationError);
-        // لا نعرض خطأ للمستخدم لأن الطلب تم إنشاؤه بنجاح
+        toast({
+          title: "تحذير",
+          description: "تم إنشاء الطلب بنجاح لكن حدث خطأ في إرسال الإشعار",
+          variant: "destructive",
+        });
       }
 
       await fetchData();
