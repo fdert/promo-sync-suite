@@ -508,9 +508,14 @@ const Orders = () => {
       }
 
       // إرسال إشعار واتساب للعميل
+      console.log('بدء عملية إرسال الإشعار...');
       try {
         const customer = customers.find(c => c.id === newOrder.customer_id);
+        console.log('بيانات العميل:', customer);
+        
         if (customer?.whatsapp_number) {
+          console.log('العميل لديه رقم واتساب:', customer.whatsapp_number);
+          
           const notificationData = {
             type: 'order_created',
             order_id: orderData.id,
@@ -529,11 +534,21 @@ const Orders = () => {
             }
           };
 
-          await supabase.functions.invoke('send-order-notifications', {
+          console.log('بيانات الإشعار:', notificationData);
+
+          const result = await supabase.functions.invoke('send-order-notifications', {
             body: notificationData
           });
 
-          console.log('تم إرسال إشعار واتساب للعميل');
+          console.log('نتيجة إرسال الإشعار:', result);
+          
+          if (result.error) {
+            console.error('خطأ في استدعاء edge function:', result.error);
+          } else {
+            console.log('تم إرسال إشعار واتساب للعميل بنجاح');
+          }
+        } else {
+          console.log('العميل ليس لديه رقم واتساب');
         }
       } catch (notificationError) {
         console.error('خطأ في إرسال إشعار واتساب:', notificationError);
