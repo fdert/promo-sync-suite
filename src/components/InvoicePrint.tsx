@@ -45,168 +45,159 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
   }
 }) => {
   return (
-    <div className="print-only invoice-print hidden" dir="rtl" style={{ 
-      backgroundColor: 'white',
-      color: 'black',
-      padding: '10px',
-      fontSize: '12px',
-      fontFamily: 'Arial, sans-serif'
-    }}>
+    <div className="print-only invoice-print hidden" dir="rtl">
       
-      {/* Header */}
+      {/* Header - مدمج ومبسط */}
       <div style={{ 
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'flex-start', 
-        marginBottom: '15px',
-        borderBottom: '2px solid #333',
-        paddingBottom: '8px'
+        marginBottom: '8px',
+        borderBottom: '2px solid #000',
+        paddingBottom: '5px'
       }}>
         <div style={{ flex: 1 }}>
           <h1 style={{ 
-            fontSize: '18px', 
+            fontSize: '14px', 
             fontWeight: 'bold', 
-            margin: '0 0 5px 0',
+            margin: '0 0 3px 0',
             color: '#000'
           }}>
             {companyInfo.name}
           </h1>
-          <div style={{ fontSize: '10px', color: '#666' }}>
-            <div>{companyInfo.phone}</div>
+          <div style={{ fontSize: '9px', color: '#555' }}>
+            {companyInfo.phone}
           </div>
         </div>
         
         <div style={{ textAlign: 'left', flex: 1 }}>
           <h2 style={{ 
-            fontSize: '16px', 
+            fontSize: '13px', 
             fontWeight: 'bold', 
-            margin: '0 0 5px 0',
+            margin: '0 0 3px 0',
             color: '#000'
           }}>
             فاتورة
           </h2>
-          <div style={{ fontSize: '10px', color: '#666' }}>
+          <div style={{ fontSize: '9px', color: '#555' }}>
             <div><strong>رقم:</strong> {invoice.invoice_number}</div>
             <div><strong>التاريخ:</strong> {new Date(invoice.issue_date).toLocaleDateString('ar-SA')}</div>
           </div>
         </div>
       </div>
 
-      {/* Customer Info */}
-      <div style={{ marginBottom: '12px' }}>
-        <div style={{ 
-          backgroundColor: '#f8f9fa', 
-          padding: '6px', 
-          border: '1px solid #ddd',
-          borderRadius: '3px'
-        }}>
-          <div style={{ 
-            margin: '0', 
-            fontSize: '11px',
-            fontWeight: 'bold'
-          }}>
-            العميل: {invoice.customers?.name}
-          </div>
-          {invoice.customers?.phone && (
-            <div style={{ margin: '2px 0 0 0', fontSize: '10px', color: '#666' }}>
-              هاتف: {invoice.customers.phone}
-            </div>
-          )}
-        </div>
+      {/* Customer Info - مدمج */}
+      <div style={{ 
+        backgroundColor: '#f8f9fa', 
+        padding: '4px', 
+        border: '1px solid #ccc',
+        borderRadius: '2px',
+        marginBottom: '8px',
+        fontSize: '9px'
+      }}>
+        <span style={{ fontWeight: 'bold' }}>العميل: </span>{invoice.customers?.name}
+        {invoice.customers?.phone && (
+          <span style={{ marginLeft: '10px' }}>
+            | هاتف: {invoice.customers.phone}
+          </span>
+        )}
       </div>
 
-      {/* Items Table */}
-      <div style={{ marginBottom: '12px' }}>
-        <table style={{ 
-          width: '100%', 
-          borderCollapse: 'collapse',
-          fontSize: '10px'
-        }}>
-          <thead>
-            <tr style={{ backgroundColor: '#f0f0f0' }}>
-              <th style={{ 
-                border: '1px solid #666', 
-                padding: '4px', 
-                textAlign: 'right',
-                fontWeight: 'bold'
+      {/* Items Table - مضغوط */}
+      <table style={{ 
+        width: '100%', 
+        borderCollapse: 'collapse',
+        fontSize: '9px',
+        marginBottom: '8px'
+      }}>
+        <thead>
+          <tr style={{ backgroundColor: '#f0f0f0' }}>
+            <th style={{ 
+              border: '1px solid #555', 
+              padding: '2px', 
+              textAlign: 'right',
+              fontWeight: 'bold',
+              width: '45%'
+            }}>
+              البند
+            </th>
+            <th style={{ 
+              border: '1px solid #555', 
+              padding: '2px', 
+              textAlign: 'center',
+              width: '15%'
+            }}>
+              الكمية
+            </th>
+            <th style={{ 
+              border: '1px solid #555', 
+              padding: '2px', 
+              textAlign: 'center',
+              width: '20%'
+            }}>
+              السعر
+            </th>
+            <th style={{ 
+              border: '1px solid #555', 
+              padding: '2px', 
+              textAlign: 'center',
+              width: '20%'
+            }}>
+              المجموع
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((item, index) => (
+            <tr key={index}>
+              <td style={{ 
+                border: '1px solid #555', 
+                padding: '2px',
+                fontSize: '8px'
               }}>
-                البند
-              </th>
-              <th style={{ 
-                border: '1px solid #666', 
-                padding: '4px', 
+                {item.item_name}
+              </td>
+              <td style={{ 
+                border: '1px solid #555', 
+                padding: '2px', 
                 textAlign: 'center',
-                width: '15%'
+                fontSize: '8px'
               }}>
-                الكمية
-              </th>
-              <th style={{ 
-                border: '1px solid #666', 
-                padding: '4px', 
+                {item.quantity}
+              </td>
+              <td style={{ 
+                border: '1px solid #555', 
+                padding: '2px', 
                 textAlign: 'center',
-                width: '20%'
+                fontSize: '8px'
               }}>
-                السعر
-              </th>
-              <th style={{ 
-                border: '1px solid #666', 
-                padding: '4px', 
+                {item.unit_price.toFixed(2)}
+              </td>
+              <td style={{ 
+                border: '1px solid #555', 
+                padding: '2px', 
                 textAlign: 'center',
-                width: '20%'
+                fontSize: '8px'
               }}>
-                المجموع
-              </th>
+                {item.total_amount.toFixed(2)}
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {items.map((item, index) => (
-              <tr key={index}>
-                <td style={{ 
-                  border: '1px solid #666', 
-                  padding: '4px'
-                }}>
-                  {item.item_name}
-                </td>
-                <td style={{ 
-                  border: '1px solid #666', 
-                  padding: '4px', 
-                  textAlign: 'center'
-                }}>
-                  {item.quantity}
-                </td>
-                <td style={{ 
-                  border: '1px solid #666', 
-                  padding: '4px', 
-                  textAlign: 'center'
-                }}>
-                  {item.unit_price.toFixed(2)}
-                </td>
-                <td style={{ 
-                  border: '1px solid #666', 
-                  padding: '4px', 
-                  textAlign: 'center'
-                }}>
-                  {item.total_amount.toFixed(2)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+          ))}
+        </tbody>
+      </table>
 
-      {/* Totals */}
+      {/* Totals - مضغوط */}
       <div style={{ 
         display: 'flex', 
         justifyContent: 'flex-end', 
-        marginBottom: '12px' 
+        marginBottom: '8px' 
       }}>
-        <div style={{ width: '150px' }}>
+        <div style={{ width: '120px', fontSize: '9px' }}>
           <div style={{ 
             display: 'flex', 
             justifyContent: 'space-between', 
-            padding: '3px 0',
-            borderBottom: '1px solid #ddd',
-            fontSize: '10px'
+            padding: '2px 0',
+            borderBottom: '1px solid #ccc'
           }}>
             <span>المجموع:</span>
             <span>{invoice.amount.toFixed(2)} ر.س</span>
@@ -214,9 +205,8 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
           <div style={{ 
             display: 'flex', 
             justifyContent: 'space-between', 
-            padding: '3px 0',
-            borderBottom: '1px solid #ddd',
-            fontSize: '10px'
+            padding: '2px 0',
+            borderBottom: '1px solid #ccc'
           }}>
             <span>الضريبة:</span>
             <span>{invoice.tax_amount.toFixed(2)} ر.س</span>
@@ -224,10 +214,10 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
           <div style={{ 
             display: 'flex', 
             justifyContent: 'space-between', 
-            padding: '5px 0',
+            padding: '3px 0',
             fontWeight: 'bold',
-            fontSize: '12px',
-            borderTop: '2px solid #333'
+            fontSize: '10px',
+            borderTop: '2px solid #000'
           }}>
             <span>الإجمالي:</span>
             <span>{invoice.total_amount.toFixed(2)} ر.س</span>
@@ -235,41 +225,43 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
         </div>
       </div>
 
-      {/* Additional Info */}
+      {/* Payment Info & Notes - في سطر واحد */}
       <div style={{ 
         display: 'flex', 
         justifyContent: 'space-between',
-        fontSize: '10px',
-        marginBottom: '8px'
+        fontSize: '8px',
+        marginBottom: '6px',
+        padding: '3px',
+        backgroundColor: '#f9f9f9',
+        border: '1px solid #ddd'
       }}>
-        <div>
-          <div style={{ margin: '0' }}>
-            <strong>نوع الدفع:</strong> {invoice.payment_type}
-          </div>
-          <div style={{ margin: '2px 0 0 0' }}>
-            <strong>الحالة:</strong> {invoice.status}
-          </div>
-        </div>
-        
-        {invoice.notes && (
-          <div style={{ maxWidth: '50%' }}>
-            <div style={{ margin: '0', fontSize: '9px', color: '#666' }}>
-              <strong>ملاحظات:</strong> {invoice.notes}
-            </div>
-          </div>
-        )}
+        <span><strong>نوع الدفع:</strong> {invoice.payment_type}</span>
+        <span><strong>الحالة:</strong> {invoice.status}</span>
       </div>
 
-      {/* Footer */}
+      {/* Notes - إذا وجدت */}
+      {invoice.notes && (
+        <div style={{ 
+          fontSize: '8px',
+          marginBottom: '6px',
+          padding: '2px',
+          fontStyle: 'italic',
+          color: '#666'
+        }}>
+          <strong>ملاحظات:</strong> {invoice.notes}
+        </div>
+      )}
+
+      {/* Footer - بسيط */}
       <div style={{ 
         textAlign: 'center', 
-        fontSize: '8px', 
-        color: '#999',
-        borderTop: '1px solid #ddd',
-        paddingTop: '5px',
-        marginTop: '10px'
+        fontSize: '7px', 
+        color: '#888',
+        borderTop: '1px solid #ccc',
+        paddingTop: '3px',
+        marginTop: '5px'
       }}>
-        شكراً لثقتكم
+        شكراً لثقتكم - تاريخ الطباعة: {new Date().toLocaleDateString('ar-SA')}
       </div>
     </div>
   );
