@@ -84,15 +84,29 @@ Deno.serve(async (req) => {
       .limit(1)
       .maybeSingle();
 
+    // إذا لم نجد webhook خاص بالفواتير، استخدم الـ webhook العام
+    let webhookUrl = webhookSettings?.webhook_url;
+    if (!webhookUrl) {
+      const { data: generalWebhook } = await supabase
+        .from('webhook_settings')
+        .select('webhook_url')
+        .eq('webhook_type', 'outgoing')
+        .eq('is_active', true)
+        .limit(1)
+        .maybeSingle();
+      
+      webhookUrl = generalWebhook?.webhook_url;
+    }
+
     if (webhookError) {
       console.error('Error fetching webhook settings:', webhookError);
       throw new Error('Failed to fetch webhook settings');
     }
 
-    if (!webhookSettings?.webhook_url) {
-      console.log('No active invoice webhook configured');
+    if (!webhookUrl) {
+      console.log('No active webhook configured for invoices');
       return new Response(
-        JSON.stringify({ success: false, message: 'No active invoice webhook configured' }),
+        JSON.stringify({ success: false, message: 'No active webhook configured' }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 400 
@@ -116,7 +130,7 @@ Deno.serve(async (req) => {
     console.log('Sending notification via webhook:', JSON.stringify(webhookPayload, null, 2));
 
     // Send to webhook
-    const webhookResponse = await fetch(webhookSettings.webhook_url, {
+    const webhookResponse = await fetch(webhookUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
