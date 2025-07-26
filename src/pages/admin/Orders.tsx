@@ -288,6 +288,62 @@ const Orders = () => {
     }
   };
 
+  // تغيير حالة الطلب
+  const handleStatusChange = async (orderId: string, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: newStatus })
+        .eq('id', orderId);
+
+      if (error) {
+        console.error('Error updating order status:', error);
+        toast({
+          title: "خطأ",
+          description: "حدث خطأ في تحديث حالة الطلب",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // تحديث الحالة محلياً دون إعادة تحميل البيانات
+      setOrders(prevOrders => 
+        prevOrders.map(order => 
+          order.id === orderId 
+            ? { ...order, status: newStatus }
+            : order
+        )
+      );
+
+      toast({
+        title: "تم تحديث الحالة",
+        description: `تم تغيير حالة الطلب إلى "${newStatus}"`,
+      });
+
+      // إرسال إشعار واتساب عند تغيير الحالة
+      try {
+        await supabase.functions.invoke('send-order-notifications', {
+          body: {
+            orderId,
+            status: newStatus,
+            type: 'status_update'
+          }
+        });
+      } catch (notificationError) {
+        console.error('Error sending notification:', notificationError);
+        // لا نريد إظهار خطأ للمستخدم هنا لأن العملية الأساسية نجحت
+      }
+
+    } catch (error) {
+      console.error('Error:', error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ غير متوقع",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -656,9 +712,32 @@ const Orders = () => {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge className={getStatusColor(order.status)}>
-                      {order.status}
-                    </Badge>
+                    <Select value={order.status} onValueChange={(newStatus) => handleStatusChange(order.id, newStatus)}>
+                      <SelectTrigger className="w-32 h-8 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border shadow-md z-50">
+                        <SelectValue>
+                          <Badge className={getStatusColor(order.status)}>
+                            {order.status}
+                          </Badge>
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border shadow-md z-50">
+                        <SelectItem value="جديد">
+                          <Badge className={getStatusColor("جديد")}>جديد</Badge>
+                        </SelectItem>
+                        <SelectItem value="قيد التنفيذ">
+                          <Badge className={getStatusColor("قيد التنفيذ")}>قيد التنفيذ</Badge>
+                        </SelectItem>
+                        <SelectItem value="قيد المراجعة">
+                          <Badge className={getStatusColor("قيد المراجعة")}>قيد المراجعة</Badge>
+                        </SelectItem>
+                        <SelectItem value="مكتمل">
+                          <Badge className={getStatusColor("مكتمل")}>مكتمل</Badge>
+                        </SelectItem>
+                        <SelectItem value="معلق">
+                          <Badge className={getStatusColor("معلق")}>معلق</Badge>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline" className={getPriorityColor(order.priority)}>
