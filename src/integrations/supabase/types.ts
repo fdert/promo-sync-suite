@@ -371,6 +371,39 @@ export type Database = {
           },
         ]
       }
+      message_templates: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean | null
+          template_content: string
+          template_name: string
+          template_type: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          template_content: string
+          template_name: string
+          template_type?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          template_content?: string
+          template_name?: string
+          template_type?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string | null
@@ -623,6 +656,96 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      webhook_settings: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean | null
+          secret_key: string | null
+          updated_at: string
+          webhook_name: string
+          webhook_type: string
+          webhook_url: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          secret_key?: string | null
+          updated_at?: string
+          webhook_name: string
+          webhook_type?: string
+          webhook_url: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          secret_key?: string | null
+          updated_at?: string
+          webhook_name?: string
+          webhook_type?: string
+          webhook_url?: string
+        }
+        Relationships: []
+      }
+      whatsapp_messages: {
+        Row: {
+          created_at: string
+          customer_id: string | null
+          from_number: string
+          id: string
+          is_reply: boolean | null
+          media_url: string | null
+          message_content: string | null
+          message_id: string | null
+          message_type: string | null
+          replied_at: string | null
+          replied_by: string | null
+          status: string | null
+          timestamp: string | null
+          to_number: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id?: string | null
+          from_number: string
+          id?: string
+          is_reply?: boolean | null
+          media_url?: string | null
+          message_content?: string | null
+          message_id?: string | null
+          message_type?: string | null
+          replied_at?: string | null
+          replied_by?: string | null
+          status?: string | null
+          timestamp?: string | null
+          to_number?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string | null
+          from_number?: string
+          id?: string
+          is_reply?: boolean | null
+          media_url?: string | null
+          message_content?: string | null
+          message_id?: string | null
+          message_type?: string | null
+          replied_at?: string | null
+          replied_by?: string | null
+          status?: string | null
+          timestamp?: string | null
+          to_number?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
