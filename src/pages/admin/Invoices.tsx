@@ -258,26 +258,37 @@ const Invoices = () => {
       setPrintInvoice(invoice);
       setPrintItems(items || []);
 
-      // تحديث عداد الطباعة
-      await supabase
-        .from('invoices')
-        .update({ 
-          print_count: (invoice.print_count || 0) + 1,
-          last_printed_at: new Date().toISOString()
-        })
-        .eq('id', invoice.id);
-
-      // انتظار قصير لضمان تحديث الحالة ثم الطباعة
+      // إضافة فئة للجسم لإخفاء عناصر الشاشة
+      document.body.classList.add('printing');
+      
+      // انتظار أطول لضمان تحديث DOM
       setTimeout(() => {
+        // تحديث عداد الطباعة
+        supabase
+          .from('invoices')
+          .update({ 
+            print_count: (invoice.print_count || 0) + 1,
+            last_printed_at: new Date().toISOString()
+          })
+          .eq('id', invoice.id);
+
+        // طباعة الفاتورة
         window.print();
+        
+        // إزالة فئة الطباعة بعد الانتهاء
+        setTimeout(() => {
+          document.body.classList.remove('printing');
+        }, 1000);
+        
         toast({
           title: "نجح",
           description: "تم إرسال الفاتورة للطباعة",
         });
-      }, 100);
+      }, 300);
       
     } catch (error) {
       console.error('Error printing invoice:', error);
+      document.body.classList.remove('printing');
       toast({
         title: "خطأ",
         description: "حدث خطأ في طباعة الفاتورة",
@@ -381,7 +392,7 @@ const Invoices = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 screen-only">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-foreground">إدارة الفواتير</h1>
