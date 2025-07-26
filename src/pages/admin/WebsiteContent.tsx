@@ -137,7 +137,7 @@ const WebsiteContent = () => {
         const fileName = `logo-${Date.now()}.${fileExt}`;
         
         const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('order-attachments')
+          .from('logos')
           .upload(fileName, logoFile);
 
         if (uploadError) {
@@ -152,7 +152,7 @@ const WebsiteContent = () => {
 
         // الحصول على رابط الشعار
         const { data: { publicUrl } } = supabase.storage
-          .from('order-attachments')
+          .from('logos')
           .getPublicUrl(fileName);
 
         logoUrl = publicUrl;
