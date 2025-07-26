@@ -57,20 +57,50 @@ Deno.serve(async (req) => {
       'invoice_updated': 'تحديث فاتورة'
     };
 
-    // Generate message based on notification type
+    // محاولة الحصول على قالب الرسالة من قاعدة البيانات
+    const { data: templateData, error: templateError } = await supabase
+      .from('message_templates')
+      .select('template_content')
+      .eq('template_name', type)
+      .eq('is_active', true)
+      .maybeSingle();
+
     let message = '';
-    switch (type) {
-      case 'invoice_created':
-        message = `${customerData.name}، تم إنشاء فاتورة جديدة رقم ${data.invoice_number} بقيمة ${data.amount} ريال. تاريخ الاستحقاق: ${data.due_date}`;
-        break;
-      case 'invoice_paid':
-        message = `${customerData.name}، شكراً لك! تم تسجيل دفع الفاتورة رقم ${data.invoice_number} بقيمة ${data.amount} ريال بنجاح.`;
-        break;
-      case 'invoice_overdue':
-        message = `${customerData.name}، تنبيه: الفاتورة رقم ${data.invoice_number} بقيمة ${data.amount} ريال متأخرة عن موعد الاستحقاق. يرجى المراجعة.`;
-        break;
-      default:
-        message = `${customerData.name}، تم تحديث الفاتورة رقم ${data.invoice_number}.`;
+    
+    if (templateData?.template_content) {
+      // استخدام القالب من قاعدة البيانات
+      message = templateData.template_content;
+      
+      // استبدال المتغيرات
+      const replacements: Record<string, string> = {
+        'customer_name': customerData.name || '',
+        'invoice_number': data.invoice_number || '',
+        'amount': data.amount?.toString() || '',
+        'due_date': data.due_date || '',
+        'payment_date': data.payment_date || '',
+        'status': data.status || ''
+      };
+
+      // استبدال جميع المتغيرات في الرسالة
+      Object.keys(replacements).forEach(key => {
+        const regex = new RegExp(`{{${key}}}`, 'g');
+        message = message.replace(regex, replacements[key]);
+      });
+    } else {
+      // الرسائل الافتراضية إذا لم توجد قوالب
+      switch (type) {
+        case 'invoice_created':
+          message = `${customerData.name}، تم إنشاء فاتورة جديدة رقم ${data.invoice_number} بقيمة ${data.amount} ريال. تاريخ الاستحقاق: ${data.due_date}`;
+          break;
+        case 'invoice_paid':
+          message = `${customerData.name}، شكراً لك! تم تسجيل دفع الفاتورة رقم ${data.invoice_number} بقيمة ${data.amount} ريال بنجاح.`;
+          break;
+        case 'invoice_overdue':
+          message = `${customerData.name}، تنبيه: الفاتورة رقم ${data.invoice_number} بقيمة ${data.amount} ريال متأخرة عن موعد الاستحقاق. يرجى المراجعة.`;
+          break;
+        default:
+          message = `${customerData.name}، تم تحديث الفاتورة رقم ${data.invoice_number}.`;
+      }
     }
 
     console.log('Generated message:', message);

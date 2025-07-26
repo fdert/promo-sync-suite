@@ -20,6 +20,7 @@ import WebhookSettings from "./pages/admin/WebhookSettings";
 import WebsiteContent from "./pages/admin/WebsiteContent";
 import Settings from "./pages/admin/Settings";
 import ServiceTypes from "./pages/admin/ServiceTypes";
+import MessageTemplates from "./pages/admin/MessageTemplates";
 import UserDashboard from "./pages/user/UserDashboard";
 import NotFound from "./pages/NotFound";
 
@@ -53,7 +54,8 @@ const App = () => (
               <Route path="accounts" element={<Accounts />} />
               <Route path="reports" element={<Reports />} />
               <Route path="services" element={<ServiceTypes />} />
-              <Route path="whatsapp" element={<WhatsApp />} />
+            <Route path="message-templates" element={<MessageTemplates />} />
+            <Route path="whatsapp" element={<WhatsApp />} />
               <Route path="webhooks" element={<WebhookSettings />} />
               <Route path="website" element={<WebsiteContent />} />
               <Route path="settings" element={<Settings />} />

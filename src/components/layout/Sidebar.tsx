@@ -64,6 +64,11 @@ const menuItems = [
     href: "/admin/services",
   },
   {
+    title: "قوالب الرسائل",
+    icon: MessageSquare,
+    href: "/admin/message-templates",
+  },
+  {
     title: "رسائل WhatsApp",
     icon: MessageSquare,
     href: "/admin/whatsapp",

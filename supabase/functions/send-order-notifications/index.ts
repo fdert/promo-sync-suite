@@ -27,51 +27,95 @@ Deno.serve(async (req) => {
     let customerPhone = '';
     let customerName = '';
 
-    switch (type) {
-      case 'order_created':
-        message = `مرحباً ${data.customer_name}! تم إنشاء طلبك رقم ${data.order_number} بنجاح. قيمة الطلب: ${data.amount} ر.س. سيتم التواصل معك قريباً لتأكيد التفاصيل.`;
-        customerPhone = data.customer_phone;
-        customerName = data.customer_name;
-        break;
+    // محاولة الحصول على قالب الرسالة من قاعدة البيانات
+    const { data: templateData, error: templateError } = await supabase
+      .from('message_templates')
+      .select('template_content')
+      .eq('template_name', type)
+      .eq('is_active', true)
+      .maybeSingle();
 
-      case 'order_confirmed':
-        message = `${data.customer_name}، تم تأكيد طلبك رقم ${data.order_number}. بدأ العمل على مشروعك وسيتم إنجازه خلال ${data.estimated_days || 'قريباً'}.`;
-        customerPhone = data.customer_phone;
-        customerName = data.customer_name;
-        break;
+    if (templateData?.template_content) {
+      console.log('Using template from database:', templateData.template_content);
+      
+      // استخدام القالب من قاعدة البيانات
+      message = templateData.template_content;
+      
+      // استبدال المتغيرات
+      const replacements: Record<string, string> = {
+        'customer_name': data.customer_name || '',
+        'order_number': data.order_number || '',
+        'amount': data.amount?.toString() || '',
+        'progress': data.progress?.toString() || '0',
+        'service_name': data.service_name || '',
+        'estimated_time': data.estimated_days || 'قريباً',
+        'company_name': 'شركتنا'
+      };
 
-      case 'order_in_progress':
-        message = `${data.customer_name}، طلبك رقم ${data.order_number} قيد التنفيذ حالياً. التقدم: ${data.progress || 0}%. سنبقيك على اطلاع بآخر التطورات.`;
-        customerPhone = data.customer_phone;
-        customerName = data.customer_name;
-        break;
+      // استبدال جميع المتغيرات في الرسالة
+      Object.keys(replacements).forEach(key => {
+        const regex = new RegExp(`{{${key}}}`, 'g');
+        message = message.replace(regex, replacements[key]);
+      });
 
-      case 'order_completed':
-        message = `تهانينا ${data.customer_name}! تم إنجاز طلبك رقم ${data.order_number} بنجاح. يمكنك الآن مراجعة النتائج. نشكرك لثقتك بخدماتنا!`;
-        customerPhone = data.customer_phone;
-        customerName = data.customer_name;
-        break;
+      customerPhone = data.customer_phone;
+      customerName = data.customer_name;
+    } else {
+      console.log('No template found, using fallback messages');
+      
+      // الرسائل الافتراضية إذا لم توجد قوالب
+      switch (type) {
+        case 'order_created':
+          message = `مرحباً ${data.customer_name}! تم إنشاء طلبك رقم ${data.order_number} بنجاح. قيمة الطلب: ${data.amount} ر.س. سيتم التواصل معك قريباً لتأكيد التفاصيل.`;
+          customerPhone = data.customer_phone;
+          customerName = data.customer_name;
+          break;
 
-      case 'invoice_created':
-        message = `${data.customer_name}، تم إنشاء فاتورة رقم ${data.invoice_number} بقيمة ${data.total_amount} ر.س. تاريخ الاستحقاق: ${data.due_date}. يرجى المراجعة والدفع.`;
-        customerPhone = data.customer_phone;
-        customerName = data.customer_name;
-        break;
+        case 'order_confirmed':
+          message = `${data.customer_name}، تم تأكيد طلبك رقم ${data.order_number}. بدأ العمل على مشروعك وسيتم إنجازه خلال ${data.estimated_days || 'قريباً'}.`;
+          customerPhone = data.customer_phone;
+          customerName = data.customer_name;
+          break;
 
-      case 'invoice_paid':
-        message = `شكراً لك ${data.customer_name}! تم استلام دفع فاتورة رقم ${data.invoice_number} بقيمة ${data.total_amount} ر.س بنجاح.`;
-        customerPhone = data.customer_phone;
-        customerName = data.customer_name;
-        break;
+        case 'order_in_progress':
+          message = `${data.customer_name}، طلبك رقم ${data.order_number} قيد التنفيذ حالياً. التقدم: ${data.progress || 0}%. سنبقيك على اطلاع بآخر التطورات.`;
+          customerPhone = data.customer_phone;
+          customerName = data.customer_name;
+          break;
 
-      case 'invoice_overdue':
-        message = `${data.customer_name}، فاتورة رقم ${data.invoice_number} متأخرة السداد. القيمة: ${data.total_amount} ر.س. يرجى الدفع في أقرب وقت لتجنب أي رسوم إضافية.`;
-        customerPhone = data.customer_phone;
-        customerName = data.customer_name;
-        break;
+        case 'order_completed':
+          message = `تهانينا ${data.customer_name}! تم إنجاز طلبك رقم ${data.order_number} بنجاح. يمكنك الآن مراجعة النتائج. نشكرك لثقتك بخدماتنا!`;
+          customerPhone = data.customer_phone;
+          customerName = data.customer_name;
+          break;
 
-      default:
-        throw new Error(`Unknown notification type: ${type}`);
+        case 'order_cancelled':
+          message = `عزيزي ${data.customer_name}، تم إلغاء طلبك رقم ${data.order_number}. للاستفسار يرجى التواصل معنا.`;
+          customerPhone = data.customer_phone;
+          customerName = data.customer_name;
+          break;
+
+        case 'invoice_created':
+          message = `${data.customer_name}، تم إنشاء فاتورة رقم ${data.invoice_number} بقيمة ${data.total_amount} ر.س. تاريخ الاستحقاق: ${data.due_date}. يرجى المراجعة والدفع.`;
+          customerPhone = data.customer_phone;
+          customerName = data.customer_name;
+          break;
+
+        case 'invoice_paid':
+          message = `شكراً لك ${data.customer_name}! تم استلام دفع فاتورة رقم ${data.invoice_number} بقيمة ${data.total_amount} ر.س بنجاح.`;
+          customerPhone = data.customer_phone;
+          customerName = data.customer_name;
+          break;
+
+        case 'invoice_overdue':
+          message = `${data.customer_name}، فاتورة رقم ${data.invoice_number} متأخرة السداد. القيمة: ${data.total_amount} ر.س. يرجى الدفع في أقرب وقت لتجنب أي رسوم إضافية.`;
+          customerPhone = data.customer_phone;
+          customerName = data.customer_name;
+          break;
+
+        default:
+          throw new Error(`Unknown notification type: ${type}`);
+      }
     }
 
     if (!customerPhone || !message) {
