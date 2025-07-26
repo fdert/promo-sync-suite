@@ -324,7 +324,11 @@ const Orders = () => {
       try {
         // الحصول على بيانات الطلب والعميل
         const currentOrder = orders.find(o => o.id === orderId);
+        console.log('Current order found:', currentOrder);
+        
         if (currentOrder && currentOrder.customers) {
+          console.log('Customer data:', currentOrder.customers);
+          
           // تحديد نوع الإشعار بناءً على الحالة الجديدة
           let notificationType;
           switch (newStatus) {
@@ -341,8 +345,21 @@ const Orders = () => {
               notificationType = null;
           }
 
+          console.log('Notification type:', notificationType);
+
           if (notificationType) {
-            await supabase.functions.invoke('send-order-notifications', {
+            console.log('Sending notification with data:', {
+              type: notificationType,
+              data: {
+                order_number: currentOrder.order_number,
+                customer_name: currentOrder.customers.name,
+                customer_phone: currentOrder.customers?.whatsapp_number || currentOrder.customers?.phone,
+                amount: currentOrder.amount,
+                progress: currentOrder.progress || 0
+              }
+            });
+            
+            const result = await supabase.functions.invoke('send-order-notifications', {
               body: {
                 type: notificationType,
                 data: {
@@ -354,7 +371,13 @@ const Orders = () => {
                 }
               }
             });
+            
+            console.log('Notification result:', result);
+          } else {
+            console.log('No notification type for status:', newStatus);
           }
+        } else {
+          console.log('No order or customer data found');
         }
       } catch (notificationError) {
         console.error('Error sending notification:', notificationError);
