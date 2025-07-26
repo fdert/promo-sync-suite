@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Plus, TrendingUp, TrendingDown, DollarSign, CreditCard, Receipt, CalendarRange, BookOpen, BarChart3, Trash2, Edit2, Eye } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, DollarSign, CreditCard, Receipt, CalendarRange, BookOpen, BarChart3, Trash2, Edit2, Eye, Users, Search, Filter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -18,11 +18,20 @@ const Accounts = () => {
   const [accountEntries, setAccountEntries] = useState<any[]>([]);
   const [expenses, setExpenses] = useState<any[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
+  const [debtorInvoices, setDebtorInvoices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddAccountOpen, setIsAddAccountOpen] = useState(false);
   const [isAddEntryOpen, setIsAddEntryOpen] = useState(false);
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
   const [userRole, setUserRole] = useState('');
+  
+  // حقول البحث للعملاء المدينين
+  const [debtorSearch, setDebtorSearch] = useState({
+    customerName: '',
+    dateFrom: '',
+    dateTo: '',
+    status: 'all'
+  });
   
   const [newAccount, setNewAccount] = useState({
     account_name: "",
@@ -155,6 +164,48 @@ const Accounts = () => {
     }
   };
 
+  // جلب فواتير العملاء المدينين
+  const fetchDebtorInvoices = async () => {
+    try {
+      let query = supabase
+        .from('invoices')
+        .select(`
+          *,
+          customers(name, phone, whatsapp_number)
+        `)
+        .in('status', ['قيد الانتظار', 'جزئي'])
+        .order('issue_date', { ascending: false });
+
+      // تطبيق فلاتر البحث
+      if (debtorSearch.customerName) {
+        query = query.ilike('customers.name', `%${debtorSearch.customerName}%`);
+      }
+
+      if (debtorSearch.dateFrom) {
+        query = query.gte('issue_date', debtorSearch.dateFrom);
+      }
+
+      if (debtorSearch.dateTo) {
+        query = query.lte('issue_date', debtorSearch.dateTo);
+      }
+
+      if (debtorSearch.status !== 'all') {
+        query = query.eq('status', debtorSearch.status);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Error fetching debtor invoices:', error);
+        return;
+      }
+
+      setDebtorInvoices(data || []);
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
@@ -163,12 +214,18 @@ const Accounts = () => {
         fetchAccounts(), 
         fetchAccountEntries(), 
         fetchExpenses(), 
-        fetchInvoices()
+        fetchInvoices(),
+        fetchDebtorInvoices()
       ]);
       setLoading(false);
     };
     loadData();
   }, []);
+
+  // تحديث بيانات العملاء المدينين عند تغيير فلاتر البحث
+  useEffect(() => {
+    fetchDebtorInvoices();
+  }, [debtorSearch]);
 
   // إضافة حساب جديد
   const handleAddAccount = async () => {
@@ -462,6 +519,12 @@ const Accounts = () => {
     return acc;
   }, {});
 
+  // حساب إجمالي المبالغ المستحقة من العملاء المدينين
+  const totalDebts = debtorInvoices.reduce((sum, invoice) => {
+    const remainingAmount = invoice.total_amount - (invoice.paid_amount || 0);
+    return sum + remainingAmount;
+  }, 0);
+
   if (loading) {
     return <div className="flex justify-center items-center h-64">جاري التحميل...</div>;
   }
@@ -488,7 +551,7 @@ const Accounts = () => {
       </div>
 
       {/* Financial Overview */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-5">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">الإيرادات الشهرية</CardTitle>
@@ -526,6 +589,17 @@ const Accounts = () => {
         
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">إجمالي الديون</CardTitle>
+            <Users className="h-4 w-4 text-warning" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-warning">{totalDebts.toLocaleString()} ر.س</div>
+            <p className="text-xs text-muted-foreground">{debtorInvoices.length} فاتورة مستحقة</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">عدد الحسابات</CardTitle>
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -537,10 +611,11 @@ const Accounts = () => {
       </div>
 
       <Tabs defaultValue="accounts" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="accounts">الحسابات</TabsTrigger>
           <TabsTrigger value="entries">القيود</TabsTrigger>
           <TabsTrigger value="expenses">المصروفات</TabsTrigger>
+          <TabsTrigger value="debtors">العملاء المدينون</TabsTrigger>
           <TabsTrigger value="reports">التقارير</TabsTrigger>
         </TabsList>
 
@@ -934,6 +1009,203 @@ const Accounts = () => {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="debtors" className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-semibold">العملاء المدينون</h2>
+            <div className="text-sm text-muted-foreground">
+              إجمالي المبالغ المستحقة: <span className="font-bold text-warning">{totalDebts.toLocaleString()} ر.س</span>
+            </div>
+          </div>
+
+          {/* فلاتر البحث */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Filter className="h-5 w-5" />
+                فلاتر البحث
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 md:grid-cols-4">
+                <div>
+                  <Label htmlFor="customerName">اسم العميل</Label>
+                  <Input
+                    id="customerName"
+                    placeholder="البحث باسم العميل..."
+                    value={debtorSearch.customerName}
+                    onChange={(e) => setDebtorSearch({...debtorSearch, customerName: e.target.value})}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="dateFrom">من تاريخ</Label>
+                  <Input
+                    id="dateFrom"
+                    type="date"
+                    value={debtorSearch.dateFrom}
+                    onChange={(e) => setDebtorSearch({...debtorSearch, dateFrom: e.target.value})}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="dateTo">إلى تاريخ</Label>
+                  <Input
+                    id="dateTo"
+                    type="date"
+                    value={debtorSearch.dateTo}
+                    onChange={(e) => setDebtorSearch({...debtorSearch, dateTo: e.target.value})}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="status">حالة الفاتورة</Label>
+                  <Select value={debtorSearch.status} onValueChange={(value) => setDebtorSearch({...debtorSearch, status: value})}>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="اختر الحالة" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">جميع الحالات</SelectItem>
+                      <SelectItem value="قيد الانتظار">قيد الانتظار</SelectItem>
+                      <SelectItem value="جزئي">مدفوع جزئياً</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              <div className="flex gap-2 mt-4">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setDebtorSearch({customerName: '', dateFrom: '', dateTo: '', status: 'all'})}
+                  className="gap-2"
+                >
+                  <Search className="h-4 w-4" />
+                  مسح الفلاتر
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* قائمة العملاء المدينين */}
+          <Card>
+            <CardContent className="p-0">
+              {debtorInvoices.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>لا توجد فواتير مستحقة حالياً</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {debtorInvoices.map((invoice) => {
+                    const remainingAmount = invoice.total_amount - (invoice.paid_amount || 0);
+                    const daysPastDue = Math.floor((new Date().getTime() - new Date(invoice.due_date).getTime()) / (1000 * 60 * 60 * 24));
+                    
+                    return (
+                      <div key={invoice.id} className="flex items-center justify-between p-4 border-b hover:bg-muted/50">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-warning/10 rounded-full flex items-center justify-center">
+                            <Receipt className="h-6 w-6 text-warning" />
+                          </div>
+                          <div>
+                            <h3 className="font-medium">{invoice.customers?.name || 'عميل غير محدد'}</h3>
+                            <p className="text-sm text-muted-foreground">
+                              فاتورة: {invoice.invoice_number} • تاريخ الإصدار: {invoice.issue_date}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              تاريخ الاستحقاق: {invoice.due_date}
+                              {daysPastDue > 0 && (
+                                <span className="text-destructive font-medium"> • متأخر {daysPastDue} يوم</span>
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="text-right">
+                          <div className="flex flex-col gap-1">
+                            <Badge variant={invoice.status === 'قيد الانتظار' ? 'destructive' : 'secondary'}>
+                              {invoice.status}
+                            </Badge>
+                            <p className="font-bold text-lg text-warning">
+                              {remainingAmount.toLocaleString()} ر.س
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              من أصل {invoice.total_amount.toLocaleString()} ر.س
+                            </p>
+                            {invoice.paid_amount > 0 && (
+                              <p className="text-sm text-success">
+                                مدفوع: {invoice.paid_amount.toLocaleString()} ر.س
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                          {invoice.customers?.phone && (
+                            <Button variant="outline" size="sm" asChild>
+                              <a href={`tel:${invoice.customers.phone}`}>
+                                <Receipt className="h-4 w-4" />
+                              </a>
+                            </Button>
+                          )}
+                          {invoice.customers?.whatsapp_number && (
+                            <Button variant="outline" size="sm" asChild>
+                              <a 
+                                href={`https://wa.me/${invoice.customers.whatsapp_number.replace(/[^0-9]/g, '')}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </a>
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* ملخص العملاء المدينين */}
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">عدد الفواتير المستحقة</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{debtorInvoices.length}</div>
+                <p className="text-xs text-muted-foreground">فاتورة غير مسددة</p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">متوسط المبلغ المستحق</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-warning">
+                  {debtorInvoices.length > 0 ? Math.round(totalDebts / debtorInvoices.length).toLocaleString() : 0} ر.س
+                </div>
+                <p className="text-xs text-muted-foreground">لكل فاتورة</p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">الفواتير المتأخرة</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-destructive">
+                  {debtorInvoices.filter(invoice => 
+                    new Date(invoice.due_date) < new Date()
+                  ).length}
+                </div>
+                <p className="text-xs text-muted-foreground">فاتورة متأخرة الدفع</p>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="reports" className="space-y-4">
