@@ -964,6 +964,15 @@ export type Database = {
         }
         Returns: undefined
       }
+      create_payment_accounting_entry: {
+        Args: {
+          payment_id: string
+          invoice_id: string
+          payment_amount: number
+          payment_type: string
+        }
+        Returns: undefined
+      }
       generate_expense_number: {
         Args: Record<PropertyKey, never>
         Returns: string
