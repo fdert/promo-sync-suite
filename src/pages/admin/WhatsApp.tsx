@@ -662,13 +662,13 @@ const WhatsApp = () => {
                       نسخ
                     </Button>
                   </div>
-                  <div className="mt-2 p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                    <p className="text-sm text-orange-800 font-medium mb-2">⚠️ تأكد من التكوين التالي:</p>
-                    <ul className="text-xs text-orange-700 space-y-1">
-                      <li>• استخدم هذا الرابط في n8n Webhook node كـ "Webhook URL"</li>
-                      <li>• تأكد من أن n8n يرسل POST requests إلى هذا الرابط</li>
-                      <li>• تحقق من أن WhatsApp Business API متصل بـ n8n بشكل صحيح</li>
-                      <li>• الرسائل الواردة يجب أن تمر عبر n8n ثم إلى هذا الرابط</li>
+                  <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm text-blue-800 font-medium mb-2">🔧 تكوين whats-sender:</p>
+                    <ul className="text-xs text-blue-700 space-y-1">
+                      <li>• استخدم هذا الرابط في سكريپت whats-sender الخاص بك</li>
+                      <li>• تأكد من إرسال POST requests إلى هذا الرابط عند استقبال رسائل جديدة</li>
+                      <li>• يجب أن يحتوي الطلب على بيانات الرسالة بصيغة JSON</li>
+                      <li>• تأكد من تضمين معلومات المرسل ونص الرسالة</li>
                     </ul>
                   </div>
                 </div>
