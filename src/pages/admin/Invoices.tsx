@@ -254,42 +254,35 @@ const Invoices = () => {
         return;
       }
 
-      // تحديث الحالة للطباعة
-      setPrintInvoice(invoice);
-      setPrintItems(items || []);
+      // إنشاء محتوى HTML للفاتورة
+      const invoiceHTML = generateInvoiceHTML(invoice, items || []);
+      
+      // إنشاء نافذة طباعة جديدة
+      const printWindow = window.open('', '_blank', 'width=800,height=600');
+      if (printWindow) {
+        printWindow.document.write(invoiceHTML);
+        printWindow.document.close();
+        
+        // انتظار تحميل المحتوى ثم الطباعة
+        printWindow.onload = () => {
+          printWindow.print();
+          printWindow.close();
+        };
 
-      // إضافة فئة no-print للواجهة
-      const mainContent = document.querySelector('.screen-only');
-      if (mainContent) {
-        mainContent.classList.add('no-print');
-      }
-
-      // انتظار تحديث DOM
-      setTimeout(() => {
         // تحديث عداد الطباعة
-        supabase
+        await supabase
           .from('invoices')
           .update({ 
             print_count: (invoice.print_count || 0) + 1,
             last_printed_at: new Date().toISOString()
           })
           .eq('id', invoice.id);
-
-        // طباعة الفاتورة
-        window.print();
-        
-        // إزالة فئة no-print بعد الطباعة
-        setTimeout(() => {
-          if (mainContent) {
-            mainContent.classList.remove('no-print');
-          }
-        }, 1000);
         
         toast({
           title: "نجح",
           description: "تم إرسال الفاتورة للطباعة",
         });
-      }, 300);
+      }
       
     } catch (error) {
       console.error('Error printing invoice:', error);
@@ -299,6 +292,221 @@ const Invoices = () => {
         variant: "destructive",
       });
     }
+  };
+
+  // دالة إنشاء HTML للفاتورة
+  const generateInvoiceHTML = (invoice, items) => {
+    const companyInfo = {
+      name: "شركتك",
+      phone: "رقم الهاتف",
+    };
+
+    return `
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>فاتورة ${invoice.invoice_number}</title>
+    <style>
+        @page {
+            size: A5 portrait;
+            margin: 10mm;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 11px;
+            line-height: 1.2;
+            margin: 0;
+            padding: 5mm;
+            background: white;
+            color: black;
+            direction: rtl;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 5px;
+        }
+        
+        .header h1 {
+            font-size: 14px;
+            font-weight: bold;
+            margin: 0 0 3px 0;
+            color: #000;
+        }
+        
+        .header h2 {
+            font-size: 13px;
+            font-weight: bold;
+            margin: 0 0 3px 0;
+            color: #000;
+        }
+        
+        .header-info {
+            font-size: 9px;
+            color: #555;
+        }
+        
+        .customer-info {
+            background-color: #f8f9fa;
+            padding: 4px;
+            border: 1px solid #ccc;
+            border-radius: 2px;
+            margin-bottom: 8px;
+            font-size: 9px;
+        }
+        
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 9px;
+            margin-bottom: 8px;
+        }
+        
+        .items-table th,
+        .items-table td {
+            border: 1px solid #555;
+            padding: 2px;
+            text-align: center;
+        }
+        
+        .items-table th {
+            background-color: #f0f0f0;
+            font-weight: bold;
+        }
+        
+        .items-table .item-name {
+            text-align: right;
+        }
+        
+        .totals {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 8px;
+        }
+        
+        .totals-box {
+            width: 120px;
+            font-size: 9px;
+        }
+        
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 2px 0;
+            border-bottom: 1px solid #ccc;
+        }
+        
+        .final-total {
+            display: flex;
+            justify-content: space-between;
+            padding: 3px 0;
+            font-weight: bold;
+            font-size: 10px;
+            border-top: 2px solid #000;
+        }
+        
+        .payment-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 8px;
+            margin-bottom: 6px;
+            padding: 3px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+        }
+        
+        .footer {
+            text-align: center;
+            font-size: 7px;
+            color: #888;
+            border-top: 1px solid #ccc;
+            padding-top: 3px;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div style="flex: 1;">
+            <h1>${companyInfo.name}</h1>
+            <div class="header-info">${companyInfo.phone}</div>
+        </div>
+        <div style="text-align: left; flex: 1;">
+            <h2>فاتورة</h2>
+            <div class="header-info">
+                <div><strong>رقم:</strong> ${invoice.invoice_number}</div>
+                <div><strong>التاريخ:</strong> ${new Date(invoice.issue_date).toLocaleDateString('ar-SA')}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="customer-info">
+        <span style="font-weight: bold;">العميل: </span>${invoice.customers?.name || ''}
+        ${invoice.customers?.phone ? `| هاتف: ${invoice.customers.phone}` : ''}
+    </div>
+
+    <table class="items-table">
+        <thead>
+            <tr>
+                <th style="text-align: right;">البند</th>
+                <th style="width: 15%;">الكمية</th>
+                <th style="width: 20%;">السعر</th>
+                <th style="width: 20%;">المجموع</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${items.map(item => `
+                <tr>
+                    <td class="item-name" style="font-size: 8px;">${item.item_name}</td>
+                    <td style="font-size: 8px;">${item.quantity}</td>
+                    <td style="font-size: 8px;">${item.unit_price.toFixed(2)}</td>
+                    <td style="font-size: 8px;">${item.total_amount.toFixed(2)}</td>
+                </tr>
+            `).join('')}
+        </tbody>
+    </table>
+
+    <div class="totals">
+        <div class="totals-box">
+            <div class="total-row">
+                <span>المجموع:</span>
+                <span>${invoice.amount.toFixed(2)} ر.س</span>
+            </div>
+            <div class="total-row">
+                <span>الضريبة:</span>
+                <span>${invoice.tax_amount.toFixed(2)} ر.س</span>
+            </div>
+            <div class="final-total">
+                <span>الإجمالي:</span>
+                <span>${invoice.total_amount.toFixed(2)} ر.س</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="payment-info">
+        <span><strong>نوع الدفع:</strong> ${invoice.payment_type}</span>
+        <span><strong>الحالة:</strong> ${invoice.status}</span>
+    </div>
+
+    ${invoice.notes ? `
+        <div style="font-size: 8px; margin-bottom: 6px; padding: 2px; font-style: italic; color: #666;">
+            <strong>ملاحظات:</strong> ${invoice.notes}
+        </div>
+    ` : ''}
+
+    <div class="footer">
+        شكراً لثقتكم
+    </div>
+</body>
+</html>
+    `;
   };
 
   // معاينة الفاتورة
