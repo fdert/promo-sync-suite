@@ -75,7 +75,7 @@ const Orders = () => {
         .from('orders')
         .select(`
           *,
-          customers (name),
+          customers (name, whatsapp_number, phone),
           services (name)
         `)
         .order('created_at', { ascending: false });
@@ -322,13 +322,40 @@ const Orders = () => {
 
       // إرسال إشعار واتساب عند تغيير الحالة
       try {
-        await supabase.functions.invoke('send-order-notifications', {
-          body: {
-            orderId,
-            status: newStatus,
-            type: 'status_update'
+        // الحصول على بيانات الطلب والعميل
+        const currentOrder = orders.find(o => o.id === orderId);
+        if (currentOrder && currentOrder.customers) {
+          // تحديد نوع الإشعار بناءً على الحالة الجديدة
+          let notificationType;
+          switch (newStatus) {
+            case 'قيد التنفيذ':
+              notificationType = 'order_in_progress';
+              break;
+            case 'مكتمل':
+              notificationType = 'order_completed';
+              break;
+            case 'جديد':
+              notificationType = 'order_confirmed';
+              break;
+            default:
+              notificationType = null;
           }
-        });
+
+          if (notificationType) {
+            await supabase.functions.invoke('send-order-notifications', {
+              body: {
+                type: notificationType,
+                data: {
+                  order_number: currentOrder.order_number,
+                  customer_name: currentOrder.customers.name,
+                  customer_phone: currentOrder.customers?.whatsapp_number || currentOrder.customers?.phone,
+                  amount: currentOrder.amount,
+                  progress: currentOrder.progress || 0
+                }
+              }
+            });
+          }
+        }
       } catch (notificationError) {
         console.error('Error sending notification:', notificationError);
         // لا نريد إظهار خطأ للمستخدم هنا لأن العملية الأساسية نجحت
