@@ -291,8 +291,10 @@ export type Database = {
           last_printed_at: string | null
           notes: string | null
           order_id: string | null
+          paid_amount: number | null
           payment_date: string | null
           payment_method: string | null
+          payment_type: string | null
           print_count: number | null
           reminder_sent_at: string | null
           status: string | null
@@ -314,8 +316,10 @@ export type Database = {
           last_printed_at?: string | null
           notes?: string | null
           order_id?: string | null
+          paid_amount?: number | null
           payment_date?: string | null
           payment_method?: string | null
+          payment_type?: string | null
           print_count?: number | null
           reminder_sent_at?: string | null
           status?: string | null
@@ -337,8 +341,10 @@ export type Database = {
           last_printed_at?: string | null
           notes?: string | null
           order_id?: string | null
+          paid_amount?: number | null
           payment_date?: string | null
           payment_method?: string | null
+          payment_type?: string | null
           print_count?: number | null
           reminder_sent_at?: string | null
           status?: string | null
