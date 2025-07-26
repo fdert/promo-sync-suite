@@ -12,6 +12,7 @@ import { Plus, Search, Eye, Printer, MessageCircle, Calendar, Filter, Trash2, X 
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import InvoicePrint from "@/components/InvoicePrint";
+import InvoicePreview from "@/components/InvoicePreview";
 
 const Invoices = () => {
   const [invoices, setInvoices] = useState([]);
@@ -36,6 +37,9 @@ const Invoices = () => {
   ]);
   const [printInvoice, setPrintInvoice] = useState(null);
   const [printItems, setPrintItems] = useState([]);
+  const [previewInvoice, setPreviewInvoice] = useState(null);
+  const [previewItems, setPreviewItems] = useState([]);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   const { toast } = useToast();
 
@@ -277,6 +281,40 @@ const Invoices = () => {
       toast({
         title: "خطأ",
         description: "حدث خطأ في طباعة الفاتورة",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // معاينة الفاتورة
+  const handlePreviewInvoice = async (invoice) => {
+    try {
+      // جلب بنود الفاتورة
+      const { data: items, error: itemsError } = await supabase
+        .from('invoice_items')
+        .select('*')
+        .eq('invoice_id', invoice.id);
+
+      if (itemsError) {
+        console.error('Error fetching invoice items:', itemsError);
+        toast({
+          title: "خطأ",
+          description: "حدث خطأ في جلب بيانات الفاتورة",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // تحديث الحالة للمعاينة
+      setPreviewInvoice(invoice);
+      setPreviewItems(items || []);
+      setIsPreviewOpen(true);
+      
+    } catch (error) {
+      console.error('Error previewing invoice:', error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ في معاينة الفاتورة",
         variant: "destructive",
       });
     }
@@ -664,7 +702,7 @@ const Invoices = () => {
                   )}
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" onClick={() => handlePreviewInvoice(invoice)}>
                     <Eye className="h-4 w-4" />
                   </Button>
                   <Button variant="outline" size="sm" onClick={() => handlePrintInvoice(invoice)}>
@@ -685,6 +723,20 @@ const Invoices = () => {
         <InvoicePrint 
           invoice={printInvoice} 
           items={printItems}
+        />
+      )}
+
+      {/* Preview Component */}
+      {previewInvoice && (
+        <InvoicePreview 
+          isOpen={isPreviewOpen}
+          onClose={() => setIsPreviewOpen(false)}
+          invoice={previewInvoice} 
+          items={previewItems}
+          onPrint={() => {
+            setIsPreviewOpen(false);
+            handlePrintInvoice(previewInvoice);
+          }}
         />
       )}
     </div>

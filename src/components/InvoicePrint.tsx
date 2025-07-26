@@ -45,8 +45,8 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
   }
 }) => {
   return (
-    <div className="print:block hidden">
-      <div className="max-w-4xl mx-auto bg-white p-8 text-black" dir="rtl">
+    <div className="print-content print:block">
+      <div className="max-w-4xl mx-auto bg-white p-8" style={{ color: 'black' }} dir="rtl">
         {/* Header */}
         <div className="flex justify-between items-start mb-8 border-b-2 border-gray-300 pb-6">
           <div>
