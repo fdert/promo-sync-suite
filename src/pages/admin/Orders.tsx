@@ -41,6 +41,8 @@ import {
   Upload,
   FileText,
   CreditCard,
+  Trash2,
+  Package,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -70,7 +72,49 @@ const Orders = () => {
     attachment_files: []
   });
 
+  const [orderItems, setOrderItems] = useState([
+    { item_name: "", description: "", quantity: 1, unit_price: 0, total_amount: 0 }
+  ]);
+
   const { toast } = useToast();
+
+  // إدارة البنود
+  const addOrderItem = () => {
+    setOrderItems([...orderItems, { item_name: "", description: "", quantity: 1, unit_price: 0, total_amount: 0 }]);
+  };
+
+  const removeOrderItem = (index: number) => {
+    if (orderItems.length > 1) {
+      setOrderItems(orderItems.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateOrderItem = (index: number, field: string, value: any) => {
+    const updatedItems = orderItems.map((item, i) => {
+      if (i === index) {
+        const updatedItem = { ...item, [field]: value };
+        
+        // حساب المجموع تلقائياً
+        if (field === 'quantity' || field === 'unit_price') {
+          updatedItem.total_amount = updatedItem.quantity * updatedItem.unit_price;
+        }
+        
+        return updatedItem;
+      }
+      return item;
+    });
+    
+    setOrderItems(updatedItems);
+    
+    // تحديث إجمالي مبلغ الطلب
+    const totalAmount = updatedItems.reduce((sum, item) => sum + item.total_amount, 0);
+    setNewOrder({ ...newOrder, amount: totalAmount.toString() });
+  };
+
+  // إعادة تعيين البنود
+  const resetOrderItems = () => {
+    setOrderItems([{ item_name: "", description: "", quantity: 1, unit_price: 0, total_amount: 0 }]);
+  };
 
   // جلب البيانات من قاعدة البيانات
   const fetchData = async () => {
@@ -177,10 +221,21 @@ const Orders = () => {
   });
 
   const handleAddOrder = async () => {
-    if (!newOrder.customer_id || !newOrder.service_name || !newOrder.amount) {
+    if (!newOrder.customer_id || !newOrder.service_name) {
       toast({
         title: "خطأ",
         description: "يرجى ملء جميع الحقول المطلوبة",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // التحقق من وجود بنود صحيحة
+    const validItems = orderItems.filter(item => item.item_name.trim() && item.quantity > 0);
+    if (validItems.length === 0) {
+      toast({
+        title: "خطأ",
+        description: "يرجى إضافة بند واحد على الأقل",
         variant: "destructive",
       });
       return;
@@ -196,7 +251,11 @@ const Orders = () => {
         return;
       }
 
-      const { error } = await supabase
+      // حساب المبلغ الإجمالي من البنود
+      const totalAmount = validItems.reduce((sum, item) => sum + item.total_amount, 0);
+
+      // إضافة الطلب
+      const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .insert({
           order_number: orderNumber,
@@ -205,19 +264,47 @@ const Orders = () => {
           service_name: newOrder.service_name,
           description: newOrder.description,
           due_date: newOrder.due_date,
-          amount: parseFloat(newOrder.amount),
+          amount: totalAmount,
           priority: newOrder.priority,
           status: 'جديد',
           paid_amount: newOrder.paid_amount ? parseFloat(newOrder.paid_amount) : 0,
           payment_type: newOrder.payment_type,
           payment_notes: newOrder.payment_notes
-        });
+        })
+        .select()
+        .single();
 
-      if (error) {
-        console.error('Error adding order:', error);
+      if (orderError) {
+        console.error('Error adding order:', orderError);
         toast({
           title: "خطأ",
           description: "حدث خطأ في إضافة الطلب",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // إضافة بنود الطلب
+      const orderItemsData = validItems.map(item => ({
+        order_id: orderData.id,
+        item_name: item.item_name,
+        description: item.description,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        total_amount: item.total_amount
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(orderItemsData);
+
+      if (itemsError) {
+        console.error('Error adding order items:', itemsError);
+        // حذف الطلب إذا فشلت إضافة البنود
+        await supabase.from('orders').delete().eq('id', orderData.id);
+        toast({
+          title: "خطأ",
+          description: "حدث خطأ في إضافة بنود الطلب",
           variant: "destructive",
         });
         return;
@@ -237,6 +324,7 @@ const Orders = () => {
         payment_notes: "",
         attachment_files: []
       });
+      resetOrderItems();
       setIsAddDialogOpen(false);
       
       toast({
@@ -492,53 +580,60 @@ const Orders = () => {
                 طلب جديد
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-lg">
+            <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>إنشاء طلب جديد</DialogTitle>
               </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="customer">العميل</Label>
-                  <CustomerSearchSelect
-                    customers={customers}
-                    value={newOrder.customer_id}
-                    onValueChange={(value) => setNewOrder({ ...newOrder, customer_id: value })}
-                    placeholder="ابحث واختر العميل..."
-                  />
+              <div className="space-y-6">
+                {/* معلومات أساسية */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                  <div>
+                    <Label htmlFor="customer">العميل</Label>
+                    <CustomerSearchSelect
+                      customers={customers}
+                      value={newOrder.customer_id}
+                      onValueChange={(value) => setNewOrder({ ...newOrder, customer_id: value })}
+                      placeholder="ابحث واختر العميل..."
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="service">نوع الخدمة</Label>
+                    <Select value={newOrder.service_id} onValueChange={(value) => {
+                      const selectedService = services.find(s => s.id === value);
+                      setNewOrder({ 
+                        ...newOrder, 
+                        service_id: value, 
+                        service_name: selectedService?.name || ""
+                      });
+                    }}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="اختر نوع الخدمة" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {services.map((service) => (
+                          <SelectItem key={service.id} value={service.id}>
+                            {service.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="priority">الأولوية</Label>
+                    <Select value={newOrder.priority} onValueChange={(value) => setNewOrder({ ...newOrder, priority: value })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="اختر الأولوية" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="عالية">عالية</SelectItem>
+                        <SelectItem value="متوسطة">متوسطة</SelectItem>
+                        <SelectItem value="منخفضة">منخفضة</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div>
-                  <Label htmlFor="service">نوع الخدمة</Label>
-                  <Select value={newOrder.service_id} onValueChange={(value) => {
-                    const selectedService = services.find(s => s.id === value);
-                    setNewOrder({ 
-                      ...newOrder, 
-                      service_id: value, 
-                      service_name: selectedService?.name || "",
-                      amount: selectedService?.base_price?.toString() || ""
-                    });
-                  }}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="اختر نوع الخدمة" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {services.map((service) => (
-                        <SelectItem key={service.id} value={service.id}>
-                          {service.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="description">وصف الطلب</Label>
-                  <Textarea 
-                    id="description" 
-                    value={newOrder.description}
-                    onChange={(e) => setNewOrder({ ...newOrder, description: e.target.value })}
-                    placeholder="تفاصيل الطلب..." 
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="dueDate">تاريخ التسليم</Label>
                     <Input 
@@ -549,89 +644,154 @@ const Orders = () => {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="amount">المبلغ</Label>
-                    <Input 
-                      id="amount" 
-                      value={newOrder.amount}
-                      onChange={(e) => setNewOrder({ ...newOrder, amount: e.target.value })}
-                      placeholder="0.00 ر.س" 
+                    <Label htmlFor="description">وصف الطلب</Label>
+                    <Textarea 
+                      id="description" 
+                      value={newOrder.description}
+                      onChange={(e) => setNewOrder({ ...newOrder, description: e.target.value })}
+                      placeholder="تفاصيل الطلب..." 
+                      className="min-h-[80px]"
                     />
                   </div>
                 </div>
-                 <div>
-                   <Label htmlFor="priority">الأولوية</Label>
-                   <Select value={newOrder.priority} onValueChange={(value) => setNewOrder({ ...newOrder, priority: value })}>
-                     <SelectTrigger>
-                       <SelectValue placeholder="اختر الأولوية" />
-                     </SelectTrigger>
-                     <SelectContent>
-                       <SelectItem value="عالية">عالية</SelectItem>
-                       <SelectItem value="متوسطة">متوسطة</SelectItem>
-                       <SelectItem value="منخفضة">منخفضة</SelectItem>
-                     </SelectContent>
-                   </Select>
-                 </div>
-                 
-                 {/* Payment Information */}
-                 <div className="space-y-4 border-t pt-4">
-                   <h3 className="font-medium flex items-center gap-2">
-                     <CreditCard className="h-4 w-4" />
-                     معلومات الدفع
-                   </h3>
-                   <div className="grid grid-cols-2 gap-4">
-                     <div>
-                       <Label htmlFor="paidAmount">المبلغ المدفوع</Label>
-                       <Input 
-                         id="paidAmount" 
-                         value={newOrder.paid_amount}
-                         onChange={(e) => setNewOrder({ ...newOrder, paid_amount: e.target.value })}
-                         placeholder="0.00 ر.س" 
-                       />
-                     </div>
-                     <div>
-                       <Label htmlFor="paymentType">نوع الدفع</Label>
-                       <Select value={newOrder.payment_type} onValueChange={(value) => setNewOrder({ ...newOrder, payment_type: value })}>
-                         <SelectTrigger>
-                           <SelectValue placeholder="اختر نوع الدفع" />
-                         </SelectTrigger>
-                         <SelectContent>
-                           <SelectItem value="كاش">كاش</SelectItem>
-                           <SelectItem value="تحويل بنكي">تحويل بنكي</SelectItem>
-                           <SelectItem value="شبكة">شبكة</SelectItem>
-                           <SelectItem value="دفع آجل">دفع آجل</SelectItem>
-                         </SelectContent>
-                       </Select>
-                     </div>
-                   </div>
-                   <div>
-                     <Label htmlFor="paymentNotes">ملاحظات الدفع</Label>
-                     <Textarea 
-                       id="paymentNotes" 
-                       value={newOrder.payment_notes}
-                       onChange={(e) => setNewOrder({ ...newOrder, payment_notes: e.target.value })}
-                       placeholder="ملاحظات الدفع..." 
-                     />
-                   </div>
-                 </div>
-                 
-                 {/* Attachments */}
-                 <div className="space-y-4 border-t pt-4">
-                   <h3 className="font-medium flex items-center gap-2">
-                     <FileText className="h-4 w-4" />
-                     المرفقات (اختياري)
-                   </h3>
-                   <div>
-                     <Label htmlFor="attachments">تحميل الملفات</Label>
-                     <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
-                       <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                       <p className="text-sm text-muted-foreground mb-2">اسحب وأفلت الملفات هنا أو</p>
-                       <Button variant="outline" size="sm">
-                         اختر الملفات
-                       </Button>
-                       <p className="text-xs text-muted-foreground mt-2">الحد الأقصى: 10 ميجابايت لكل ملف</p>
-                     </div>
-                   </div>
-                 </div>
+
+                {/* بنود الطلب */}
+                <div className="space-y-4 border-t pt-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-medium flex items-center gap-2">
+                      <Package className="h-4 w-4" />
+                      بنود الطلب
+                    </h3>
+                    <Button variant="outline" size="sm" onClick={addOrderItem}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      إضافة بند
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {orderItems.map((item, index) => (
+                      <div key={index} className="grid grid-cols-1 lg:grid-cols-6 gap-3 p-4 border rounded-lg">
+                        <div className="lg:col-span-2">
+                          <Label htmlFor={`item-name-${index}`}>اسم البند</Label>
+                          <Input
+                            id={`item-name-${index}`}
+                            value={item.item_name}
+                            onChange={(e) => updateOrderItem(index, 'item_name', e.target.value)}
+                            placeholder="اسم البند..."
+                          />
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor={`quantity-${index}`}>الكمية</Label>
+                          <Input
+                            id={`quantity-${index}`}
+                            type="number"
+                            min="1"
+                            value={item.quantity}
+                            onChange={(e) => updateOrderItem(index, 'quantity', parseFloat(e.target.value) || 1)}
+                          />
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor={`unit-price-${index}`}>السعر المفرد</Label>
+                          <Input
+                            id={`unit-price-${index}`}
+                            type="number"
+                            step="0.01"
+                            value={item.unit_price}
+                            onChange={(e) => updateOrderItem(index, 'unit_price', parseFloat(e.target.value) || 0)}
+                            placeholder="0.00"
+                          />
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor={`total-${index}`}>الإجمالي</Label>
+                          <Input
+                            id={`total-${index}`}
+                            value={`${item.total_amount.toFixed(2)} ر.س`}
+                            readOnly
+                            className="bg-muted"
+                          />
+                        </div>
+                        
+                        <div className="flex items-end">
+                          {orderItems.length > 1 && (
+                            <Button 
+                              variant="outline" 
+                              size="icon" 
+                              onClick={() => removeOrderItem(index)}
+                              className="text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* إجمالي المبلغ */}
+                  <div className="flex justify-end p-4 bg-muted/50 rounded-lg">
+                    <div className="text-lg font-semibold">
+                      إجمالي المبلغ: {orderItems.reduce((sum, item) => sum + item.total_amount, 0).toFixed(2)} ر.س
+                    </div>
+                  </div>
+                </div>
+
+                {/* معلومات الدفع */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 border-t pt-4">
+                  <div>
+                    <Label htmlFor="paidAmount">المبلغ المدفوع</Label>
+                    <Input 
+                      id="paidAmount" 
+                      type="number"
+                      step="0.01"
+                      value={newOrder.paid_amount}
+                      onChange={(e) => setNewOrder({ ...newOrder, paid_amount: e.target.value })}
+                      placeholder="0.00" 
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="paymentType">نوع الدفع</Label>
+                    <Select value={newOrder.payment_type} onValueChange={(value) => setNewOrder({ ...newOrder, payment_type: value })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="اختر نوع الدفع" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="كاش">كاش</SelectItem>
+                        <SelectItem value="تحويل بنكي">تحويل بنكي</SelectItem>
+                        <SelectItem value="شبكة">شبكة</SelectItem>
+                        <SelectItem value="دفع آجل">دفع آجل</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="paymentNotes">ملاحظات الدفع</Label>
+                    <Textarea 
+                      id="paymentNotes" 
+                      value={newOrder.payment_notes}
+                      onChange={(e) => setNewOrder({ ...newOrder, payment_notes: e.target.value })}
+                      placeholder="ملاحظات الدفع..." 
+                      className="min-h-[80px]"
+                    />
+                  </div>
+                </div>
+
+                {/* المرفقات */}
+                <div className="space-y-4 border-t pt-4">
+                  <h3 className="font-medium flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    المرفقات (اختياري)
+                  </h3>
+                  <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
+                    <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground mb-2">اسحب وأفلت الملفات هنا أو</p>
+                    <Button variant="outline" size="sm">
+                      اختر الملفات
+                    </Button>
+                    <p className="text-xs text-muted-foreground mt-2">الحد الأقصى: 10 ميجابايت لكل ملف</p>
+                  </div>
+                </div>
                 <div className="flex gap-2 pt-4">
                   <Button 
                     variant="hero" 

@@ -47,11 +47,14 @@ const MessageTemplates = () => {
   const availableVariables = {
     order: [
       "customer_name", "order_number", "progress", "amount", 
-      "due_date", "service_name", "estimated_time"
+      "due_date", "service_name", "estimated_time", "paid_amount",
+      "remaining_amount", "payment_type", "payment_notes", 
+      "order_items", "order_items_count", "order_items_total"
     ],
     invoice: [
       "customer_name", "invoice_number", "amount", "due_date", 
-      "payment_date", "status"
+      "payment_date", "status", "paid_amount", "remaining_amount",
+      "payment_type", "invoice_items", "invoice_items_count"
     ],
     general: [
       "customer_name", "company_name", "date", "time"
@@ -192,13 +195,55 @@ const MessageTemplates = () => {
           preview = preview.replace(regex, 'INV-001');
           break;
         case 'amount':
-          preview = preview.replace(regex, '500');
+          preview = preview.replace(regex, '1,500 ر.س');
+          break;
+        case 'paid_amount':
+          preview = preview.replace(regex, '1,000 ر.س');
+          break;
+        case 'remaining_amount':
+          preview = preview.replace(regex, '500 ر.س');
+          break;
+        case 'payment_type':
+          preview = preview.replace(regex, 'تحويل بنكي');
+          break;
+        case 'payment_notes':
+          preview = preview.replace(regex, 'تم الدفع جزئياً');
+          break;
+        case 'order_items':
+          preview = preview.replace(regex, '1. تصميم شعار - الكمية: 1 - السعر: 500 ر.س\n2. تطوير موقع - الكمية: 1 - السعر: 1000 ر.س');
+          break;
+        case 'order_items_count':
+          preview = preview.replace(regex, '2');
+          break;
+        case 'order_items_total':
+          preview = preview.replace(regex, '1,500 ر.س');
+          break;
+        case 'invoice_items':
+          preview = preview.replace(regex, 'البند الأول، البند الثاني');
+          break;
+        case 'invoice_items_count':
+          preview = preview.replace(regex, '2');
           break;
         case 'progress':
-          preview = preview.replace(regex, '75');
+          preview = preview.replace(regex, '75%');
+          break;
+        case 'due_date':
+          preview = preview.replace(regex, '2024-02-15');
+          break;
+        case 'service_name':
+          preview = preview.replace(regex, 'تصميم شعار');
+          break;
+        case 'estimated_time':
+          preview = preview.replace(regex, '5 أيام');
           break;
         case 'company_name':
           preview = preview.replace(regex, 'شركة المثال');
+          break;
+        case 'date':
+          preview = preview.replace(regex, new Date().toLocaleDateString('ar-SA'));
+          break;
+        case 'time':
+          preview = preview.replace(regex, new Date().toLocaleTimeString('ar-SA'));
           break;
         default:
           preview = preview.replace(regex, `[${variable}]`);
