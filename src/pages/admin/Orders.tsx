@@ -507,6 +507,39 @@ const Orders = () => {
         return;
       }
 
+      // إرسال إشعار واتساب للعميل
+      try {
+        const customer = customers.find(c => c.id === newOrder.customer_id);
+        if (customer?.whatsapp_number) {
+          const notificationData = {
+            type: 'order_created',
+            order_id: orderData.id,
+            data: {
+              customer_name: customer.name,
+              customer_phone: customer.whatsapp_number,
+              order_number: orderNumber,
+              service_name: newOrder.service_name,
+              description: newOrder.description || 'غير محدد',
+              amount: totalAmount,
+              paid_amount: newOrder.paid_amount ? parseFloat(newOrder.paid_amount) : 0,
+              payment_type: newOrder.payment_type || 'دفع آجل',
+              priority: newOrder.priority || 'متوسطة',
+              status: 'جديد',
+              due_date: newOrder.due_date || null
+            }
+          };
+
+          await supabase.functions.invoke('send-order-notifications', {
+            body: notificationData
+          });
+
+          console.log('تم إرسال إشعار واتساب للعميل');
+        }
+      } catch (notificationError) {
+        console.error('خطأ في إرسال إشعار واتساب:', notificationError);
+        // لا نعرض خطأ للمستخدم لأن الطلب تم إنشاؤه بنجاح
+      }
+
       await fetchData();
       setNewOrder({ 
         customer_id: "", 
@@ -527,7 +560,7 @@ const Orders = () => {
       
       toast({
         title: "تم إضافة الطلب",
-        description: "تم إضافة الطلب بنجاح",
+        description: "تم إضافة الطلب بنجاح وإرسال إشعار للعميل",
       });
     } catch (error) {
       console.error('Error:', error);

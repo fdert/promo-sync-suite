@@ -27,6 +27,24 @@ Deno.serve(async (req) => {
     let customerPhone = '';
     let customerName = '';
 
+    // جلب بيانات الطلب الكاملة مع بنود الطلب للطلبات الجديدة
+    let orderDetails = null;
+    if (type === 'order_created' && data.order_id) {
+      const { data: orderData, error: orderError } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          customers(name, whatsapp_number),
+          order_items(item_name, quantity, unit_price, total_amount, description)
+        `)
+        .eq('id', data.order_id)
+        .single();
+      
+      if (!orderError && orderData) {
+        orderDetails = orderData;
+      }
+    }
+
     // محاولة الحصول على قالب الرسالة من قاعدة البيانات
     const { data: templateData, error: templateError } = await supabase
       .from('message_templates')
@@ -41,13 +59,69 @@ Deno.serve(async (req) => {
       // استخدام القالب من قاعدة البيانات
       message = templateData.template_content;
       
+      // إعداد المتغيرات للاستبدال
+      let orderItemsText = '';
+      let remainingAmount = '0';
+      let startDate = 'سيتم تحديده';
+      let dueDate = 'سيتم تحديده';
+      let description = data.description || 'غير محدد';
+      
+      // إذا كانت هناك تفاصيل طلب، استخدمها
+      if (orderDetails) {
+        // تنسيق بنود الطلب
+        if (orderDetails.order_items && orderDetails.order_items.length > 0) {
+          orderItemsText = orderDetails.order_items.map((item: any, index: number) => 
+            `${index + 1}. ${item.item_name}\n   الكمية: ${item.quantity}\n   السعر: ${item.unit_price} ر.س\n   المجموع: ${item.total_amount} ر.س${item.description ? `\n   الوصف: ${item.description}` : ''}`
+          ).join('\n\n');
+        } else {
+          orderItemsText = 'لا توجد بنود محددة';
+        }
+        
+        // حساب المبلغ المتبقي
+        const totalAmount = parseFloat(orderDetails.amount?.toString() || '0');
+        const paidAmount = parseFloat(orderDetails.paid_amount?.toString() || '0');
+        remainingAmount = (totalAmount - paidAmount).toString();
+        
+        // تنسيق التواريخ
+        if (orderDetails.start_date) {
+          startDate = new Date(orderDetails.start_date).toLocaleDateString('ar-SA');
+        }
+        if (orderDetails.due_date) {
+          dueDate = new Date(orderDetails.due_date).toLocaleDateString('ar-SA');
+        }
+        
+        description = orderDetails.description || 'غير محدد';
+        
+        // استخدام بيانات من orderDetails
+        customerPhone = orderDetails.customers?.whatsapp_number || data.customer_phone;
+        customerName = orderDetails.customers?.name || data.customer_name;
+      } else {
+        // استخدام البيانات المرسلة مباشرة
+        customerPhone = data.customer_phone;
+        customerName = data.customer_name;
+        
+        // حساب المبلغ المتبقي من البيانات المرسلة
+        const totalAmount = parseFloat(data.amount?.toString() || '0');
+        const paidAmount = parseFloat(data.paid_amount?.toString() || '0');
+        remainingAmount = (totalAmount - paidAmount).toString();
+      }
+      
       // استبدال المتغيرات
       const replacements: Record<string, string> = {
-        'customer_name': data.customer_name || '',
+        'customer_name': customerName || '',
         'order_number': data.order_number || '',
         'amount': data.amount?.toString() || '',
+        'paid_amount': data.paid_amount?.toString() || '0',
+        'remaining_amount': remainingAmount,
+        'payment_type': data.payment_type || 'غير محدد',
         'progress': data.progress?.toString() || '0',
         'service_name': data.service_name || '',
+        'description': description,
+        'order_items': orderItemsText,
+        'start_date': startDate,
+        'due_date': dueDate,
+        'status': data.status || 'جديد',
+        'priority': data.priority || 'متوسطة',
         'estimated_time': data.estimated_days || 'قريباً',
         'company_name': 'شركتنا'
       };
@@ -57,9 +131,6 @@ Deno.serve(async (req) => {
         const regex = new RegExp(`{{${key}}}`, 'g');
         message = message.replace(regex, replacements[key]);
       });
-
-      customerPhone = data.customer_phone;
-      customerName = data.customer_name;
     } else {
       console.log('No template found, using fallback messages');
       
