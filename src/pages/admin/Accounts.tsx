@@ -135,14 +135,13 @@ const Accounts = () => {
     }
   };
 
-  // جلب الفواتير للحصول على الإيرادات
+  // جلب الفواتير للحصول على الإيرادات (جميع الفواتير وليس المدفوعة فقط)
   const fetchInvoices = async () => {
     try {
       const { data, error } = await supabase
         .from('invoices')
         .select('*')
-        .eq('status', 'مدفوع')
-        .order('payment_date', { ascending: false })
+        .order('issue_date', { ascending: false })
         .limit(10);
 
       if (error) {
@@ -399,15 +398,18 @@ const Accounts = () => {
           .eq('reference_id', invoice.id);
 
         if (!existingEntries || existingEntries.length === 0) {
-          // إضافة القيود المحاسبية المفقودة
-          await supabase.functions.invoke('create-invoice-accounting-entry', {
-            body: {
-              invoice_id: invoice.id,
-              customer_name: invoice.customers?.name || 'عميل غير محدد',
-              total_amount: invoice.total_amount
-            }
+          // إضافة القيود المحاسبية المفقودة باستخدام الدالة المحاسبية
+          const { error: entryError } = await supabase.rpc('create_invoice_accounting_entry', {
+            invoice_id: invoice.id,
+            customer_name: invoice.customers?.name || 'عميل غير محدد',
+            total_amount: invoice.total_amount
           });
-          fixedCount++;
+          
+          if (entryError) {
+            console.error('Error creating accounting entry:', entryError);
+          } else {
+            fixedCount++;
+          }
         }
       }
 
@@ -432,10 +434,11 @@ const Accounts = () => {
   // حساب الإحصائيات
   const monthlyIncome = invoices
     .filter(invoice => {
-      const paymentDate = new Date(invoice.payment_date);
+      const issueDate = new Date(invoice.issue_date);
       const currentMonth = new Date();
-      return paymentDate.getMonth() === currentMonth.getMonth() && 
-             paymentDate.getFullYear() === currentMonth.getFullYear();
+      return issueDate.getMonth() === currentMonth.getMonth() && 
+             issueDate.getFullYear() === currentMonth.getFullYear() &&
+             invoice.status === 'مدفوع';
     })
     .reduce((sum, invoice) => sum + (invoice.total_amount || 0), 0);
 

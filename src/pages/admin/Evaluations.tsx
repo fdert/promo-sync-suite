@@ -43,6 +43,7 @@ const Evaluations = () => {
   const fetchEvaluations = async () => {
     try {
       setLoading(true);
+      console.log('Fetching evaluations...');
       
       // جلب التقييمات (جميع التقييمات بما في ذلك غير المرسلة)
       const { data: evaluationsData, error: evaluationsError } = await supabase
@@ -54,11 +55,14 @@ const Evaluations = () => {
         `)
         .order('created_at', { ascending: false });
 
+      console.log('Evaluations data:', evaluationsData);
+      console.log('Evaluations error:', evaluationsError);
+
       if (evaluationsError) {
         console.error('Error fetching evaluations:', evaluationsError);
         toast({
           title: "خطأ",
-          description: "حدث خطأ في جلب التقييمات",
+          description: "حدث خطأ في جلب التقييمات: " + evaluationsError.message,
           variant: "destructive",
         });
         return;

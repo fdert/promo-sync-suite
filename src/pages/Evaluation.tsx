@@ -94,6 +94,9 @@ const Evaluation = () => {
 
     try {
       setSubmitting(true);
+      console.log('Submitting evaluation with token:', token);
+      console.log('Ratings:', ratings);
+      console.log('Feedback:', feedback);
 
       const { error } = await supabase
         .from('evaluations')
@@ -110,12 +113,13 @@ const Evaluation = () => {
         console.error('Error submitting evaluation:', error);
         toast({
           title: "خطأ",
-          description: "حدث خطأ في إرسال التقييم",
+          description: "حدث خطأ في إرسال التقييم: " + error.message,
           variant: "destructive",
         });
         return;
       }
 
+      console.log('Evaluation submitted successfully');
       setSubmitted(true);
       toast({
         title: "شكراً لك!",
