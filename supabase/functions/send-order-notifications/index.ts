@@ -84,7 +84,8 @@ Deno.serve(async (req) => {
       .select('webhook_url')
       .eq('webhook_type', 'outgoing')
       .eq('is_active', true)
-      .single();
+      .limit(1)
+      .maybeSingle();
 
     if (!webhookSettings?.webhook_url) {
       throw new Error('No active outgoing webhook configured');
