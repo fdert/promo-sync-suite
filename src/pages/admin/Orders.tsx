@@ -840,12 +840,21 @@ const Orders = () => {
             const result = await supabase.functions.invoke('send-order-notifications', {
               body: {
                 type: notificationType,
+                order_id: orderId,
                 data: {
                   order_number: currentOrder.order_number,
                   customer_name: currentOrder.customers.name,
                   customer_phone: currentOrder.customers?.whatsapp_number || currentOrder.customers?.phone,
                   amount: currentOrder.amount,
-                  progress: currentOrder.progress || 0
+                  progress: currentOrder.progress || 0,
+                  service_name: currentOrder.service_name,
+                  description: currentOrder.description,
+                  payment_type: currentOrder.payment_type,
+                  paid_amount: currentOrder.paid_amount || 0,
+                  status: newStatus,
+                  priority: currentOrder.priority,
+                  due_date: currentOrder.due_date,
+                  start_date: currentOrder.start_date
                 }
               }
             });

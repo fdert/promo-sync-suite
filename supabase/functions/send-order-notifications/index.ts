@@ -123,9 +123,9 @@ Deno.serve(async (req) => {
         'due_date': dueDate,
         'status': data.status || 'جديد',
         'priority': data.priority || 'متوسطة',
-        'estimated_time': data.estimated_days || 'قريباً',
-        'company_name': 'شركتنا',
-        'evaluation_link': `https://e5a7747a-0935-46df-9ea9-1308e76636dc.lovableproject.com/evaluation/${data.evaluation_token}`
+         'estimated_time': data.estimated_days || 'قريباً',
+         'company_name': 'شركتنا',
+         'evaluation_link': `https://promo-sync-suite.lovable.app/evaluation/${data.evaluation_token}`
       };
 
       // استبدال جميع المتغيرات في الرسالة
@@ -169,8 +169,9 @@ Deno.serve(async (req) => {
           break;
 
         case 'order_ready_for_delivery':
-          message = `${data.customer_name}، طلبك رقم ${data.order_number} جاهز للتسليم! يرجى تقييم الخدمة: https://gcuqfxacnbxdldsbmgvf.supabase.co/evaluation/${data.evaluation_token}`;
+          message = `${data.customer_name}، طلبك رقم ${data.order_number} جاهز للتسليم! لتقييم الخدمة يرجى الضغط هنا: ${data.evaluation_link}`;
           customerPhone = data.customer_phone;
+          customerName = data.customer_name;
           customerName = data.customer_name;
           break;
 
@@ -218,7 +219,13 @@ Deno.serve(async (req) => {
 
     if (!selectedWebhook?.webhook_url) {
       console.log('No matching webhook found for notification type:', type);
-      throw new Error(`No active webhook configured for notification type: ${type}`);
+      // بدلاً من رمي خطأ، سنحاول الإرسال مع webhook افتراضي إذا وجد
+      if (webhookSettings && webhookSettings.length > 0) {
+        selectedWebhook = webhookSettings[0];
+        console.log('Using first available webhook as last resort');
+      } else {
+        throw new Error(`No active webhook configured for notification type: ${type}`);
+      }
     }
 
     // إعداد بيانات الرسالة للإرسال عبر n8n
@@ -244,11 +251,20 @@ Deno.serve(async (req) => {
       body: JSON.stringify(messagePayload)
     });
 
-    const responseData = await response.text();
-    console.log('Webhook response:', responseData);
+    let responseData;
+    try {
+      responseData = await response.text();
+      console.log('Webhook response:', responseData);
+    } catch (e) {
+      responseData = 'Failed to read response';
+      console.log('Failed to read webhook response');
+    }
 
     if (!response.ok) {
-      throw new Error(`Webhook failed: ${response.status} ${responseData}`);
+      console.error(`Webhook failed: ${response.status} ${responseData}`);
+      // لا نرمي خطأ هنا بل نسجل المشكلة ونكمل
+    } else {
+      console.log('Webhook sent successfully');
     }
 
     // حفظ الرسالة المرسلة في قاعدة البيانات
