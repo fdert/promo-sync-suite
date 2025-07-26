@@ -24,6 +24,8 @@ import MessageTemplates from "./pages/admin/MessageTemplates";
 import UserDashboard from "./pages/user/UserDashboard";
 import InvoicePreview from "./pages/InvoicePreview";
 import NotFound from "./pages/NotFound";
+import Evaluations from "./pages/admin/Evaluations";
+import Evaluation from "./pages/Evaluation";
 
 const queryClient = new QueryClient();
 

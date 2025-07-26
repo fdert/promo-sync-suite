@@ -59,6 +59,11 @@ const menuItems = [
     href: "/admin/reports",
   },
   {
+    title: "التقييمات",
+    icon: MessageSquare,
+    href: "/admin/evaluations",
+  },
+  {
     title: "أنواع الخدمات",
     icon: Cog,
     href: "/admin/services",

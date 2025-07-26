@@ -386,6 +386,8 @@ const Orders = () => {
         return "bg-warning/10 text-warning border-warning/20";
       case "جديد":
         return "bg-accent/10 text-accent border-accent/20";
+      case "جاهز للتسليم":
+        return "bg-purple-500/10 text-purple-600 border-purple-200";
       case "معلق":
         return "bg-destructive/10 text-destructive border-destructive/20";
       default:
@@ -711,6 +713,72 @@ const Orders = () => {
           variant: "destructive",
         });
         return;
+      }
+
+      // إرسال إشعار واتساب عندما تصبح الحالة "جاهز للتسليم"
+      if (newStatus === "جاهز للتسليم") {
+        try {
+          // جلب بيانات الطلب والعميل
+          const { data: orderData, error: orderError } = await supabase
+            .from('orders')
+            .select(`
+              *,
+              customers (id, name, phone, whatsapp_number),
+              order_items (*)
+            `)
+            .eq('id', orderId)
+            .single();
+
+          if (orderError) {
+            console.error('خطأ في جلب بيانات الطلب:', orderError);
+          } else if (orderData?.customers?.whatsapp_number) {
+            // إنشاء token للتقييم
+            const evaluationToken = crypto.randomUUID();
+            
+            // إضافة سجل تقييم في قاعدة البيانات
+            const { error: evalError } = await supabase
+              .from('evaluations')
+              .insert({
+                order_id: orderId,
+                customer_id: orderData.customer_id,
+                evaluation_token: evaluationToken,
+                rating: 5, // قيمة افتراضية مؤقتة
+                submitted_at: null // لم يتم الإرسال بعد
+              });
+
+            if (!evalError) {
+              // إرسال إشعار جاهز للتسليم
+              const notificationData = {
+                type: 'order_ready_for_delivery',
+                order_id: orderId,
+                data: {
+                  customer_name: orderData.customers.name,
+                  customer_phone: orderData.customers.whatsapp_number,
+                  order_number: orderData.order_number,
+                  service_name: orderData.service_name,
+                  description: orderData.description || 'غير محدد',
+                  amount: orderData.amount,
+                  paid_amount: orderData.paid_amount || 0,
+                  payment_type: orderData.payment_type || 'دفع آجل',
+                  due_date: orderData.due_date,
+                  evaluation_token: evaluationToken
+                }
+              };
+
+              const result = await supabase.functions.invoke('send-order-notifications', {
+                body: notificationData
+              });
+
+              if (result.error) {
+                console.error('خطأ في إرسال إشعار جاهز للتسليم:', result.error);
+              } else {
+                console.log('تم إرسال إشعار جاهز للتسليم بنجاح');
+              }
+            }
+          }
+        } catch (notificationError) {
+          console.error('خطأ في عملية إرسال الإشعار:', notificationError);
+        }
       }
 
       // تحديث الحالة محلياً دون إعادة تحميل البيانات
@@ -1413,6 +1481,9 @@ const Orders = () => {
                         </SelectItem>
                         <SelectItem value="مكتمل">
                           <Badge className={getStatusColor("مكتمل")}>مكتمل</Badge>
+                        </SelectItem>
+                        <SelectItem value="جاهز للتسليم">
+                          <Badge className={getStatusColor("جاهز للتسليم")}>جاهز للتسليم</Badge>
                         </SelectItem>
                         <SelectItem value="معلق">
                           <Badge className={getStatusColor("معلق")}>معلق</Badge>
