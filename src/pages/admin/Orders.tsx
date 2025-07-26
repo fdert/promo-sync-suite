@@ -38,6 +38,9 @@ import {
   DollarSign,
   User,
   Clock,
+  Upload,
+  FileText,
+  CreditCard,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -60,7 +63,11 @@ const Orders = () => {
     description: "",
     due_date: "",
     amount: "",
-    priority: "متوسطة"
+    priority: "متوسطة",
+    paid_amount: "",
+    payment_type: "دفع آجل",
+    payment_notes: "",
+    attachment_files: []
   });
 
   const { toast } = useToast();
@@ -200,7 +207,10 @@ const Orders = () => {
           due_date: newOrder.due_date,
           amount: parseFloat(newOrder.amount),
           priority: newOrder.priority,
-          status: 'جديد'
+          status: 'جديد',
+          paid_amount: newOrder.paid_amount ? parseFloat(newOrder.paid_amount) : 0,
+          payment_type: newOrder.payment_type,
+          payment_notes: newOrder.payment_notes
         });
 
       if (error) {
@@ -214,7 +224,19 @@ const Orders = () => {
       }
 
       await fetchData();
-      setNewOrder({ customer_id: "", service_id: "", service_name: "", description: "", due_date: "", amount: "", priority: "متوسطة" });
+      setNewOrder({ 
+        customer_id: "", 
+        service_id: "", 
+        service_name: "", 
+        description: "", 
+        due_date: "", 
+        amount: "", 
+        priority: "متوسطة",
+        paid_amount: "",
+        payment_type: "دفع آجل",
+        payment_notes: "",
+        attachment_files: []
+      });
       setIsAddDialogOpen(false);
       
       toast({
@@ -235,7 +257,11 @@ const Orders = () => {
       description: order.description,
       due_date: order.due_date,
       amount: order.amount.toString(),
-      priority: order.priority
+      priority: order.priority,
+      paid_amount: order.paid_amount?.toString() || "",
+      payment_type: order.payment_type || "دفع آجل",
+      payment_notes: order.payment_notes || "",
+      attachment_files: order.attachment_urls || []
     });
     setIsEditDialogOpen(true);
   };
@@ -260,7 +286,10 @@ const Orders = () => {
           description: newOrder.description,
           due_date: newOrder.due_date,
           amount: parseFloat(newOrder.amount),
-          priority: newOrder.priority
+          priority: newOrder.priority,
+          paid_amount: newOrder.paid_amount ? parseFloat(newOrder.paid_amount) : 0,
+          payment_type: newOrder.payment_type,
+          payment_notes: newOrder.payment_notes
         })
         .eq('id', editingOrder.id);
 
@@ -275,7 +304,19 @@ const Orders = () => {
       }
 
       await fetchData();
-      setNewOrder({ customer_id: "", service_id: "", service_name: "", description: "", due_date: "", amount: "", priority: "متوسطة" });
+      setNewOrder({ 
+        customer_id: "", 
+        service_id: "", 
+        service_name: "", 
+        description: "", 
+        due_date: "", 
+        amount: "", 
+        priority: "متوسطة",
+        paid_amount: "",
+        payment_type: "دفع آجل",
+        payment_notes: "",
+        attachment_files: []
+      });
       setIsEditDialogOpen(false);
       setEditingOrder(null);
       
@@ -517,19 +558,80 @@ const Orders = () => {
                     />
                   </div>
                 </div>
-                <div>
-                  <Label htmlFor="priority">الأولوية</Label>
-                  <Select value={newOrder.priority} onValueChange={(value) => setNewOrder({ ...newOrder, priority: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="اختر الأولوية" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="عالية">عالية</SelectItem>
-                      <SelectItem value="متوسطة">متوسطة</SelectItem>
-                      <SelectItem value="منخفضة">منخفضة</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                 <div>
+                   <Label htmlFor="priority">الأولوية</Label>
+                   <Select value={newOrder.priority} onValueChange={(value) => setNewOrder({ ...newOrder, priority: value })}>
+                     <SelectTrigger>
+                       <SelectValue placeholder="اختر الأولوية" />
+                     </SelectTrigger>
+                     <SelectContent>
+                       <SelectItem value="عالية">عالية</SelectItem>
+                       <SelectItem value="متوسطة">متوسطة</SelectItem>
+                       <SelectItem value="منخفضة">منخفضة</SelectItem>
+                     </SelectContent>
+                   </Select>
+                 </div>
+                 
+                 {/* Payment Information */}
+                 <div className="space-y-4 border-t pt-4">
+                   <h3 className="font-medium flex items-center gap-2">
+                     <CreditCard className="h-4 w-4" />
+                     معلومات الدفع
+                   </h3>
+                   <div className="grid grid-cols-2 gap-4">
+                     <div>
+                       <Label htmlFor="paidAmount">المبلغ المدفوع</Label>
+                       <Input 
+                         id="paidAmount" 
+                         value={newOrder.paid_amount}
+                         onChange={(e) => setNewOrder({ ...newOrder, paid_amount: e.target.value })}
+                         placeholder="0.00 ر.س" 
+                       />
+                     </div>
+                     <div>
+                       <Label htmlFor="paymentType">نوع الدفع</Label>
+                       <Select value={newOrder.payment_type} onValueChange={(value) => setNewOrder({ ...newOrder, payment_type: value })}>
+                         <SelectTrigger>
+                           <SelectValue placeholder="اختر نوع الدفع" />
+                         </SelectTrigger>
+                         <SelectContent>
+                           <SelectItem value="كاش">كاش</SelectItem>
+                           <SelectItem value="تحويل بنكي">تحويل بنكي</SelectItem>
+                           <SelectItem value="شبكة">شبكة</SelectItem>
+                           <SelectItem value="دفع آجل">دفع آجل</SelectItem>
+                         </SelectContent>
+                       </Select>
+                     </div>
+                   </div>
+                   <div>
+                     <Label htmlFor="paymentNotes">ملاحظات الدفع</Label>
+                     <Textarea 
+                       id="paymentNotes" 
+                       value={newOrder.payment_notes}
+                       onChange={(e) => setNewOrder({ ...newOrder, payment_notes: e.target.value })}
+                       placeholder="ملاحظات الدفع..." 
+                     />
+                   </div>
+                 </div>
+                 
+                 {/* Attachments */}
+                 <div className="space-y-4 border-t pt-4">
+                   <h3 className="font-medium flex items-center gap-2">
+                     <FileText className="h-4 w-4" />
+                     المرفقات (اختياري)
+                   </h3>
+                   <div>
+                     <Label htmlFor="attachments">تحميل الملفات</Label>
+                     <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
+                       <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                       <p className="text-sm text-muted-foreground mb-2">اسحب وأفلت الملفات هنا أو</p>
+                       <Button variant="outline" size="sm">
+                         اختر الملفات
+                       </Button>
+                       <p className="text-xs text-muted-foreground mt-2">الحد الأقصى: 10 ميجابايت لكل ملف</p>
+                     </div>
+                   </div>
+                 </div>
                 <div className="flex gap-2 pt-4">
                   <Button 
                     variant="hero" 
@@ -616,19 +718,61 @@ const Orders = () => {
                     />
                   </div>
                 </div>
-                <div>
-                  <Label htmlFor="edit-priority">الأولوية</Label>
-                  <Select value={newOrder.priority} onValueChange={(value) => setNewOrder({ ...newOrder, priority: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="اختر الأولوية" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="عالية">عالية</SelectItem>
-                      <SelectItem value="متوسطة">متوسطة</SelectItem>
-                      <SelectItem value="منخفضة">منخفضة</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                 <div>
+                   <Label htmlFor="edit-priority">الأولوية</Label>
+                   <Select value={newOrder.priority} onValueChange={(value) => setNewOrder({ ...newOrder, priority: value })}>
+                     <SelectTrigger>
+                       <SelectValue placeholder="اختر الأولوية" />
+                     </SelectTrigger>
+                     <SelectContent>
+                       <SelectItem value="عالية">عالية</SelectItem>
+                       <SelectItem value="متوسطة">متوسطة</SelectItem>
+                       <SelectItem value="منخفضة">منخفضة</SelectItem>
+                     </SelectContent>
+                   </Select>
+                 </div>
+                 
+                 {/* Payment Information in Edit */}
+                 <div className="space-y-4 border-t pt-4">
+                   <h3 className="font-medium flex items-center gap-2">
+                     <CreditCard className="h-4 w-4" />
+                     معلومات الدفع
+                   </h3>
+                   <div className="grid grid-cols-2 gap-4">
+                     <div>
+                       <Label htmlFor="edit-paidAmount">المبلغ المدفوع</Label>
+                       <Input 
+                         id="edit-paidAmount" 
+                         value={newOrder.paid_amount}
+                         onChange={(e) => setNewOrder({ ...newOrder, paid_amount: e.target.value })}
+                         placeholder="0.00 ر.س" 
+                       />
+                     </div>
+                     <div>
+                       <Label htmlFor="edit-paymentType">نوع الدفع</Label>
+                       <Select value={newOrder.payment_type} onValueChange={(value) => setNewOrder({ ...newOrder, payment_type: value })}>
+                         <SelectTrigger>
+                           <SelectValue placeholder="اختر نوع الدفع" />
+                         </SelectTrigger>
+                         <SelectContent>
+                           <SelectItem value="كاش">كاش</SelectItem>
+                           <SelectItem value="تحويل بنكي">تحويل بنكي</SelectItem>
+                           <SelectItem value="شبكة">شبكة</SelectItem>
+                           <SelectItem value="دفع آجل">دفع آجل</SelectItem>
+                         </SelectContent>
+                       </Select>
+                     </div>
+                   </div>
+                   <div>
+                     <Label htmlFor="edit-paymentNotes">ملاحظات الدفع</Label>
+                     <Textarea 
+                       id="edit-paymentNotes" 
+                       value={newOrder.payment_notes}
+                       onChange={(e) => setNewOrder({ ...newOrder, payment_notes: e.target.value })}
+                       placeholder="ملاحظات الدفع..." 
+                     />
+                   </div>
+                 </div>
                 <div className="flex gap-2 pt-4">
                   <Button 
                     variant="hero" 
@@ -732,15 +876,16 @@ const Orders = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>رقم الطلب</TableHead>
-                <TableHead>العميل</TableHead>
-                <TableHead>الخدمة</TableHead>
-                <TableHead>الحالة</TableHead>
-                <TableHead>الأولوية</TableHead>
-                <TableHead>التقدم</TableHead>
-                <TableHead>تاريخ التسليم</TableHead>
-                <TableHead>المبلغ</TableHead>
-                <TableHead>الإجراءات</TableHead>
+                 <TableHead>رقم الطلب</TableHead>
+                 <TableHead>العميل</TableHead>
+                 <TableHead>الخدمة</TableHead>
+                 <TableHead>الحالة</TableHead>
+                 <TableHead>الأولوية</TableHead>
+                 <TableHead>التقدم</TableHead>
+                 <TableHead>تاريخ التسليم</TableHead>
+                 <TableHead>المبلغ</TableHead>
+                 <TableHead>الدفع</TableHead>
+                 <TableHead>الإجراءات</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -813,14 +958,27 @@ const Orders = () => {
                       {order.due_date ? new Date(order.due_date).toLocaleDateString('ar-SA') : 'غير محدد'}
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      <DollarSign className="h-3 w-3" />
-                      {order.amount ? `${order.amount} ر.س` : 'غير محدد'}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
+                   <TableCell>
+                     <div className="flex items-center gap-1">
+                       <DollarSign className="h-3 w-3" />
+                       {order.amount ? `${order.amount} ر.س` : 'غير محدد'}
+                     </div>
+                   </TableCell>
+                   <TableCell>
+                     <div className="space-y-1">
+                       <div className="flex items-center gap-1 text-sm">
+                         <CreditCard className="h-3 w-3" />
+                         <span className="text-success">
+                           {order.paid_amount ? `${order.paid_amount} ر.س` : '0 ر.س'}
+                         </span>
+                       </div>
+                       <div className="text-xs text-muted-foreground">
+                         {order.payment_type || 'دفع آجل'}
+                       </div>
+                     </div>
+                   </TableCell>
+                   <TableCell>
+                     <div className="flex items-center gap-2">
                       <Button variant="ghost" size="icon">
                         <Eye className="h-4 w-4" />
                       </Button>

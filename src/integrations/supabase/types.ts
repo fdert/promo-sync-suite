@@ -446,6 +446,7 @@ export type Database = {
         Row: {
           amount: number
           assigned_to: string | null
+          attachment_urls: string[] | null
           completion_date: string | null
           created_at: string | null
           created_by: string | null
@@ -455,6 +456,9 @@ export type Database = {
           id: string
           notes: string | null
           order_number: string
+          paid_amount: number | null
+          payment_notes: string | null
+          payment_type: string | null
           priority: string | null
           progress: number | null
           service_id: string | null
@@ -466,6 +470,7 @@ export type Database = {
         Insert: {
           amount: number
           assigned_to?: string | null
+          attachment_urls?: string[] | null
           completion_date?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -475,6 +480,9 @@ export type Database = {
           id?: string
           notes?: string | null
           order_number: string
+          paid_amount?: number | null
+          payment_notes?: string | null
+          payment_type?: string | null
           priority?: string | null
           progress?: number | null
           service_id?: string | null
@@ -486,6 +494,7 @@ export type Database = {
         Update: {
           amount?: number
           assigned_to?: string | null
+          attachment_urls?: string[] | null
           completion_date?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -495,6 +504,9 @@ export type Database = {
           id?: string
           notes?: string | null
           order_number?: string
+          paid_amount?: number | null
+          payment_notes?: string | null
+          payment_type?: string | null
           priority?: string | null
           progress?: number | null
           service_id?: string | null
@@ -530,6 +542,60 @@ export type Database = {
             columns: ["service_id"]
             isOneToOne: false
             referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payments: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          id: string
+          invoice_id: string | null
+          notes: string | null
+          order_id: string | null
+          payment_date: string
+          payment_type: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          invoice_id?: string | null
+          notes?: string | null
+          order_id?: string | null
+          payment_date?: string
+          payment_type: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          invoice_id?: string | null
+          notes?: string | null
+          order_id?: string | null
+          payment_date?: string
+          payment_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
             referencedColumns: ["id"]
           },
         ]
