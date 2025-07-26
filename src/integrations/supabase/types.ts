@@ -665,6 +665,7 @@ export type Database = {
           created_by: string | null
           id: string
           is_active: boolean | null
+          order_statuses: string[] | null
           secret_key: string | null
           updated_at: string
           webhook_name: string
@@ -676,6 +677,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           is_active?: boolean | null
+          order_statuses?: string[] | null
           secret_key?: string | null
           updated_at?: string
           webhook_name: string
@@ -687,6 +689,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           is_active?: boolean | null
+          order_statuses?: string[] | null
           secret_key?: string | null
           updated_at?: string
           webhook_name?: string
