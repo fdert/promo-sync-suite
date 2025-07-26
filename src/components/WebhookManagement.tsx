@@ -16,6 +16,8 @@ import {
   Loader2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface WebhookSetting {
   id?: string;
@@ -24,6 +26,7 @@ interface WebhookSetting {
   webhook_type: string;
   is_active: boolean;
   secret_key?: string;
+  order_statuses?: string[];
   created_at?: string;
   updated_at?: string;
 }
@@ -50,11 +53,20 @@ const WebhookManagement = ({
     webhook_url: '',
     webhook_type: webhookType,
     is_active: true,
-    secret_key: ''
+    secret_key: '',
+    order_statuses: []
   });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
+
+  const orderStatusOptions = [
+    { value: 'order_created', label: 'طلب جديد' },
+    { value: 'order_in_progress', label: 'قيد التنفيذ' },
+    { value: 'order_completed', label: 'مكتمل' },
+    { value: 'order_cancelled', label: 'ملغي' },
+    { value: 'order_updated', label: 'محدث' }
+  ];
 
   const handleSave = async () => {
     if (!newWebhook.webhook_name || !newWebhook.webhook_url) {
@@ -74,7 +86,8 @@ const WebhookManagement = ({
         webhook_url: '',
         webhook_type: webhookType,
         is_active: true,
-        secret_key: ''
+        secret_key: '',
+        order_statuses: []
       });
     } catch (error) {
       // Error handled in parent component
@@ -163,6 +176,41 @@ const WebhookManagement = ({
             </div>
           </div>
 
+          {/* Order Status Selection for Orders Webhook */}
+          {webhookType === 'outgoing' && (
+            <div className="space-y-2">
+              <Label>حالات الطلب المطلوب إرسال إشعارات لها</Label>
+              <p className="text-sm text-muted-foreground">اختر حالات الطلب التي تريد إرسال الويب هوك عندها (فارغ = جميع الحالات)</p>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {orderStatusOptions.map((status) => (
+                  <div key={status.value} className="flex items-center space-x-2 space-x-reverse">
+                    <Checkbox
+                      id={status.value}
+                      checked={newWebhook.order_statuses?.includes(status.value) || false}
+                      onCheckedChange={(checked) => {
+                        const currentStatuses = newWebhook.order_statuses || [];
+                        if (checked) {
+                          setNewWebhook({
+                            ...newWebhook, 
+                            order_statuses: [...currentStatuses, status.value]
+                          });
+                        } else {
+                          setNewWebhook({
+                            ...newWebhook,
+                            order_statuses: currentStatuses.filter(s => s !== status.value)
+                          });
+                        }
+                      }}
+                    />
+                    <Label htmlFor={status.value} className="text-sm font-medium">
+                      {status.label}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <Button onClick={handleSave} disabled={saving} className="w-full">
             {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
             إضافة ويب هوك
@@ -190,6 +238,7 @@ const WebhookManagement = ({
                   <TableHead>الاسم</TableHead>
                   <TableHead>الرابط</TableHead>
                   <TableHead>النوع</TableHead>
+                  <TableHead>حالات الطلب</TableHead>
                   <TableHead>الحالة</TableHead>
                   <TableHead>الإجراءات</TableHead>
                 </TableRow>
@@ -224,6 +273,26 @@ const WebhookManagement = ({
                       <Badge variant="secondary">
                         {webhook.webhook_type}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {webhook.webhook_type === 'outgoing' && webhook.order_statuses ? (
+                        webhook.order_statuses.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {webhook.order_statuses.map((status) => {
+                              const statusLabel = orderStatusOptions.find(opt => opt.value === status)?.label;
+                              return (
+                                <Badge key={status} variant="outline" className="text-xs">
+                                  {statusLabel}
+                                </Badge>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <Badge variant="outline" className="text-xs">جميع الحالات</Badge>
+                        )
+                      ) : (
+                        <span className="text-muted-foreground text-sm">-</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
