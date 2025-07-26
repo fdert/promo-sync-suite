@@ -63,7 +63,9 @@ const App = () => (
               <Route path="webhooks" element={<WebhookSettings />} />
               <Route path="website" element={<WebsiteContent />} />
               <Route path="settings" element={<Settings />} />
+              <Route path="evaluations" element={<Evaluations />} />
             </Route>
+            <Route path="/evaluation/:token" element={<Evaluation />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

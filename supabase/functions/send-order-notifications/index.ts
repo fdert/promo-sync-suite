@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
     const { data: templateData, error: templateError } = await supabase
       .from('message_templates')
       .select('template_content')
-      .eq('template_name', type)
+      .eq('template_type', type)
       .eq('is_active', true)
       .maybeSingle();
 
@@ -163,6 +163,12 @@ Deno.serve(async (req) => {
 
         case 'order_cancelled':
           message = `عزيزي ${data.customer_name}، تم إلغاء طلبك رقم ${data.order_number}. للاستفسار يرجى التواصل معنا.`;
+          customerPhone = data.customer_phone;
+          customerName = data.customer_name;
+          break;
+
+        case 'order_ready_for_delivery':
+          message = `${data.customer_name}، طلبك رقم ${data.order_number} جاهز للتسليم! يرجى تقييم الخدمة: https://gcuqfxacnbxdldsbmgvf.supabase.co/evaluation/${data.evaluation_token}`;
           customerPhone = data.customer_phone;
           customerName = data.customer_name;
           break;
