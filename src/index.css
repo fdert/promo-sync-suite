@@ -201,44 +201,43 @@ All colors MUST be HSL.
   }
 
   /* Show only print components */
-  .print-content,
-  .print-content * {
+  .print-invoice,
+  .print-invoice * {
     visibility: visible;
   }
 
-  .print-content {
+  .print-invoice {
     position: absolute;
     left: 0;
     top: 0;
     width: 100%;
-  }
-
-  /* Hide non-print elements */
-  .no-print {
-    display: none !important;
-  }
-
-  /* Ensure black text for print */
-  .print-content {
-    color: black !important;
+    height: 100%;
     background: white !important;
+    color: black !important;
   }
 
-  /* Print-specific styles */
-  .print-content table {
+  /* Hide screen elements during print */
+  .no-print,
+  .screen-only {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  /* Ensure print content is visible */
+  .print-invoice table {
     border-collapse: collapse;
     width: 100%;
   }
 
-  .print-content th,
-  .print-content td {
-    border: 1px solid #000;
-    padding: 8px;
-    text-align: right;
+  .print-invoice th,
+  .print-invoice td {
+    border: 1px solid #000 !important;
+    padding: 4px !important;
+    font-size: 10px !important;
   }
 
-  .print-content th {
-    background-color: #f5f5f5 !important;
-    font-weight: bold;
+  .print-invoice th {
+    background-color: #f0f0f0 !important;
+    font-weight: bold !important;
   }
 }

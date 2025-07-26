@@ -45,28 +45,31 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
   }
 }) => {
   return (
-    <div className="print-content print:block" style={{ 
-      position: 'absolute', 
-      left: '-9999px', 
-      width: '100%',
-      fontSize: '12px',
-      lineHeight: '1.3'
-    }}>
-      <div className="bg-white" style={{ 
-        color: 'black', 
-        padding: '10px',
-        maxWidth: '100%',
-        height: 'auto'
-      }} dir="rtl">
+    <div 
+      className="print-invoice" 
+      style={{ 
+        position: 'fixed',
+        left: '-9999px',
+        top: '0',
+        width: '210mm',
+        height: '148mm',
+        backgroundColor: 'white',
+        color: 'black',
+        fontSize: '12px',
+        fontFamily: 'Arial, sans-serif',
+        direction: 'rtl'
+      }}
+    >
+      <div style={{ padding: '10px', height: '100%' }}>
         
-        {/* Header مدمج */}
+        {/* Header */}
         <div style={{ 
           display: 'flex', 
           justifyContent: 'space-between', 
           alignItems: 'flex-start', 
           marginBottom: '15px',
           borderBottom: '2px solid #333',
-          paddingBottom: '10px'
+          paddingBottom: '8px'
         }}>
           <div style={{ flex: 1 }}>
             <h1 style={{ 
@@ -78,7 +81,7 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
               {companyInfo.name}
             </h1>
             <div style={{ fontSize: '10px', color: '#666' }}>
-              <p style={{ margin: '2px 0' }}>{companyInfo.phone}</p>
+              <div>{companyInfo.phone}</div>
             </div>
           </div>
           
@@ -92,40 +95,36 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
               فاتورة
             </h2>
             <div style={{ fontSize: '10px', color: '#666' }}>
-              <p style={{ margin: '1px 0' }}>
-                <strong>رقم:</strong> {invoice.invoice_number}
-              </p>
-              <p style={{ margin: '1px 0' }}>
-                <strong>التاريخ:</strong> {new Date(invoice.issue_date).toLocaleDateString('ar-SA')}
-              </p>
+              <div><strong>رقم:</strong> {invoice.invoice_number}</div>
+              <div><strong>التاريخ:</strong> {new Date(invoice.issue_date).toLocaleDateString('ar-SA')}</div>
             </div>
           </div>
         </div>
 
-        {/* بيانات العميل مبسطة */}
+        {/* Customer Info */}
         <div style={{ marginBottom: '12px' }}>
           <div style={{ 
             backgroundColor: '#f8f9fa', 
-            padding: '8px', 
+            padding: '6px', 
             border: '1px solid #ddd',
-            borderRadius: '4px'
+            borderRadius: '3px'
           }}>
-            <p style={{ 
+            <div style={{ 
               margin: '0', 
               fontSize: '11px',
               fontWeight: 'bold'
             }}>
               العميل: {invoice.customers?.name}
-            </p>
+            </div>
             {invoice.customers?.phone && (
-              <p style={{ margin: '2px 0 0 0', fontSize: '10px', color: '#666' }}>
+              <div style={{ margin: '2px 0 0 0', fontSize: '10px', color: '#666' }}>
                 هاتف: {invoice.customers.phone}
-              </p>
+              </div>
             )}
           </div>
         </div>
 
-        {/* جدول البنود مبسط */}
+        {/* Items Table */}
         <div style={{ marginBottom: '12px' }}>
           <table style={{ 
             width: '100%', 
@@ -204,7 +203,7 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
           </table>
         </div>
 
-        {/* المجاميع */}
+        {/* Totals */}
         <div style={{ 
           display: 'flex', 
           justifyContent: 'flex-end', 
@@ -245,40 +244,42 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
           </div>
         </div>
 
-        {/* معلومات إضافية مبسطة */}
+        {/* Additional Info */}
         <div style={{ 
           display: 'flex', 
           justifyContent: 'space-between',
           fontSize: '10px',
-          marginBottom: '10px'
+          marginBottom: '8px'
         }}>
           <div>
-            <p style={{ margin: '0' }}>
+            <div style={{ margin: '0' }}>
               <strong>نوع الدفع:</strong> {invoice.payment_type}
-            </p>
-            <p style={{ margin: '2px 0 0 0' }}>
+            </div>
+            <div style={{ margin: '2px 0 0 0' }}>
               <strong>الحالة:</strong> {invoice.status}
-            </p>
+            </div>
           </div>
           
           {invoice.notes && (
             <div style={{ maxWidth: '50%' }}>
-              <p style={{ margin: '0', fontSize: '9px', color: '#666' }}>
+              <div style={{ margin: '0', fontSize: '9px', color: '#666' }}>
                 <strong>ملاحظات:</strong> {invoice.notes}
-              </p>
+              </div>
             </div>
           )}
         </div>
 
-        {/* Footer بسيط */}
+        {/* Footer */}
         <div style={{ 
+          position: 'absolute',
+          bottom: '10px',
+          left: '50%',
+          transform: 'translateX(-50%)',
           textAlign: 'center', 
           fontSize: '8px', 
-          color: '#999',
-          borderTop: '1px solid #ddd',
-          paddingTop: '5px'
+          color: '#999'
         }}>
-          <p style={{ margin: '0' }}>شكراً لثقتكم</p>
+          شكراً لثقتكم
         </div>
       </div>
     </div>
