@@ -956,6 +956,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_invoice_accounting_entry: {
+        Args: {
+          invoice_id: string
+          customer_name: string
+          total_amount: number
+        }
+        Returns: undefined
+      }
       generate_expense_number: {
         Args: Record<PropertyKey, never>
         Returns: string
