@@ -14,6 +14,89 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_entries: {
+        Row: {
+          account_id: string
+          created_at: string
+          created_by: string | null
+          credit_amount: number | null
+          debit_amount: number | null
+          description: string
+          entry_date: string
+          id: string
+          reference_id: string | null
+          reference_type: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          created_by?: string | null
+          credit_amount?: number | null
+          debit_amount?: number | null
+          description: string
+          entry_date?: string
+          id?: string
+          reference_id?: string | null
+          reference_type: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          created_by?: string | null
+          credit_amount?: number | null
+          debit_amount?: number | null
+          description?: string
+          entry_date?: string
+          id?: string
+          reference_id?: string | null
+          reference_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_entries_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      accounts: {
+        Row: {
+          account_name: string
+          account_type: string
+          balance: number
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          updated_at: string
+        }
+        Insert: {
+          account_name: string
+          account_type: string
+          balance?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+        }
+        Update: {
+          account_name?: string
+          account_type?: string
+          balance?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       activity_logs: {
         Row: {
           action: string
