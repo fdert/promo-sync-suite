@@ -51,6 +51,7 @@ const WhatsApp = () => {
 
   const fetchMessages = async () => {
     try {
+      console.log('Fetching messages...');
       const { data, error } = await supabase
         .from('whatsapp_messages')
         .select(`
@@ -60,7 +61,13 @@ const WhatsApp = () => {
         .order('created_at', { ascending: false })
         .limit(100);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching messages:', error);
+        throw error;
+      }
+      
+      console.log('Fetched messages:', data?.length || 0, 'messages');
+      console.log('Latest message:', data?.[0]);
       setMessages(data || []);
     } catch (error) {
       console.error('Error fetching messages:', error);
