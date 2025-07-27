@@ -297,11 +297,12 @@ Deno.serve(async (req) => {
 
     console.log('Sending notification via webhook:', JSON.stringify(messagePayload, null, 2));
 
-    // إرسال الرسالة عبر webhook إلى n8n
+    // إرسال الرسالة عبر webhook إلى n8n مع headers صحيحة
     const response = await fetch(selectedWebhook.webhook_url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
       },
       body: JSON.stringify(messagePayload)
     });
