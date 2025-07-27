@@ -92,17 +92,28 @@ Deno.serve(async (req) => {
       }
 
       if (messageData && messageData.from_number) {
+        console.log('Processing message data:', JSON.stringify(messageData, null, 2));
+        
         // البحث عن العميل أو إنشاؤه
         let customer = null;
-        const { data: existingCustomer } = await supabase
+        console.log('Looking for customer with WhatsApp number:', messageData.from_number);
+        
+        const { data: existingCustomer, error: customerLookupError } = await supabase
           .from('customers')
           .select('*')
           .eq('whatsapp_number', messageData.from_number)
           .single();
 
+        if (customerLookupError) {
+          console.log('Customer lookup error (might be expected for new customers):', customerLookupError);
+        }
+
         if (existingCustomer) {
           customer = existingCustomer;
+          console.log('Found existing customer:', customer.name);
         } else {
+          console.log('Creating new customer...');
+          
           // إنشاء عميل جديد
           const { data: newCustomer, error: customerError } = await supabase
             .from('customers')
@@ -119,21 +130,25 @@ Deno.serve(async (req) => {
             console.error('Error creating customer:', customerError);
           } else {
             customer = newCustomer;
+            console.log('Created new customer:', customer?.name);
           }
         }
 
         // إضافة معرف العميل
         messageData.customer_id = customer?.id || null;
+        console.log('Message data with customer ID:', JSON.stringify(messageData, null, 2));
 
         // حفظ الرسالة في قاعدة البيانات
+        console.log('Attempting to save message to database...');
         const { data: savedMessage, error: messageError } = await supabase
           .from('whatsapp_messages')
-          .insert(messageData);
+          .insert(messageData)
+          .select();
 
         if (messageError) {
           console.error('Error saving message:', messageError);
           return new Response(
-            JSON.stringify({ error: 'Failed to save message' }),
+            JSON.stringify({ error: 'Failed to save message', details: messageError }),
             {
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
               status: 500
@@ -160,13 +175,17 @@ Deno.serve(async (req) => {
           JSON.stringify({ 
             success: true, 
             message: 'Message processed successfully',
-            customer_id: customer?.id
+            customer_id: customer?.id,
+            message_id: savedMessage?.[0]?.id
           }),
           {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 200
           }
         );
+      } else {
+        console.log('No valid message data found or missing from_number');
+        console.log('Body received:', JSON.stringify(body, null, 2));
       }
 
       // إذا لم تكن رسالة، إرجاع رد عادي
