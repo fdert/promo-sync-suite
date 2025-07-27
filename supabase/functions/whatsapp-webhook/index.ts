@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
       let messageData = null;
       
       // تنسيق 1: رسالة مباشرة من WhatsApp Business API
-      if (body.message) {
+      if (body.message && typeof body.message === 'object') {
         console.log('Processing format 1: WhatsApp Business API message');
         const message = body.message;
         messageData = {
@@ -53,9 +53,9 @@ Deno.serve(async (req) => {
         console.log('Created messageData format 1:', JSON.stringify(messageData, null, 2));
       }
       
-      // تنسيق 2: البيانات مباشرة في الـ body
-      else if (body.from || body.sender) {
-        console.log('Processing format 2: Direct body data');
+      // تنسيق 2: البيانات مباشرة في الـ body (اختبار الـ webhook)
+      else if (body.from && body.message) {
+        console.log('Processing format 2: Direct body data (test webhook)');
         messageData = {
           message_id: body.id || body.messageId || null,
           from_number: body.from || body.sender || body.phone,
@@ -88,9 +88,9 @@ Deno.serve(async (req) => {
         console.log('Created messageData format 3:', JSON.stringify(messageData, null, 2));
       }
       
-      // إذا لم يتم إيجاد بيانات رسالة، إنشاؤها من البيانات المباشرة
-      if (!messageData && (body.from || body.message || body.customerName)) {
-        console.log('Processing fallback format: Creating from direct body data');
+      // تنسيق 4: fallback للبيانات المباشرة
+      else if (body.from || body.sender || body.customerName) {
+        console.log('Processing fallback format: Creating from any available data');
         messageData = {
           message_id: body.id || body.messageId || null,
           from_number: body.from || body.sender || body.phone || '+966500000000',
@@ -108,10 +108,15 @@ Deno.serve(async (req) => {
       if (!messageData) {
         console.log('No message data could be created from body:', JSON.stringify(body, null, 2));
         return new Response(
-          JSON.stringify({ success: true, message: 'No valid message data found' }),
+          JSON.stringify({ 
+            success: false, 
+            message: 'No valid message data found',
+            received_body: body,
+            debug: 'None of the conditions matched'
+          }),
           {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 200
+            status: 400
           }
         );
       }
