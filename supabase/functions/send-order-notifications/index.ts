@@ -256,16 +256,31 @@ Deno.serve(async (req) => {
       }
     }
 
-    // إعداد بيانات الرسالة للإرسال عبر n8n
+    // إعداد بيانات الرسالة للإرسال عبر n8n (بطريقة مبسطة لسهولة الاستخدام)
     const messagePayload = {
+      // متغيرات منفصلة لسهولة الوصول إليها في n8n
       to: customerPhone,
-      type: 'text',
-      message: {
-        text: message
-      },
-      timestamp: Math.floor(Date.now() / 1000),
-      notification_type: type,
-      customer_name: customerName
+      phoneNumber: customerPhone,
+      customerName: customerName,
+      message: message,
+      messageText: message,
+      notificationType: type,
+      orderNumber: data.order_number || '',
+      serviceName: data.service_name || '',
+      amount: data.amount || 0,
+      
+      // البيانات الكاملة للاستخدام المتقدم
+      fullData: {
+        to: customerPhone,
+        type: 'text',
+        message: {
+          text: message
+        },
+        timestamp: Math.floor(Date.now() / 1000),
+        notification_type: type,
+        customer_name: customerName,
+        order_data: data
+      }
     };
 
     console.log('Sending notification via webhook:', JSON.stringify(messagePayload, null, 2));
