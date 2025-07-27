@@ -715,53 +715,76 @@ const Accounts = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {(accountList as any[]).map((account) => (
-                    <div key={account.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                          <BookOpen className="h-5 w-5 text-primary" />
+                  {(accountList as any[]).map((account) => {
+                    // تحديد كيفية عرض الرصيد حسب نوع الحساب
+                    const isRevenueAccount = account.account_type === 'إيرادات';
+                    const isExpenseAccount = account.account_type === 'مصروفات';
+                    
+                    // للحسابات الإيرادية: عرض الرقم موجب مع وصف
+                    const displayBalance = isRevenueAccount ? Math.abs(account.balance) : account.balance;
+                    const balanceLabel = isRevenueAccount 
+                      ? 'الإيرادات المحققة' 
+                      : isExpenseAccount 
+                        ? 'إجمالي المصروفات'
+                        : 'الرصيد الحالي';
+                    
+                    // تحديد لون الرصيد
+                    const balanceColor = isRevenueAccount 
+                      ? 'text-success' 
+                      : isExpenseAccount
+                        ? 'text-destructive'
+                        : account.balance >= 0 
+                          ? 'text-success' 
+                          : 'text-destructive';
+
+                    return (
+                      <div key={account.id} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                            <BookOpen className="h-5 w-5 text-primary" />
+                          </div>
+                          <div>
+                            <h3 className="font-medium">{account.account_name}</h3>
+                            <p className="text-sm text-muted-foreground">{account.description}</p>
+                          </div>
                         </div>
-                        <div>
-                          <h3 className="font-medium">{account.account_name}</h3>
-                          <p className="text-sm text-muted-foreground">{account.description}</p>
+                        <div className="flex items-center gap-3">
+                          <div className="text-right">
+                            <p className={`text-lg font-bold ${balanceColor}`}>
+                              {displayBalance?.toLocaleString()} ر.س
+                            </p>
+                            <p className="text-xs text-muted-foreground">{balanceLabel}</p>
+                          </div>
+                          {userRole === 'admin' && (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    هل أنت متأكد من حذف الحساب "{account.account_name}"؟
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                                  <AlertDialogAction 
+                                    onClick={() => handleDeleteAccount(account.id)}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  >
+                                    حذف
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <div className="text-right">
-                          <p className={`text-lg font-bold ${account.balance >= 0 ? 'text-success' : 'text-destructive'}`}>
-                            {account.balance?.toLocaleString()} ر.س
-                          </p>
-                          <p className="text-xs text-muted-foreground">الرصيد الحالي</p>
-                        </div>
-                        {userRole === 'admin' && (
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  هل أنت متأكد من حذف الحساب "{account.account_name}"؟
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>إلغاء</AlertDialogCancel>
-                                <AlertDialogAction 
-                                  onClick={() => handleDeleteAccount(account.id)}
-                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                >
-                                  حذف
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
