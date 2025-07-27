@@ -9,6 +9,7 @@ const corsHeaders = {
 // إنشاء عميل Supabase
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const whatsSenderApiKey = Deno.env.get('WHATS_SENDER_API_KEY')!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 Deno.serve(async (req) => {
@@ -61,54 +62,38 @@ Deno.serve(async (req) => {
       );
     }
 
-    // الحصول على إعدادات الويب هوك للإرسال
-    let sendWebhookUrl = webhook_url;
-    if (!sendWebhookUrl) {
-      const { data: webhookSettings } = await supabase
-        .from('webhook_settings')
-        .select('webhook_url')
-        .eq('webhook_type', 'outgoing')
-        .eq('is_active', true)
-        .single();
-
-      if (webhookSettings) {
-        sendWebhookUrl = webhookSettings.webhook_url;
-      }
-    }
-
-    if (!sendWebhookUrl) {
+    // التحقق من وجود API key لـ whats-sender
+    if (!whatsSenderApiKey) {
       return new Response(
-        JSON.stringify({ error: 'No outgoing webhook configured' }),
+        JSON.stringify({ error: 'WHATS_SENDER_API_KEY not configured in secrets' }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400
+          status: 500
         }
       );
     }
 
-    // إعداد بيانات الرسالة للإرسال عبر n8n
+    // إعداد بيانات الرسالة للإرسال عبر whats-sender API
     const messagePayload = {
-      to: to_number,
-      type: message_type,
-      message: {
-        text: message_content
-      },
-      timestamp: Math.floor(Date.now() / 1000)
+      number: to_number,
+      message: message_content,
+      type: message_type
     };
 
-    console.log('Sending message via webhook:', JSON.stringify(messagePayload, null, 2));
+    console.log('Sending message via whats-sender API:', JSON.stringify(messagePayload, null, 2));
 
-    // إرسال الرسالة عبر webhook إلى n8n
-    const response = await fetch(sendWebhookUrl, {
+    // إرسال الرسالة عبر whats-sender API
+    const response = await fetch('https://api.whats-sender.com/send-message', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${whatsSenderApiKey}`,
       },
       body: JSON.stringify(messagePayload)
     });
 
     const responseData = await response.text();
-    console.log('Webhook response:', responseData);
+    console.log('Whats-sender API response:', responseData);
 
     if (!response.ok) {
       throw new Error(`Webhook failed: ${response.status} ${responseData}`);
