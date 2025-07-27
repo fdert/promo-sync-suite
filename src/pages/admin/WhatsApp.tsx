@@ -189,13 +189,22 @@ const WhatsApp = () => {
     try {
       setLoading(true);
 
+      // تحديد رقم الواتساب الصحيح للإرسال
+      const recipientNumber = selectedMessage.to_number === 'system' 
+        ? selectedMessage.from_number 
+        : selectedMessage.to_number;
+
+      console.log('Sending reply to:', recipientNumber, 'Message:', replyText);
+
       const response = await supabase.functions.invoke('send-whatsapp', {
         body: {
-          to_number: selectedMessage.from_number,
+          to_number: recipientNumber,
           message_content: replyText,
           message_type: 'text'
         }
       });
+
+      console.log('Reply response:', response);
 
       if (response.error) throw response.error;
 
