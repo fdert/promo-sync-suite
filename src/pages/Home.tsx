@@ -2,11 +2,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Globe, LogIn } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import logo from "@/assets/logo.png";
 
 const Home = () => {
@@ -14,8 +15,38 @@ const Home = () => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const { signIn } = useAuth();
+  const { signIn, user } = useAuth();
   const navigate = useNavigate();
+
+  // إعادة توجيه المستخدم المسجل دخوله
+  useEffect(() => {
+    if (user) {
+      getUserRole();
+    }
+  }, [user]);
+
+  const getUserRole = async () => {
+    if (!user) return;
+    
+    try {
+      const { data: userRole } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .single();
+
+      if (userRole?.role === 'admin' || userRole?.role === 'manager') {
+        navigate('/admin');
+      } else if (userRole?.role === 'employee') {
+        navigate('/employee');
+      } else {
+        navigate('/user');
+      }
+    } catch (error) {
+      // إذا لم يكن للمستخدم دور محدد، توجيهه إلى لوحة المستخدم العادي
+      navigate('/user');
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,7 +62,7 @@ const Home = () => {
         toast.error("خطأ في تسجيل الدخول. يرجى التحقق من البيانات");
       } else {
         toast.success("تم تسجيل الدخول بنجاح");
-        navigate("/dashboard");
+        // التوجيه سيتم تلقائياً من خلال useEffect
       }
     } catch (error) {
       toast.error("حدث خطأ غير متوقع");
