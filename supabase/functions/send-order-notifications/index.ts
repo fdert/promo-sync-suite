@@ -219,8 +219,11 @@ Deno.serve(async (req) => {
     let selectedWebhook = null;
     
     if (webhookSettings && webhookSettings.length > 0) {
-      // البحث عن webhook يحتوي على هذا النوع من الإشعارات أو webhook بدون تحديد حالات
+      // البحث عن webhook نشط يحتوي على هذا النوع من الإشعارات
       for (const webhook of webhookSettings) {
+        // تأكد من أن الـ webhook نشط أولاً
+        if (!webhook.is_active) continue;
+        
         if (!webhook.order_statuses || webhook.order_statuses.length === 0) {
           // webhook لجميع الحالات
           selectedWebhook = webhook;
@@ -232,10 +235,13 @@ Deno.serve(async (req) => {
         }
       }
       
-      // إذا لم نجد webhook مخصص، نستخدم الأول المتوفر
-      if (!selectedWebhook && webhookSettings.length > 0) {
-        selectedWebhook = webhookSettings[0];
-        console.log('Using first available webhook as fallback');
+      // إذا لم نجد webhook مخصص، نستخدم أول webhook نشط
+      if (!selectedWebhook) {
+        const activeWebhook = webhookSettings.find(w => w.is_active);
+        if (activeWebhook) {
+          selectedWebhook = activeWebhook;
+          console.log('Using first active webhook as fallback');
+        }
       }
     }
 
