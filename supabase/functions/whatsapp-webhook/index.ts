@@ -75,6 +75,21 @@ Deno.serve(async (req) => {
           is_reply: false
         };
       }
+      
+      // إذا لم يتم إيجاد بيانات رسالة، إنشاؤها من البيانات المباشرة
+      if (!messageData && (body.from || body.message || body.customerName)) {
+        messageData = {
+          message_id: body.id || body.messageId || null,
+          from_number: body.from || body.sender || body.phone || '+966500000000',
+          to_number: body.to || body.recipient || 'system',
+          message_type: body.type || 'text',
+          message_content: body.message || body.text || body.content || 'رسالة واردة',
+          media_url: body.media_url || body.mediaUrl || null,
+          status: 'received',
+          timestamp: body.timestamp ? (typeof body.timestamp === 'number' ? new Date(body.timestamp * 1000).toISOString() : new Date(body.timestamp).toISOString()) : new Date().toISOString(),
+          is_reply: false
+        };
+      }
 
       if (messageData && messageData.from_number) {
         // البحث عن العميل أو إنشاؤه
