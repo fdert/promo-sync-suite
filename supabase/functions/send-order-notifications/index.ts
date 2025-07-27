@@ -27,9 +27,9 @@ Deno.serve(async (req) => {
     let customerPhone = '';
     let customerName = '';
 
-    // جلب بيانات الطلب الكاملة مع بنود الطلب للطلبات الجديدة
+    // جلب بيانات الطلب الكاملة مع بنود الطلب لجميع أنواع الإشعارات
     let orderDetails = null;
-    if (type === 'order_created' && order_id) {
+    if (order_id) {
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .select(`
@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
     const { data: templateData, error: templateError } = await supabase
       .from('message_templates')
       .select('template_content')
-      .eq('template_type', type)
+      .eq('template_name', type)
       .eq('is_active', true)
       .maybeSingle();
 
