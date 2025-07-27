@@ -270,7 +270,7 @@ Deno.serve(async (req) => {
       messageStatus = 'failed';
     }
 
-    // حفظ الرسالة المرسلة في قاعدة البيانات مع الحالة الصحيحة
+    // حفظ الرسالة المرسلة في قاعدة البيانات مع حالة "pending" للمعالجة لاحقاً
     const { data: sentMessage, error: messageError } = await supabase
       .from('whatsapp_messages')
       .insert({
@@ -278,8 +278,9 @@ Deno.serve(async (req) => {
         to_number: customerPhone,
         message_type: 'text',
         message_content: message,
-        status: messageStatus,
-        is_reply: false
+        status: 'pending', // تغيير الحالة إلى pending بدلاً من sent
+        is_reply: false,
+        customer_id: orderData.customers?.id || null
       });
 
     if (messageError) {
