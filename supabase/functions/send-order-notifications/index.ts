@@ -260,14 +260,17 @@ Deno.serve(async (req) => {
       console.log('Failed to read webhook response');
     }
 
-    if (!response.ok) {
-      console.error(`Webhook failed: ${response.status} ${responseData}`);
-      // لا نرمي خطأ هنا بل نسجل المشكلة ونكمل
-    } else {
+    // تحديد حالة الرسالة حسب نجاح أو فشل الويب هوك
+    let messageStatus = 'failed';
+    if (response.ok) {
       console.log('Webhook sent successfully');
+      messageStatus = 'sent';
+    } else {
+      console.error(`Webhook failed: ${response.status} ${responseData}`);
+      messageStatus = 'failed';
     }
 
-    // حفظ الرسالة المرسلة في قاعدة البيانات
+    // حفظ الرسالة المرسلة في قاعدة البيانات مع الحالة الصحيحة
     const { data: sentMessage, error: messageError } = await supabase
       .from('whatsapp_messages')
       .insert({
@@ -275,7 +278,7 @@ Deno.serve(async (req) => {
         to_number: customerPhone,
         message_type: 'text',
         message_content: message,
-        status: 'sent',
+        status: messageStatus,
         is_reply: false
       });
 
