@@ -1179,6 +1179,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      send_whatsapp_notification_improved: {
+        Args: {
+          customer_id_param: string
+          template_name_param: string
+          order_data?: Json
+        }
+        Returns: boolean
+      }
       update_last_login: {
         Args: { _user_id: string }
         Returns: undefined
