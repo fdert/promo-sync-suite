@@ -256,9 +256,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    // إعداد بيانات الرسالة للإرسال عبر n8n باستخدام نفس متغيرات القوالب
+    // إعداد بيانات الرسالة للإرسال عبر n8n كمتغيرات منفصلة في الجذر
     const messagePayload = {
-      // المتغيرات الأساسية المستخدمة في قوالب الرسائل
+      // متغيرات قوالب الرسائل - يمكن الوصول إليها مباشرة في n8n
       customer_name: customerName,
       order_number: data.order_number || '',
       service_name: data.service_name || '',
@@ -274,16 +274,23 @@ Deno.serve(async (req) => {
       order_items: orderItemsText,
       evaluation_link: evaluation_link,
       company_name: 'وكالة الإبداع للدعاية والإعلان',
+      estimated_time: data.estimated_days || 'قريباً',
+      progress: data.progress?.toString() || '0',
       date: new Date().toLocaleDateString('ar-SA'),
       
-      // بيانات الواتساب
+      // بيانات الواتساب للإرسال المباشر
       to: customerPhone,
-      message: {
-        text: message
-      },
-      notification_type: type,
+      phone: customerPhone,
+      phoneNumber: customerPhone,
+      message: message,
+      messageText: message,
+      text: message,
       
-      // البيانات الإضافية للتتبع
+      // معلومات نوع الإشعار
+      notification_type: type,
+      type: type,
+      
+      // البيانات الإضافية
       timestamp: Math.floor(Date.now() / 1000),
       order_id: order_id
     };
