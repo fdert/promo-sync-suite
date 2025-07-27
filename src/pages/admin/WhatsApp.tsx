@@ -57,7 +57,7 @@ const WhatsApp = () => {
           *,
           customers(name, whatsapp_number)
         `)
-        .order('timestamp', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(100);
 
       if (error) throw error;
