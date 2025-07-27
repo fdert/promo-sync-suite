@@ -203,13 +203,8 @@ const WhatsApp = () => {
 
       console.log('Sending reply to:', recipientNumber, 'Message:', replyText);
 
-      const response = await supabase.functions.invoke('send-whatsapp', {
-        body: {
-          to_number: recipientNumber,
-          message_content: replyText,
-          message_type: 'text'
-        }
-      });
+      // ملاحظة: تم إلغاء تفعيل إرسال الرسائل
+      const response = { error: null, data: { success: false, message: 'إرسال الرسائل غير متاح حالياً' } };
 
       console.log('Reply response:', response);
 
@@ -739,9 +734,9 @@ const WhatsApp = () => {
                     </Button>
                   </div>
                   <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <p className="text-sm text-blue-800 font-medium mb-2">🔧 تكوين whats-sender:</p>
+                    <p className="text-sm text-blue-800 font-medium mb-2">🔧 تكوين الويب هوك:</p>
                     <ul className="text-xs text-blue-700 space-y-1">
-                      <li>• استخدم هذا الرابط في سكريپت whats-sender الخاص بك</li>
+                      <li>• استخدم هذا الرابط في نظام إدارة الرسائل الخاص بك</li>
                       <li>• تأكد من إرسال POST requests إلى هذا الرابط عند استقبال رسائل جديدة</li>
                       <li>• يجب أن يحتوي الطلب على بيانات الرسالة بصيغة JSON</li>
                       <li>• تأكد من تضمين معلومات المرسل ونص الرسالة</li>
@@ -749,28 +744,6 @@ const WhatsApp = () => {
                   </div>
                 </div>
 
-                <div>
-                  <Label>رابط إرسال الرسائل (Internal API)</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      value={`https://gcuqfxacnbxdldsbmgvf.supabase.co/functions/v1/send-whatsapp`}
-                      readOnly
-                      className="bg-muted"
-                    />
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        navigator.clipboard.writeText('https://gcuqfxacnbxdldsbmgvf.supabase.co/functions/v1/send-whatsapp');
-                        toast({
-                          title: "تم النسخ",
-                          description: "تم نسخ الرابط إلى الحافظة",
-                        });
-                      }}
-                    >
-                      نسخ
-                    </Button>
-                  </div>
-                </div>
               </div>
             </CardContent>
           </Card>
