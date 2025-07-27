@@ -313,10 +313,12 @@ const WhatsApp = () => {
           title: "نجح الاختبار ✅",
           description: "تم إرسال رسالة تجريبية بنجاح، تحقق من قائمة الرسائل",
         });
-        // تحديث قائمة الرسائل
+        // تحديث قائمة الرسائل فوراً
+        await fetchMessages();
+        // تحديث إضافي بعد 2 ثانية للتأكد
         setTimeout(() => {
           fetchMessages();
-        }, 1000);
+        }, 2000);
       } else {
         throw new Error(`فشل الاختبار: ${response.status} - ${result}`);
       }
