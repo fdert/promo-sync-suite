@@ -272,7 +272,7 @@ Deno.serve(async (req) => {
       start_date: startDate,
       due_date: dueDate,
       order_items: orderItemsText,
-      evaluation_link: evaluation_link,
+      evaluation_link: `https://e5a7747a-0935-46df-9ea9-1308e76636dc.lovableproject.com/evaluation/token-${order_id}`,
       company_name: 'وكالة الإبداع للدعاية والإعلان',
       estimated_time: data.estimated_days || 'قريباً',
       progress: data.progress?.toString() || '0',
