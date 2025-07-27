@@ -1167,6 +1167,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      process_pending_whatsapp_messages: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       send_whatsapp_notification: {
         Args: {
           customer_id_param: string
