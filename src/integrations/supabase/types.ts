@@ -1167,6 +1167,14 @@ export type Database = {
         }
         Returns: undefined
       }
+      send_whatsapp_notification: {
+        Args: {
+          customer_id_param: string
+          template_name_param: string
+          order_data?: Json
+        }
+        Returns: boolean
+      }
       update_last_login: {
         Args: { _user_id: string }
         Returns: undefined
