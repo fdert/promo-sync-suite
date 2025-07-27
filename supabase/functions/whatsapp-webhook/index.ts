@@ -26,56 +26,91 @@ Deno.serve(async (req) => {
       const body = await req.json();
       console.log('Received WhatsApp webhook:', JSON.stringify(body, null, 2));
 
-      // التحقق من وجود الرسالة
+      // تنسيقات مختلفة للبيانات الواردة من n8n
+      let messageData = null;
+      
+      // تنسيق 1: رسالة مباشرة من WhatsApp Business API
       if (body.message) {
         const message = body.message;
-        
+        messageData = {
+          message_id: message.id || null,
+          from_number: message.from,
+          to_number: message.to || 'system',
+          message_type: message.type || 'text',
+          message_content: message.text?.body || message.caption || message.body || '',
+          media_url: message.image?.link || message.video?.link || message.audio?.link || message.document?.link || null,
+          status: 'received',
+          timestamp: message.timestamp ? new Date(message.timestamp * 1000).toISOString() : new Date().toISOString(),
+          is_reply: false
+        };
+      }
+      
+      // تنسيق 2: البيانات مباشرة في الـ body
+      else if (body.from || body.sender) {
+        messageData = {
+          message_id: body.id || body.messageId || null,
+          from_number: body.from || body.sender || body.phone,
+          to_number: body.to || body.recipient || 'system',
+          message_type: body.type || 'text',
+          message_content: body.message || body.text || body.content || '',
+          media_url: body.media_url || body.mediaUrl || null,
+          status: 'received',
+          timestamp: body.timestamp ? new Date(body.timestamp * 1000).toISOString() : new Date().toISOString(),
+          is_reply: false
+        };
+      }
+      
+      // تنسيق 3: n8n custom format
+      else if (body.data) {
+        const data = body.data;
+        messageData = {
+          message_id: data.id || null,
+          from_number: data.from || data.sender,
+          to_number: data.to || 'system',
+          message_type: data.type || 'text',
+          message_content: data.message || data.text || '',
+          media_url: data.media_url || null,
+          status: 'received',
+          timestamp: data.timestamp ? new Date(data.timestamp * 1000).toISOString() : new Date().toISOString(),
+          is_reply: false
+        };
+      }
+
+      if (messageData && messageData.from_number) {
         // البحث عن العميل أو إنشاؤه
         let customer = null;
-        if (message.from) {
-          const { data: existingCustomer } = await supabase
+        const { data: existingCustomer } = await supabase
+          .from('customers')
+          .select('*')
+          .eq('whatsapp_number', messageData.from_number)
+          .single();
+
+        if (existingCustomer) {
+          customer = existingCustomer;
+        } else {
+          // إنشاء عميل جديد
+          const { data: newCustomer, error: customerError } = await supabase
             .from('customers')
-            .select('*')
-            .eq('whatsapp_number', message.from)
+            .insert({
+              name: body.profile?.name || body.customerName || `عميل واتس آب ${messageData.from_number}`,
+              whatsapp_number: messageData.from_number,
+              phone: messageData.from_number,
+              import_source: 'whatsapp_webhook'
+            })
+            .select()
             .single();
 
-          if (existingCustomer) {
-            customer = existingCustomer;
+          if (customerError) {
+            console.error('Error creating customer:', customerError);
           } else {
-            // إنشاء عميل جديد
-            const { data: newCustomer, error: customerError } = await supabase
-              .from('customers')
-              .insert({
-                name: message.profile?.name || `عميل واتس آب ${message.from}`,
-                whatsapp_number: message.from,
-                phone: message.from,
-                import_source: 'whatsapp_webhook'
-              })
-              .select()
-              .single();
-
-            if (customerError) {
-              console.error('Error creating customer:', customerError);
-            } else {
-              customer = newCustomer;
-            }
+            customer = newCustomer;
           }
         }
 
-        // حفظ الرسالة في قاعدة البيانات
-        const messageData = {
-          message_id: message.id || null,
-          from_number: message.from,
-          to_number: message.to || null,
-          message_type: message.type || 'text',
-          message_content: message.text?.body || message.caption || '',
-          media_url: message.image?.link || message.video?.link || message.audio?.link || message.document?.link || null,
-          status: 'received',
-          timestamp: new Date(message.timestamp * 1000).toISOString(),
-          customer_id: customer?.id || null,
-          is_reply: false
-        };
+        // إضافة معرف العميل
+        messageData.customer_id = customer?.id || null;
 
+        // حفظ الرسالة في قاعدة البيانات
         const { data: savedMessage, error: messageError } = await supabase
           .from('whatsapp_messages')
           .insert(messageData);
