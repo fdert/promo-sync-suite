@@ -256,31 +256,36 @@ Deno.serve(async (req) => {
       }
     }
 
-    // إعداد بيانات الرسالة للإرسال عبر n8n (بطريقة مبسطة لسهولة الاستخدام)
+    // إعداد بيانات الرسالة للإرسال عبر n8n باستخدام نفس متغيرات القوالب
     const messagePayload = {
-      // متغيرات منفصلة لسهولة الوصول إليها في n8n
-      to: customerPhone,
-      phoneNumber: customerPhone,
-      customerName: customerName,
-      message: message,
-      messageText: message,
-      notificationType: type,
-      orderNumber: data.order_number || '',
-      serviceName: data.service_name || '',
-      amount: data.amount || 0,
+      // المتغيرات الأساسية المستخدمة في قوالب الرسائل
+      customer_name: customerName,
+      order_number: data.order_number || '',
+      service_name: data.service_name || '',
+      description: orderDetails?.description || data.description || 'غير محدد',
+      amount: data.amount?.toString() || '0',
+      paid_amount: data.paid_amount?.toString() || '0',
+      remaining_amount: remainingAmount,
+      payment_type: data.payment_type || 'غير محدد',
+      status: data.status || '',
+      priority: data.priority || 'متوسطة',
+      start_date: startDate,
+      due_date: dueDate,
+      order_items: orderItemsText,
+      evaluation_link: evaluation_link,
+      company_name: 'وكالة الإبداع للدعاية والإعلان',
+      date: new Date().toLocaleDateString('ar-SA'),
       
-      // البيانات الكاملة للاستخدام المتقدم
-      fullData: {
-        to: customerPhone,
-        type: 'text',
-        message: {
-          text: message
-        },
-        timestamp: Math.floor(Date.now() / 1000),
-        notification_type: type,
-        customer_name: customerName,
-        order_data: data
-      }
+      // بيانات الواتساب
+      to: customerPhone,
+      message: {
+        text: message
+      },
+      notification_type: type,
+      
+      // البيانات الإضافية للتتبع
+      timestamp: Math.floor(Date.now() / 1000),
+      order_id: order_id
     };
 
     console.log('Sending notification via webhook:', JSON.stringify(messagePayload, null, 2));
