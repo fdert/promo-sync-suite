@@ -1146,9 +1146,9 @@ const Orders = () => {
                           <SelectValue placeholder="اختر نوع الدفع" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="كاش">كاش</SelectItem>
+                          <SelectItem value="نقدي">نقدي</SelectItem>
                           <SelectItem value="تحويل بنكي">تحويل بنكي</SelectItem>
-                          <SelectItem value="شبكة">شبكة</SelectItem>
+                          <SelectItem value="الشبكة">الشبكة</SelectItem>
                           <SelectItem value="دفع آجل">دفع آجل</SelectItem>
                         </SelectContent>
                       </Select>
@@ -1321,9 +1321,9 @@ const Orders = () => {
                            <SelectValue placeholder="اختر نوع الدفع" />
                          </SelectTrigger>
                          <SelectContent>
-                           <SelectItem value="كاش">كاش</SelectItem>
+                           <SelectItem value="نقدي">نقدي</SelectItem>
                            <SelectItem value="تحويل بنكي">تحويل بنكي</SelectItem>
-                           <SelectItem value="شبكة">شبكة</SelectItem>
+                           <SelectItem value="الشبكة">الشبكة</SelectItem>
                            <SelectItem value="دفع آجل">دفع آجل</SelectItem>
                          </SelectContent>
                        </Select>
@@ -1750,9 +1750,9 @@ const PaymentManagement = ({ order, onPaymentAdded }) => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="كاش">كاش</SelectItem>
+                  <SelectItem value="نقدي">نقدي</SelectItem>
                   <SelectItem value="تحويل بنكي">تحويل بنكي</SelectItem>
-                  <SelectItem value="شبكة">شبكة</SelectItem>
+                  <SelectItem value="الشبكة">الشبكة</SelectItem>
                   <SelectItem value="دفع آجل">دفع آجل</SelectItem>
                 </SelectContent>
               </Select>
