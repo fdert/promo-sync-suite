@@ -20,8 +20,30 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { type, order_id, data } = await req.json();
+    console.log('Function started successfully');
+    
+    let requestBody;
+    try {
+      requestBody = await req.json();
+      console.log('Request body parsed:', requestBody);
+    } catch (parseError) {
+      console.error('Error parsing request body:', parseError);
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON in request body', details: parseError.message }),
+        { headers: corsHeaders, status: 400 }
+      );
+    }
+
+    const { type, order_id, data } = requestBody;
     console.log('Notification request:', { type, order_id, data });
+
+    if (!type || !order_id) {
+      console.error('Missing required fields:', { type, order_id });
+      return new Response(
+        JSON.stringify({ error: 'Missing required fields: type and order_id' }),
+        { headers: corsHeaders, status: 400 }
+      );
+    }
 
     let message = '';
     let customerPhone = '';
@@ -125,7 +147,7 @@ Deno.serve(async (req) => {
         'priority': data.priority || 'متوسطة',
          'estimated_time': data.estimated_days || 'قريباً',
          'company_name': 'شركتنا',
-         'evaluation_link': `https://promo-sync-suite.lovable.app/evaluation/${data.evaluation_token}`
+         'evaluation_link': `https://e5a7747a-0935-46df-9ea9-1308e76636dc.lovableproject.com/evaluation/token-${order_id}`
       };
 
       // استبدال جميع المتغيرات في الرسالة
@@ -280,7 +302,7 @@ Deno.serve(async (req) => {
         message_content: message,
         status: messageStatus, // سيكون sent أو failed حسب استجابة الويب هوك
         is_reply: false,
-        customer_id: orderData.customers?.id || null
+        customer_id: orderDetails?.customers?.id || null
       });
 
     if (messageError) {
