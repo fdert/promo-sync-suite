@@ -24,13 +24,14 @@ Deno.serve(async (req) => {
     if (req.method === 'POST') {
       // التعامل مع الرسائل الواردة من n8n
       const body = await req.json();
-      console.log('Received WhatsApp webhook:', JSON.stringify(body, null, 2));
+      console.log('Received WhatsApp webhook POST:', JSON.stringify(body, null, 2));
 
       // تنسيقات مختلفة للبيانات الواردة من n8n
       let messageData = null;
       
       // تنسيق 1: رسالة مباشرة من WhatsApp Business API
       if (body.message) {
+        console.log('Processing format 1: WhatsApp Business API message');
         const message = body.message;
         messageData = {
           message_id: message.id || null,
@@ -43,10 +44,12 @@ Deno.serve(async (req) => {
           timestamp: message.timestamp ? new Date(message.timestamp * 1000).toISOString() : new Date().toISOString(),
           is_reply: false
         };
+        console.log('Created messageData format 1:', JSON.stringify(messageData, null, 2));
       }
       
       // تنسيق 2: البيانات مباشرة في الـ body
       else if (body.from || body.sender) {
+        console.log('Processing format 2: Direct body data');
         messageData = {
           message_id: body.id || body.messageId || null,
           from_number: body.from || body.sender || body.phone,
@@ -58,10 +61,12 @@ Deno.serve(async (req) => {
           timestamp: body.timestamp ? new Date(body.timestamp * 1000).toISOString() : new Date().toISOString(),
           is_reply: false
         };
+        console.log('Created messageData format 2:', JSON.stringify(messageData, null, 2));
       }
       
       // تنسيق 3: n8n custom format
       else if (body.data) {
+        console.log('Processing format 3: n8n custom format');
         const data = body.data;
         messageData = {
           message_id: data.id || null,
@@ -74,10 +79,12 @@ Deno.serve(async (req) => {
           timestamp: data.timestamp ? new Date(data.timestamp * 1000).toISOString() : new Date().toISOString(),
           is_reply: false
         };
+        console.log('Created messageData format 3:', JSON.stringify(messageData, null, 2));
       }
       
       // إذا لم يتم إيجاد بيانات رسالة، إنشاؤها من البيانات المباشرة
       if (!messageData && (body.from || body.message || body.customerName)) {
+        console.log('Processing fallback format: Creating from direct body data');
         messageData = {
           message_id: body.id || body.messageId || null,
           from_number: body.from || body.sender || body.phone || '+966500000000',
@@ -89,6 +96,18 @@ Deno.serve(async (req) => {
           timestamp: body.timestamp ? (typeof body.timestamp === 'number' ? new Date(body.timestamp * 1000).toISOString() : new Date(body.timestamp).toISOString()) : new Date().toISOString(),
           is_reply: false
         };
+        console.log('Created messageData fallback:', JSON.stringify(messageData, null, 2));
+      }
+      
+      if (!messageData) {
+        console.log('No message data could be created from body:', JSON.stringify(body, null, 2));
+        return new Response(
+          JSON.stringify({ success: true, message: 'No valid message data found' }),
+          {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200
+          }
+        );
       }
 
       if (messageData && messageData.from_number) {
