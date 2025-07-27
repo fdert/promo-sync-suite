@@ -109,9 +109,12 @@ Deno.serve(async (req) => {
           }
         );
       }
-
+      
+      // التحقق من وجود messageData ومعالجتها
+      console.log('Final messageData:', JSON.stringify(messageData, null, 2));
+      
       if (messageData && messageData.from_number) {
-        console.log('Processing message data:', JSON.stringify(messageData, null, 2));
+        console.log('Processing valid message data...');
         
         // البحث عن العميل أو إنشاؤه
         let customer = null;
@@ -121,10 +124,10 @@ Deno.serve(async (req) => {
           .from('customers')
           .select('*')
           .eq('whatsapp_number', messageData.from_number)
-          .single();
+          .maybeSingle();
 
         if (customerLookupError) {
-          console.log('Customer lookup error (might be expected for new customers):', customerLookupError);
+          console.log('Customer lookup error:', customerLookupError);
         }
 
         if (existingCustomer) {
@@ -134,10 +137,12 @@ Deno.serve(async (req) => {
           console.log('Creating new customer...');
           
           // إنشاء عميل جديد
+          const customerName = body.profile?.name || body.customerName || `عميل واتس آب ${messageData.from_number}`;
+          
           const { data: newCustomer, error: customerError } = await supabase
             .from('customers')
             .insert({
-              name: body.profile?.name || body.customerName || `عميل واتس آب ${messageData.from_number}`,
+              name: customerName,
               whatsapp_number: messageData.from_number,
               phone: messageData.from_number,
               import_source: 'whatsapp_webhook'
@@ -155,7 +160,7 @@ Deno.serve(async (req) => {
 
         // إضافة معرف العميل
         messageData.customer_id = customer?.id || null;
-        console.log('Message data with customer ID:', JSON.stringify(messageData, null, 2));
+        console.log('Final message data to save:', JSON.stringify(messageData, null, 2));
 
         // حفظ الرسالة في قاعدة البيانات
         console.log('Attempting to save message to database...');
@@ -165,9 +170,13 @@ Deno.serve(async (req) => {
           .select();
 
         if (messageError) {
-          console.error('Error saving message:', messageError);
+          console.error('Error saving message to database:', messageError);
           return new Response(
-            JSON.stringify({ error: 'Failed to save message', details: messageError }),
+            JSON.stringify({ 
+              error: 'Failed to save message', 
+              details: messageError,
+              messageData: messageData 
+            }),
             {
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
               status: 500
@@ -175,27 +184,15 @@ Deno.serve(async (req) => {
           );
         }
 
-        console.log('Message saved successfully:', savedMessage);
-
-        // إرسال رد تلقائي إذا كان هناك قالب ترحيب
-        const { data: welcomeTemplate } = await supabase
-          .from('message_templates')
-          .select('*')
-          .eq('template_type', 'welcome')
-          .eq('is_active', true)
-          .single();
-
-        if (welcomeTemplate && customer) {
-          // هنا يمكن إرسال رسالة ترحيب تلقائية
-          console.log('Welcome template found:', welcomeTemplate.template_content);
-        }
+        console.log('Message saved successfully to database:', savedMessage);
 
         return new Response(
           JSON.stringify({ 
             success: true, 
-            message: 'Message processed successfully',
+            message: 'Message processed and saved successfully',
             customer_id: customer?.id,
-            message_id: savedMessage?.[0]?.id
+            message_id: savedMessage?.[0]?.id,
+            saved_data: savedMessage?.[0]
           }),
           {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -204,12 +201,25 @@ Deno.serve(async (req) => {
         );
       } else {
         console.log('No valid message data found or missing from_number');
+        console.log('messageData:', messageData);
         console.log('Body received:', JSON.stringify(body, null, 2));
+        
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            message: 'No valid message data found',
+            received_body: body
+          }),
+          {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 400
+          }
+        );
       }
 
       // إذا لم تكن رسالة، إرجاع رد عادي
       return new Response(
-        JSON.stringify({ success: true, message: 'Webhook received' }),
+        JSON.stringify({ success: true, message: 'Webhook received but no message to process' }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 200
