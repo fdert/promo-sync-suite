@@ -164,7 +164,7 @@ const Accounts = () => {
     }
   };
 
-  // جلب فواتير العملاء المدينين
+  // جلب فواتير العملاء المدينين - فقط الفواتير غير المدفوعة بالكامل
   const fetchDebtorInvoices = async () => {
     try {
       console.log('Fetching debtor invoices with search filters:', debtorSearch);
@@ -178,21 +178,12 @@ const Accounts = () => {
         .order('issue_date', { ascending: false });
 
       // تطبيق فلاتر البحث
-      if (debtorSearch.customerName) {
-        // البحث في اسم العميل باستخدام فلترة JavaScript لأن Supabase تحتاج معالجة خاصة للجوين
-        // سنقوم بالفلترة بعد جلب البيانات
-      }
-
       if (debtorSearch.dateFrom) {
         query = query.gte('issue_date', debtorSearch.dateFrom);
       }
 
       if (debtorSearch.dateTo) {
         query = query.lte('issue_date', debtorSearch.dateTo);
-      }
-
-      if (debtorSearch.status !== 'all') {
-        query = query.eq('status', debtorSearch.status);
       }
 
       const { data, error } = await query;
@@ -205,11 +196,11 @@ const Accounts = () => {
         return;
       }
 
-      // فلترة الفواتير التي لديها مبالغ متبقية (غير مسددة بالكامل)
+      // فلترة الفواتير التي لديها مبالغ متبقية فعلاً (استخدام رقم صغير لتجنب مشاكل الفاصلة العشرية)
       let debtorInvoicesFiltered = (data || []).filter(invoice => {
         const remainingAmount = invoice.total_amount - (invoice.paid_amount || 0);
         console.log(`Invoice ${invoice.invoice_number}: total=${invoice.total_amount}, paid=${invoice.paid_amount || 0}, remaining=${remainingAmount}`);
-        return remainingAmount > 0;
+        return remainingAmount > 0.01;
       });
 
       // تطبيق فلتر البحث في اسم العميل
@@ -226,11 +217,11 @@ const Accounts = () => {
           const paidAmount = invoice.paid_amount || 0;
           
           if (debtorSearch.status === 'partial') {
-            return paidAmount > 0 && remainingAmount > 0; // مدفوع جزئياً
+            return paidAmount > 0 && remainingAmount > 0.01; // مدفوع جزئياً
           } else if (debtorSearch.status === 'unpaid') {
-            return paidAmount === 0; // غير مدفوع نهائياً
+            return paidAmount <= 0.01; // غير مدفوع نهائياً
           }
-          return true;
+          return remainingAmount > 0.01;
         });
       }
 
