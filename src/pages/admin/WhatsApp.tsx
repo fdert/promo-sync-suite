@@ -283,6 +283,55 @@ const WhatsApp = () => {
     }
   };
 
+  const testWebhook = async () => {
+    try {
+      setLoading(true);
+      
+      const testData = {
+        from: "+966500000000",
+        message: "رسالة تجريبية لاختبار الـ webhook",
+        customerName: "عميل تجريبي",
+        type: "text",
+        timestamp: Math.floor(Date.now() / 1000)
+      };
+
+      console.log('Testing webhook with data:', testData);
+
+      const response = await fetch('https://gcuqfxacnbxdldsbmgvf.supabase.co/functions/v1/whatsapp-webhook', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(testData)
+      });
+
+      const result = await response.text();
+      console.log('Webhook test response:', result);
+
+      if (response.ok) {
+        toast({
+          title: "نجح الاختبار ✅",
+          description: "تم إرسال رسالة تجريبية بنجاح، تحقق من قائمة الرسائل",
+        });
+        // تحديث قائمة الرسائل
+        setTimeout(() => {
+          fetchMessages();
+        }, 1000);
+      } else {
+        throw new Error(`فشل الاختبار: ${response.status} - ${result}`);
+      }
+    } catch (error) {
+      console.error('Webhook test error:', error);
+      toast({
+        title: "فشل الاختبار ❌",
+        description: error.message || "حدث خطأ في اختبار الـ webhook",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -292,6 +341,15 @@ const WhatsApp = () => {
         </div>
         
         <div className="flex gap-2">
+          <Button 
+            onClick={testWebhook} 
+            disabled={loading}
+            variant="default" 
+            className="gap-2"
+          >
+            <Settings className="h-4 w-4" />
+            {loading ? "جاري الاختبار..." : "اختبار الـ Webhook"}
+          </Button>
           <Button onClick={downloadMessages} variant="outline" className="gap-2">
             <Download className="h-4 w-4" />
             تنزيل الرسائل
