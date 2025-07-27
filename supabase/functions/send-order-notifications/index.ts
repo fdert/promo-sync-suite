@@ -48,6 +48,10 @@ Deno.serve(async (req) => {
     let message = '';
     let customerPhone = '';
     let customerName = '';
+    let remainingAmount = '0';
+    let orderItemsText = '';
+    let startDate = 'سيتم تحديده';
+    let dueDate = 'سيتم تحديده';
 
     // جلب بيانات الطلب الكاملة مع بنود الطلب لجميع أنواع الإشعارات
     let orderDetails = null;
@@ -82,14 +86,8 @@ Deno.serve(async (req) => {
       // استخدام القالب من قاعدة البيانات
       message = templateData.template_content;
       
-      // إعداد المتغيرات للاستبدال
-      let orderItemsText = '';
-      let remainingAmount = '0';
-      let startDate = 'سيتم تحديده';
-      let dueDate = 'سيتم تحديده';
-      let description = data.description || 'غير محدد';
-      
       // إذا كانت هناك تفاصيل طلب، استخدمها
+      let description = data.description || 'غير محدد';
       if (orderDetails) {
         // تنسيق بنود الطلب
         if (orderDetails.order_items && orderDetails.order_items.length > 0) {
