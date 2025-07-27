@@ -12,8 +12,13 @@ const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 Deno.serve(async (req) => {
+  console.log('=== WEBHOOK REQUEST RECEIVED ===');
+  console.log('Method:', req.method);
+  console.log('URL:', req.url);
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    console.log('Handling OPTIONS request');
     return new Response(null, { 
       headers: corsHeaders,
       status: 200 
@@ -22,6 +27,7 @@ Deno.serve(async (req) => {
 
   try {
     if (req.method === 'POST') {
+      console.log('=== PROCESSING POST REQUEST ===');
       // التعامل مع الرسائل الواردة من n8n
       const body = await req.json();
       console.log('Received WhatsApp webhook POST:', JSON.stringify(body, null, 2));
