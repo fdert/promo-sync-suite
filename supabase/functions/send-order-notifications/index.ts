@@ -124,8 +124,7 @@ Deno.serve(async (req) => {
         'status': data.status || 'جديد',
         'priority': data.priority || 'متوسطة',
         'estimated_time': data.estimated_days || 'قريباً',
-        'company_name': 'شركتنا',
-        'evaluation_link': `https://e5a7747a-0935-46df-9ea9-1308e76636dc.lovableproject.com/evaluation/${data.evaluation_token}`
+        'company_name': 'شركتنا'
       };
 
       // استبدال جميع المتغيرات في الرسالة
