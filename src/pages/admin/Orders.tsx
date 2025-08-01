@@ -804,7 +804,7 @@ const Orders = () => {
         if (currentOrder && currentOrder.customers) {
           console.log('Customer data:', currentOrder.customers);
           
-          // تحديد نوع الإشعار بناءً على الحالة الجديدة
+          // تحديد نوع الإشعار بناءً على الحالة الجديدة (تجاهل "جاهز للتسليم" لأنه يتم إرساله أعلاه)
           let notificationType;
           switch (newStatus) {
             case 'قيد التنفيذ':
@@ -813,24 +813,14 @@ const Orders = () => {
             case 'مكتمل':
               notificationType = 'order_completed';
               break;
-            case 'مؤكد':
+            case 'جديد':
               notificationType = 'order_confirmed';
-              break;
-            case 'قيد المراجعة':
-              notificationType = 'order_under_review';
               break;
             case 'جاهز للتسليم':
               notificationType = null; // تم إرساله بالفعل أعلاه
               break;
-            case 'ملغي':
-              notificationType = 'order_cancelled';
-              break;
-            case 'معلق':
-              notificationType = 'order_on_hold';
-              break;
             default:
-              // إرسال إشعار عام لأي حالة أخرى
-              notificationType = 'order_status_updated';
+              notificationType = null;
           }
 
           console.log('Notification type:', notificationType);
@@ -850,20 +840,11 @@ const Orders = () => {
             const result = await supabase.functions.invoke('send-order-notifications', {
               body: {
                 type: notificationType,
-                order_id: orderId,
                 data: {
                   order_number: currentOrder.order_number,
                   customer_name: currentOrder.customers.name,
                   customer_phone: currentOrder.customers?.whatsapp_number || currentOrder.customers?.phone,
-                  service_name: currentOrder.service_name,
-                  description: currentOrder.description || 'غير محدد',
                   amount: currentOrder.amount,
-                  paid_amount: currentOrder.paid_amount || 0,
-                  remaining_amount: (currentOrder.amount - (currentOrder.paid_amount || 0)),
-                  payment_type: currentOrder.payment_type || 'غير محدد',
-                  status: newStatus,
-                  priority: currentOrder.priority || 'متوسطة',
-                  due_date: currentOrder.due_date,
                   progress: currentOrder.progress || 0
                 }
               }

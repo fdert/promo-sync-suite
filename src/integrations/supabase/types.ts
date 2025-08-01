@@ -1023,33 +1023,6 @@ export type Database = {
         }
         Relationships: []
       }
-      website_settings: {
-        Row: {
-          created_at: string
-          created_by: string | null
-          id: string
-          setting_key: string
-          setting_value: Json
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          setting_key: string
-          setting_value: Json
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          setting_key?: string
-          setting_value?: Json
-          updated_at?: string
-        }
-        Relationships: []
-      }
       whatsapp_messages: {
         Row: {
           created_at: string
@@ -1102,15 +1075,7 @@ export type Database = {
           to_number?: string | null
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "fk_whatsapp_messages_customer"
-            columns: ["customer_id"]
-            isOneToOne: false
-            referencedRelation: "customers"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
     }
     Views: {
@@ -1166,26 +1131,6 @@ export type Database = {
           _details?: Json
         }
         Returns: undefined
-      }
-      process_pending_whatsapp_messages: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      send_whatsapp_notification: {
-        Args: {
-          customer_id_param: string
-          template_name_param: string
-          order_data?: Json
-        }
-        Returns: boolean
-      }
-      send_whatsapp_notification_improved: {
-        Args: {
-          customer_id_param: string
-          template_name_param: string
-          order_data?: Json
-        }
-        Returns: boolean
       }
       update_last_login: {
         Args: { _user_id: string }
