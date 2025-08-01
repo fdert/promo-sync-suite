@@ -254,55 +254,46 @@ Deno.serve(async (req) => {
       }
     }
 
-    // إعداد بيانات الرسالة للإرسال عبر n8n كمتغيرات منفصلة في الجذر
-    const messagePayload = {
-      // متغيرات قوالب الرسائل - يمكن الوصول إليها مباشرة في n8n
-      customer_name: customerName,
-      order_number: data.order_number || '',
-      service_name: data.service_name || '',
-      description: orderDetails?.description || data.description || 'غير محدد',
-      amount: data.amount?.toString() || '0',
-      paid_amount: data.paid_amount?.toString() || '0',
-      remaining_amount: remainingAmount,
-      payment_type: data.payment_type || 'غير محدد',
-      status: data.status || '',
-      priority: data.priority || 'متوسطة',
-      start_date: startDate,
-      due_date: dueDate,
-      order_items: orderItemsText,
-      evaluation_link: `https://e5a7747a-0935-46df-9ea9-1308e76636dc.lovableproject.com/evaluation/token-${order_id}`,
-      company_name: 'وكالة الإبداع للدعاية والإعلان',
-      estimated_time: data.estimated_days || 'قريباً',
-      progress: data.progress?.toString() || '0',
-      date: new Date().toLocaleDateString('ar-SA'),
-      
-      // بيانات الواتساب للإرسال المباشر
-      to: customerPhone,
-      phone: customerPhone,
-      phoneNumber: customerPhone,
-      message: message,
-      messageText: message,
-      text: message,
-      
-      // معلومات نوع الإشعار
-      notification_type: type,
-      type: type,
-      
-      // البيانات الإضافية
-      timestamp: Math.floor(Date.now() / 1000),
-      order_id: order_id
-    };
+    // إعداد URLSearchParams لإرسال البيانات كمتغيرات منفصلة
+    const formData = new URLSearchParams();
+    formData.append('customer_name', customerName);
+    formData.append('order_number', data.order_number || '');
+    formData.append('service_name', data.service_name || '');
+    formData.append('description', orderDetails?.description || data.description || 'غير محدد');
+    formData.append('amount', data.amount?.toString() || '0');
+    formData.append('paid_amount', data.paid_amount?.toString() || '0');
+    formData.append('remaining_amount', remainingAmount);
+    formData.append('payment_type', data.payment_type || 'غير محدد');
+    formData.append('status', data.status || '');
+    formData.append('priority', data.priority || 'متوسطة');
+    formData.append('start_date', startDate);
+    formData.append('due_date', dueDate);
+    formData.append('order_items', orderItemsText);
+    formData.append('evaluation_link', `https://e5a7747a-0935-46df-9ea9-1308e76636dc.lovableproject.com/evaluation/token-${order_id}`);
+    formData.append('company_name', 'وكالة الإبداع للدعاية والإعلان');
+    formData.append('estimated_time', data.estimated_days || 'قريباً');
+    formData.append('progress', data.progress?.toString() || '0');
+    formData.append('date', new Date().toLocaleDateString('ar-SA'));
+    formData.append('to', customerPhone);
+    formData.append('phone', customerPhone);
+    formData.append('phoneNumber', customerPhone);
+    formData.append('message', message);
+    formData.append('messageText', message);
+    formData.append('text', message);
+    formData.append('notification_type', type);
+    formData.append('type', type);
+    formData.append('timestamp', Math.floor(Date.now() / 1000).toString());
+    formData.append('order_id', order_id);
 
-    console.log('Sending notification via webhook:', JSON.stringify(messagePayload, null, 2));
+    console.log('Sending notification via webhook with form data:', formData.toString());
 
-    // إرسال الرسالة عبر webhook إلى n8n مع headers صحيحة
+    // إرسال الرسالة عبر webhook إلى n8n كـ form data
     const response = await fetch(selectedWebhook.webhook_url, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: JSON.stringify(messagePayload)
+      body: formData
     });
 
     let responseData;
