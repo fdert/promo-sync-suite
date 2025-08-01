@@ -44,7 +44,7 @@ const Evaluations = () => {
     try {
       setLoading(true);
       
-      // جلب التقييمات
+      // جلب التقييمات (جميع التقييمات بما في ذلك غير المرسلة)
       const { data: evaluationsData, error: evaluationsError } = await supabase
         .from('evaluations')
         .select(`
@@ -52,7 +52,7 @@ const Evaluations = () => {
           orders (order_number, service_name),
           customers (name, phone)
         `)
-        .order('submitted_at', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (evaluationsError) {
         console.error('Error fetching evaluations:', evaluationsError);
@@ -68,7 +68,7 @@ const Evaluations = () => {
       const { data: statsData, error: statsError } = await supabase
         .from('evaluation_stats')
         .select('*')
-        .single();
+        .maybeSingle();
 
       if (statsError) {
         console.error('Error fetching stats:', statsError);
@@ -290,11 +290,12 @@ const Evaluations = () => {
         <CardContent>
           <Table>
             <TableHeader>
-              <TableRow>
+               <TableRow>
                 <TableHead>العميل</TableHead>
                 <TableHead>رقم الطلب</TableHead>
                 <TableHead>الخدمة</TableHead>
                 <TableHead>التقييم العام</TableHead>
+                <TableHead>الحالة</TableHead>
                 <TableHead>التوصية</TableHead>
                 <TableHead>تاريخ التقييم</TableHead>
                 <TableHead>الإجراءات</TableHead>
@@ -324,6 +325,11 @@ const Evaluations = () => {
                         {evaluation.rating}/5
                       </Badge>
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={evaluation.submitted_at ? "default" : "secondary"}>
+                      {evaluation.submitted_at ? "مرسل" : "في الانتظار"}
+                    </Badge>
                   </TableCell>
                   <TableCell>
                     <Badge variant={evaluation.would_recommend ? "default" : "secondary"}>
