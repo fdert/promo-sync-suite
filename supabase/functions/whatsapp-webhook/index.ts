@@ -12,13 +12,8 @@ const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 Deno.serve(async (req) => {
-  console.log('=== WEBHOOK REQUEST RECEIVED ===');
-  console.log('Method:', req.method);
-  console.log('URL:', req.url);
-  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    console.log('Handling OPTIONS request');
     return new Response(null, { 
       headers: corsHeaders,
       status: 200 
@@ -27,167 +22,68 @@ Deno.serve(async (req) => {
 
   try {
     if (req.method === 'POST') {
-      console.log('=== PROCESSING POST REQUEST ===');
       // التعامل مع الرسائل الواردة من n8n
       const body = await req.json();
-      console.log('Received WhatsApp webhook POST:', JSON.stringify(body, null, 2));
+      console.log('Received WhatsApp webhook:', JSON.stringify(body, null, 2));
 
-      // تنسيقات مختلفة للبيانات الواردة من n8n
-      let messageData = null;
-      
-      // تنسيق 1: رسالة مباشرة من WhatsApp Business API
-      if (body.message && typeof body.message === 'object') {
-        console.log('Processing format 1: WhatsApp Business API message');
+      // التحقق من وجود الرسالة
+      if (body.message) {
         const message = body.message;
-        messageData = {
-          message_id: message.id || null,
-          from_number: message.from,
-          to_number: message.to || 'system',
-          message_type: message.type || 'text',
-          message_content: message.text?.body || message.caption || message.body || '',
-          media_url: message.image?.link || message.video?.link || message.audio?.link || message.document?.link || null,
-          status: 'received',
-          timestamp: message.timestamp ? new Date(message.timestamp * 1000).toISOString() : new Date().toISOString(),
-          is_reply: false
-        };
-        console.log('Created messageData format 1:', JSON.stringify(messageData, null, 2));
-      }
-      
-      // تنسيق 2: البيانات مباشرة في الـ body (اختبار الـ webhook)
-      else if (body.from && body.message) {
-        console.log('Processing format 2: Direct body data (test webhook)');
-        messageData = {
-          message_id: body.id || body.messageId || null,
-          from_number: body.from || body.sender || body.phone,
-          to_number: body.to || body.recipient || 'system',
-          message_type: body.type || 'text',
-          message_content: body.message || body.text || body.content || '',
-          media_url: body.media_url || body.mediaUrl || null,
-          status: 'received',
-          timestamp: body.timestamp ? new Date(body.timestamp * 1000).toISOString() : new Date().toISOString(),
-          is_reply: false
-        };
-        console.log('Created messageData format 2:', JSON.stringify(messageData, null, 2));
-      }
-      
-      // تنسيق 3: n8n custom format
-      else if (body.data) {
-        console.log('Processing format 3: n8n custom format');
-        const data = body.data;
-        messageData = {
-          message_id: data.id || null,
-          from_number: data.from || data.sender,
-          to_number: data.to || 'system',
-          message_type: data.type || 'text',
-          message_content: data.message || data.text || '',
-          media_url: data.media_url || null,
-          status: 'received',
-          timestamp: data.timestamp ? new Date(data.timestamp * 1000).toISOString() : new Date().toISOString(),
-          is_reply: false
-        };
-        console.log('Created messageData format 3:', JSON.stringify(messageData, null, 2));
-      }
-      
-      // تنسيق 4: fallback للبيانات المباشرة
-      else if (body.from || body.sender || body.customerName) {
-        console.log('Processing fallback format: Creating from any available data');
-        messageData = {
-          message_id: body.id || body.messageId || null,
-          from_number: body.from || body.sender || body.phone || '+966500000000',
-          to_number: body.to || body.recipient || 'system',
-          message_type: body.type || 'text',
-          message_content: body.message || body.text || body.content || 'رسالة واردة',
-          media_url: body.media_url || body.mediaUrl || null,
-          status: 'received',
-          timestamp: body.timestamp ? (typeof body.timestamp === 'number' ? new Date(body.timestamp * 1000).toISOString() : new Date(body.timestamp).toISOString()) : new Date().toISOString(),
-          is_reply: false
-        };
-        console.log('Created messageData fallback:', JSON.stringify(messageData, null, 2));
-      }
-      
-      if (!messageData) {
-        console.log('No message data could be created from body:', JSON.stringify(body, null, 2));
-        return new Response(
-          JSON.stringify({ 
-            success: false, 
-            message: 'No valid message data found',
-            received_body: body,
-            debug: 'None of the conditions matched'
-          }),
-          {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 400
-          }
-        );
-      }
-      
-      // التحقق من وجود messageData ومعالجتها
-      console.log('Final messageData:', JSON.stringify(messageData, null, 2));
-      
-      if (messageData && messageData.from_number) {
-        console.log('Processing valid message data...');
         
         // البحث عن العميل أو إنشاؤه
         let customer = null;
-        console.log('Looking for customer with WhatsApp number:', messageData.from_number);
-        
-        const { data: existingCustomer, error: customerLookupError } = await supabase
-          .from('customers')
-          .select('*')
-          .eq('whatsapp_number', messageData.from_number)
-          .maybeSingle();
-
-        if (customerLookupError) {
-          console.log('Customer lookup error:', customerLookupError);
-        }
-
-        if (existingCustomer) {
-          customer = existingCustomer;
-          console.log('Found existing customer:', customer.name);
-        } else {
-          console.log('Creating new customer...');
-          
-          // إنشاء عميل جديد
-          const customerName = body.profile?.name || body.customerName || `عميل واتس آب ${messageData.from_number}`;
-          
-          const { data: newCustomer, error: customerError } = await supabase
+        if (message.from) {
+          const { data: existingCustomer } = await supabase
             .from('customers')
-            .insert({
-              name: customerName,
-              whatsapp_number: messageData.from_number,
-              phone: messageData.from_number,
-              import_source: 'whatsapp_webhook'
-            })
-            .select()
+            .select('*')
+            .eq('whatsapp_number', message.from)
             .single();
 
-          if (customerError) {
-            console.error('Error creating customer:', customerError);
+          if (existingCustomer) {
+            customer = existingCustomer;
           } else {
-            customer = newCustomer;
-            console.log('Created new customer:', customer?.name);
+            // إنشاء عميل جديد
+            const { data: newCustomer, error: customerError } = await supabase
+              .from('customers')
+              .insert({
+                name: message.profile?.name || `عميل واتس آب ${message.from}`,
+                whatsapp_number: message.from,
+                phone: message.from,
+                import_source: 'whatsapp_webhook'
+              })
+              .select()
+              .single();
+
+            if (customerError) {
+              console.error('Error creating customer:', customerError);
+            } else {
+              customer = newCustomer;
+            }
           }
         }
 
-        // إضافة معرف العميل
-        messageData.customer_id = customer?.id || null;
-        console.log('Final message data to save:', JSON.stringify(messageData, null, 2));
-
         // حفظ الرسالة في قاعدة البيانات
-        console.log('Attempting to save message to database...');
+        const messageData = {
+          message_id: message.id || null,
+          from_number: message.from,
+          to_number: message.to || null,
+          message_type: message.type || 'text',
+          message_content: message.text?.body || message.caption || '',
+          media_url: message.image?.link || message.video?.link || message.audio?.link || message.document?.link || null,
+          status: 'received',
+          timestamp: new Date(message.timestamp * 1000).toISOString(),
+          customer_id: customer?.id || null,
+          is_reply: false
+        };
+
         const { data: savedMessage, error: messageError } = await supabase
           .from('whatsapp_messages')
-          .insert(messageData)
-          .select();
+          .insert(messageData);
 
         if (messageError) {
-          console.error('Error saving message to database:', messageError);
+          console.error('Error saving message:', messageError);
           return new Response(
-            JSON.stringify({ 
-              error: 'Failed to save message', 
-              details: messageError,
-              messageData: messageData 
-            }),
+            JSON.stringify({ error: 'Failed to save message' }),
             {
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
               status: 500
@@ -195,42 +91,37 @@ Deno.serve(async (req) => {
           );
         }
 
-        console.log('Message saved successfully to database:', savedMessage);
+        console.log('Message saved successfully:', savedMessage);
+
+        // إرسال رد تلقائي إذا كان هناك قالب ترحيب
+        const { data: welcomeTemplate } = await supabase
+          .from('message_templates')
+          .select('*')
+          .eq('template_type', 'welcome')
+          .eq('is_active', true)
+          .single();
+
+        if (welcomeTemplate && customer) {
+          // هنا يمكن إرسال رسالة ترحيب تلقائية
+          console.log('Welcome template found:', welcomeTemplate.template_content);
+        }
 
         return new Response(
           JSON.stringify({ 
             success: true, 
-            message: 'Message processed and saved successfully',
-            customer_id: customer?.id,
-            message_id: savedMessage?.[0]?.id,
-            saved_data: savedMessage?.[0]
+            message: 'Message processed successfully',
+            customer_id: customer?.id
           }),
           {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 200
           }
         );
-      } else {
-        console.log('No valid message data found or missing from_number');
-        console.log('messageData:', messageData);
-        console.log('Body received:', JSON.stringify(body, null, 2));
-        
-        return new Response(
-          JSON.stringify({ 
-            success: false, 
-            message: 'No valid message data found',
-            received_body: body
-          }),
-          {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 400
-          }
-        );
       }
 
       // إذا لم تكن رسالة، إرجاع رد عادي
       return new Response(
-        JSON.stringify({ success: true, message: 'Webhook received but no message to process' }),
+        JSON.stringify({ success: true, message: 'Webhook received' }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 200

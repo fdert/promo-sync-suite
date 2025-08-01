@@ -5,11 +5,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import RoleProtectedRoute from "@/components/RoleProtectedRoute";
 import Home from "./pages/Home";
 import Auth from "./pages/Auth";
 import AdminLayout from "./components/layout/AdminLayout";
-import EmployeeLayout from "./components/layout/EmployeeLayout";
 import Dashboard from "./pages/admin/Dashboard";
 import Users from "./pages/admin/Users";
 import Customers from "./pages/admin/Customers";
@@ -24,7 +22,6 @@ import Settings from "./pages/admin/Settings";
 import ServiceTypes from "./pages/admin/ServiceTypes";
 import MessageTemplates from "./pages/admin/MessageTemplates";
 import UserDashboard from "./pages/user/UserDashboard";
-import EmployeeDashboard from "./pages/employee/EmployeeDashboard";
 import InvoicePreview from "./pages/InvoicePreview";
 import NotFound from "./pages/NotFound";
 import Evaluations from "./pages/admin/Evaluations";
@@ -48,20 +45,6 @@ const App = () => (
                 <UserDashboard />
               </ProtectedRoute>
             } />
-            <Route path="/employee" element={
-              <ProtectedRoute>
-                <RoleProtectedRoute allowedRoles={['employee']}>
-                  <EmployeeLayout />
-                </RoleProtectedRoute>
-              </ProtectedRoute>
-            }>
-              <Route index element={<EmployeeDashboard />} />
-              <Route path="customers" element={<Customers />} />
-              <Route path="orders" element={<Orders />} />
-              <Route path="invoices" element={<Invoices />} />
-              <Route path="evaluations" element={<Evaluations />} />
-              <Route path="whatsapp" element={<WhatsApp />} />
-            </Route>
             <Route path="/admin" element={
               <ProtectedRoute>
                 <AdminLayout />
@@ -75,23 +58,11 @@ const App = () => (
               <Route path="accounts" element={<Accounts />} />
               <Route path="reports" element={<Reports />} />
               <Route path="services" element={<ServiceTypes />} />
-            <Route path="message-templates" element={
-                <RoleProtectedRoute allowedRoles={['admin', 'manager']}>
-                  <MessageTemplates />
-                </RoleProtectedRoute>
-              } />
+            <Route path="message-templates" element={<MessageTemplates />} />
             <Route path="whatsapp" element={<WhatsApp />} />
               <Route path="webhooks" element={<WebhookSettings />} />
-              <Route path="website" element={
-                <RoleProtectedRoute allowedRoles={['admin']}>
-                  <WebsiteContent />
-                </RoleProtectedRoute>
-              } />
-              <Route path="settings" element={
-                <RoleProtectedRoute allowedRoles={['admin']}>
-                  <Settings />
-                </RoleProtectedRoute>
-              } />
+              <Route path="website" element={<WebsiteContent />} />
+              <Route path="settings" element={<Settings />} />
               <Route path="evaluations" element={<Evaluations />} />
             </Route>
             <Route path="/evaluation/:token" element={<Evaluation />} />

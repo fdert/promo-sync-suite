@@ -155,12 +155,7 @@ const Users = () => {
       permissions: [
         "orders_view", "orders_create", "orders_edit",
         "customers_view", "customers_create", "customers_edit",
-        "invoices_view", "invoices_create",
-        "whatsapp_view", "whatsapp_send", "whatsapp_reply",
-        "evaluations_view",
-        "services_view",
-        "payments_view", "payments_create",
-        "dashboard_view"
+        "invoices_view", "invoices_create"
       ]
     },
     { 
@@ -232,52 +227,6 @@ const Users = () => {
         { key: "users_create", label: "إضافة مستخدم" },
         { key: "users_edit", label: "تعديل مستخدم" },
         { key: "users_delete", label: "حذف مستخدم" }
-      ]
-    },
-    { 
-      key: "evaluations", 
-      label: "التقييمات",
-      actions: [
-        { key: "evaluations_view", label: "عرض التقييمات" },
-        { key: "evaluations_edit", label: "تعديل التقييمات" },
-        { key: "evaluations_delete", label: "حذف التقييمات" }
-      ]
-    },
-    { 
-      key: "whatsapp", 
-      label: "واتساب",
-      actions: [
-        { key: "whatsapp_view", label: "عرض رسائل واتساب" },
-        { key: "whatsapp_send", label: "إرسال رسائل واتساب" },
-        { key: "whatsapp_reply", label: "الرد على رسائل واتساب" }
-      ]
-    },
-    { 
-      key: "services", 
-      label: "الخدمات",
-      actions: [
-        { key: "services_view", label: "عرض الخدمات" },
-        { key: "services_create", label: "إضافة خدمة" },
-        { key: "services_edit", label: "تعديل خدمة" },
-        { key: "services_delete", label: "حذف خدمة" }
-      ]
-    },
-    { 
-      key: "payments", 
-      label: "المدفوعات",
-      actions: [
-        { key: "payments_view", label: "عرض المدفوعات" },
-        { key: "payments_create", label: "إضافة دفعة" },
-        { key: "payments_edit", label: "تعديل دفعة" },
-        { key: "payments_delete", label: "حذف دفعة" }
-      ]
-    },
-    { 
-      key: "dashboard", 
-      label: "لوحة القيادة",
-      actions: [
-        { key: "dashboard_view", label: "عرض لوحة القيادة" },
-        { key: "dashboard_stats", label: "عرض الإحصائيات" }
       ]
     },
     { 

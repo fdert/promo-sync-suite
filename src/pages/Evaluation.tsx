@@ -5,10 +5,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Star, Heart, CheckCircle, MessageSquare } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 
 const Evaluation = () => {
-  const { token } = useParams();
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [evaluation, setEvaluation] = useState(null);
@@ -25,6 +25,8 @@ const Evaluation = () => {
   const [suggestions, setSuggestions] = useState("");
   const [wouldRecommend, setWouldRecommend] = useState(true);
   const { toast } = useToast();
+
+  const token = searchParams.get('token');
 
   useEffect(() => {
     if (token) {
@@ -94,9 +96,6 @@ const Evaluation = () => {
 
     try {
       setSubmitting(true);
-      console.log('Submitting evaluation with token:', token);
-      console.log('Ratings:', ratings);
-      console.log('Feedback:', feedback);
 
       const { error } = await supabase
         .from('evaluations')
@@ -113,13 +112,12 @@ const Evaluation = () => {
         console.error('Error submitting evaluation:', error);
         toast({
           title: "خطأ",
-          description: "حدث خطأ في إرسال التقييم: " + error.message,
+          description: "حدث خطأ في إرسال التقييم",
           variant: "destructive",
         });
         return;
       }
 
-      console.log('Evaluation submitted successfully');
       setSubmitted(true);
       toast({
         title: "شكراً لك!",

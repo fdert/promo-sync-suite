@@ -6,7 +6,6 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>;
-  signUpAdmin: (email: string, password: string, fullName: string, role: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   loading: boolean;
@@ -64,38 +63,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { error };
   };
 
-  const signUpAdmin = async (email: string, password: string, fullName: string, role: string) => {
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: {
-          full_name: fullName,
-          role: role
-        }
-      }
-    });
-    
-    if (!error && data.user) {
-      // إضافة دور المستخدم مباشرة
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: data.user.id,
-          role: role as any
-        });
-      
-      if (roleError) {
-        console.error('Error adding role:', roleError);
-      }
-    }
-    
-    return { error };
-  };
-
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({
       email,
@@ -113,7 +80,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     user,
     session,
     signUp,
-    signUpAdmin,
     signIn,
     signOut,
     loading

@@ -5,8 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Palette, LogIn, UserPlus, AlertCircle, Shield } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Palette, LogIn, UserPlus, AlertCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -19,17 +18,10 @@ const Auth = () => {
     confirmPassword: "", 
     fullName: "" 
   });
-  const [adminForm, setAdminForm] = useState({ 
-    email: "", 
-    password: "", 
-    confirmPassword: "", 
-    fullName: "",
-    role: "admin"
-  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const { signIn, signUp, signUpAdmin, user } = useAuth();
+  const { signIn, signUp, user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -108,54 +100,6 @@ const Auth = () => {
     setLoading(false);
   };
 
-  const handleAdminSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-
-    if (!adminForm.email || !adminForm.password || !adminForm.fullName || !adminForm.role) {
-      setError("يرجى ملء جميع الحقول المطلوبة");
-      setLoading(false);
-      return;
-    }
-
-    if (adminForm.password !== adminForm.confirmPassword) {
-      setError("كلمة المرور وتأكيدها غير متطابقتان");
-      setLoading(false);
-      return;
-    }
-
-    if (adminForm.password.length < 6) {
-      setError("كلمة المرور يجب أن تكون 6 أحرف على الأقل");
-      setLoading(false);
-      return;
-    }
-
-    const { error } = await signUpAdmin(adminForm.email, adminForm.password, adminForm.fullName, adminForm.role);
-    
-    if (error) {
-      if (error.message.includes("User already registered")) {
-        setError("البريد الإلكتروني مسجل مسبقاً");
-      } else {
-        setError("حدث خطأ أثناء التسجيل");
-      }
-    } else {
-      toast({
-        title: "تم إنشاء حساب الموظف بنجاح",
-        description: `تم إنشاء حساب ${adminForm.role === 'admin' ? 'مدير' : adminForm.role === 'manager' ? 'مسؤول' : 'موظف'} بنجاح`
-      });
-      setAdminForm({ 
-        email: "", 
-        password: "", 
-        confirmPassword: "", 
-        fullName: "",
-        role: "admin"
-      });
-    }
-    
-    setLoading(false);
-  };
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-accent/5 to-background p-4">
       <Card className="w-full max-w-md">
@@ -173,7 +117,7 @@ const Auth = () => {
         
         <CardContent>
           <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="login" className="gap-2">
                 <LogIn className="h-4 w-4" />
                 تسجيل الدخول
@@ -181,10 +125,6 @@ const Auth = () => {
               <TabsTrigger value="signup" className="gap-2">
                 <UserPlus className="h-4 w-4" />
                 إنشاء حساب
-              </TabsTrigger>
-              <TabsTrigger value="admin" className="gap-2">
-                <Shield className="h-4 w-4" />
-                تسجيل موظف
               </TabsTrigger>
             </TabsList>
             
@@ -293,87 +233,6 @@ const Auth = () => {
                 
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? "جاري إنشاء الحساب..." : "إنشاء حساب"}
-                </Button>
-              </form>
-            </TabsContent>
-
-            <TabsContent value="admin">
-              <form onSubmit={handleAdminSignup} className="space-y-4">
-                <CardHeader className="px-0 pb-4">
-                  <CardTitle>تسجيل موظف إداري</CardTitle>
-                  <CardDescription>
-                    إنشاء حساب جديد للموظفين والإدارة
-                  </CardDescription>
-                </CardHeader>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="admin-name">الاسم الكامل</Label>
-                  <Input
-                    id="admin-name"
-                    type="text"
-                    value={adminForm.fullName}
-                    onChange={(e) => setAdminForm({ ...adminForm, fullName: e.target.value })}
-                    placeholder="أدخل اسم الموظف الكامل"
-                    disabled={loading}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="admin-email">البريد الإلكتروني</Label>
-                  <Input
-                    id="admin-email"
-                    type="email"
-                    value={adminForm.email}
-                    onChange={(e) => setAdminForm({ ...adminForm, email: e.target.value })}
-                    placeholder="أدخل بريد الموظف الإلكتروني"
-                    disabled={loading}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="admin-role">نوع الحساب</Label>
-                  <Select 
-                    value={adminForm.role} 
-                    onValueChange={(value) => setAdminForm({ ...adminForm, role: value })}
-                    disabled={loading}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="اختر نوع الحساب" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="admin">مدير نظام</SelectItem>
-                      <SelectItem value="manager">مدير</SelectItem>
-                      <SelectItem value="employee">موظف</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="admin-password">كلمة المرور</Label>
-                  <Input
-                    id="admin-password"
-                    type="password"
-                    value={adminForm.password}
-                    onChange={(e) => setAdminForm({ ...adminForm, password: e.target.value })}
-                    placeholder="أدخل كلمة المرور (6 أحرف على الأقل)"
-                    disabled={loading}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="admin-confirm">تأكيد كلمة المرور</Label>
-                  <Input
-                    id="admin-confirm"
-                    type="password"
-                    value={adminForm.confirmPassword}
-                    onChange={(e) => setAdminForm({ ...adminForm, confirmPassword: e.target.value })}
-                    placeholder="أعد إدخال كلمة المرور"
-                    disabled={loading}
-                  />
-                </div>
-                
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "جاري إنشاء الحساب..." : "إنشاء حساب موظف"}
                 </Button>
               </form>
             </TabsContent>

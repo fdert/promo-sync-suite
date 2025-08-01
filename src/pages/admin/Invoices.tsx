@@ -1156,8 +1156,8 @@ const Invoices = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="نقدي">نقدي</SelectItem>
-                      <SelectItem value="تحويل بنكي">تحويل بنكي</SelectItem>
-                      <SelectItem value="الشبكة">الشبكة</SelectItem>
+                      <SelectItem value="بنكي">تحويل بنكي</SelectItem>
+                      <SelectItem value="بطاقة ائتمان">بطاقة ائتمان</SelectItem>
                       <SelectItem value="شيك">شيك</SelectItem>
                     </SelectContent>
                   </Select>
@@ -1572,8 +1572,8 @@ const Invoices = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="نقدي">نقدي</SelectItem>
-                      <SelectItem value="تحويل بنكي">تحويل بنكي</SelectItem>
-                      <SelectItem value="الشبكة">الشبكة</SelectItem>
+                      <SelectItem value="بنكي">تحويل بنكي</SelectItem>
+                      <SelectItem value="بطاقة ائتمان">بطاقة ائتمان</SelectItem>
                       <SelectItem value="شيك">شيك</SelectItem>
                     </SelectContent>
                   </Select>

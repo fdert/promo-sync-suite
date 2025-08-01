@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Plus, TrendingUp, TrendingDown, DollarSign, CreditCard, Receipt, CalendarRange, BookOpen, BarChart3, Trash2, Edit2, Eye, Users, Search, Filter } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, DollarSign, CreditCard, Receipt, CalendarRange, BookOpen, BarChart3, Trash2, Edit2, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -18,20 +18,11 @@ const Accounts = () => {
   const [accountEntries, setAccountEntries] = useState<any[]>([]);
   const [expenses, setExpenses] = useState<any[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
-  const [debtorInvoices, setDebtorInvoices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddAccountOpen, setIsAddAccountOpen] = useState(false);
   const [isAddEntryOpen, setIsAddEntryOpen] = useState(false);
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
   const [userRole, setUserRole] = useState('');
-  
-  // حقول البحث للعملاء المدينين
-  const [debtorSearch, setDebtorSearch] = useState({
-    customerName: '',
-    dateFrom: '',
-    dateTo: '',
-    status: 'all'
-  });
   
   const [newAccount, setNewAccount] = useState({
     account_name: "",
@@ -144,13 +135,14 @@ const Accounts = () => {
     }
   };
 
-  // جلب الفواتير للحصول على الإيرادات (جميع الفواتير وليس المدفوعة فقط)
+  // جلب الفواتير للحصول على الإيرادات
   const fetchInvoices = async () => {
     try {
       const { data, error } = await supabase
         .from('invoices')
         .select('*')
-        .order('issue_date', { ascending: false })
+        .eq('status', 'مدفوع')
+        .order('payment_date', { ascending: false })
         .limit(10);
 
       if (error) {
@@ -164,75 +156,6 @@ const Accounts = () => {
     }
   };
 
-  // جلب فواتير العملاء المدينين - فقط الفواتير غير المدفوعة بالكامل
-  const fetchDebtorInvoices = async () => {
-    try {
-      console.log('Fetching debtor invoices with search filters:', debtorSearch);
-      
-      let query = supabase
-        .from('invoices')
-        .select(`
-          *,
-          customers(name, phone, whatsapp_number)
-        `)
-        .order('issue_date', { ascending: false });
-
-      // تطبيق فلاتر البحث
-      if (debtorSearch.dateFrom) {
-        query = query.gte('issue_date', debtorSearch.dateFrom);
-      }
-
-      if (debtorSearch.dateTo) {
-        query = query.lte('issue_date', debtorSearch.dateTo);
-      }
-
-      const { data, error } = await query;
-
-      console.log('All invoices data:', data);
-      console.log('Invoices error:', error);
-
-      if (error) {
-        console.error('Error fetching debtor invoices:', error);
-        return;
-      }
-
-      // فلترة الفواتير التي لديها مبالغ متبقية فعلاً (استخدام رقم صغير لتجنب مشاكل الفاصلة العشرية)
-      let debtorInvoicesFiltered = (data || []).filter(invoice => {
-        const remainingAmount = invoice.total_amount - (invoice.paid_amount || 0);
-        console.log(`Invoice ${invoice.invoice_number}: total=${invoice.total_amount}, paid=${invoice.paid_amount || 0}, remaining=${remainingAmount}`);
-        return remainingAmount > 0.01;
-      });
-
-      // تطبيق فلتر البحث في اسم العميل
-      if (debtorSearch.customerName) {
-        debtorInvoicesFiltered = debtorInvoicesFiltered.filter(invoice => 
-          invoice.customers?.name?.toLowerCase().includes(debtorSearch.customerName.toLowerCase())
-        );
-      }
-
-      // تطبيق فلتر الحالة
-      if (debtorSearch.status !== 'all') {
-        debtorInvoicesFiltered = debtorInvoicesFiltered.filter(invoice => {
-          const remainingAmount = invoice.total_amount - (invoice.paid_amount || 0);
-          const paidAmount = invoice.paid_amount || 0;
-          
-          if (debtorSearch.status === 'partial') {
-            return paidAmount > 0 && remainingAmount > 0.01; // مدفوع جزئياً
-          } else if (debtorSearch.status === 'unpaid') {
-            return paidAmount <= 0.01; // غير مدفوع نهائياً
-          }
-          return remainingAmount > 0.01;
-        });
-      }
-
-      console.log('Filtered debtor invoices:', debtorInvoicesFiltered);
-      setDebtorInvoices(debtorInvoicesFiltered);
-      
-    } catch (error) {
-      console.error('Error:', error);
-    }
-  };
-
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
@@ -241,18 +164,12 @@ const Accounts = () => {
         fetchAccounts(), 
         fetchAccountEntries(), 
         fetchExpenses(), 
-        fetchInvoices(),
-        fetchDebtorInvoices()
+        fetchInvoices()
       ]);
       setLoading(false);
     };
     loadData();
   }, []);
-
-  // تحديث بيانات العملاء المدينين عند تغيير فلاتر البحث
-  useEffect(() => {
-    fetchDebtorInvoices();
-  }, [debtorSearch]);
 
   // إضافة حساب جديد
   const handleAddAccount = async () => {
@@ -482,18 +399,15 @@ const Accounts = () => {
           .eq('reference_id', invoice.id);
 
         if (!existingEntries || existingEntries.length === 0) {
-          // إضافة القيود المحاسبية المفقودة باستخدام الدالة المحاسبية
-          const { error: entryError } = await supabase.rpc('create_invoice_accounting_entry', {
-            invoice_id: invoice.id,
-            customer_name: invoice.customers?.name || 'عميل غير محدد',
-            total_amount: invoice.total_amount
+          // إضافة القيود المحاسبية المفقودة
+          await supabase.functions.invoke('create-invoice-accounting-entry', {
+            body: {
+              invoice_id: invoice.id,
+              customer_name: invoice.customers?.name || 'عميل غير محدد',
+              total_amount: invoice.total_amount
+            }
           });
-          
-          if (entryError) {
-            console.error('Error creating accounting entry:', entryError);
-          } else {
-            fixedCount++;
-          }
+          fixedCount++;
         }
       }
 
@@ -518,11 +432,10 @@ const Accounts = () => {
   // حساب الإحصائيات
   const monthlyIncome = invoices
     .filter(invoice => {
-      const issueDate = new Date(invoice.issue_date);
+      const paymentDate = new Date(invoice.payment_date);
       const currentMonth = new Date();
-      return issueDate.getMonth() === currentMonth.getMonth() && 
-             issueDate.getFullYear() === currentMonth.getFullYear() &&
-             invoice.status === 'مدفوع';
+      return paymentDate.getMonth() === currentMonth.getMonth() && 
+             paymentDate.getFullYear() === currentMonth.getFullYear();
     })
     .reduce((sum, invoice) => sum + (invoice.total_amount || 0), 0);
 
@@ -545,12 +458,6 @@ const Accounts = () => {
     acc[account.account_type].push(account);
     return acc;
   }, {});
-
-  // حساب إجمالي المبالغ المستحقة من العملاء المدينين
-  const totalDebts = debtorInvoices.reduce((sum, invoice) => {
-    const remainingAmount = invoice.total_amount - (invoice.paid_amount || 0);
-    return sum + remainingAmount;
-  }, 0);
 
   if (loading) {
     return <div className="flex justify-center items-center h-64">جاري التحميل...</div>;
@@ -578,7 +485,7 @@ const Accounts = () => {
       </div>
 
       {/* Financial Overview */}
-      <div className="grid gap-4 md:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">الإيرادات الشهرية</CardTitle>
@@ -616,17 +523,6 @@ const Accounts = () => {
         
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">إجمالي الديون</CardTitle>
-            <Users className="h-4 w-4 text-warning" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-warning">{totalDebts.toLocaleString()} ر.س</div>
-            <p className="text-xs text-muted-foreground">{debtorInvoices.length} فاتورة مستحقة</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">عدد الحسابات</CardTitle>
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -638,11 +534,10 @@ const Accounts = () => {
       </div>
 
       <Tabs defaultValue="accounts" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="accounts">الحسابات</TabsTrigger>
           <TabsTrigger value="entries">القيود</TabsTrigger>
           <TabsTrigger value="expenses">المصروفات</TabsTrigger>
-          <TabsTrigger value="debtors">العملاء المدينون</TabsTrigger>
           <TabsTrigger value="reports">التقارير</TabsTrigger>
         </TabsList>
 
@@ -715,76 +610,53 @@ const Accounts = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {(accountList as any[]).map((account) => {
-                    // تحديد كيفية عرض الرصيد حسب نوع الحساب
-                    const isRevenueAccount = account.account_type === 'إيرادات';
-                    const isExpenseAccount = account.account_type === 'مصروفات';
-                    
-                    // للحسابات الإيرادية: عرض الرقم موجب مع وصف
-                    const displayBalance = isRevenueAccount ? Math.abs(account.balance) : account.balance;
-                    const balanceLabel = isRevenueAccount 
-                      ? 'الإيرادات المحققة' 
-                      : isExpenseAccount 
-                        ? 'إجمالي المصروفات'
-                        : 'الرصيد الحالي';
-                    
-                    // تحديد لون الرصيد
-                    const balanceColor = isRevenueAccount 
-                      ? 'text-success' 
-                      : isExpenseAccount
-                        ? 'text-destructive'
-                        : account.balance >= 0 
-                          ? 'text-success' 
-                          : 'text-destructive';
-
-                    return (
-                      <div key={account.id} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                            <BookOpen className="h-5 w-5 text-primary" />
-                          </div>
-                          <div>
-                            <h3 className="font-medium">{account.account_name}</h3>
-                            <p className="text-sm text-muted-foreground">{account.description}</p>
-                          </div>
+                  {(accountList as any[]).map((account) => (
+                    <div key={account.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                          <BookOpen className="h-5 w-5 text-primary" />
                         </div>
-                        <div className="flex items-center gap-3">
-                          <div className="text-right">
-                            <p className={`text-lg font-bold ${balanceColor}`}>
-                              {displayBalance?.toLocaleString()} ر.س
-                            </p>
-                            <p className="text-xs text-muted-foreground">{balanceLabel}</p>
-                          </div>
-                          {userRole === 'admin' && (
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    هل أنت متأكد من حذف الحساب "{account.account_name}"؟
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>إلغاء</AlertDialogCancel>
-                                  <AlertDialogAction 
-                                    onClick={() => handleDeleteAccount(account.id)}
-                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                  >
-                                    حذف
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          )}
+                        <div>
+                          <h3 className="font-medium">{account.account_name}</h3>
+                          <p className="text-sm text-muted-foreground">{account.description}</p>
                         </div>
                       </div>
-                    );
-                  })}
+                      <div className="flex items-center gap-3">
+                        <div className="text-right">
+                          <p className={`text-lg font-bold ${account.balance >= 0 ? 'text-success' : 'text-destructive'}`}>
+                            {account.balance?.toLocaleString()} ر.س
+                          </p>
+                          <p className="text-xs text-muted-foreground">الرصيد الحالي</p>
+                        </div>
+                        {userRole === 'admin' && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  هل أنت متأكد من حذف الحساب "{account.account_name}"؟
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                                <AlertDialogAction 
+                                  onClick={() => handleDeleteAccount(account.id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  حذف
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>
@@ -1006,8 +878,8 @@ const Accounts = () => {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="نقدي">نقدي</SelectItem>
-                        <SelectItem value="تحويل بنكي">تحويل بنكي</SelectItem>
-                        <SelectItem value="الشبكة">الشبكة</SelectItem>
+                        <SelectItem value="بنكي">تحويل بنكي</SelectItem>
+                        <SelectItem value="بطاقة ائتمان">بطاقة ائتمان</SelectItem>
                         <SelectItem value="شيك">شيك</SelectItem>
                       </SelectContent>
                     </Select>
@@ -1059,203 +931,6 @@ const Accounts = () => {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
-
-        <TabsContent value="debtors" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">العملاء المدينون</h2>
-            <div className="text-sm text-muted-foreground">
-              إجمالي المبالغ المستحقة: <span className="font-bold text-warning">{totalDebts.toLocaleString()} ر.س</span>
-            </div>
-          </div>
-
-          {/* فلاتر البحث */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Filter className="h-5 w-5" />
-                فلاتر البحث
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-4">
-                <div>
-                  <Label htmlFor="customerName">اسم العميل</Label>
-                  <Input
-                    id="customerName"
-                    placeholder="البحث باسم العميل..."
-                    value={debtorSearch.customerName}
-                    onChange={(e) => setDebtorSearch({...debtorSearch, customerName: e.target.value})}
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="dateFrom">من تاريخ</Label>
-                  <Input
-                    id="dateFrom"
-                    type="date"
-                    value={debtorSearch.dateFrom}
-                    onChange={(e) => setDebtorSearch({...debtorSearch, dateFrom: e.target.value})}
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="dateTo">إلى تاريخ</Label>
-                  <Input
-                    id="dateTo"
-                    type="date"
-                    value={debtorSearch.dateTo}
-                    onChange={(e) => setDebtorSearch({...debtorSearch, dateTo: e.target.value})}
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="status">حالة الفاتورة</Label>
-                    <Select value={debtorSearch.status} onValueChange={(value) => setDebtorSearch({...debtorSearch, status: value})}>
-                      <SelectTrigger className="mt-1">
-                        <SelectValue placeholder="اختر الحالة" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">جميع الحالات</SelectItem>
-                        <SelectItem value="partial">مدفوع جزئياً</SelectItem>
-                        <SelectItem value="unpaid">غير مدفوع</SelectItem>
-                      </SelectContent>
-                    </Select>
-                </div>
-              </div>
-              
-              <div className="flex gap-2 mt-4">
-                <Button 
-                  variant="outline" 
-                  onClick={() => setDebtorSearch({customerName: '', dateFrom: '', dateTo: '', status: 'all'})}
-                  className="gap-2"
-                >
-                  <Search className="h-4 w-4" />
-                  مسح الفلاتر
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* قائمة العملاء المدينين */}
-          <Card>
-            <CardContent className="p-0">
-              {debtorInvoices.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>لا توجد فواتير مستحقة حالياً</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {debtorInvoices.map((invoice) => {
-                    const remainingAmount = invoice.total_amount - (invoice.paid_amount || 0);
-                    const daysPastDue = Math.floor((new Date().getTime() - new Date(invoice.due_date).getTime()) / (1000 * 60 * 60 * 24));
-                    
-                    return (
-                      <div key={invoice.id} className="flex items-center justify-between p-4 border-b hover:bg-muted/50">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-warning/10 rounded-full flex items-center justify-center">
-                            <Receipt className="h-6 w-6 text-warning" />
-                          </div>
-                          <div>
-                            <h3 className="font-medium">{invoice.customers?.name || 'عميل غير محدد'}</h3>
-                            <p className="text-sm text-muted-foreground">
-                              فاتورة: {invoice.invoice_number} • تاريخ الإصدار: {invoice.issue_date}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              تاريخ الاستحقاق: {invoice.due_date}
-                              {daysPastDue > 0 && (
-                                <span className="text-destructive font-medium"> • متأخر {daysPastDue} يوم</span>
-                              )}
-                            </p>
-                          </div>
-                        </div>
-                        
-                        <div className="text-right">
-                          <div className="flex flex-col gap-1">
-                            <Badge variant={invoice.status === 'قيد الانتظار' ? 'destructive' : 'secondary'}>
-                              {invoice.status}
-                            </Badge>
-                            <p className="font-bold text-lg text-warning">
-                              {remainingAmount.toLocaleString()} ر.س
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              من أصل {invoice.total_amount.toLocaleString()} ر.س
-                            </p>
-                            {invoice.paid_amount > 0 && (
-                              <p className="text-sm text-success">
-                                مدفوع: {invoice.paid_amount.toLocaleString()} ر.س
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center gap-2">
-                          {invoice.customers?.phone && (
-                            <Button variant="outline" size="sm" asChild>
-                              <a href={`tel:${invoice.customers.phone}`}>
-                                <Receipt className="h-4 w-4" />
-                              </a>
-                            </Button>
-                          )}
-                          {invoice.customers?.whatsapp_number && (
-                            <Button variant="outline" size="sm" asChild>
-                              <a 
-                                href={`https://wa.me/${invoice.customers.whatsapp_number.replace(/[^0-9]/g, '')}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                              >
-                                <Eye className="h-4 w-4" />
-                              </a>
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* ملخص العملاء المدينين */}
-          <div className="grid gap-4 md:grid-cols-3">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">عدد الفواتير المستحقة</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{debtorInvoices.length}</div>
-                <p className="text-xs text-muted-foreground">فاتورة غير مسددة</p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">متوسط المبلغ المستحق</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-warning">
-                  {debtorInvoices.length > 0 ? Math.round(totalDebts / debtorInvoices.length).toLocaleString() : 0} ر.س
-                </div>
-                <p className="text-xs text-muted-foreground">لكل فاتورة</p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">الفواتير المتأخرة</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-destructive">
-                  {debtorInvoices.filter(invoice => 
-                    new Date(invoice.due_date) < new Date()
-                  ).length}
-                </div>
-                <p className="text-xs text-muted-foreground">فاتورة متأخرة الدفع</p>
-              </CardContent>
-            </Card>
-          </div>
         </TabsContent>
 
         <TabsContent value="reports" className="space-y-4">

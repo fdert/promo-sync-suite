@@ -20,42 +20,16 @@ Deno.serve(async (req) => {
   }
 
   try {
-    console.log('Function started successfully');
-    
-    let requestBody;
-    try {
-      requestBody = await req.json();
-      console.log('Request body parsed:', requestBody);
-    } catch (parseError) {
-      console.error('Error parsing request body:', parseError);
-      return new Response(
-        JSON.stringify({ error: 'Invalid JSON in request body', details: parseError.message }),
-        { headers: corsHeaders, status: 400 }
-      );
-    }
-
-    const { type, order_id, data } = requestBody;
+    const { type, order_id, data } = await req.json();
     console.log('Notification request:', { type, order_id, data });
-
-    if (!type || !order_id) {
-      console.error('Missing required fields:', { type, order_id });
-      return new Response(
-        JSON.stringify({ error: 'Missing required fields: type and order_id' }),
-        { headers: corsHeaders, status: 400 }
-      );
-    }
 
     let message = '';
     let customerPhone = '';
     let customerName = '';
-    let remainingAmount = '0';
-    let orderItemsText = '';
-    let startDate = 'سيتم تحديده';
-    let dueDate = 'سيتم تحديده';
 
-    // جلب بيانات الطلب الكاملة مع بنود الطلب لجميع أنواع الإشعارات
+    // جلب بيانات الطلب الكاملة مع بنود الطلب للطلبات الجديدة
     let orderDetails = null;
-    if (order_id) {
+    if (type === 'order_created' && order_id) {
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .select(`
@@ -76,7 +50,7 @@ Deno.serve(async (req) => {
     const { data: templateData, error: templateError } = await supabase
       .from('message_templates')
       .select('template_content')
-      .eq('template_name', type)
+      .eq('template_type', type)
       .eq('is_active', true)
       .maybeSingle();
 
@@ -86,8 +60,14 @@ Deno.serve(async (req) => {
       // استخدام القالب من قاعدة البيانات
       message = templateData.template_content;
       
-      // إذا كانت هناك تفاصيل طلب، استخدمها
+      // إعداد المتغيرات للاستبدال
+      let orderItemsText = '';
+      let remainingAmount = '0';
+      let startDate = 'سيتم تحديده';
+      let dueDate = 'سيتم تحديده';
       let description = data.description || 'غير محدد';
+      
+      // إذا كانت هناك تفاصيل طلب، استخدمها
       if (orderDetails) {
         // تنسيق بنود الطلب
         if (orderDetails.order_items && orderDetails.order_items.length > 0) {
@@ -143,9 +123,9 @@ Deno.serve(async (req) => {
         'due_date': dueDate,
         'status': data.status || 'جديد',
         'priority': data.priority || 'متوسطة',
-         'estimated_time': data.estimated_days || 'قريباً',
-         'company_name': 'شركتنا',
-         'evaluation_link': `https://e5a7747a-0935-46df-9ea9-1308e76636dc.lovableproject.com/evaluation/token-${order_id}`
+        'estimated_time': data.estimated_days || 'قريباً',
+        'company_name': 'شركتنا',
+        'evaluation_link': `https://e5a7747a-0935-46df-9ea9-1308e76636dc.lovableproject.com/evaluation/${data.evaluation_token}`
       };
 
       // استبدال جميع المتغيرات في الرسالة
@@ -189,9 +169,8 @@ Deno.serve(async (req) => {
           break;
 
         case 'order_ready_for_delivery':
-          message = `${data.customer_name}، طلبك رقم ${data.order_number} جاهز للتسليم! لتقييم الخدمة يرجى الضغط هنا: ${data.evaluation_link}`;
+          message = `${data.customer_name}، طلبك رقم ${data.order_number} جاهز للتسليم! يرجى تقييم الخدمة: https://gcuqfxacnbxdldsbmgvf.supabase.co/evaluation/${data.evaluation_token}`;
           customerPhone = data.customer_phone;
-          customerName = data.customer_name;
           customerName = data.customer_name;
           break;
 
@@ -217,11 +196,8 @@ Deno.serve(async (req) => {
     let selectedWebhook = null;
     
     if (webhookSettings && webhookSettings.length > 0) {
-      // البحث عن webhook نشط يحتوي على هذا النوع من الإشعارات
+      // البحث عن webhook يحتوي على هذا النوع من الإشعارات أو webhook بدون تحديد حالات
       for (const webhook of webhookSettings) {
-        // تأكد من أن الـ webhook نشط أولاً
-        if (!webhook.is_active) continue;
-        
         if (!webhook.order_statuses || webhook.order_statuses.length === 0) {
           // webhook لجميع الحالات
           selectedWebhook = webhook;
@@ -233,86 +209,46 @@ Deno.serve(async (req) => {
         }
       }
       
-      // إذا لم نجد webhook مخصص، نستخدم أول webhook نشط
-      if (!selectedWebhook) {
-        const activeWebhook = webhookSettings.find(w => w.is_active);
-        if (activeWebhook) {
-          selectedWebhook = activeWebhook;
-          console.log('Using first active webhook as fallback');
-        }
+      // إذا لم نجد webhook مخصص، نستخدم الأول المتوفر
+      if (!selectedWebhook && webhookSettings.length > 0) {
+        selectedWebhook = webhookSettings[0];
+        console.log('Using first available webhook as fallback');
       }
     }
 
     if (!selectedWebhook?.webhook_url) {
       console.log('No matching webhook found for notification type:', type);
-      // بدلاً من رمي خطأ، سنحاول الإرسال مع webhook افتراضي إذا وجد
-      if (webhookSettings && webhookSettings.length > 0) {
-        selectedWebhook = webhookSettings[0];
-        console.log('Using first available webhook as last resort');
-      } else {
-        throw new Error(`No active webhook configured for notification type: ${type}`);
-      }
+      throw new Error(`No active webhook configured for notification type: ${type}`);
     }
 
-    // إعداد URLSearchParams لإرسال البيانات كمتغيرات منفصلة
-    const formData = new URLSearchParams();
-    formData.append('customer_name', customerName);
-    formData.append('order_number', data.order_number || '');
-    formData.append('service_name', data.service_name || '');
-    formData.append('description', orderDetails?.description || data.description || 'غير محدد');
-    formData.append('amount', data.amount?.toString() || '0');
-    formData.append('paid_amount', data.paid_amount?.toString() || '0');
-    formData.append('remaining_amount', remainingAmount);
-    formData.append('payment_type', data.payment_type || 'غير محدد');
-    formData.append('status', data.status || '');
-    formData.append('priority', data.priority || 'متوسطة');
-    formData.append('start_date', startDate);
-    formData.append('due_date', dueDate);
-    formData.append('order_items', orderItemsText);
-    formData.append('evaluation_link', `https://e5a7747a-0935-46df-9ea9-1308e76636dc.lovableproject.com/evaluation/token-${order_id}`);
-    formData.append('company_name', 'وكالة الإبداع للدعاية والإعلان');
-    formData.append('estimated_time', data.estimated_days || 'قريباً');
-    formData.append('progress', data.progress?.toString() || '0');
-    formData.append('date', new Date().toLocaleDateString('ar-SA'));
-    formData.append('to', customerPhone);
-    formData.append('phone', customerPhone);
-    formData.append('phoneNumber', customerPhone);
-    formData.append('message', message);
-    formData.append('messageText', message);
-    formData.append('text', message);
-    formData.append('notification_type', type);
-    formData.append('type', type);
-    formData.append('timestamp', Math.floor(Date.now() / 1000).toString());
-    formData.append('order_id', order_id);
+    // إعداد بيانات الرسالة للإرسال عبر n8n
+    const messagePayload = {
+      to: customerPhone,
+      type: 'text',
+      message: {
+        text: message
+      },
+      timestamp: Math.floor(Date.now() / 1000),
+      notification_type: type,
+      customer_name: customerName
+    };
 
-    console.log('Sending notification via webhook with form data:', formData.toString());
+    console.log('Sending notification via webhook:', JSON.stringify(messagePayload, null, 2));
 
-    // إرسال الرسالة عبر webhook إلى n8n كـ form data
+    // إرسال الرسالة عبر webhook إلى n8n
     const response = await fetch(selectedWebhook.webhook_url, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Type': 'application/json',
       },
-      body: formData
+      body: JSON.stringify(messagePayload)
     });
 
-    let responseData;
-    try {
-      responseData = await response.text();
-      console.log('Webhook response:', responseData);
-    } catch (e) {
-      responseData = 'Failed to read response';
-      console.log('Failed to read webhook response');
-    }
+    const responseData = await response.text();
+    console.log('Webhook response:', responseData);
 
-    // تحديد حالة الرسالة حسب نجاح أو فشل الويب هوك
-    let messageStatus = 'failed';
-    if (response.ok) {
-      console.log('Webhook sent successfully');
-      messageStatus = 'sent';
-    } else {
-      console.error(`Webhook failed: ${response.status} ${responseData}`);
-      messageStatus = 'failed';
+    if (!response.ok) {
+      throw new Error(`Webhook failed: ${response.status} ${responseData}`);
     }
 
     // حفظ الرسالة المرسلة في قاعدة البيانات
@@ -323,9 +259,8 @@ Deno.serve(async (req) => {
         to_number: customerPhone,
         message_type: 'text',
         message_content: message,
-        status: messageStatus, // سيكون sent أو failed حسب استجابة الويب هوك
-        is_reply: false,
-        customer_id: orderDetails?.customers?.id || null
+        status: 'sent',
+        is_reply: false
       });
 
     if (messageError) {

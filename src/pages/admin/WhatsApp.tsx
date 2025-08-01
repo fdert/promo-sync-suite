@@ -51,23 +51,16 @@ const WhatsApp = () => {
 
   const fetchMessages = async () => {
     try {
-      console.log('Fetching messages...');
       const { data, error } = await supabase
         .from('whatsapp_messages')
         .select(`
           *,
           customers(name, whatsapp_number)
         `)
-        .order('created_at', { ascending: false })
+        .order('timestamp', { ascending: false })
         .limit(100);
 
-      if (error) {
-        console.error('Error fetching messages:', error);
-        throw error;
-      }
-      
-      console.log('Fetched messages:', data?.length || 0, 'messages');
-      console.log('Latest message:', data?.[0]);
+      if (error) throw error;
       setMessages(data || []);
     } catch (error) {
       console.error('Error fetching messages:', error);
@@ -196,17 +189,13 @@ const WhatsApp = () => {
     try {
       setLoading(true);
 
-      // تحديد رقم الواتساب الصحيح للإرسال
-      const recipientNumber = selectedMessage.to_number === 'system' 
-        ? selectedMessage.from_number 
-        : selectedMessage.to_number;
-
-      console.log('Sending reply to:', recipientNumber, 'Message:', replyText);
-
-      // ملاحظة: تم إلغاء تفعيل إرسال الرسائل
-      const response = { error: null, data: { success: false, message: 'إرسال الرسائل غير متاح حالياً' } };
-
-      console.log('Reply response:', response);
+      const response = await supabase.functions.invoke('send-whatsapp', {
+        body: {
+          to_number: selectedMessage.from_number,
+          message_content: replyText,
+          message_type: 'text'
+        }
+      });
 
       if (response.error) throw response.error;
 
@@ -285,57 +274,6 @@ const WhatsApp = () => {
     }
   };
 
-  const testWebhook = async () => {
-    try {
-      setLoading(true);
-      
-      const testData = {
-        from: "+966500000000",
-        message: "رسالة تجريبية لاختبار الـ webhook",
-        customerName: "عميل تجريبي",
-        type: "text",
-        timestamp: Math.floor(Date.now() / 1000)
-      };
-
-      console.log('Testing webhook with data:', testData);
-
-      const response = await fetch('https://gcuqfxacnbxdldsbmgvf.supabase.co/functions/v1/whatsapp-webhook', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(testData)
-      });
-
-      const result = await response.text();
-      console.log('Webhook test response:', result);
-
-      if (response.ok) {
-        toast({
-          title: "نجح الاختبار ✅",
-          description: "تم إرسال رسالة تجريبية بنجاح، تحقق من قائمة الرسائل",
-        });
-        // تحديث قائمة الرسائل فوراً
-        await fetchMessages();
-        // تحديث إضافي بعد 2 ثانية للتأكد
-        setTimeout(() => {
-          fetchMessages();
-        }, 2000);
-      } else {
-        throw new Error(`فشل الاختبار: ${response.status} - ${result}`);
-      }
-    } catch (error) {
-      console.error('Webhook test error:', error);
-      toast({
-        title: "فشل الاختبار ❌",
-        description: error.message || "حدث خطأ في اختبار الـ webhook",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -345,15 +283,6 @@ const WhatsApp = () => {
         </div>
         
         <div className="flex gap-2">
-          <Button 
-            onClick={testWebhook} 
-            disabled={loading}
-            variant="default" 
-            className="gap-2"
-          >
-            <Settings className="h-4 w-4" />
-            {loading ? "جاري الاختبار..." : "اختبار الـ Webhook"}
-          </Button>
           <Button onClick={downloadMessages} variant="outline" className="gap-2">
             <Download className="h-4 w-4" />
             تنزيل الرسائل
@@ -716,14 +645,14 @@ const WhatsApp = () => {
                   <Label>رابط استقبال الرسائل (Webhook URL لـ n8n)</Label>
                   <div className="flex gap-2">
                     <Input
-                      value={`https://gcuqfxacnbxdldsbmgvf.supabase.co/functions/v1/whatsapp-webhook`}
+                      value={`https://gcuqfxacnbxdldsbmgvf.functions.supabase.co/functions/v1/whatsapp-webhook`}
                       readOnly
                       className="bg-muted"
                     />
                     <Button
                       variant="outline"
                       onClick={() => {
-                        navigator.clipboard.writeText('https://gcuqfxacnbxdldsbmgvf.supabase.co/functions/v1/whatsapp-webhook');
+                        navigator.clipboard.writeText('https://gcuqfxacnbxdldsbmgvf.functions.supabase.co/functions/v1/whatsapp-webhook');
                         toast({
                           title: "تم النسخ",
                           description: "تم نسخ الرابط إلى الحافظة",
@@ -733,17 +662,30 @@ const WhatsApp = () => {
                       نسخ
                     </Button>
                   </div>
-                  <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <p className="text-sm text-blue-800 font-medium mb-2">🔧 تكوين الويب هوك:</p>
-                    <ul className="text-xs text-blue-700 space-y-1">
-                      <li>• استخدم هذا الرابط في نظام إدارة الرسائل الخاص بك</li>
-                      <li>• تأكد من إرسال POST requests إلى هذا الرابط عند استقبال رسائل جديدة</li>
-                      <li>• يجب أن يحتوي الطلب على بيانات الرسالة بصيغة JSON</li>
-                      <li>• تأكد من تضمين معلومات المرسل ونص الرسالة</li>
-                    </ul>
-                  </div>
                 </div>
 
+                <div>
+                  <Label>رابط إرسال الرسائل (Internal API)</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={`https://gcuqfxacnbxdldsbmgvf.functions.supabase.co/functions/v1/send-whatsapp`}
+                      readOnly
+                      className="bg-muted"
+                    />
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        navigator.clipboard.writeText('https://gcuqfxacnbxdldsbmgvf.functions.supabase.co/functions/v1/send-whatsapp');
+                        toast({
+                          title: "تم النسخ",
+                          description: "تم نسخ الرابط إلى الحافظة",
+                        });
+                      }}
+                    >
+                      نسخ
+                    </Button>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>

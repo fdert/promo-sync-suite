@@ -1,188 +1,300 @@
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useState, useEffect } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import { Link, useNavigate } from "react-router-dom";
-import { Eye, EyeOff, Globe, LogIn } from "lucide-react";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import logo from "@/assets/logo.png";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Palette,
+  Monitor,
+  Megaphone,
+  TrendingUp,
+  Users,
+  Star,
+  ArrowRight,
+  Phone,
+  Mail,
+  MapPin,
+  CheckCircle,
+} from "lucide-react";
+import { Link } from "react-router-dom";
 
 const Home = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const { signIn, user } = useAuth();
-  const navigate = useNavigate();
+  const services = [
+    {
+      icon: Palette,
+      title: "تصميم الشعارات والهوية البصرية",
+      description: "تصميم شعارات احترافية وهويات بصرية متكاملة تعكس شخصية علامتك التجارية",
+      features: ["تصميم شعار احترافي", "دليل الهوية البصرية", "تطبيقات الهوية", "ملفات قابلة للطباعة"],
+    },
+    {
+      icon: Monitor,
+      title: "تطوير المواقع الإلكترونية",
+      description: "تطوير مواقع إلكترونية حديثة ومتجاوبة مع جميع الأجهزة",
+      features: ["تصميم متجاوب", "سهولة الإدارة", "سرعة في التحميل", "محرك بحث محسن"],
+    },
+    {
+      icon: Megaphone,
+      title: "إدارة الحملات الإعلانية",
+      description: "إنشاء وإدارة حملات إعلانية فعالة على منصات التواصل الاجتماعي",
+      features: ["تحليل الجمهور المستهدف", "إنشاء محتوى إبداعي", "متابعة الأداء", "تقارير تفصيلية"],
+    },
+    {
+      icon: TrendingUp,
+      title: "التسويق الرقمي",
+      description: "استراتيجيات تسويق رقمي متطورة لزيادة المبيعات والوصول",
+      features: ["تحسين محركات البحث", "إدارة وسائل التواصل", "التسويق بالمحتوى", "الإعلانات المدفوعة"],
+    },
+  ];
 
-  // إعادة توجيه المستخدم المسجل دخوله
-  useEffect(() => {
-    if (user) {
-      getUserRole();
-    }
-  }, [user]);
+  const stats = [
+    { number: "500+", label: "عميل راضي" },
+    { number: "1200+", label: "مشروع مكتمل" },
+    { number: "5+", label: "سنوات خبرة" },
+    { number: "24/7", label: "دعم فني" },
+  ];
 
-  const getUserRole = async () => {
-    if (!user) return;
-    
-    try {
-      const { data: userRole } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .single();
-
-      if (userRole?.role === 'admin' || userRole?.role === 'manager') {
-        navigate('/admin');
-      } else if (userRole?.role === 'employee') {
-        navigate('/employee');
-      } else {
-        navigate('/user');
-      }
-    } catch (error) {
-      // إذا لم يكن للمستخدم دور محدد، توجيهه إلى لوحة المستخدم العادي
-      navigate('/user');
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || !password) {
-      toast.error("يرجى إدخال البريد الإلكتروني وكلمة المرور");
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const { error } = await signIn(email, password);
-      if (error) {
-        toast.error("خطأ في تسجيل الدخول. يرجى التحقق من البيانات");
-      } else {
-        toast.success("تم تسجيل الدخول بنجاح");
-        // التوجيه سيتم تلقائياً من خلال useEffect
-      }
-    } catch (error) {
-      toast.error("حدث خطأ غير متوقع");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const testimonials = [
+    {
+      name: "أحمد محمد",
+      company: "شركة النجاح التجارية",
+      text: "خدمة ممتازة وتصميمات إبداعية فاقت توقعاتي. فريق محترف ومتعاون.",
+      rating: 5,
+    },
+    {
+      name: "فاطمة علي",
+      company: "مؤسسة الأمل الخيرية",
+      text: "تعامل راقي وجودة عالية في التنفيذ. أنصح بالتعامل معهم بكل ثقة.",
+      rating: 5,
+    },
+    {
+      name: "محمد عبدالله",
+      company: "متجر الإلكترونيات الحديثة",
+      text: "ساعدونا في بناء هويتنا البصرية بشكل احترافي ومميز.",
+      rating: 5,
+    },
+  ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20" dir="rtl">
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="w-full max-w-md space-y-8">
-          {/* Logo and Branding */}
-          <div className="text-center space-y-6">
-            <div className="flex justify-center">
-              <img 
-                src={logo} 
-                alt="شعار وكالة الإبداع" 
-                className="w-24 h-24 object-contain drop-shadow-lg"
-              />
-            </div>
-            <div className="space-y-2">
-              <h1 className="text-4xl font-amiri font-bold text-foreground bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                وكالة الإبداع
-              </h1>
-              <p className="text-lg font-cairo font-medium text-muted-foreground">
-                للدعاية والإعلان
-              </p>
-              <p className="text-sm text-muted-foreground">
-                نظام إدارة شامل ومتطور
-              </p>
-            </div>
-          </div>
-
-          {/* Login Card */}
-          <Card className="border-0 shadow-2xl bg-card/80 backdrop-blur">
-            <CardHeader className="text-center pb-4">
-              <CardTitle className="text-xl font-cairo font-semibold text-foreground flex items-center justify-center gap-2">
-                <LogIn className="w-5 h-5" />
-                تسجيل الدخول
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="font-cairo font-medium">البريد الإلكتروني</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="example@domain.com"
-                    className="font-cairo"
-                    required
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="password" className="font-cairo font-medium">كلمة المرور</Label>
-                  <div className="relative">
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••"
-                      className="font-cairo pl-10"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-
-                <Button 
-                  type="submit" 
-                  className="w-full font-cairo font-semibold text-base"
-                  disabled={isLoading}
-                >
-                  {isLoading ? "جاري تسجيل الدخول..." : "دخول"}
-                </Button>
-              </form>
-
-              {/* Agency Website Link */}
-              <div className="pt-4 border-t">
-                <Button 
-                  variant="outline" 
-                  className="w-full font-cairo font-medium"
-                  asChild
-                >
-                  <a 
-                    href="https://creativity-agency.com" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2"
-                  >
-                    <Globe className="w-4 h-4" />
-                    زيارة موقع الوكالة
-                  </a>
-                </Button>
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="bg-white shadow-sm border-b sticky top-0 z-50">
+        <div className="container mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-10 h-10 bg-gradient-to-r from-primary to-accent rounded-xl flex items-center justify-center">
+                <Palette className="h-6 w-6 text-white" />
               </div>
-            </CardContent>
-          </Card>
+              <div>
+                <h1 className="text-xl font-bold text-foreground">وكالة الإبداع</h1>
+                <p className="text-sm text-muted-foreground">للدعاية والإعلان</p>
+              </div>
+            </div>
+            
+            <nav className="hidden md:flex items-center gap-6">
+              <a href="#services" className="text-muted-foreground hover:text-primary transition-colors">
+                خدماتنا
+              </a>
+              <a href="#about" className="text-muted-foreground hover:text-primary transition-colors">
+                من نحن
+              </a>
+              <a href="#testimonials" className="text-muted-foreground hover:text-primary transition-colors">
+                آراء العملاء
+              </a>
+              <a href="#contact" className="text-muted-foreground hover:text-primary transition-colors">
+                تواصل معنا
+              </a>
+              <Link to="/auth">
+                <Button>تسجيل الدخول</Button>
+              </Link>
+            </nav>
+          </div>
+        </div>
+      </header>
 
-          {/* Footer */}
-          <div className="text-center space-y-2">
-            <p className="text-sm text-muted-foreground font-cairo">
-              © 2024 وكالة الإبداع للدعاية والإعلان
+      {/* Hero Section */}
+      <section className="py-20 bg-gradient-to-br from-primary/5 via-accent/5 to-background">
+        <div className="container mx-auto px-6 text-center">
+          <Badge variant="outline" className="mb-4 bg-white/50">
+            وكالة متخصصة في الدعاية والإعلان
+          </Badge>
+          <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            نبني علامتك التجارية
+            <br />
+            بإبداع وتميز
+          </h1>
+          <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
+            نقدم حلول إبداعية متكاملة في التصميم والتسويق الرقمي لنساعدك في الوصول لأهدافك التجارية
+          </p>
+          <div className="flex items-center justify-center gap-4 flex-wrap">
+            <Button variant="hero" size="lg" className="gap-2">
+              احجز استشارة مجانية
+              <ArrowRight className="h-5 w-5" />
+            </Button>
+            <Button variant="outline" size="lg">
+              تصفح أعمالنا
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* Stats Section */}
+      <section className="py-16 bg-white">
+        <div className="container mx-auto px-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            {stats.map((stat, index) => (
+              <div key={index} className="text-center">
+                <h3 className="text-3xl md:text-4xl font-bold text-primary mb-2">
+                  {stat.number}
+                </h3>
+                <p className="text-muted-foreground">{stat.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Services Section */}
+      <section id="services" className="py-20">
+        <div className="container mx-auto px-6">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">خدماتنا المتميزة</h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              نقدم مجموعة شاملة من الخدمات الإبداعية والتسويقية لتحقيق أهدافك التجارية
             </p>
-            <p className="text-xs text-muted-foreground">
-              جميع الحقوق محفوظة
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {services.map((service, index) => (
+              <Card key={index} className="hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+                <CardContent className="p-8">
+                  <div className="flex items-start gap-4">
+                    <div className="bg-gradient-to-r from-primary to-accent p-3 rounded-xl">
+                      <service.icon className="h-8 w-8 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-xl font-bold mb-3">{service.title}</h3>
+                      <p className="text-muted-foreground mb-4">{service.description}</p>
+                      <ul className="space-y-2">
+                        {service.features.map((feature, i) => (
+                          <li key={i} className="flex items-center gap-2 text-sm">
+                            <CheckCircle className="h-4 w-4 text-success" />
+                            {feature}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials Section */}
+      <section id="testimonials" className="py-20 bg-muted/20">
+        <div className="container mx-auto px-6">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">آراء عملائنا</h2>
+            <p className="text-xl text-muted-foreground">
+              ثقة عملائنا هي أغلى ما نملك
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {testimonials.map((testimonial, index) => (
+              <Card key={index} className="hover:shadow-lg transition-shadow">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-1 mb-4">
+                    {[...Array(testimonial.rating)].map((_, i) => (
+                      <Star key={i} className="h-5 w-5 fill-accent text-accent" />
+                    ))}
+                  </div>
+                  <p className="text-muted-foreground mb-4 italic">
+                    "{testimonial.text}"
+                  </p>
+                  <div>
+                    <h4 className="font-semibold">{testimonial.name}</h4>
+                    <p className="text-sm text-muted-foreground">{testimonial.company}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Contact Section */}
+      <section id="contact" className="py-20 bg-white">
+        <div className="container mx-auto px-6">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">تواصل معنا</h2>
+            <p className="text-xl text-muted-foreground">
+              نحن هنا لمساعدتك في تحقيق أهدافك
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+            <Card className="text-center hover:shadow-lg transition-shadow">
+              <CardContent className="p-6">
+                <div className="bg-primary/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Phone className="h-8 w-8 text-primary" />
+                </div>
+                <h3 className="font-semibold mb-2">اتصل بنا</h3>
+                <p className="text-muted-foreground">+966 50 123 4567</p>
+              </CardContent>
+            </Card>
+            
+            <Card className="text-center hover:shadow-lg transition-shadow">
+              <CardContent className="p-6">
+                <div className="bg-primary/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Mail className="h-8 w-8 text-primary" />
+                </div>
+                <h3 className="font-semibold mb-2">راسلنا</h3>
+                <p className="text-muted-foreground">info@creative-agency.com</p>
+              </CardContent>
+            </Card>
+            
+            <Card className="text-center hover:shadow-lg transition-shadow">
+              <CardContent className="p-6">
+                <div className="bg-primary/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <MapPin className="h-8 w-8 text-primary" />
+                </div>
+                <h3 className="font-semibold mb-2">موقعنا</h3>
+                <p className="text-muted-foreground">الرياض، المملكة العربية السعودية</p>
+              </CardContent>
+            </Card>
+          </div>
+          
+          <div className="text-center mt-12">
+            <Button variant="hero" size="lg" className="gap-2">
+              احجز موعدك الآن
+              <ArrowRight className="h-5 w-5" />
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="py-12 bg-foreground text-white">
+        <div className="container mx-auto px-6">
+          <div className="text-center">
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <div className="w-10 h-10 bg-gradient-to-r from-primary to-accent rounded-xl flex items-center justify-center">
+                <Palette className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold">وكالة الإبداع</h3>
+                <p className="text-sm text-white/70">للدعاية والإعلان</p>
+              </div>
+            </div>
+            <p className="text-white/70 mb-6">
+              نبني الأحلام بالإبداع والتميز
+            </p>
+            <p className="text-white/50">
+              © 2024 وكالة الإبداع للدعاية والإعلان. جميع الحقوق محفوظة.
             </p>
           </div>
         </div>
-      </div>
+      </footer>
     </div>
   );
 };

@@ -43,9 +43,8 @@ const Evaluations = () => {
   const fetchEvaluations = async () => {
     try {
       setLoading(true);
-      console.log('Fetching evaluations...');
       
-      // جلب التقييمات (جميع التقييمات بما في ذلك غير المرسلة)
+      // جلب التقييمات
       const { data: evaluationsData, error: evaluationsError } = await supabase
         .from('evaluations')
         .select(`
@@ -53,53 +52,30 @@ const Evaluations = () => {
           orders (order_number, service_name),
           customers (name, phone)
         `)
-        .order('created_at', { ascending: false });
-
-      console.log('Evaluations data:', evaluationsData);
-      console.log('Evaluations error:', evaluationsError);
+        .order('submitted_at', { ascending: false });
 
       if (evaluationsError) {
         console.error('Error fetching evaluations:', evaluationsError);
         toast({
           title: "خطأ",
-          description: "حدث خطأ في جلب التقييمات: " + evaluationsError.message,
+          description: "حدث خطأ في جلب التقييمات",
           variant: "destructive",
         });
         return;
       }
 
-      // حساب الإحصائيات من البيانات المتوفرة
-      const submittedEvaluations = (evaluationsData || []).filter(e => e.submitted_at !== null);
-      const totalEvaluations = submittedEvaluations.length;
-      
-      let calculatedStats = null;
-      if (totalEvaluations > 0) {
-        const averageRating = submittedEvaluations.reduce((sum, e) => sum + e.rating, 0) / totalEvaluations;
-        const fiveStarCount = submittedEvaluations.filter(e => e.rating === 5).length;
-        const fourStarCount = submittedEvaluations.filter(e => e.rating === 4).length;
-        const threeStarCount = submittedEvaluations.filter(e => e.rating === 3).length;
-        const twoStarCount = submittedEvaluations.filter(e => e.rating === 2).length;
-        const oneStarCount = submittedEvaluations.filter(e => e.rating === 1).length;
-        const recommendationCount = submittedEvaluations.filter(e => e.would_recommend === true).length;
-        
-        calculatedStats = {
-          total_evaluations: totalEvaluations,
-          average_rating: Math.round(averageRating * 100) / 100,
-          five_star_count: fiveStarCount,
-          four_star_count: fourStarCount,
-          three_star_count: threeStarCount,
-          two_star_count: twoStarCount,
-          one_star_count: oneStarCount,
-          recommendation_percentage: Math.round((recommendationCount / totalEvaluations) * 100),
-          service_quality_avg: submittedEvaluations.filter(e => e.service_quality_rating).reduce((sum, e) => sum + e.service_quality_rating, 0) / submittedEvaluations.filter(e => e.service_quality_rating).length || 0,
-          delivery_time_avg: submittedEvaluations.filter(e => e.delivery_time_rating).reduce((sum, e) => sum + e.delivery_time_rating, 0) / submittedEvaluations.filter(e => e.delivery_time_rating).length || 0,
-          communication_avg: submittedEvaluations.filter(e => e.communication_rating).reduce((sum, e) => sum + e.communication_rating, 0) / submittedEvaluations.filter(e => e.communication_rating).length || 0,
-          price_value_avg: submittedEvaluations.filter(e => e.price_value_rating).reduce((sum, e) => sum + e.price_value_rating, 0) / submittedEvaluations.filter(e => e.price_value_rating).length || 0
-        };
+      // جلب الإحصائيات
+      const { data: statsData, error: statsError } = await supabase
+        .from('evaluation_stats')
+        .select('*')
+        .single();
+
+      if (statsError) {
+        console.error('Error fetching stats:', statsError);
       }
 
       setEvaluations(evaluationsData || []);
-      setStats(calculatedStats);
+      setStats(statsData);
     } catch (error) {
       console.error('Error:', error);
     } finally {
@@ -314,12 +290,11 @@ const Evaluations = () => {
         <CardContent>
           <Table>
             <TableHeader>
-               <TableRow>
+              <TableRow>
                 <TableHead>العميل</TableHead>
                 <TableHead>رقم الطلب</TableHead>
                 <TableHead>الخدمة</TableHead>
                 <TableHead>التقييم العام</TableHead>
-                <TableHead>الحالة</TableHead>
                 <TableHead>التوصية</TableHead>
                 <TableHead>تاريخ التقييم</TableHead>
                 <TableHead>الإجراءات</TableHead>
@@ -349,11 +324,6 @@ const Evaluations = () => {
                         {evaluation.rating}/5
                       </Badge>
                     </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={evaluation.submitted_at ? "default" : "secondary"}>
-                      {evaluation.submitted_at ? "مرسل" : "في الانتظار"}
-                    </Badge>
                   </TableCell>
                   <TableCell>
                     <Badge variant={evaluation.would_recommend ? "default" : "secondary"}>
