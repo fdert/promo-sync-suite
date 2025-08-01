@@ -164,7 +164,7 @@ const Accounts = () => {
     }
   };
 
-  // جلب فواتير العملاء المدينين
+  // جلب فواتير العملاء المدينين - فقط الفواتير غير المدفوعة بالكامل
   const fetchDebtorInvoices = async () => {
     try {
       console.log('Fetching debtor invoices with search filters:', debtorSearch);
@@ -178,21 +178,12 @@ const Accounts = () => {
         .order('issue_date', { ascending: false });
 
       // تطبيق فلاتر البحث
-      if (debtorSearch.customerName) {
-        // البحث في اسم العميل باستخدام فلترة JavaScript لأن Supabase تحتاج معالجة خاصة للجوين
-        // سنقوم بالفلترة بعد جلب البيانات
-      }
-
       if (debtorSearch.dateFrom) {
         query = query.gte('issue_date', debtorSearch.dateFrom);
       }
 
       if (debtorSearch.dateTo) {
         query = query.lte('issue_date', debtorSearch.dateTo);
-      }
-
-      if (debtorSearch.status !== 'all') {
-        query = query.eq('status', debtorSearch.status);
       }
 
       const { data, error } = await query;
@@ -205,10 +196,11 @@ const Accounts = () => {
         return;
       }
 
-      // فلترة الفواتير التي لديها مبالغ متبقية (غير مسددة بالكامل)
+      // فلترة الفواتير التي لديها مبالغ متبقية فعلاً (استخدام رقم صغير لتجنب مشاكل الفاصلة العشرية)
       let debtorInvoicesFiltered = (data || []).filter(invoice => {
         const remainingAmount = invoice.total_amount - (invoice.paid_amount || 0);
-        return remainingAmount > 0;
+        console.log(`Invoice ${invoice.invoice_number}: total=${invoice.total_amount}, paid=${invoice.paid_amount || 0}, remaining=${remainingAmount}`);
+        return remainingAmount > 0.01;
       });
 
       // تطبيق فلتر البحث في اسم العميل
@@ -225,11 +217,11 @@ const Accounts = () => {
           const paidAmount = invoice.paid_amount || 0;
           
           if (debtorSearch.status === 'partial') {
-            return paidAmount > 0 && remainingAmount > 0; // مدفوع جزئياً
+            return paidAmount > 0 && remainingAmount > 0.01; // مدفوع جزئياً
           } else if (debtorSearch.status === 'unpaid') {
-            return paidAmount === 0; // غير مدفوع نهائياً
+            return paidAmount <= 0.01; // غير مدفوع نهائياً
           }
-          return true;
+          return remainingAmount > 0.01;
         });
       }
 
@@ -723,53 +715,76 @@ const Accounts = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {(accountList as any[]).map((account) => (
-                    <div key={account.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                          <BookOpen className="h-5 w-5 text-primary" />
+                  {(accountList as any[]).map((account) => {
+                    // تحديد كيفية عرض الرصيد حسب نوع الحساب
+                    const isRevenueAccount = account.account_type === 'إيرادات';
+                    const isExpenseAccount = account.account_type === 'مصروفات';
+                    
+                    // للحسابات الإيرادية: عرض الرقم موجب مع وصف
+                    const displayBalance = isRevenueAccount ? Math.abs(account.balance) : account.balance;
+                    const balanceLabel = isRevenueAccount 
+                      ? 'الإيرادات المحققة' 
+                      : isExpenseAccount 
+                        ? 'إجمالي المصروفات'
+                        : 'الرصيد الحالي';
+                    
+                    // تحديد لون الرصيد
+                    const balanceColor = isRevenueAccount 
+                      ? 'text-success' 
+                      : isExpenseAccount
+                        ? 'text-destructive'
+                        : account.balance >= 0 
+                          ? 'text-success' 
+                          : 'text-destructive';
+
+                    return (
+                      <div key={account.id} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                            <BookOpen className="h-5 w-5 text-primary" />
+                          </div>
+                          <div>
+                            <h3 className="font-medium">{account.account_name}</h3>
+                            <p className="text-sm text-muted-foreground">{account.description}</p>
+                          </div>
                         </div>
-                        <div>
-                          <h3 className="font-medium">{account.account_name}</h3>
-                          <p className="text-sm text-muted-foreground">{account.description}</p>
+                        <div className="flex items-center gap-3">
+                          <div className="text-right">
+                            <p className={`text-lg font-bold ${balanceColor}`}>
+                              {displayBalance?.toLocaleString()} ر.س
+                            </p>
+                            <p className="text-xs text-muted-foreground">{balanceLabel}</p>
+                          </div>
+                          {userRole === 'admin' && (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    هل أنت متأكد من حذف الحساب "{account.account_name}"؟
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                                  <AlertDialogAction 
+                                    onClick={() => handleDeleteAccount(account.id)}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  >
+                                    حذف
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <div className="text-right">
-                          <p className={`text-lg font-bold ${account.balance >= 0 ? 'text-success' : 'text-destructive'}`}>
-                            {account.balance?.toLocaleString()} ر.س
-                          </p>
-                          <p className="text-xs text-muted-foreground">الرصيد الحالي</p>
-                        </div>
-                        {userRole === 'admin' && (
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  هل أنت متأكد من حذف الحساب "{account.account_name}"؟
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>إلغاء</AlertDialogCancel>
-                                <AlertDialogAction 
-                                  onClick={() => handleDeleteAccount(account.id)}
-                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                >
-                                  حذف
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
@@ -991,8 +1006,8 @@ const Accounts = () => {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="نقدي">نقدي</SelectItem>
-                        <SelectItem value="بنكي">تحويل بنكي</SelectItem>
-                        <SelectItem value="بطاقة ائتمان">بطاقة ائتمان</SelectItem>
+                        <SelectItem value="تحويل بنكي">تحويل بنكي</SelectItem>
+                        <SelectItem value="الشبكة">الشبكة</SelectItem>
                         <SelectItem value="شيك">شيك</SelectItem>
                       </SelectContent>
                     </Select>

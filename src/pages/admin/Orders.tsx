@@ -715,71 +715,7 @@ const Orders = () => {
         return;
       }
 
-      // إرسال إشعار واتساب عندما تصبح الحالة "جاهز للتسليم"
-      if (newStatus === "جاهز للتسليم") {
-        try {
-          // جلب بيانات الطلب والعميل
-          const { data: orderData, error: orderError } = await supabase
-            .from('orders')
-            .select(`
-              *,
-              customers (id, name, phone, whatsapp_number),
-              order_items (*)
-            `)
-            .eq('id', orderId)
-            .single();
-
-          if (orderError) {
-            console.error('خطأ في جلب بيانات الطلب:', orderError);
-          } else if (orderData?.customers?.whatsapp_number) {
-            // إنشاء token للتقييم
-            const evaluationToken = crypto.randomUUID();
-            
-            // إضافة سجل تقييم في قاعدة البيانات
-            const { error: evalError } = await supabase
-              .from('evaluations')
-              .insert({
-                order_id: orderId,
-                customer_id: orderData.customer_id,
-                evaluation_token: evaluationToken,
-                rating: 5, // قيمة افتراضية مؤقتة
-                submitted_at: null // لم يتم الإرسال بعد
-              });
-
-            if (!evalError) {
-              // إرسال إشعار جاهز للتسليم
-              const notificationData = {
-                type: 'order_ready_for_delivery',
-                order_id: orderId,
-                data: {
-                  customer_name: orderData.customers.name,
-                  customer_phone: orderData.customers.whatsapp_number,
-                  order_number: orderData.order_number,
-                  service_name: orderData.service_name,
-                  description: orderData.description || 'غير محدد',
-                  amount: orderData.amount,
-                  paid_amount: orderData.paid_amount || 0,
-                  payment_type: orderData.payment_type || 'دفع آجل',
-                  due_date: orderData.due_date,
-                  evaluation_token: evaluationToken
-                }
-              };
-
-              const result = await supabase.functions.invoke('send-order-notifications', {
-                body: notificationData
-              });
-
-              if (result.error) {
-                console.error('خطأ في إرسال إشعار جاهز للتسليم:', result.error);
-              } else {
-                console.log('تم إرسال إشعار جاهز للتسليم بنجاح');
-              }
-            }
-          }
-        } catch (notificationError) {
-          console.error('خطأ في عملية إرسال الإشعار:', notificationError);
-        }
-      }
+      // سيتم إرسال إشعار واتس آب لجميع حالات الطلب في الأسفل
 
       // تحديث الحالة محلياً دون إعادة تحميل البيانات
       setOrders(prevOrders => 
@@ -798,26 +734,49 @@ const Orders = () => {
       // إرسال إشعار واتساب عند تغيير الحالة
       try {
         // الحصول على بيانات الطلب والعميل
-        const currentOrder = orders.find(o => o.id === orderId);
-        console.log('Current order found:', currentOrder);
+        const { data: orderData, error: orderError } = await supabase
+          .from('orders')
+          .select(`
+            *,
+            customers (id, name, phone, whatsapp_number),
+            order_items (*)
+          `)
+          .eq('id', orderId)
+          .single();
         
-        if (currentOrder && currentOrder.customers) {
-          console.log('Customer data:', currentOrder.customers);
+        if (orderError) {
+          console.error('خطأ في جلب بيانات الطلب:', orderError);
+          return;
+        }
+
+        console.log('Order data loaded:', orderData);
+        
+        if (orderData && orderData.customers?.whatsapp_number) {
+          console.log('Customer data:', orderData.customers);
           
-          // تحديد نوع الإشعار بناءً على الحالة الجديدة (تجاهل "جاهز للتسليم" لأنه يتم إرساله أعلاه)
+          // تحديد نوع الإشعار بناءً على الحالة الجديدة
           let notificationType;
           switch (newStatus) {
+            case 'مؤكد':
+              notificationType = 'order_confirmed';
+              break;
             case 'قيد التنفيذ':
               notificationType = 'order_in_progress';
+              break;
+            case 'قيد المراجعة':
+              notificationType = 'order_under_review';
+              break;
+            case 'جاهز للتسليم':
+              notificationType = 'order_ready_for_delivery';
               break;
             case 'مكتمل':
               notificationType = 'order_completed';
               break;
-            case 'جديد':
-              notificationType = 'order_confirmed';
+            case 'ملغي':
+              notificationType = 'order_cancelled';
               break;
-            case 'جاهز للتسليم':
-              notificationType = null; // تم إرساله بالفعل أعلاه
+            case 'جديد':
+              notificationType = 'order_created';
               break;
             default:
               notificationType = null;
@@ -826,36 +785,42 @@ const Orders = () => {
           console.log('Notification type:', notificationType);
 
           if (notificationType) {
-            console.log('Sending notification with data:', {
+            const notificationData = {
               type: notificationType,
+              order_id: orderId,
               data: {
-                order_number: currentOrder.order_number,
-                customer_name: currentOrder.customers.name,
-                customer_phone: currentOrder.customers?.whatsapp_number || currentOrder.customers?.phone,
-                amount: currentOrder.amount,
-                progress: currentOrder.progress || 0
+                order_number: orderData.order_number,
+                customer_name: orderData.customers.name,
+                customer_phone: orderData.customers.whatsapp_number,
+                amount: orderData.amount,
+                progress: orderData.progress || 0,
+                service_name: orderData.service_name,
+                description: orderData.description || '',
+                payment_type: orderData.payment_type || 'دفع آجل',
+                paid_amount: orderData.paid_amount || 0,
+                status: newStatus,
+                priority: orderData.priority || 'متوسطة',
+                due_date: orderData.due_date,
+                start_date: orderData.start_date
               }
-            });
+            };
+            
+            console.log('Sending notification with data:', notificationData);
             
             const result = await supabase.functions.invoke('send-order-notifications', {
-              body: {
-                type: notificationType,
-                data: {
-                  order_number: currentOrder.order_number,
-                  customer_name: currentOrder.customers.name,
-                  customer_phone: currentOrder.customers?.whatsapp_number || currentOrder.customers?.phone,
-                  amount: currentOrder.amount,
-                  progress: currentOrder.progress || 0
-                }
-              }
+              body: notificationData
             });
             
             console.log('Notification result:', result);
-          } else {
-            console.log('No notification type for status:', newStatus);
+
+            if (result.error) {
+              console.error('خطأ في إرسال الإشعار:', result.error);
+            } else {
+              console.log('تم إرسال إشعار الواتس آب بنجاح');
+            }
           }
         } else {
-          console.log('No order or customer data found');
+          console.log('لا يوجد رقم واتس آب للعميل');
         }
       } catch (notificationError) {
         console.error('Error sending notification:', notificationError);
@@ -1137,9 +1102,9 @@ const Orders = () => {
                           <SelectValue placeholder="اختر نوع الدفع" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="كاش">كاش</SelectItem>
+                          <SelectItem value="نقدي">نقدي</SelectItem>
                           <SelectItem value="تحويل بنكي">تحويل بنكي</SelectItem>
-                          <SelectItem value="شبكة">شبكة</SelectItem>
+                          <SelectItem value="الشبكة">الشبكة</SelectItem>
                           <SelectItem value="دفع آجل">دفع آجل</SelectItem>
                         </SelectContent>
                       </Select>
@@ -1312,9 +1277,9 @@ const Orders = () => {
                            <SelectValue placeholder="اختر نوع الدفع" />
                          </SelectTrigger>
                          <SelectContent>
-                           <SelectItem value="كاش">كاش</SelectItem>
+                           <SelectItem value="نقدي">نقدي</SelectItem>
                            <SelectItem value="تحويل بنكي">تحويل بنكي</SelectItem>
-                           <SelectItem value="شبكة">شبكة</SelectItem>
+                           <SelectItem value="الشبكة">الشبكة</SelectItem>
                            <SelectItem value="دفع آجل">دفع آجل</SelectItem>
                          </SelectContent>
                        </Select>
@@ -1741,9 +1706,9 @@ const PaymentManagement = ({ order, onPaymentAdded }) => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="كاش">كاش</SelectItem>
+                  <SelectItem value="نقدي">نقدي</SelectItem>
                   <SelectItem value="تحويل بنكي">تحويل بنكي</SelectItem>
-                  <SelectItem value="شبكة">شبكة</SelectItem>
+                  <SelectItem value="الشبكة">الشبكة</SelectItem>
                   <SelectItem value="دفع آجل">دفع آجل</SelectItem>
                 </SelectContent>
               </Select>

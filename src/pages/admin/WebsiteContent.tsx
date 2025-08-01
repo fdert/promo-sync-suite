@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,7 +21,9 @@ import {
   Mail,
   MapPin,
   Star,
+  Palette,
 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const WebsiteContent = () => {
   const { toast } = useToast();
@@ -31,6 +33,7 @@ const WebsiteContent = () => {
     name: "وكالة الإبداع",
     subtitle: "للدعاية والإعلان",
     tagline: "نبني الأحلام بالإبداع والتميز",
+    logo: "", // رابط الشعار
   });
 
   const [heroSection, setHeroSection] = useState({
@@ -107,12 +110,135 @@ const WebsiteContent = () => {
     contactDescription: "نحن هنا لمساعدتك في تحقيق أهدافك",
   });
 
-  const handleSave = () => {
-    toast({
-      title: "تم الحفظ بنجاح",
-      description: "تم حفظ تغييرات محتوى الموقع",
-    });
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string>("");
+
+  const handleLogoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setLogoFile(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        setLogoPreview(result);
+        setCompanyInfo({ ...companyInfo, logo: result });
+      };
+      reader.readAsDataURL(file);
+    }
   };
+
+  const handleSave = async () => {
+    try {
+      let logoUrl = companyInfo.logo;
+
+      // رفع الشعار إذا تم اختيار ملف جديد
+      if (logoFile) {
+        const fileExt = logoFile.name.split('.').pop();
+        const fileName = `logo-${Date.now()}.${fileExt}`;
+        
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('logos')
+          .upload(fileName, logoFile);
+
+        if (uploadError) {
+          console.error('Error uploading logo:', uploadError);
+          toast({
+            title: "خطأ في رفع الشعار",
+            description: "حدث خطأ أثناء رفع الشعار: " + uploadError.message,
+            variant: "destructive",
+          });
+          return;
+        }
+
+        // الحصول على رابط الشعار
+        const { data: { publicUrl } } = supabase.storage
+          .from('logos')
+          .getPublicUrl(fileName);
+
+        logoUrl = publicUrl;
+        setCompanyInfo({ ...companyInfo, logo: logoUrl });
+      }
+
+      const websiteData = {
+        companyInfo: { ...companyInfo, logo: logoUrl },
+        heroSection,
+        stats,
+        services,
+        testimonials,
+        contactInfo,
+        sections
+      };
+
+      // حفظ البيانات في قاعدة البيانات
+      const { error } = await supabase
+        .from('website_settings')
+        .upsert({
+          setting_key: 'website_content',
+          setting_value: websiteData,
+          created_by: (await supabase.auth.getUser()).data.user?.id
+        });
+
+      if (error) {
+        console.error('Error saving website settings:', error);
+        toast({
+          title: "خطأ في الحفظ",
+          description: "حدث خطأ أثناء حفظ الإعدادات: " + error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "تم الحفظ بنجاح",
+        description: "تم حفظ تغييرات محتوى الموقع في قاعدة البيانات",
+      });
+    } catch (error) {
+      console.error('Error:', error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ غير متوقع",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // جلب البيانات المحفوظة عند تحميل الصفحة
+  const loadSavedData = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('website_settings')
+        .select('setting_value')
+        .eq('setting_key', 'website_content')
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error loading website settings:', error);
+        return;
+      }
+
+      if (data?.setting_value) {
+        const savedData = data.setting_value as any;
+        if (savedData.companyInfo) {
+          setCompanyInfo(savedData.companyInfo);
+          if (savedData.companyInfo.logo) {
+            setLogoPreview(savedData.companyInfo.logo);
+          }
+        }
+        if (savedData.heroSection) setHeroSection(savedData.heroSection);
+        if (savedData.stats) setStats(savedData.stats);
+        if (savedData.services) setServices(savedData.services);
+        if (savedData.testimonials) setTestimonials(savedData.testimonials);
+        if (savedData.contactInfo) setContactInfo(savedData.contactInfo);
+        if (savedData.sections) setSections(savedData.sections);
+      }
+    } catch (error) {
+      console.error('Error loading data:', error);
+    }
+  };
+
+  useEffect(() => {
+    loadSavedData();
+  }, []);
 
   const addService = () => {
     setServices([
@@ -163,8 +289,9 @@ const WebsiteContent = () => {
       </div>
 
       <Tabs defaultValue="company" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="company">معلومات الشركة</TabsTrigger>
+          <TabsTrigger value="logo">الشعار</TabsTrigger>
           <TabsTrigger value="hero">القسم الرئيسي</TabsTrigger>
           <TabsTrigger value="stats">الإحصائيات</TabsTrigger>
           <TabsTrigger value="services">الخدمات</TabsTrigger>
@@ -214,6 +341,82 @@ const WebsiteContent = () => {
                   }
                 />
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* إدارة الشعار */}
+        <TabsContent value="logo">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Palette className="h-5 w-5" />
+                إدارة شعار الشركة
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* عرض الشعار الحالي */}
+              {logoPreview && (
+                <div className="space-y-2">
+                  <Label>الشعار الحالي</Label>
+                  <div className="flex items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg">
+                    <img 
+                      src={logoPreview} 
+                      alt="شعار الشركة" 
+                      className="max-h-32 max-w-32 object-contain"
+                    />
+                  </div>
+                </div>
+              )}
+              
+              {/* رفع شعار جديد */}
+              <div className="space-y-2">
+                <Label htmlFor="logo-upload">تحديث الشعار</Label>
+                <div className="flex items-center gap-4">
+                  <input
+                    id="logo-upload"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleLogoChange}
+                    className="hidden"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => document.getElementById('logo-upload')?.click()}
+                  >
+                    اختيار ملف
+                  </Button>
+                  {logoFile && (
+                    <span className="text-sm text-muted-foreground">
+                      {logoFile.name}
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  يُفضل استخدام صور بصيغة PNG أو JPG بحجم لا يزيد عن 2MB
+                </p>
+              </div>
+
+              {/* معاينة مباشرة */}
+              {logoPreview && (
+                <div className="space-y-2">
+                  <Label>معاينة في الموقع</Label>
+                  <div className="p-4 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <img 
+                        src={logoPreview} 
+                        alt="معاينة الشعار" 
+                        className="h-10 w-10 object-contain"
+                      />
+                      <div>
+                        <h3 className="font-semibold text-lg">{companyInfo.name}</h3>
+                        <p className="text-sm text-gray-600">{companyInfo.subtitle}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

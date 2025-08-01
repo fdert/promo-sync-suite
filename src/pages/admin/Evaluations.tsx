@@ -68,18 +68,38 @@ const Evaluations = () => {
         return;
       }
 
-      // جلب الإحصائيات
-      const { data: statsData, error: statsError } = await supabase
-        .from('evaluation_stats')
-        .select('*')
-        .maybeSingle();
-
-      if (statsError) {
-        console.error('Error fetching stats:', statsError);
+      // حساب الإحصائيات من البيانات المتوفرة
+      const submittedEvaluations = (evaluationsData || []).filter(e => e.submitted_at !== null);
+      const totalEvaluations = submittedEvaluations.length;
+      
+      let calculatedStats = null;
+      if (totalEvaluations > 0) {
+        const averageRating = submittedEvaluations.reduce((sum, e) => sum + e.rating, 0) / totalEvaluations;
+        const fiveStarCount = submittedEvaluations.filter(e => e.rating === 5).length;
+        const fourStarCount = submittedEvaluations.filter(e => e.rating === 4).length;
+        const threeStarCount = submittedEvaluations.filter(e => e.rating === 3).length;
+        const twoStarCount = submittedEvaluations.filter(e => e.rating === 2).length;
+        const oneStarCount = submittedEvaluations.filter(e => e.rating === 1).length;
+        const recommendationCount = submittedEvaluations.filter(e => e.would_recommend === true).length;
+        
+        calculatedStats = {
+          total_evaluations: totalEvaluations,
+          average_rating: Math.round(averageRating * 100) / 100,
+          five_star_count: fiveStarCount,
+          four_star_count: fourStarCount,
+          three_star_count: threeStarCount,
+          two_star_count: twoStarCount,
+          one_star_count: oneStarCount,
+          recommendation_percentage: Math.round((recommendationCount / totalEvaluations) * 100),
+          service_quality_avg: submittedEvaluations.filter(e => e.service_quality_rating).reduce((sum, e) => sum + e.service_quality_rating, 0) / submittedEvaluations.filter(e => e.service_quality_rating).length || 0,
+          delivery_time_avg: submittedEvaluations.filter(e => e.delivery_time_rating).reduce((sum, e) => sum + e.delivery_time_rating, 0) / submittedEvaluations.filter(e => e.delivery_time_rating).length || 0,
+          communication_avg: submittedEvaluations.filter(e => e.communication_rating).reduce((sum, e) => sum + e.communication_rating, 0) / submittedEvaluations.filter(e => e.communication_rating).length || 0,
+          price_value_avg: submittedEvaluations.filter(e => e.price_value_rating).reduce((sum, e) => sum + e.price_value_rating, 0) / submittedEvaluations.filter(e => e.price_value_rating).length || 0
+        };
       }
 
       setEvaluations(evaluationsData || []);
-      setStats(statsData);
+      setStats(calculatedStats);
     } catch (error) {
       console.error('Error:', error);
     } finally {

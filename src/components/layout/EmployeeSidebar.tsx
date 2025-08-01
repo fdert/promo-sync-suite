@@ -5,14 +5,9 @@ import {
   Users,
   ClipboardList,
   FileText,
-  DollarSign,
-  BarChart3,
-  Settings,
   MessageSquare,
-  Palette,
   ChevronLeft,
-  Building2,
-  Cog,
+  Palette,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -20,104 +15,56 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from '@/integrations/supabase/types';
 
+type UserRole = Database['public']['Enums']['app_role'];
+
 interface SidebarProps {
   collapsed: boolean;
   onToggle: () => void;
 }
 
-type UserRole = Database['public']['Enums']['app_role'];
-
-const menuItems = [
+const employeeMenuItems = [
   {
     title: "الرئيسية",
     icon: Home,
-    href: "/admin",
-    allowedRoles: ['admin', 'manager', 'employee', 'accountant'] as UserRole[],
-  },
-  {
-    title: "المستخدمين",
-    icon: Users,
-    href: "/admin/users",
-    allowedRoles: ['admin', 'manager'] as UserRole[],
+    href: "/employee",
+    allowedRoles: ['employee'] as UserRole[],
   },
   {
     title: "العملاء",
     icon: Users,
-    href: "/admin/customers",
-    allowedRoles: ['admin', 'manager', 'employee'] as UserRole[],
+    href: "/employee/customers",
+    allowedRoles: ['employee'] as UserRole[],
   },
   {
     title: "الطلبات",
     icon: ClipboardList,
-    href: "/admin/orders",
-    allowedRoles: ['admin', 'manager', 'employee'] as UserRole[],
+    href: "/employee/orders",
+    allowedRoles: ['employee'] as UserRole[],
   },
   {
     title: "الفواتير",
     icon: FileText,
-    href: "/admin/invoices",
-    allowedRoles: ['admin', 'manager', 'employee'] as UserRole[],
-  },
-  {
-    title: "الحسابات",
-    icon: DollarSign,
-    href: "/admin/accounts",
-    allowedRoles: ['admin', 'manager', 'accountant'] as UserRole[],
-  },
-  {
-    title: "التقارير",
-    icon: BarChart3,
-    href: "/admin/reports",
-    allowedRoles: ['admin', 'manager', 'accountant'] as UserRole[],
+    href: "/employee/invoices",
+    allowedRoles: ['employee'] as UserRole[],
   },
   {
     title: "التقييمات",
     icon: MessageSquare,
-    href: "/admin/evaluations",
-    allowedRoles: ['admin', 'manager', 'employee'] as UserRole[],
-  },
-  {
-    title: "أنواع الخدمات",
-    icon: Cog,
-    href: "/admin/services",
-    allowedRoles: ['admin'] as UserRole[],
-  },
-  {
-    title: "قوالب الرسائل",
-    icon: MessageSquare,
-    href: "/admin/message-templates",
-    allowedRoles: ['admin', 'manager'] as UserRole[],
+    href: "/employee/evaluations",
+    allowedRoles: ['employee'] as UserRole[],
   },
   {
     title: "رسائل WhatsApp",
     icon: MessageSquare,
-    href: "/admin/whatsapp",
-    allowedRoles: ['admin', 'manager', 'employee'] as UserRole[],
-  },
-  {
-    title: "ويب هوك",
-    icon: Settings,
-    href: "/admin/webhooks",
-    allowedRoles: ['admin', 'manager'] as UserRole[],
-  },
-  {
-    title: "موقع الوكالة",
-    icon: Building2,
-    href: "/admin/website",
-    allowedRoles: ['admin'] as UserRole[],
-  },
-  {
-    title: "الإعدادات",
-    icon: Settings,
-    href: "/admin/settings",
-    allowedRoles: ['admin'] as UserRole[],
+    href: "/employee/whatsapp",
+    allowedRoles: ['employee'] as UserRole[],
   },
 ];
 
-const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
+const EmployeeSidebar = ({ collapsed, onToggle }: SidebarProps) => {
   const { user } = useAuth();
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
-  const [filteredMenuItems, setFilteredMenuItems] = useState(menuItems);
+  const [filteredMenuItems, setFilteredMenuItems] = useState(employeeMenuItems);
 
   useEffect(() => {
     const fetchUserRoles = async () => {
@@ -133,7 +80,7 @@ const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
         setUserRoles(roles);
 
         // فلترة عناصر القائمة حسب الأدوار
-        const filtered = menuItems.filter(item => {
+        const filtered = employeeMenuItems.filter(item => {
           return item.allowedRoles.some(role => roles.includes(role));
         });
         setFilteredMenuItems(filtered);
@@ -161,8 +108,8 @@ const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
                 <Palette className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h2 className="text-sm font-bold text-foreground">وكالة الإبداع</h2>
-                <p className="text-xs text-muted-foreground">للدعاية والإعلان</p>
+                <h2 className="text-sm font-bold text-foreground">لوحة الموظف</h2>
+                <p className="text-xs text-muted-foreground">وكالة الإبداع</p>
               </div>
             </div>
           )}
@@ -219,4 +166,4 @@ const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
   );
 };
 
-export default Sidebar;
+export default EmployeeSidebar;
