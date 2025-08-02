@@ -8,9 +8,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Printer, Upload, FileText, Clock, CheckCircle, XCircle } from "lucide-react";
+import { Printer, Upload, FileText, Clock, CheckCircle, XCircle, Plus, Edit, Trash2, Save, X } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 interface PrintOrder {
   id: string;
@@ -53,6 +55,16 @@ interface PrintMaterial {
   unit_type: string;
   color?: string;
   thickness?: string;
+  is_active?: boolean;
+}
+
+interface MaterialFormData {
+  material_name: string;
+  material_type: string;
+  cost_per_unit: number;
+  unit_type: string;
+  color: string;
+  thickness: string;
 }
 
 const PrintManagement = () => {
@@ -60,6 +72,17 @@ const PrintManagement = () => {
   const [printMaterials, setPrintMaterials] = useState<PrintMaterial[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<PrintOrder | null>(null);
   const [loading, setLoading] = useState(true);
+  const [materialsLoading, setMaterialsLoading] = useState(false);
+  const [editingMaterial, setEditingMaterial] = useState<PrintMaterial | null>(null);
+  const [isAddingMaterial, setIsAddingMaterial] = useState(false);
+  const [materialForm, setMaterialForm] = useState<MaterialFormData>({
+    material_name: "",
+    material_type: "",
+    cost_per_unit: 0,
+    unit_type: "متر مربع",
+    color: "",
+    thickness: ""
+  });
   const { toast } = useToast();
 
   const statusLabels = {
@@ -125,6 +148,7 @@ const PrintManagement = () => {
 
   const fetchPrintMaterials = async () => {
     try {
+      setMaterialsLoading(true);
       const { data, error } = await supabase
         .from("print_materials")
         .select("*")
@@ -135,7 +159,152 @@ const PrintManagement = () => {
       setPrintMaterials(data || []);
     } catch (error) {
       console.error("Error fetching print materials:", error);
+      toast({
+        title: "خطأ",
+        description: "فشل في تحميل مواد الطباعة",
+        variant: "destructive",
+      });
+    } finally {
+      setMaterialsLoading(false);
     }
+  };
+
+  const handleAddMaterial = async () => {
+    try {
+      if (!materialForm.material_name || !materialForm.material_type) {
+        toast({
+          title: "خطأ",
+          description: "يرجى ملء جميع الحقول المطلوبة",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const { error } = await supabase
+        .from("print_materials")
+        .insert([{
+          ...materialForm,
+          is_active: true
+        }]);
+
+      if (error) throw error;
+
+      toast({
+        title: "تم بنجاح",
+        description: "تم إضافة المادة الجديدة",
+      });
+
+      setMaterialForm({
+        material_name: "",
+        material_type: "",
+        cost_per_unit: 0,
+        unit_type: "متر مربع",
+        color: "",
+        thickness: ""
+      });
+      setIsAddingMaterial(false);
+      await fetchPrintMaterials();
+    } catch (error) {
+      console.error("Error adding material:", error);
+      toast({
+        title: "خطأ",
+        description: "فشل في إضافة المادة",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleEditMaterial = async () => {
+    try {
+      if (!editingMaterial || !materialForm.material_name || !materialForm.material_type) {
+        toast({
+          title: "خطأ",
+          description: "يرجى ملء جميع الحقول المطلوبة",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const { error } = await supabase
+        .from("print_materials")
+        .update(materialForm)
+        .eq("id", editingMaterial.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "تم بنجاح",
+        description: "تم تحديث المادة",
+      });
+
+      setEditingMaterial(null);
+      setMaterialForm({
+        material_name: "",
+        material_type: "",
+        cost_per_unit: 0,
+        unit_type: "متر مربع",
+        color: "",
+        thickness: ""
+      });
+      await fetchPrintMaterials();
+    } catch (error) {
+      console.error("Error updating material:", error);
+      toast({
+        title: "خطأ",
+        description: "فشل في تحديث المادة",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteMaterial = async (materialId: string) => {
+    try {
+      const { error } = await supabase
+        .from("print_materials")
+        .update({ is_active: false })
+        .eq("id", materialId);
+
+      if (error) throw error;
+
+      toast({
+        title: "تم بنجاح",
+        description: "تم حذف المادة",
+      });
+
+      await fetchPrintMaterials();
+    } catch (error) {
+      console.error("Error deleting material:", error);
+      toast({
+        title: "خطأ",
+        description: "فشل في حذف المادة",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const startEditMaterial = (material: PrintMaterial) => {
+    setEditingMaterial(material);
+    setMaterialForm({
+      material_name: material.material_name,
+      material_type: material.material_type,
+      cost_per_unit: material.cost_per_unit,
+      unit_type: material.unit_type,
+      color: material.color || "",
+      thickness: material.thickness || ""
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditingMaterial(null);
+    setIsAddingMaterial(false);
+    setMaterialForm({
+      material_name: "",
+      material_type: "",
+      cost_per_unit: 0,
+      unit_type: "متر مربع",
+      color: "",
+      thickness: ""
+    });
   };
 
   const updateOrderStatus = async (orderId: string, newStatus: string) => {
@@ -414,26 +583,209 @@ const PrintManagement = () => {
 
         <TabsContent value="materials">
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
               <CardTitle>مواد الطباعة</CardTitle>
+              <Button 
+                onClick={() => setIsAddingMaterial(true)}
+                className="ml-auto"
+              >
+                <Plus className="ml-2 h-4 w-4" />
+                إضافة مادة جديدة
+              </Button>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4">
-                {printMaterials.map((material) => (
-                  <div key={material.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <h3 className="font-medium">{material.material_name}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {material.material_type} - {material.color} {material.thickness && `- ${material.thickness}`}
+              {/* نموذج إضافة/تعديل مادة */}
+              {(isAddingMaterial || editingMaterial) && (
+                <Card className="mb-6 border-dashed">
+                  <CardHeader>
+                    <CardTitle className="text-lg">
+                      {editingMaterial ? "تعديل المادة" : "إضافة مادة جديدة"}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="material_name">اسم المادة *</Label>
+                        <Input
+                          id="material_name"
+                          value={materialForm.material_name}
+                          onChange={(e) => setMaterialForm({...materialForm, material_name: e.target.value})}
+                          placeholder="مثال: فوم بورد"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="material_type">نوع المادة *</Label>
+                        <Select 
+                          value={materialForm.material_type} 
+                          onValueChange={(value) => setMaterialForm({...materialForm, material_type: value})}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="اختر نوع المادة" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="بلاستيك">بلاستيك</SelectItem>
+                            <SelectItem value="ورق">ورق</SelectItem>
+                            <SelectItem value="فينيل">فينيل</SelectItem>
+                            <SelectItem value="أكريليك">أكريليك</SelectItem>
+                            <SelectItem value="فوم">فوم</SelectItem>
+                            <SelectItem value="معدن">معدن</SelectItem>
+                            <SelectItem value="نسيج">نسيج</SelectItem>
+                            <SelectItem value="خشب">خشب</SelectItem>
+                            <SelectItem value="زجاج">زجاج</SelectItem>
+                            <SelectItem value="أخرى">أخرى</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="cost_per_unit">التكلفة لكل وحدة</Label>
+                        <Input
+                          id="cost_per_unit"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={materialForm.cost_per_unit}
+                          onChange={(e) => setMaterialForm({...materialForm, cost_per_unit: parseFloat(e.target.value) || 0})}
+                          placeholder="0.00"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="unit_type">وحدة القياس</Label>
+                        <Select 
+                          value={materialForm.unit_type} 
+                          onValueChange={(value) => setMaterialForm({...materialForm, unit_type: value})}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="اختر وحدة القياس" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="متر مربع">متر مربع</SelectItem>
+                            <SelectItem value="متر طولي">متر طولي</SelectItem>
+                            <SelectItem value="قطعة">قطعة</SelectItem>
+                            <SelectItem value="ورقة">ورقة</SelectItem>
+                            <SelectItem value="كيلوجرام">كيلوجرام</SelectItem>
+                            <SelectItem value="لتر">لتر</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="color">اللون</Label>
+                        <Input
+                          id="color"
+                          value={materialForm.color}
+                          onChange={(e) => setMaterialForm({...materialForm, color: e.target.value})}
+                          placeholder="مثال: أبيض، أسود، شفاف"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="thickness">السماكة</Label>
+                        <Input
+                          id="thickness"
+                          value={materialForm.thickness}
+                          onChange={(e) => setMaterialForm({...materialForm, thickness: e.target.value})}
+                          placeholder="مثال: 3مم، 5مم"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex gap-2 pt-4">
+                      <Button 
+                        onClick={editingMaterial ? handleEditMaterial : handleAddMaterial}
+                        disabled={materialsLoading}
+                      >
+                        <Save className="ml-2 h-4 w-4" />
+                        {editingMaterial ? "حفظ التعديل" : "إضافة المادة"}
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        onClick={cancelEdit}
+                      >
+                        <X className="ml-2 h-4 w-4" />
+                        إلغاء
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* قائمة المواد */}
+              {materialsLoading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                  <p className="text-muted-foreground">جاري تحميل المواد...</p>
+                </div>
+              ) : (
+                <div className="grid gap-4">
+                  {printMaterials.map((material) => (
+                    <div key={material.id} className="flex items-center justify-between p-4 border rounded-lg hover:shadow-sm transition-shadow">
+                      <div className="flex-1">
+                        <h3 className="font-medium text-lg">{material.material_name}</h3>
+                        <div className="mt-1 text-sm text-muted-foreground">
+                          <span className="inline-block">النوع: {material.material_type}</span>
+                          {material.color && (
+                            <span className="inline-block mx-2">• اللون: {material.color}</span>
+                          )}
+                          {material.thickness && (
+                            <span className="inline-block">• السماكة: {material.thickness}</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="text-left">
+                          <p className="font-medium text-lg">{material.cost_per_unit} ر.س</p>
+                          <p className="text-sm text-muted-foreground">{material.unit_type}</p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => startEditMaterial(material)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button size="sm" variant="outline">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  هل أنت متأكد من حذف المادة "{material.material_name}"؟ 
+                                  لن يمكن التراجع عن هذا الإجراء.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                                <AlertDialogAction 
+                                  onClick={() => handleDeleteMaterial(material.id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  حذف
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {printMaterials.length === 0 && (
+                    <div className="text-center py-12">
+                      <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                      <h3 className="text-lg font-medium mb-2">لا توجد مواد طباعة</h3>
+                      <p className="text-muted-foreground mb-4">
+                        ابدأ بإضافة المواد المستخدمة في عمليات الطباعة
                       </p>
+                      <Button onClick={() => setIsAddingMaterial(true)}>
+                        <Plus className="ml-2 h-4 w-4" />
+                        إضافة مادة جديدة
+                      </Button>
                     </div>
-                    <div className="text-left">
-                      <p className="font-medium">{material.cost_per_unit} ر.س</p>
-                      <p className="text-sm text-muted-foreground">{material.unit_type}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
