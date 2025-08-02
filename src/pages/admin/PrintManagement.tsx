@@ -105,6 +105,7 @@ const PrintManagement = () => {
   const [isAddingMaterial, setIsAddingMaterial] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [userRole, setUserRole] = useState<string>("");
   const [orderMaterialForm, setOrderMaterialForm] = useState({
     material_id: "",
     dimensions_width: 0,
@@ -150,7 +151,27 @@ const PrintManagement = () => {
   useEffect(() => {
     fetchPrintOrders();
     fetchPrintMaterials();
+    fetchUserRole();
   }, []);
+
+  const fetchUserRole = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: roles } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .single();
+        
+        if (roles) {
+          setUserRole(roles.role);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching user role:', error);
+    }
+  };
 
   const fetchPrintOrders = async () => {
     try {
@@ -624,7 +645,9 @@ const PrintManagement = () => {
         <TabsList>
           <TabsTrigger value="orders">طلبات الطباعة</TabsTrigger>
           <TabsTrigger value="materials">المواد</TabsTrigger>
-          <TabsTrigger value="reports">التقارير</TabsTrigger>
+          {(userRole === "admin" || userRole === "manager") && (
+            <TabsTrigger value="reports">التقارير</TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="orders" className="space-y-4">

@@ -102,6 +102,12 @@ const menuItems = [
     allowedRoles: ['admin', 'manager', 'employee'] as UserRole[],
   },
   {
+    title: "طباعة العملاء",
+    icon: Users,
+    href: "/admin/customer-print-orders",
+    allowedRoles: ['admin', 'manager'] as UserRole[],
+  },
+  {
     title: "ويب هوك",
     icon: Settings,
     href: "/admin/webhooks",

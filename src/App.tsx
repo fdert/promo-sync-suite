@@ -30,6 +30,7 @@ import PrintOrders from "./pages/user/PrintOrders";
 import InvoicePreview from "./pages/InvoicePreview";
 import NotFound from "./pages/NotFound";
 import Evaluations from "./pages/admin/Evaluations";
+import CustomerPrintOrders from "./pages/admin/CustomerPrintOrders";
 import Evaluation from "./pages/Evaluation";
 
 const queryClient = new QueryClient();
@@ -90,6 +91,7 @@ const App = () => (
               } />
             <Route path="whatsapp" element={<WhatsApp />} />
               <Route path="print-management" element={<PrintManagement />} />
+              <Route path="customer-print-orders" element={<CustomerPrintOrders />} />
               <Route path="webhooks" element={<WebhookSettings />} />
               <Route path="website" element={
                 <RoleProtectedRoute allowedRoles={['admin']}>
