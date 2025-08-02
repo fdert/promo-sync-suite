@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Printer, Upload, FileText, Clock, CheckCircle, XCircle, Plus, Edit, Trash2, Save, X } from "lucide-react";
+import { Printer, Upload, FileText, Clock, CheckCircle, XCircle, Plus, Edit, Trash2, Save, X, Download, Eye } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -19,6 +19,7 @@ interface PrintOrder {
   print_order_number: string;
   status: string;
   order_id: string;
+  material_id?: string;
   dimensions_width?: number;
   dimensions_height?: number;
   dimensions_depth?: number;
@@ -45,6 +46,30 @@ interface PrintOrder {
     material_name: string;
     material_type: string;
   };
+  print_files?: Array<{
+    id: string;
+    file_name: string;
+    file_path: string;
+    file_type: string;
+    upload_date: string;
+    is_approved: boolean;
+  }>;
+}
+
+interface PrintFile {
+  id: string;
+  print_order_id: string;
+  file_name: string;
+  file_path: string;
+  file_type: string;
+  file_size?: number;
+  mime_type?: string;
+  upload_date: string;
+  uploaded_by?: string;
+  is_approved: boolean;
+  approval_date?: string;
+  approved_by?: string;
+  notes?: string;
 }
 
 interface PrintMaterial {
@@ -75,6 +100,16 @@ const PrintManagement = () => {
   const [materialsLoading, setMaterialsLoading] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<PrintMaterial | null>(null);
   const [isAddingMaterial, setIsAddingMaterial] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [orderMaterialForm, setOrderMaterialForm] = useState({
+    material_id: "",
+    dimensions_width: 0,
+    dimensions_height: 0,
+    dimensions_depth: 0,
+    actual_cost: 0,
+    printing_notes: ""
+  });
   const [materialForm, setMaterialForm] = useState<MaterialFormData>({
     material_name: "",
     material_type: "",
@@ -128,6 +163,14 @@ const PrintManagement = () => {
           print_materials(
             material_name,
             material_type
+          ),
+          print_files(
+            id,
+            file_name,
+            file_path,
+            file_type,
+            upload_date,
+            is_approved
           )
         `)
         .order("created_at", { ascending: false });
@@ -291,6 +334,150 @@ const PrintManagement = () => {
       unit_type: material.unit_type,
       color: material.color || "",
       thickness: material.thickness || ""
+    });
+  };
+
+  // وظائف رفع الملفات وإدارة المواد
+  const handleFileUpload = async (orderId: string, files: FileList) => {
+    if (!files.length) return;
+
+    setUploading(true);
+    try {
+      const user = await supabase.auth.getUser();
+      if (!user.data.user) {
+        throw new Error("المستخدم غير مسجل الدخول");
+      }
+
+      for (const file of Array.from(files)) {
+        // رفع الملف إلى storage
+        const fileExtension = file.name.split('.').pop();
+        const fileName = `${orderId}_${Date.now()}.${fileExtension}`;
+        const filePath = `${orderId}/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('print-files')
+          .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        // حفظ معلومات الملف في قاعدة البيانات
+        const { error: dbError } = await supabase
+          .from('print_files')
+          .insert({
+            print_order_id: orderId,
+            file_name: file.name,
+            file_path: filePath,
+            file_type: file.type || 'unknown',
+            file_size: file.size,
+            mime_type: file.type,
+            uploaded_by: user.data.user.id,
+            is_approved: false
+          });
+
+        if (dbError) throw dbError;
+      }
+
+      toast({
+        title: "تم بنجاح",
+        description: "تم رفع الملفات بنجاح",
+      });
+
+      await fetchPrintOrders();
+    } catch (error) {
+      console.error("Error uploading files:", error);
+      toast({
+        title: "خطأ",
+        description: "فشل في رفع الملفات",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleUpdateOrderMaterials = async (orderId: string) => {
+    try {
+      if (!orderMaterialForm.material_id) {
+        toast({
+          title: "خطأ",
+          description: "يرجى اختيار المادة المستخدمة",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const { error } = await supabase
+        .from("print_orders")
+        .update({
+          material_id: orderMaterialForm.material_id,
+          dimensions_width: orderMaterialForm.dimensions_width || null,
+          dimensions_height: orderMaterialForm.dimensions_height || null,
+          dimensions_depth: orderMaterialForm.dimensions_depth || null,
+          actual_cost: orderMaterialForm.actual_cost || 0,
+          printing_notes: orderMaterialForm.printing_notes || null
+        })
+        .eq("id", orderId);
+
+      if (error) throw error;
+
+      toast({
+        title: "تم بنجاح",
+        description: "تم تحديث معلومات المواد والتكلفة",
+      });
+
+      setSelectedOrder(null);
+      setOrderMaterialForm({
+        material_id: "",
+        dimensions_width: 0,
+        dimensions_height: 0,
+        dimensions_depth: 0,
+        actual_cost: 0,
+        printing_notes: ""
+      });
+      await fetchPrintOrders();
+    } catch (error) {
+      console.error("Error updating order materials:", error);
+      toast({
+        title: "خطأ",
+        description: "فشل في تحديث معلومات المواد",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const downloadFile = async (filePath: string, fileName: string) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('print-files')
+        .download(filePath);
+
+      if (error) throw error;
+
+      const url = URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error downloading file:", error);
+      toast({
+        title: "خطأ",
+        description: "فشل في تحميل الملف",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const openOrderDialog = (order: PrintOrder) => {
+    setSelectedOrder(order);
+    setOrderMaterialForm({
+      material_id: order.material_id || "",
+      dimensions_width: order.dimensions_width || 0,
+      dimensions_height: order.dimensions_height || 0,
+      dimensions_depth: order.dimensions_depth || 0,
+      actual_cost: order.actual_cost || 0,
+      printing_notes: order.printing_notes || ""
     });
   };
 
@@ -506,6 +693,7 @@ const PrintManagement = () => {
 
                   {/* أزرار التحكم */}
                   <div className="flex gap-2 flex-wrap">
+                    {/* أزرار حالة الطلب */}
                     {order.status === "pending" && (
                       <Button
                         size="sm"
@@ -562,6 +750,166 @@ const PrintManagement = () => {
                         إكمال الطلب
                       </Button>
                     )}
+                    
+                    {/* أزرار إضافية لإدارة الملفات والمواد */}
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openOrderDialog(order)}
+                        >
+                          <Upload className="ml-2 h-4 w-4" />
+                          رفع التصميم
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-2xl">
+                        <DialogHeader>
+                          <DialogTitle>إدارة الملفات والمواد - {order.print_order_number}</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-6">
+                          {/* قسم رفع الملفات */}
+                          <div>
+                            <h4 className="font-medium mb-3">رفع التصاميم النهائية</h4>
+                            <Input
+                              type="file"
+                              multiple
+                              accept=".pdf,.jpg,.jpeg,.png,.ai,.psd,.eps"
+                              onChange={(e) => e.target.files && handleFileUpload(order.id, e.target.files)}
+                              disabled={uploading}
+                            />
+                            {uploading && (
+                              <p className="text-sm text-muted-foreground mt-2">جاري رفع الملفات...</p>
+                            )}
+                          </div>
+
+                          {/* قسم اختيار المواد والمقاسات */}
+                          <div className="space-y-4">
+                            <h4 className="font-medium">تفاصيل التنفيذ النهائي</h4>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                <Label>المادة المستخدمة</Label>
+                                <Select 
+                                  value={orderMaterialForm.material_id} 
+                                  onValueChange={(value) => setOrderMaterialForm({...orderMaterialForm, material_id: value})}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="اختر المادة" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {printMaterials.map((material) => (
+                                      <SelectItem key={material.id} value={material.id}>
+                                        {material.material_name} - {material.material_type}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              
+                              <div>
+                                <Label>التكلفة الفعلية</Label>
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  value={orderMaterialForm.actual_cost}
+                                  onChange={(e) => setOrderMaterialForm({...orderMaterialForm, actual_cost: parseFloat(e.target.value) || 0})}
+                                  placeholder="0.00"
+                                />
+                              </div>
+                              
+                              <div>
+                                <Label>العرض (سم)</Label>
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  value={orderMaterialForm.dimensions_width}
+                                  onChange={(e) => setOrderMaterialForm({...orderMaterialForm, dimensions_width: parseFloat(e.target.value) || 0})}
+                                  placeholder="100"
+                                />
+                              </div>
+                              
+                              <div>
+                                <Label>الارتفاع (سم)</Label>
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  value={orderMaterialForm.dimensions_height}
+                                  onChange={(e) => setOrderMaterialForm({...orderMaterialForm, dimensions_height: parseFloat(e.target.value) || 0})}
+                                  placeholder="150"
+                                />
+                              </div>
+                              
+                              <div>
+                                <Label>العمق (سم) - اختياري</Label>
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  value={orderMaterialForm.dimensions_depth}
+                                  onChange={(e) => setOrderMaterialForm({...orderMaterialForm, dimensions_depth: parseFloat(e.target.value) || 0})}
+                                  placeholder="5"
+                                />
+                              </div>
+                            </div>
+                            
+                            <div>
+                              <Label>ملاحظات الطباعة</Label>
+                              <Textarea
+                                value={orderMaterialForm.printing_notes}
+                                onChange={(e) => setOrderMaterialForm({...orderMaterialForm, printing_notes: e.target.value})}
+                                placeholder="ملاحظات حول الطباعة أو التشطيب..."
+                                rows={3}
+                              />
+                            </div>
+                            
+                            <Button 
+                              onClick={() => handleUpdateOrderMaterials(order.id)}
+                              className="w-full"
+                            >
+                              <Save className="ml-2 h-4 w-4" />
+                              حفظ تفاصيل التنفيذ
+                            </Button>
+                          </div>
+
+                          {/* عرض الملفات المرفوعة */}
+                          {order.print_files && order.print_files.length > 0 && (
+                            <div>
+                              <h4 className="font-medium mb-3">الملفات المرفوعة</h4>
+                              <div className="space-y-2">
+                                {order.print_files.map((file) => (
+                                  <div key={file.id} className="flex items-center justify-between p-3 border rounded-lg">
+                                    <div className="flex items-center gap-3">
+                                      <FileText className="h-4 w-4" />
+                                      <div>
+                                        <p className="text-sm font-medium">{file.file_name}</p>
+                                        <p className="text-xs text-muted-foreground">
+                                          {new Date(file.upload_date).toLocaleDateString('ar-SA')}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => downloadFile(file.file_path, file.file_name)}
+                                      >
+                                        <Download className="h-4 w-4" />
+                                      </Button>
+                                      {file.is_approved && (
+                                        <Badge variant="default" className="bg-green-500">
+                                          معتمد
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                   </div>
                 </CardContent>
               </Card>
