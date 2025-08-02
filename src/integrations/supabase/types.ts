@@ -859,6 +859,247 @@ export type Database = {
           },
         ]
       }
+      print_files: {
+        Row: {
+          approval_date: string | null
+          approved_by: string | null
+          file_name: string
+          file_path: string
+          file_size: number | null
+          file_type: string
+          id: string
+          is_approved: boolean | null
+          mime_type: string | null
+          notes: string | null
+          print_order_id: string
+          upload_date: string | null
+          uploaded_by: string | null
+          version_number: number | null
+        }
+        Insert: {
+          approval_date?: string | null
+          approved_by?: string | null
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          file_type: string
+          id?: string
+          is_approved?: boolean | null
+          mime_type?: string | null
+          notes?: string | null
+          print_order_id: string
+          upload_date?: string | null
+          uploaded_by?: string | null
+          version_number?: number | null
+        }
+        Update: {
+          approval_date?: string | null
+          approved_by?: string | null
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          file_type?: string
+          id?: string
+          is_approved?: boolean | null
+          mime_type?: string | null
+          notes?: string | null
+          print_order_id?: string
+          upload_date?: string | null
+          uploaded_by?: string | null
+          version_number?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "print_files_print_order_id_fkey"
+            columns: ["print_order_id"]
+            isOneToOne: false
+            referencedRelation: "print_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      print_materials: {
+        Row: {
+          color: string | null
+          cost_per_unit: number | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          material_name: string
+          material_type: string
+          thickness: string | null
+          unit_type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          color?: string | null
+          cost_per_unit?: number | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          material_name: string
+          material_type: string
+          thickness?: string | null
+          unit_type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          color?: string | null
+          cost_per_unit?: number | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          material_name?: string
+          material_type?: string
+          thickness?: string | null
+          unit_type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      print_orders: {
+        Row: {
+          actual_cost: number | null
+          additional_materials: Json | null
+          created_at: string | null
+          created_by: string | null
+          delivery_date: string | null
+          design_completed_at: string | null
+          design_notes: string | null
+          design_started_at: string | null
+          dimensions_depth: number | null
+          dimensions_height: number | null
+          dimensions_width: number | null
+          estimated_cost: number | null
+          finishing_type: string | null
+          id: string
+          material_id: string | null
+          order_id: string
+          print_completed_at: string | null
+          print_order_number: string
+          print_started_at: string | null
+          print_type: string | null
+          printing_notes: string | null
+          quality_check_at: string | null
+          quantity: number | null
+          status: string | null
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          actual_cost?: number | null
+          additional_materials?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          delivery_date?: string | null
+          design_completed_at?: string | null
+          design_notes?: string | null
+          design_started_at?: string | null
+          dimensions_depth?: number | null
+          dimensions_height?: number | null
+          dimensions_width?: number | null
+          estimated_cost?: number | null
+          finishing_type?: string | null
+          id?: string
+          material_id?: string | null
+          order_id: string
+          print_completed_at?: string | null
+          print_order_number?: string
+          print_started_at?: string | null
+          print_type?: string | null
+          printing_notes?: string | null
+          quality_check_at?: string | null
+          quantity?: number | null
+          status?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          actual_cost?: number | null
+          additional_materials?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          delivery_date?: string | null
+          design_completed_at?: string | null
+          design_notes?: string | null
+          design_started_at?: string | null
+          dimensions_depth?: number | null
+          dimensions_height?: number | null
+          dimensions_width?: number | null
+          estimated_cost?: number | null
+          finishing_type?: string | null
+          id?: string
+          material_id?: string | null
+          order_id?: string
+          print_completed_at?: string | null
+          print_order_number?: string
+          print_started_at?: string | null
+          print_type?: string | null
+          printing_notes?: string | null
+          quality_check_at?: string | null
+          quantity?: number | null
+          status?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "print_orders_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "print_materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "print_orders_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      print_tracking: {
+        Row: {
+          created_at: string | null
+          duration_minutes: number | null
+          id: string
+          notes: string | null
+          performed_by: string | null
+          print_order_id: string
+          stage: string
+          status: string
+        }
+        Insert: {
+          created_at?: string | null
+          duration_minutes?: number | null
+          id?: string
+          notes?: string | null
+          performed_by?: string | null
+          print_order_id: string
+          stage: string
+          status: string
+        }
+        Update: {
+          created_at?: string | null
+          duration_minutes?: number | null
+          id?: string
+          notes?: string | null
+          performed_by?: string | null
+          print_order_id?: string
+          stage?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "print_tracking_print_order_id_fkey"
+            columns: ["print_order_id"]
+            isOneToOne: false
+            referencedRelation: "print_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null

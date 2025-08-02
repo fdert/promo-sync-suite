@@ -13,6 +13,7 @@ import {
   ChevronLeft,
   Building2,
   Cog,
+  Printer,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -92,6 +93,12 @@ const menuItems = [
     title: "رسائل WhatsApp",
     icon: MessageSquare,
     href: "/admin/whatsapp",
+    allowedRoles: ['admin', 'manager', 'employee'] as UserRole[],
+  },
+  {
+    title: "إدارة الطباعة",
+    icon: Printer,
+    href: "/admin/print-management",
     allowedRoles: ['admin', 'manager', 'employee'] as UserRole[],
   },
   {

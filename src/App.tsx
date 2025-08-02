@@ -25,6 +25,8 @@ import ServiceTypes from "./pages/admin/ServiceTypes";
 import MessageTemplates from "./pages/admin/MessageTemplates";
 import UserDashboard from "./pages/user/UserDashboard";
 import EmployeeDashboard from "./pages/employee/EmployeeDashboard";
+import PrintManagement from "./pages/admin/PrintManagement";
+import PrintOrders from "./pages/user/PrintOrders";
 import InvoicePreview from "./pages/InvoicePreview";
 import NotFound from "./pages/NotFound";
 import Evaluations from "./pages/admin/Evaluations";
@@ -48,6 +50,11 @@ const App = () => (
                 <UserDashboard />
               </ProtectedRoute>
             } />
+            <Route path="/user/print-orders" element={
+              <ProtectedRoute>
+                <PrintOrders />
+              </ProtectedRoute>
+            } />
             <Route path="/employee" element={
               <ProtectedRoute>
                 <RoleProtectedRoute allowedRoles={['employee']}>
@@ -59,6 +66,7 @@ const App = () => (
               <Route path="customers" element={<Customers />} />
               <Route path="orders" element={<Orders />} />
               <Route path="invoices" element={<Invoices />} />
+              <Route path="print-orders" element={<PrintOrders />} />
               <Route path="evaluations" element={<Evaluations />} />
               <Route path="whatsapp" element={<WhatsApp />} />
             </Route>
@@ -81,6 +89,7 @@ const App = () => (
                 </RoleProtectedRoute>
               } />
             <Route path="whatsapp" element={<WhatsApp />} />
+              <Route path="print-management" element={<PrintManagement />} />
               <Route path="webhooks" element={<WebhookSettings />} />
               <Route path="website" element={
                 <RoleProtectedRoute allowedRoles={['admin']}>

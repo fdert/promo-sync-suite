@@ -18,9 +18,12 @@ import {
   Eye,
   CheckCircle,
   Clock,
-  AlertCircle
+  AlertCircle,
+  Printer
 } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { BarChart3 } from "lucide-react";
 
 const UserDashboard = () => {
   const [orders, setOrders] = useState([
@@ -234,6 +237,75 @@ const UserDashboard = () => {
               </DialogContent>
             </Dialog>
           </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+          <Card className="hover:shadow-md transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">طلبات الطباعة</CardTitle>
+              <Printer className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-xs text-muted-foreground mb-3">
+                تتبع ورفع ملفات التصميم للطباعة
+              </p>
+              <Link to="/user/print-orders">
+                <Button size="sm" className="w-full">
+                  <Printer className="ml-2 h-4 w-4" />
+                  عرض طلبات الطباعة
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+          
+          <Card className="hover:shadow-md transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">الطلبات الجديدة</CardTitle>
+              <PlusCircle className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-xs text-muted-foreground mb-3">
+                إضافة طلب جديد أو خدمة
+              </p>
+              <Button size="sm" variant="outline" className="w-full" onClick={() => setIsAddOrderOpen(true)}>
+                <PlusCircle className="ml-2 h-4 w-4" />
+                طلب جديد
+              </Button>
+            </CardContent>
+          </Card>
+          
+          <Card className="hover:shadow-md transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">الفواتير</CardTitle>
+              <FileText className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-xs text-muted-foreground mb-3">
+                عرض ومتابعة الفواتير
+              </p>
+              <Button size="sm" variant="outline" className="w-full">
+                <FileText className="ml-2 h-4 w-4" />
+                عرض الفواتير
+              </Button>
+            </CardContent>
+          </Card>
+          
+          <Card className="hover:shadow-md transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">التقارير</CardTitle>
+              <BarChart3 className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-xs text-muted-foreground mb-3">
+                إحصائيات وتقارير تفصيلية
+              </p>
+              <Button size="sm" variant="outline" className="w-full">
+                <BarChart3 className="ml-2 h-4 w-4" />
+                عرض التقارير
+              </Button>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Statistics */}

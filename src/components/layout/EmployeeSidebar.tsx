@@ -8,6 +8,7 @@ import {
   MessageSquare,
   ChevronLeft,
   Palette,
+  Printer,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -45,6 +46,12 @@ const employeeMenuItems = [
     title: "الفواتير",
     icon: FileText,
     href: "/employee/invoices",
+    allowedRoles: ['employee'] as UserRole[],
+  },
+  {
+    title: "طلبات الطباعة",
+    icon: Printer,
+    href: "/employee/print-orders",
     allowedRoles: ['employee'] as UserRole[],
   },
   {
