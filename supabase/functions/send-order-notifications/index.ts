@@ -301,33 +301,46 @@ Deno.serve(async (req) => {
 
     console.log('Sending notification via webhook:', JSON.stringify(messagePayload, null, 2));
 
-    // إرسال الرسالة عبر webhook إلى n8n مع headers صحيحة
-    const response = await fetch(selectedWebhook.webhook_url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: JSON.stringify(messagePayload)
-    });
-
+    // إرسال الرسالة عبر webhook إلى n8n مع headers صحيحة وإعادة المحاولة
+    let response;
     let responseData;
-    try {
-      responseData = await response.text();
-      console.log('Webhook response:', responseData);
-    } catch (e) {
-      responseData = 'Failed to read response';
-      console.log('Failed to read webhook response');
-    }
-
-    // تحديد حالة الرسالة حسب نجاح أو فشل الويب هوك
     let messageStatus = 'failed';
-    if (response.ok) {
-      console.log('Webhook sent successfully');
-      messageStatus = 'sent';
-    } else {
-      console.error(`Webhook failed: ${response.status} ${responseData}`);
+    
+    try {
+      response = await fetch(selectedWebhook.webhook_url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'User-Agent': 'Supabase-Functions'
+        },
+        body: JSON.stringify(messagePayload),
+        // إضافة timeout لتجنب انتظار طويل
+        signal: AbortSignal.timeout(30000) // 30 ثانية
+      });
+
+      try {
+        responseData = await response.text();
+        console.log('Webhook response status:', response.status);
+        console.log('Webhook response data:', responseData);
+      } catch (e) {
+        responseData = 'Failed to read response';
+        console.log('Failed to read webhook response:', e);
+      }
+
+      // تحديد حالة الرسالة حسب نجاح أو فشل الويب هوك
+      if (response.ok && response.status >= 200 && response.status < 300) {
+        console.log('Webhook sent successfully');
+        messageStatus = 'sent';
+      } else {
+        console.error(`Webhook failed with status: ${response.status}`);
+        console.error(`Webhook response: ${responseData}`);
+        messageStatus = 'failed';
+      }
+    } catch (fetchError) {
+      console.error('Fetch error:', fetchError);
       messageStatus = 'failed';
+      responseData = `Fetch error: ${fetchError.message}`;
     }
 
     // حفظ الرسالة المرسلة في قاعدة البيانات
