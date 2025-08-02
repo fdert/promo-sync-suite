@@ -182,6 +182,12 @@ Deno.serve(async (req) => {
           customerName = data.customer_name;
           break;
 
+        case 'order_updated':
+          message = `${data.customer_name}، تم تحديث طلبك رقم ${data.order_number}. الحالة الحالية: ${data.status}. سنبقيك على اطلاع بأي تطورات جديدة.`;
+          customerPhone = data.customer_phone;
+          customerName = data.customer_name;
+          break;
+
         case 'order_cancelled':
           message = `عزيزي ${data.customer_name}، تم إلغاء طلبك رقم ${data.order_number}. للاستفسار يرجى التواصل معنا.`;
           customerPhone = data.customer_phone;
