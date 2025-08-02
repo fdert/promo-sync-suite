@@ -45,6 +45,7 @@ import {
   Package,
   Receipt,
   TrendingUp,
+  ImageIcon,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -82,6 +83,10 @@ const Orders = () => {
   const [orderItems, setOrderItems] = useState([
     { item_name: "", description: "", quantity: 1, unit_price: 0, total_amount: 0 }
   ]);
+
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [selectedOrderForUpload, setSelectedOrderForUpload] = useState(null);
+  const [uploading, setUploading] = useState(false);
 
   const { toast } = useToast();
 
@@ -310,6 +315,89 @@ const Orders = () => {
         variant: "destructive",
       });
       return false;
+    }
+  };
+
+  // رفع تصميم للطلب
+  const handleDesignUpload = async (orderId: string, files: FileList) => {
+    if (!files || files.length === 0) return;
+
+    setUploading(true);
+    
+    try {
+      // البحث عن print_order مرتبط بهذا الطلب
+      const { data: printOrderData, error: printOrderError } = await supabase
+        .from('print_orders')
+        .select('id')
+        .eq('order_id', orderId)
+        .single();
+
+      let printOrderId = printOrderData?.id;
+
+      // إذا لم يوجد print_order، أنشئ واحد جديد
+      if (!printOrderId) {
+        const { data: newPrintOrder, error: createError } = await supabase
+          .from('print_orders')
+          .insert({
+            order_id: orderId,
+            status: 'pending',
+            quantity: 1,
+            estimated_cost: 0,
+            actual_cost: 0
+          })
+          .select('id')
+          .single();
+
+        if (createError) throw createError;
+        printOrderId = newPrintOrder.id;
+      }
+
+      // رفع الملفات
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${printOrderId}_${Date.now()}.${fileExt}`;
+        const filePath = `${printOrderId}/${fileName}`;
+
+        // رفع الملف إلى storage
+        const { error: uploadError } = await supabase.storage
+          .from('print-files')
+          .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        // حفظ معلومات الملف في قاعدة البيانات
+        const { error: insertError } = await supabase
+          .from('print_files')
+          .insert({
+            print_order_id: printOrderId,
+            file_name: file.name,
+            file_path: filePath,
+            file_type: file.type,
+            file_size: file.size,
+            mime_type: file.type
+          });
+
+        if (insertError) throw insertError;
+      }
+
+      toast({
+        title: "تم رفع التصميم",
+        description: "تم رفع ملفات التصميم بنجاح",
+      });
+
+      setUploadDialogOpen(false);
+      setSelectedOrderForUpload(null);
+
+    } catch (error) {
+      console.error('Error uploading design:', error);
+      toast({
+        title: "خطأ في رفع التصميم",
+        description: "حدث خطأ أثناء رفع ملفات التصميم",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -1521,17 +1609,28 @@ const Orders = () => {
                       >
                         <CreditCard className="h-4 w-4" />
                       </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        onClick={() => convertToInvoice(order.id)}
-                        title="تحويل إلى فاتورة"
-                      >
-                        <Receipt className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" title="إرسال رسالة">
-                        <MessageSquare className="h-4 w-4" />
-                      </Button>
+                       <Button 
+                         variant="ghost" 
+                         size="icon"
+                         onClick={() => convertToInvoice(order.id)}
+                         title="تحويل إلى فاتورة"
+                       >
+                         <Receipt className="h-4 w-4" />
+                       </Button>
+                       <Button 
+                         variant="ghost" 
+                         size="icon"
+                         onClick={() => {
+                           setSelectedOrderForUpload(order);
+                           setUploadDialogOpen(true);
+                         }}
+                         title="رفع تصميم"
+                       >
+                         <ImageIcon className="h-4 w-4" />
+                       </Button>
+                       <Button variant="ghost" size="icon" title="إرسال رسالة">
+                         <MessageSquare className="h-4 w-4" />
+                       </Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -1557,6 +1656,51 @@ const Orders = () => {
               }}
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* نافذة رفع التصميم */}
+      <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>رفع تصميم للطلب {selectedOrderForUpload?.order_number}</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6">
+              <div className="text-center">
+                <Upload className="mx-auto h-12 w-12 text-muted-foreground" />
+                <div className="mt-4">
+                  <Label htmlFor="design-upload" className="cursor-pointer">
+                    <span className="mt-2 block text-sm font-medium text-muted-foreground">
+                      اختر ملفات التصميم أو اسحبها هنا
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      PDF, PNG, JPG, AI, PSD (حد أقصى 10 ملفات)
+                    </span>
+                  </Label>
+                  <Input
+                    id="design-upload"
+                    type="file"
+                    multiple
+                    accept=".pdf,.png,.jpg,.jpeg,.ai,.psd"
+                    className="hidden"
+                    onChange={(e) => {
+                      if (e.target.files && selectedOrderForUpload) {
+                        handleDesignUpload(selectedOrderForUpload.id, e.target.files);
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+            
+            {uploading && (
+              <div className="text-center py-4">
+                <div className="text-sm text-muted-foreground">جارٍ رفع الملفات...</div>
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

@@ -98,6 +98,7 @@ const PrintManagement = () => {
   const [selectedOrder, setSelectedOrder] = useState<PrintOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [materialsLoading, setMaterialsLoading] = useState(false);
+  const [downloadingFiles, setDownloadingFiles] = useState<string[]>([]);
   const [editingMaterial, setEditingMaterial] = useState<PrintMaterial | null>(null);
   const [isAddingMaterial, setIsAddingMaterial] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -164,7 +165,7 @@ const PrintManagement = () => {
             material_name,
             material_type
           ),
-          print_files(
+          print_files!left(
             id,
             file_name,
             file_path,
@@ -469,6 +470,51 @@ const PrintManagement = () => {
     }
   };
 
+  const downloadAllFiles = async (orderId: string, printOrderNumber: string) => {
+    try {
+      setDownloadingFiles(prev => [...prev, orderId]);
+
+      // جلب جميع ملفات هذا الطلب
+      const { data: files, error } = await supabase
+        .from('print_files')
+        .select('file_path, file_name')
+        .eq('print_order_id', orderId);
+
+      if (error) throw error;
+
+      if (!files || files.length === 0) {
+        toast({
+          title: "لا توجد ملفات",
+          description: "لا توجد ملفات للتحميل في هذا الطلب",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // تحميل الملفات واحد تلو الآخر
+      for (const file of files) {
+        await downloadFile(file.file_path, file.file_name);
+        // إضافة تأخير بسيط بين التحميلات
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+
+      toast({
+        title: "تم التحميل",
+        description: `تم تحميل ${files.length} ملف من طلب ${printOrderNumber}`,
+      });
+
+    } catch (error) {
+      console.error("Error downloading all files:", error);
+      toast({
+        title: "خطأ",
+        description: "فشل في تحميل الملفات",
+        variant: "destructive",
+      });
+    } finally {
+      setDownloadingFiles(prev => prev.filter(id => id !== orderId));
+    }
+  };
+
   const openOrderDialog = (order: PrintOrder) => {
     setSelectedOrder(order);
     setOrderMaterialForm({
@@ -763,6 +809,23 @@ const PrintManagement = () => {
                           رفع التصميم
                         </Button>
                       </DialogTrigger>
+
+                    {/* زر تحميل جميع ملفات الطباعة */}
+                    {order.print_files && order.print_files.length > 0 && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => downloadAllFiles(order.id, order.print_order_number)}
+                        disabled={downloadingFiles.includes(order.id)}
+                      >
+                        {downloadingFiles.includes(order.id) ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2" />
+                        ) : (
+                          <Download className="ml-2 h-4 w-4" />
+                        )}
+                        تحميل الملفات ({order.print_files.length})
+                      </Button>
+                    )}
                       <DialogContent className="max-w-2xl">
                         <DialogHeader>
                           <DialogTitle>إدارة الملفات والمواد - {order.print_order_number}</DialogTitle>
