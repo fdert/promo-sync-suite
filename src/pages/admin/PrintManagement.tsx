@@ -8,11 +8,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Printer, Upload, FileText, Clock, CheckCircle, XCircle, Plus, Edit, Trash2, Save, X, Download, Eye } from "lucide-react";
+import { Printer, Upload, FileText, Clock, CheckCircle, XCircle, Plus, Edit, Trash2, Save, X, Download, Eye, TrendingUp, BarChart3, PieChart as PieChartIcon, DollarSign, Package } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 
 interface PrintOrder {
   id: string;
@@ -1202,20 +1204,294 @@ const PrintManagement = () => {
         </TabsContent>
 
         <TabsContent value="reports">
-          <Card>
-            <CardHeader>
-              <CardTitle>تقارير الطباعة</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-12">
-                <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-medium mb-2">التقارير قيد التطوير</h3>
-                <p className="text-muted-foreground">
-                  ستتوفر التقارير والإحصائيات التفصيلية قريباً
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="space-y-6">
+            {/* إحصائيات عامة */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <Card>
+                <CardContent className="flex items-center p-6">
+                  <TrendingUp className="h-8 w-8 text-blue-600" />
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-muted-foreground">متوسط وقت التصميم</p>
+                    <p className="text-2xl font-bold">
+                      {(() => {
+                        const designTimes = printOrders
+                          .filter(order => order.design_started_at && order.design_completed_at)
+                          .map(order => {
+                            const start = new Date(order.design_started_at!);
+                            const end = new Date(order.design_completed_at!);
+                            return Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+                          });
+                        const avg = designTimes.length > 0 
+                          ? Math.round(designTimes.reduce((a, b) => a + b, 0) / designTimes.length) 
+                          : 0;
+                        return `${avg} يوم`;
+                      })()}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="flex items-center p-6">
+                  <DollarSign className="h-8 w-8 text-green-600" />
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-muted-foreground">إجمالي التكلفة الفعلية</p>
+                    <p className="text-2xl font-bold">
+                      {printOrders.reduce((sum, order) => sum + (order.actual_cost || 0), 0).toLocaleString()} ر.س
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="flex items-center p-6">
+                  <Package className="h-8 w-8 text-purple-600" />
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-muted-foreground">أكثر المواد استخداماً</p>
+                    <p className="text-2xl font-bold">
+                      {(() => {
+                        const materialUsage = printOrders.reduce((acc, order) => {
+                          if (order.print_materials?.material_name) {
+                            acc[order.print_materials.material_name] = (acc[order.print_materials.material_name] || 0) + 1;
+                          }
+                          return acc;
+                        }, {} as Record<string, number>);
+                        const mostUsed = Object.entries(materialUsage).sort((a, b) => b[1] - a[1])[0];
+                        return mostUsed ? mostUsed[0] : "لا يوجد";
+                      })()}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="flex items-center p-6">
+                  <Clock className="h-8 w-8 text-orange-600" />
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-muted-foreground">متوسط وقت الطباعة</p>
+                    <p className="text-2xl font-bold">
+                      {(() => {
+                        const printTimes = printOrders
+                          .filter(order => order.print_started_at && order.print_completed_at)
+                          .map(order => {
+                            const start = new Date(order.print_started_at!);
+                            const end = new Date(order.print_completed_at!);
+                            return Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+                          });
+                        const avg = printTimes.length > 0 
+                          ? Math.round(printTimes.reduce((a, b) => a + b, 0) / printTimes.length) 
+                          : 0;
+                        return `${avg} يوم`;
+                      })()}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* رسم بياني لحالات الطلبات */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5" />
+                  توزيع حالات طلبات الطباعة
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ChartContainer
+                  config={{
+                    count: {
+                      label: "عدد الطلبات",
+                      color: "hsl(var(--chart-1))",
+                    },
+                  }}
+                  className="h-[300px]"
+                >
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={Object.entries(statusLabels).map(([status, label]) => ({
+                        status: label,
+                        count: printOrders.filter(order => order.status === status).length,
+                      }))}
+                      margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis 
+                        dataKey="status" 
+                        tick={{ fontSize: 12 }}
+                        angle={-45}
+                        textAnchor="end"
+                        height={80}
+                      />
+                      <YAxis />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Bar 
+                        dataKey="count" 
+                        fill="hsl(var(--primary))"
+                        radius={[4, 4, 0, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              </CardContent>
+            </Card>
+
+            {/* الرسم الدائري لاستخدام المواد */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <PieChart className="h-5 w-5" />
+                    استخدام المواد
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {(() => {
+                    const materialUsage = printOrders.reduce((acc, order) => {
+                      if (order.print_materials?.material_name) {
+                        const materialName = order.print_materials.material_name;
+                        acc[materialName] = (acc[materialName] || 0) + 1;
+                      }
+                      return acc;
+                    }, {} as Record<string, number>);
+
+                    const data = Object.entries(materialUsage).map(([name, count], index) => ({
+                      name,
+                      value: count,
+                      fill: `hsl(${(index * 360) / Object.keys(materialUsage).length}, 70%, 50%)`
+                    }));
+
+                    if (data.length === 0) {
+                      return (
+                        <div className="text-center py-8">
+                          <p className="text-muted-foreground">لا توجد بيانات لعرضها</p>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <ChartContainer
+                        config={{
+                          value: {
+                            label: "عدد الاستخدامات",
+                          },
+                        }}
+                        className="h-[300px]"
+                      >
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={data}
+                              cx="50%"
+                              cy="50%"
+                              outerRadius={80}
+                              dataKey="value"
+                              label={({ name, value }) => `${name}: ${value}`}
+                            >
+                              {data.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.fill} />
+                              ))}
+                            </Pie>
+                            <ChartTooltip content={<ChartTooltipContent />} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </ChartContainer>
+                    );
+                  })()}
+                </CardContent>
+              </Card>
+
+              {/* قائمة أحدث الطلبات المكتملة */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5" />
+                    آخر الطلبات المكتملة
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {printOrders
+                      .filter(order => order.status === "completed")
+                      .slice(0, 5)
+                      .map((order) => (
+                        <div key={order.id} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div>
+                            <p className="font-medium">{order.print_order_number}</p>
+                            <p className="text-sm text-muted-foreground">{order.orders.customers.name}</p>
+                          </div>
+                          <div className="text-left">
+                            <p className="text-sm text-muted-foreground">
+                              {new Date(order.created_at).toLocaleDateString('ar-SA')}
+                            </p>
+                            <Badge variant="default" className="bg-green-500">
+                              مكتمل
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
+                    {printOrders.filter(order => order.status === "completed").length === 0 && (
+                      <div className="text-center py-8">
+                        <p className="text-muted-foreground">لا توجد طلبات مكتملة بعد</p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* تقرير مفصل للأداء */}
+            <Card>
+              <CardHeader>
+                <CardTitle>تقرير الأداء الشهري</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-2">
+                    <h4 className="font-medium">الطلبات المنجزة هذا الشهر</h4>
+                    <p className="text-2xl font-bold text-green-600">
+                      {printOrders.filter(order => {
+                        const orderDate = new Date(order.created_at);
+                        const now = new Date();
+                        return orderDate.getMonth() === now.getMonth() && 
+                               orderDate.getFullYear() === now.getFullYear() &&
+                               order.status === "completed";
+                      }).length}
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <h4 className="font-medium">متوسط وقت الإنجاز</h4>
+                    <p className="text-2xl font-bold text-blue-600">
+                      {(() => {
+                        const completedOrders = printOrders.filter(order => 
+                          order.status === "completed" && order.created_at && order.print_completed_at
+                        );
+                        if (completedOrders.length === 0) return "0 يوم";
+                        
+                        const totalDays = completedOrders.reduce((sum, order) => {
+                          const start = new Date(order.created_at);
+                          const end = new Date(order.print_completed_at!);
+                          return sum + Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+                        }, 0);
+                        
+                        return `${Math.round(totalDays / completedOrders.length)} يوم`;
+                      })()}
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <h4 className="font-medium">معدل الكفاءة</h4>
+                    <p className="text-2xl font-bold text-purple-600">
+                      {printOrders.length > 0 
+                        ? Math.round((printOrders.filter(order => order.status === "completed").length / printOrders.length) * 100)
+                        : 0}%
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
