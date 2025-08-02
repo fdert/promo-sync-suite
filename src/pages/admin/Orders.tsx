@@ -87,6 +87,18 @@ const Orders = () => {
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [selectedOrderForUpload, setSelectedOrderForUpload] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [printMaterials, setPrintMaterials] = useState([]);
+  const [printOrderData, setPrintOrderData] = useState({
+    material_id: "",
+    dimensions_width: "",
+    dimensions_height: "",
+    dimensions_depth: "",
+    quantity: 1,
+    print_type: "",
+    finishing_type: "",
+    design_notes: "",
+    estimated_cost: ""
+  });
 
   const { toast } = useToast();
 
@@ -318,31 +330,46 @@ const Orders = () => {
     }
   };
 
-  // رفع تصميم للطلب
+  // رفع تصميم للطلب مع بيانات الطباعة
   const handleDesignUpload = async (orderId: string, files: FileList) => {
-    if (!files || files.length === 0) return;
+    if (!files || files.length === 0) {
+      toast({
+        title: "خطأ",
+        description: "يرجى اختيار ملفات للرفع",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setUploading(true);
     
     try {
       // البحث عن print_order مرتبط بهذا الطلب
-      const { data: printOrderData, error: printOrderError } = await supabase
+      const { data: existingPrintOrder, error: printOrderError } = await supabase
         .from('print_orders')
         .select('id')
         .eq('order_id', orderId)
         .single();
 
-      let printOrderId = printOrderData?.id;
+      let printOrderId = existingPrintOrder?.id;
 
-      // إذا لم يوجد print_order، أنشئ واحد جديد
+      // إذا لم يوجد print_order، أنشئ واحد جديد مع البيانات المدخلة
       if (!printOrderId) {
+        const printOrderFormData = printOrderData; // استخدام المتغير الصحيح
         const { data: newPrintOrder, error: createError } = await supabase
           .from('print_orders')
           .insert({
             order_id: orderId,
-            status: 'pending',
-            quantity: 1,
-            estimated_cost: 0,
+            status: 'design_completed',
+            material_id: printOrderFormData.material_id || null,
+            dimensions_width: printOrderFormData.dimensions_width ? parseFloat(printOrderFormData.dimensions_width) : null,
+            dimensions_height: printOrderFormData.dimensions_height ? parseFloat(printOrderFormData.dimensions_height) : null,
+            dimensions_depth: printOrderFormData.dimensions_depth ? parseFloat(printOrderFormData.dimensions_depth) : null,
+            quantity: printOrderFormData.quantity || 1,
+            print_type: printOrderFormData.print_type || null,
+            finishing_type: printOrderFormData.finishing_type || null,
+            design_notes: printOrderFormData.design_notes || 'تم رفع التصميم من صفحة الطلبات',
+            estimated_cost: printOrderFormData.estimated_cost ? parseFloat(printOrderFormData.estimated_cost) : 0,
             actual_cost: 0
           })
           .select('id')
@@ -350,6 +377,26 @@ const Orders = () => {
 
         if (createError) throw createError;
         printOrderId = newPrintOrder.id;
+      } else {
+        // تحديث البيانات إذا كان موجود
+        const printOrderFormData = printOrderData; // استخدام المتغير الصحيح
+        const { error: updateError } = await supabase
+          .from('print_orders')
+          .update({
+            material_id: printOrderFormData.material_id || null,
+            dimensions_width: printOrderFormData.dimensions_width ? parseFloat(printOrderFormData.dimensions_width) : null,
+            dimensions_height: printOrderFormData.dimensions_height ? parseFloat(printOrderFormData.dimensions_height) : null,
+            dimensions_depth: printOrderFormData.dimensions_depth ? parseFloat(printOrderFormData.dimensions_depth) : null,
+            quantity: printOrderFormData.quantity || 1,
+            print_type: printOrderFormData.print_type || null,
+            finishing_type: printOrderFormData.finishing_type || null,
+            design_notes: printOrderFormData.design_notes || 'تم تحديث التصميم من صفحة الطلبات',
+            estimated_cost: printOrderFormData.estimated_cost ? parseFloat(printOrderFormData.estimated_cost) : 0,
+            status: 'design_completed'
+          })
+          .eq('id', printOrderId);
+
+        if (updateError) throw updateError;
       }
 
       // رفع الملفات
@@ -383,7 +430,20 @@ const Orders = () => {
 
       toast({
         title: "تم رفع التصميم",
-        description: "تم رفع ملفات التصميم بنجاح",
+        description: "تم رفع ملفات التصميم مع البيانات بنجاح",
+      });
+
+      // إعادة تعيين النموذج
+      setPrintOrderData({
+        material_id: "",
+        dimensions_width: "",
+        dimensions_height: "",
+        dimensions_depth: "",
+        quantity: 1,
+        print_type: "",
+        finishing_type: "",
+        design_notes: "",
+        estimated_cost: ""
       });
 
       setUploadDialogOpen(false);
@@ -462,7 +522,24 @@ const Orders = () => {
   // تحميل البيانات عند تحميل الصفحة
   useEffect(() => {
     fetchData();
+    fetchPrintMaterials();
   }, []);
+
+  // جلب مواد الطباعة
+  const fetchPrintMaterials = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('print_materials')
+        .select('*')
+        .eq('is_active', true)
+        .order('material_name');
+
+      if (error) throw error;
+      setPrintMaterials(data || []);
+    } catch (error) {
+      console.error('Error fetching print materials:', error);
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -1659,14 +1736,151 @@ const Orders = () => {
         </DialogContent>
       </Dialog>
 
-      {/* نافذة رفع التصميم */}
+      {/* نافذة رفع التصميم مع بيانات الطباعة */}
       <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>رفع تصميم للطلب {selectedOrderForUpload?.order_number}</DialogTitle>
+            <DialogTitle>رفع تصميم وبيانات الطباعة للطلب {selectedOrderForUpload?.order_number}</DialogTitle>
           </DialogHeader>
           
-          <div className="space-y-4">
+          <div className="space-y-6">
+            {/* بيانات الطباعة */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 p-4 border rounded-lg">
+              <h3 className="lg:col-span-3 font-medium text-lg mb-4">بيانات الطباعة</h3>
+              
+              {/* المادة */}
+              <div>
+                <Label htmlFor="material">المادة</Label>
+                <Select value={printOrderData.material_id} onValueChange={(value) => setPrintOrderData({...printOrderData, material_id: value})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="اختر المادة" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {printMaterials.map((material) => (
+                      <SelectItem key={material.id} value={material.id}>
+                        {material.material_name} - {material.material_type}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* الكمية */}
+              <div>
+                <Label htmlFor="quantity">الكمية</Label>
+                <Input
+                  id="quantity"
+                  type="number"
+                  min="1"
+                  value={printOrderData.quantity}
+                  onChange={(e) => setPrintOrderData({...printOrderData, quantity: parseInt(e.target.value) || 1})}
+                />
+              </div>
+
+              {/* التكلفة المتوقعة */}
+              <div>
+                <Label htmlFor="estimated_cost">التكلفة المتوقعة (ر.س)</Label>
+                <Input
+                  id="estimated_cost"
+                  type="number"
+                  step="0.01"
+                  value={printOrderData.estimated_cost}
+                  onChange={(e) => setPrintOrderData({...printOrderData, estimated_cost: e.target.value})}
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+
+            {/* المقاسات */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 p-4 border rounded-lg">
+              <h3 className="lg:col-span-3 font-medium text-lg mb-4">المقاسات (سم)</h3>
+              
+              <div>
+                <Label htmlFor="width">العرض</Label>
+                <Input
+                  id="width"
+                  type="number"
+                  step="0.1"
+                  value={printOrderData.dimensions_width}
+                  onChange={(e) => setPrintOrderData({...printOrderData, dimensions_width: e.target.value})}
+                  placeholder="0.0"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="height">الارتفاع</Label>
+                <Input
+                  id="height"
+                  type="number"
+                  step="0.1"
+                  value={printOrderData.dimensions_height}
+                  onChange={(e) => setPrintOrderData({...printOrderData, dimensions_height: e.target.value})}
+                  placeholder="0.0"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="depth">العمق</Label>
+                <Input
+                  id="depth"
+                  type="number"
+                  step="0.1"
+                  value={printOrderData.dimensions_depth}
+                  onChange={(e) => setPrintOrderData({...printOrderData, dimensions_depth: e.target.value})}
+                  placeholder="0.0"
+                />
+              </div>
+            </div>
+
+            {/* معلومات إضافية */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-4 border rounded-lg">
+              <h3 className="lg:col-span-2 font-medium text-lg mb-4">معلومات إضافية</h3>
+              
+              <div>
+                <Label htmlFor="print_type">نوع الطباعة</Label>
+                <Select value={printOrderData.print_type} onValueChange={(value) => setPrintOrderData({...printOrderData, print_type: value})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="اختر نوع الطباعة" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="digital">رقمية</SelectItem>
+                    <SelectItem value="offset">أوفست</SelectItem>
+                    <SelectItem value="screen">سلك سكرين</SelectItem>
+                    <SelectItem value="uv">UV</SelectItem>
+                    <SelectItem value="laser">ليزر</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="finishing_type">نوع التشطيب</Label>
+                <Select value={printOrderData.finishing_type} onValueChange={(value) => setPrintOrderData({...printOrderData, finishing_type: value})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="اختر نوع التشطيب" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="normal">عادي</SelectItem>
+                    <SelectItem value="lamination">لامينيشن</SelectItem>
+                    <SelectItem value="uv_coating">طلاء UV</SelectItem>
+                    <SelectItem value="embossing">بروز</SelectItem>
+                    <SelectItem value="cutting">قص</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="lg:col-span-2">
+                <Label htmlFor="design_notes">ملاحظات التصميم</Label>
+                <Textarea
+                  id="design_notes"
+                  value={printOrderData.design_notes}
+                  onChange={(e) => setPrintOrderData({...printOrderData, design_notes: e.target.value})}
+                  placeholder="أي ملاحظات خاصة بالتصميم أو الطباعة..."
+                  className="min-h-[80px]"
+                />
+              </div>
+            </div>
+
+            {/* رفع الملفات */}
             <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6">
               <div className="text-center">
                 <Upload className="mx-auto h-12 w-12 text-muted-foreground" />
@@ -1697,7 +1911,7 @@ const Orders = () => {
             
             {uploading && (
               <div className="text-center py-4">
-                <div className="text-sm text-muted-foreground">جارٍ رفع الملفات...</div>
+                <div className="text-sm text-muted-foreground">جارٍ رفع الملفات وحفظ البيانات...</div>
               </div>
             )}
           </div>
