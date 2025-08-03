@@ -402,6 +402,7 @@ const Invoices = () => {
       }
 
       // إنشاء محتوى HTML للفاتورة
+      console.log('بيانات الشركة للطباعة:', companyInfo);
       const invoiceHTML = generateInvoiceHTML(invoice, items || []);
       
       // إنشاء نافذة طباعة جديدة
@@ -443,10 +444,6 @@ const Invoices = () => {
 
   // دالة إنشاء HTML للفاتورة
   const generateInvoiceHTML = (invoice, items) => {
-    const companyInfo = {
-      name: "شركتك",
-      phone: "رقم الهاتف",
-    };
 
     return `
 <!DOCTYPE html>
@@ -479,6 +476,19 @@ const Invoices = () => {
             margin-bottom: 8px;
             border-bottom: 2px solid #000;
             padding-bottom: 5px;
+        }
+        
+        .company-section {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+        }
+        
+        .company-logo {
+            width: 40px;
+            height: 40px;
+            object-fit: contain;
         }
         
         .header h1 {
@@ -581,9 +591,16 @@ const Invoices = () => {
 </head>
 <body>
     <div class="header">
-        <div style="flex: 1;">
-            <h1>${companyInfo.name}</h1>
-            <div class="header-info">${companyInfo.phone}</div>
+        <div class="company-section">
+            ${companyInfo.logo ? `<img src="${companyInfo.logo}" alt="شعار الشركة" class="company-logo" />` : ''}
+            <div>
+                <h1>${companyInfo.name}</h1>
+                <div class="header-info">
+                    <div>${companyInfo.address}</div>
+                    <div>هاتف: ${companyInfo.phone}</div>
+                    <div>البريد: ${companyInfo.email}</div>
+                </div>
+            </div>
         </div>
         <div style="text-align: left; flex: 1;">
             <h2>فاتورة</h2>
