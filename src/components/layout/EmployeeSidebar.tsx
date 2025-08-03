@@ -10,6 +10,7 @@ import {
   Palette,
   Printer,
   TrendingUp,
+  Archive,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -59,6 +60,12 @@ const employeeMenuItems = [
     title: "التقييمات",
     icon: MessageSquare,
     href: "/employee/evaluations",
+    allowedRoles: ['employee'] as UserRole[],
+  },
+  {
+    title: "أرشيف الطباعة",
+    icon: Archive,
+    href: "/employee/print-archive",
     allowedRoles: ['employee'] as UserRole[],
   },
   {

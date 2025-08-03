@@ -20,6 +20,7 @@ import Reports from "./pages/admin/Reports";
 import EmployeeReports from "./pages/employee/Reports";
 import EmployeeCustomers from "./pages/employee/Customers";
 import EmployeePrintOrders from "./pages/employee/PrintOrders";
+import PrintArchive from "./pages/employee/PrintArchive";
 import WhatsApp from "./pages/admin/WhatsApp";
 import WebhookSettings from "./pages/admin/WebhookSettings";
 import WebsiteContent from "./pages/admin/WebsiteContent";
@@ -72,6 +73,7 @@ const App = () => (
               <Route path="invoices" element={<Invoices />} />
               <Route path="print-orders" element={<EmployeePrintOrders />} />
               <Route path="evaluations" element={<Evaluations />} />
+              <Route path="print-archive" element={<PrintArchive />} />
               <Route path="reports" element={<EmployeeReports />} />
             </Route>
             <Route path="/admin" element={
