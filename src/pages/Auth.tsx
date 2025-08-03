@@ -43,26 +43,34 @@ const Auth = () => {
   useEffect(() => {
     const fetchCompanyInfo = async () => {
       try {
+        console.log('جاري جلب بيانات الشركة...');
         const { data, error } = await supabase
           .from('website_settings')
           .select('setting_value')
           .eq('setting_key', 'website_content')
           .single();
 
+        console.log('استجابة قاعدة البيانات:', { data, error });
+
         if (!error && data?.setting_value && typeof data.setting_value === 'object') {
           const settingValue = data.setting_value as any;
           const companyData = settingValue.companyInfo;
           
+          console.log('بيانات الشركة المستخرجة:', companyData);
+          
           if (companyData) {
-            setCompanyInfo({
+            const newCompanyInfo = {
               name: companyData.name || "وكالة ابداع واحتراف للدعاية والاعلان",
               tagline: companyData.tagline || "نبني الأحلام بالإبداع والاحتراف",
               logo: companyData.logo || null
-            });
+            };
+            
+            console.log('بيانات الشركة الجديدة:', newCompanyInfo);
+            setCompanyInfo(newCompanyInfo);
           }
         }
       } catch (error) {
-        console.error('Error fetching company info:', error);
+        console.error('خطأ في جلب بيانات الشركة:', error);
         // في حالة الخطأ، استخدم البيانات الافتراضية
         setCompanyInfo({
           name: "وكالة ابداع واحتراف للدعاية والاعلان",
@@ -199,57 +207,63 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-accent/5 to-background p-4">
-      <Card className="w-full max-w-md shadow-2xl border-0 bg-card/50 backdrop-blur-sm">
-        <CardHeader className="text-center pb-8">
-          <div className="flex flex-col items-center gap-6 mb-6">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-accent/5 to-background p-2 sm:p-4 md:p-6">
+      <Card className="w-full max-w-sm sm:max-w-md md:max-w-lg shadow-2xl border-0 bg-card/50 backdrop-blur-sm mx-2">
+        <CardHeader className="text-center pb-4 sm:pb-6 md:pb-8 px-4 sm:px-6">
+          <div className="flex flex-col items-center gap-3 sm:gap-4 md:gap-6 mb-4 sm:mb-6">
             {companyInfo.logo ? (
               <div className="relative">
                 <img 
                   src={companyInfo.logo} 
                   alt="شعار الشركة"
-                  className="w-20 h-20 object-contain rounded-2xl bg-white p-3 shadow-2xl ring-4 ring-primary/10"
+                  className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 object-contain rounded-xl sm:rounded-2xl bg-white p-2 sm:p-3 shadow-xl sm:shadow-2xl ring-2 sm:ring-4 ring-primary/10"
+                  onError={(e) => {
+                    console.error('خطأ في تحميل الشعار:', e);
+                  }}
                 />
               </div>
             ) : (
-              <div className="w-20 h-20 bg-gradient-to-r from-primary to-accent rounded-2xl flex items-center justify-center shadow-2xl ring-4 ring-primary/10">
-                <Palette className="h-10 w-10 text-white" />
+              <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-r from-primary to-accent rounded-xl sm:rounded-2xl flex items-center justify-center shadow-xl sm:shadow-2xl ring-2 sm:ring-4 ring-primary/10">
+                <Palette className="h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10 text-white" />
               </div>
             )}
             
-            <div className="text-center space-y-2">
-              <h1 className="text-3xl font-black text-foreground leading-tight" style={{ fontFamily: 'Cairo, Tajawal, -apple-system, BlinkMacSystemFont, sans-serif' }}>
+            <div className="text-center space-y-1 sm:space-y-2">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-foreground leading-tight px-2" style={{ fontFamily: 'Cairo, Tajawal, -apple-system, BlinkMacSystemFont, sans-serif' }}>
                 {companyInfo.name}
               </h1>
-              <p className="text-base text-muted-foreground font-semibold leading-relaxed" style={{ fontFamily: 'Cairo, Tajawal, -apple-system, BlinkMacSystemFont, sans-serif' }}>
+              <p className="text-sm sm:text-base text-muted-foreground font-semibold leading-relaxed px-2" style={{ fontFamily: 'Cairo, Tajawal, -apple-system, BlinkMacSystemFont, sans-serif' }}>
                 {companyInfo.tagline}
               </p>
-              <div className="w-16 h-1 bg-gradient-to-r from-primary to-accent rounded-full mx-auto"></div>
+              <div className="w-12 sm:w-14 md:w-16 h-0.5 sm:h-1 bg-gradient-to-r from-primary to-accent rounded-full mx-auto"></div>
             </div>
           </div>
         </CardHeader>
         
-        <CardContent className="space-y-6" style={{ fontFamily: 'Cairo, Tajawal, -apple-system, BlinkMacSystemFont, sans-serif' }}>
+        <CardContent className="space-y-4 sm:space-y-6 px-4 sm:px-6" style={{ fontFamily: 'Cairo, Tajawal, -apple-system, BlinkMacSystemFont, sans-serif' }}>
           <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 bg-muted/50 p-1 rounded-xl">
-              <TabsTrigger value="login" className="gap-2 text-sm font-semibold rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-md">
-                <LogIn className="h-4 w-4" />
-                تسجيل الدخول
+            <TabsList className="grid w-full grid-cols-3 bg-muted/50 p-1 rounded-lg sm:rounded-xl h-auto">
+              <TabsTrigger value="login" className="gap-1 sm:gap-2 text-xs sm:text-sm font-semibold rounded-md sm:rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-md py-2 sm:py-2.5 flex-col sm:flex-row">
+                <LogIn className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">تسجيل الدخول</span>
+                <span className="sm:hidden">دخول</span>
               </TabsTrigger>
-              <TabsTrigger value="signup" className="gap-2 text-sm font-semibold rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-md">
-                <UserPlus className="h-4 w-4" />
-                إنشاء حساب
+              <TabsTrigger value="signup" className="gap-1 sm:gap-2 text-xs sm:text-sm font-semibold rounded-md sm:rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-md py-2 sm:py-2.5 flex-col sm:flex-row">
+                <UserPlus className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">إنشاء حساب</span>
+                <span className="sm:hidden">حساب</span>
               </TabsTrigger>
-              <TabsTrigger value="admin" className="gap-2 text-sm font-semibold rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-md">
-                <Shield className="h-4 w-4" />
-                تسجيل موظف
+              <TabsTrigger value="admin" className="gap-1 sm:gap-2 text-xs sm:text-sm font-semibold rounded-md sm:rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-md py-2 sm:py-2.5 flex-col sm:flex-row">
+                <Shield className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">تسجيل موظف</span>
+                <span className="sm:hidden">موظف</span>
               </TabsTrigger>
             </TabsList>
             
             {error && (
-              <Alert variant="destructive" className="mt-6 border-destructive/20 bg-destructive/5">
-                <AlertCircle className="h-5 w-5" />
-                <AlertDescription className="text-sm font-medium leading-relaxed">{error}</AlertDescription>
+              <Alert variant="destructive" className="mt-4 sm:mt-6 border-destructive/20 bg-destructive/5 mx-2 sm:mx-0">
+                <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5" />
+                <AlertDescription className="text-xs sm:text-sm font-medium leading-relaxed">{error}</AlertDescription>
               </Alert>
             )}
 

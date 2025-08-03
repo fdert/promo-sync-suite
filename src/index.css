@@ -6,6 +6,20 @@
 All colors MUST be HSL.
 */
 
+/* تحسين الخطوط العربية */
+* {
+  font-family: 'Cairo', 'Tajawal', 'Segoe UI', system-ui, -apple-system, sans-serif !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* تحسين العرض على الجوال */
+@media (max-width: 640px) {
+  html {
+    font-size: 14px;
+  }
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
