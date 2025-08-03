@@ -508,77 +508,196 @@ const Invoices = () => {
             <div className="space-y-4">
               <Button 
                 onClick={() => window.print()} 
-                className="w-full gap-2"
+                className="w-full gap-2 no-print"
               >
                 <Printer className="h-4 w-4" />
                 طباعة الفاتورة
               </Button>
-              <div className="bg-white p-8 rounded-lg shadow-lg max-w-4xl mx-auto print:shadow-none" dir="rtl">
-                {/* نفس محتوى العرض */}
-                <div className="flex justify-between items-start mb-8">
-                  <div>
-                    <h1 className="text-3xl font-bold text-primary mb-2">فاتورة</h1>
-                    <p className="text-sm text-gray-600">رقم الفاتورة: {printingInvoice.invoice_number}</p>
-                    <p className="text-sm text-gray-600">تاريخ الإصدار: {new Date(printingInvoice.issue_date).toLocaleDateString('ar-SA')}</p>
-                    <p className="text-sm text-gray-600">تاريخ الاستحقاق: {new Date(printingInvoice.due_date).toLocaleDateString('ar-SA')}</p>
-                  </div>
-                  <div className="text-right">
-                    <h2 className="text-xl font-bold text-primary">{companyInfo.name}</h2>
-                    <p className="text-sm text-gray-600">{companyInfo.address}</p>
-                    <p className="text-sm text-gray-600">هاتف: {companyInfo.phone}</p>
-                    <p className="text-sm text-gray-600">البريد: {companyInfo.email}</p>
-                  </div>
-                </div>
+              
+              {/* إضافة CSS للطباعة */}
+              <style>{`
+                @media print {
+                  .no-print { display: none !important; }
+                  body * { visibility: hidden; }
+                  .print-content, .print-content * { visibility: visible; }
+                  .print-content { 
+                    position: absolute;
+                    left: 0;
+                    top: 0;
+                    width: 100%;
+                    height: 100%;
+                  }
+                  @page {
+                    size: A5;
+                    margin: 10mm;
+                  }
+                  .invoice-container {
+                    width: 100%;
+                    height: 190mm;
+                    font-size: 11px;
+                    line-height: 1.3;
+                  }
+                  .header-section {
+                    height: 60mm;
+                    border-bottom: 2px solid #000;
+                    margin-bottom: 5mm;
+                  }
+                  .customer-section {
+                    height: 25mm;
+                    margin-bottom: 5mm;
+                  }
+                  .details-section {
+                    height: 40mm;
+                    margin-bottom: 5mm;
+                  }
+                  .total-section {
+                    height: 30mm;
+                    border-top: 2px solid #000;
+                    margin-bottom: 5mm;
+                  }
+                  .footer-section {
+                    height: 25mm;
+                    text-align: center;
+                  }
+                  .company-logo {
+                    max-height: 40mm;
+                    max-width: 40mm;
+                  }
+                  .company-stamp {
+                    max-height: 20mm;
+                    max-width: 30mm;
+                  }
+                }
+              `}</style>
 
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold mb-2">بيانات العميل:</h3>
-                  <p className="font-medium">{printingInvoice.customers?.name}</p>
-                  {printingInvoice.customers?.phone && <p className="text-sm">{printingInvoice.customers.phone}</p>}
-                  {printingInvoice.customers?.address && <p className="text-sm">{printingInvoice.customers.address}</p>}
-                </div>
+              <div className="print-content bg-white p-6 rounded-lg shadow-lg max-w-4xl mx-auto" dir="rtl">
+                <div className="invoice-container">
+                  
+                  {/* Header Section */}
+                  <div className="header-section flex justify-between items-start relative">
+                    {/* بيانات الشركة - اليمين */}
+                    <div className="w-1/3 text-right">
+                      <h2 className="text-lg font-bold text-blue-800 mb-2">{companyInfo.name}</h2>
+                      <p className="text-xs mb-1">{companyInfo.address}</p>
+                      <p className="text-xs mb-1">هاتف: {companyInfo.phone}</p>
+                      <p className="text-xs mb-1">البريد: {companyInfo.email}</p>
+                    </div>
 
-                <div className="border rounded-lg p-4 mb-6">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <span className="font-semibold">المبلغ الأساسي:</span>
-                      <span className="mr-2">{printingInvoice.amount?.toLocaleString('ar-SA')} ر.س</span>
+                    {/* شعار الوكالة - المنتصف */}
+                    <div className="w-1/3 flex justify-center items-center">
+                      {companyInfo.logo && (
+                        <img 
+                          src={companyInfo.logo} 
+                          alt="شعار الوكالة" 
+                          className="company-logo object-contain"
+                        />
+                      )}
                     </div>
-                    <div>
-                      <span className="font-semibold">الضريبة (15%):</span>
-                      <span className="mr-2">{printingInvoice.tax_amount?.toLocaleString('ar-SA')} ر.س</span>
-                    </div>
-                    <div>
-                      <span className="font-semibold">نوع الدفع:</span>
-                      <span className="mr-2">{printingInvoice.payment_type}</span>
-                    </div>
-                    <div>
-                      <span className="font-semibold">الحالة:</span>
-                      <span className="mr-2">{printingInvoice.status}</span>
+
+                    {/* بيانات الفاتورة - اليسار */}
+                    <div className="w-1/3 text-left">
+                      <h1 className="text-2xl font-bold text-blue-800 mb-2">فـاتـورة</h1>
+                      <p className="text-xs mb-1"><strong>رقم الفاتورة:</strong> {printingInvoice.invoice_number}</p>
+                      <p className="text-xs mb-1"><strong>تاريخ الإصدار:</strong> {new Date(printingInvoice.issue_date).toLocaleDateString('ar-SA')}</p>
+                      <p className="text-xs mb-1"><strong>تاريخ الاستحقاق:</strong> {new Date(printingInvoice.due_date).toLocaleDateString('ar-SA')}</p>
                     </div>
                   </div>
-                </div>
 
-                <div className="border-t-2 border-primary pt-4 mb-6">
-                  <div className="text-left">
-                    <span className="text-2xl font-bold">المجموع الكلي: {printingInvoice.total_amount?.toLocaleString('ar-SA')} ر.س</span>
-                  </div>
-                </div>
-
-                {printingInvoice.notes && (
-                  <div className="mb-6">
-                    <h4 className="font-semibold mb-2">ملاحظات:</h4>
-                    <p className="text-sm">{printingInvoice.notes}</p>
-                  </div>
-                )}
-
-                <div className="text-center mt-8 pt-4 border-t">
-                  <p className="text-sm text-gray-600 mb-2">شكراً لك على التعامل معنا</p>
-                  <p className="text-blue-600 italic text-sm">{companyInfo.tagline}</p>
-                  {companyInfo.stamp && (
-                    <div className="mt-4 flex justify-center">
-                      <img src={companyInfo.stamp} alt="ختم الوكالة" className="h-16" />
+                  {/* Customer Section */}
+                  <div className="customer-section">
+                    <h3 className="text-sm font-bold mb-2 bg-gray-100 p-2">بيانات العميل:</h3>
+                    <div className="pr-4">
+                      <p className="text-sm font-medium mb-1">{printingInvoice.customers?.name}</p>
+                      {printingInvoice.customers?.phone && (
+                        <p className="text-xs mb-1">الهاتف: {printingInvoice.customers.phone}</p>
+                      )}
+                      {printingInvoice.customers?.address && (
+                        <p className="text-xs mb-1">العنوان: {printingInvoice.customers.address}</p>
+                      )}
                     </div>
-                  )}
+                  </div>
+
+                  {/* Details Section */}
+                  <div className="details-section">
+                    <h3 className="text-sm font-bold mb-2 bg-gray-100 p-2">تفاصيل الفاتورة:</h3>
+                    <div className="border border-gray-300 rounded">
+                      <table className="w-full text-xs">
+                        <tbody>
+                          <tr className="border-b">
+                            <td className="p-2 font-medium">الوصف</td>
+                            <td className="p-2 text-left">خدمات الدعاية والإعلان</td>
+                          </tr>
+                          <tr className="border-b">
+                            <td className="p-2 font-medium">المبلغ الأساسي</td>
+                            <td className="p-2 text-left">{printingInvoice.amount?.toLocaleString('ar-SA')} ر.س</td>
+                          </tr>
+                          <tr className="border-b">
+                            <td className="p-2 font-medium">ضريبة القيمة المضافة (15%)</td>
+                            <td className="p-2 text-left">{printingInvoice.tax_amount?.toLocaleString('ar-SA')} ر.س</td>
+                          </tr>
+                          <tr className="border-b">
+                            <td className="p-2 font-medium">نوع الدفع</td>
+                            <td className="p-2 text-left">{printingInvoice.payment_type}</td>
+                          </tr>
+                          <tr>
+                            <td className="p-2 font-medium">الحالة</td>
+                            <td className="p-2 text-left">
+                              <span className={`px-2 py-1 rounded text-xs ${
+                                printingInvoice.status === 'مدفوع' ? 'bg-green-100' :
+                                printingInvoice.status === 'قيد الانتظار' ? 'bg-yellow-100' :
+                                'bg-red-100'
+                              }`}>
+                                {printingInvoice.status}
+                              </span>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Total Section */}
+                  <div className="total-section">
+                    <div className="flex justify-between items-center mb-4">
+                      <div className="text-right">
+                        <h2 className="text-xl font-bold text-blue-800">
+                          المجموع الكلي: {printingInvoice.total_amount?.toLocaleString('ar-SA')} ر.س
+                        </h2>
+                      </div>
+                      {/* الختم أسفل المجموع الكلي */}
+                      <div className="flex justify-center">
+                        {companyInfo.stamp && (
+                          <img 
+                            src={companyInfo.stamp} 
+                            alt="ختم الوكالة" 
+                            className="company-stamp object-contain"
+                          />
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Notes */}
+                    {printingInvoice.notes && (
+                      <div className="mt-3">
+                        <h4 className="text-xs font-bold mb-1">ملاحظات:</h4>
+                        <p className="text-xs bg-gray-50 p-2 rounded">{printingInvoice.notes}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Footer Section */}
+                  <div className="footer-section">
+                    <div className="border-t border-gray-300 pt-3">
+                      <p className="text-sm font-medium text-gray-700 mb-2">شكراً لك على التعامل معنا</p>
+                      <p className="text-blue-600 italic text-xs font-medium">{companyInfo.tagline}</p>
+                      <div className="mt-2">
+                        <p className="text-xs text-gray-500">
+                          للاستفسارات: {companyInfo.phone} | {companyInfo.email}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
                 </div>
               </div>
             </div>
