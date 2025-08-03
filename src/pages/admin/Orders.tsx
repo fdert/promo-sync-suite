@@ -249,19 +249,24 @@ const Orders = () => {
         return false;
       }
 
+      // حساب الضريبة (15%)
+      const taxAmount = order.amount * 0.15;
+      const totalAmount = order.amount + taxAmount;
+
       // إنشاء الفاتورة
       const invoiceData = {
         invoice_number: invoiceNumber,
         customer_id: order.customer_id,
         order_id: order.id,
-        amount: order.amount,
-        total_amount: order.amount,
-        tax_amount: 0, // يمكن حسابها لاحقاً
-        status: (order.paid_amount || 0) >= order.amount ? 'مدفوعة' : 'قيد الانتظار',
+        amount: Number(order.amount) || 0,
+        tax_amount: Number(taxAmount) || 0,
+        total_amount: Number(totalAmount) || 0,
+        status: (order.paid_amount || 0) >= totalAmount ? 'مدفوعة' : 'قيد الانتظار',
         issue_date: new Date().toISOString().split('T')[0],
-        due_date: order.due_date,
-        payment_type: order.payment_type,
-        notes: order.payment_notes || `فاتورة الطلب ${order.order_number}`
+        due_date: order.due_date || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        payment_type: order.payment_type || 'دفع آجل',
+        notes: order.payment_notes || `فاتورة الطلب ${order.order_number}`,
+        paid_amount: Number(order.paid_amount) || 0
       };
 
       const { data: newInvoice, error: invoiceError } = await supabase
@@ -290,10 +295,10 @@ const Orders = () => {
         const invoiceItems = orderItems.map(item => ({
           invoice_id: newInvoice.id,
           item_name: item.item_name,
-          description: item.description,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-          total_amount: item.total_amount
+          description: item.description || '',
+          quantity: Number(item.quantity) || 1,
+          unit_price: Number(item.unit_price) || 0,
+          total_amount: Number(item.total_amount) || 0
         }));
 
         const { error: insertItemsError } = await supabase

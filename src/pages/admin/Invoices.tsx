@@ -130,6 +130,9 @@ const Invoices = () => {
             font-weight: 700;
             margin-bottom: 8px;
             color: #ffffff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
           }
           
           .company-details {
@@ -547,17 +550,26 @@ const Invoices = () => {
   };
 
   const handleEditInvoice = (invoice) => {
-    setEditingInvoice(invoice);
-    toast({
-      title: "تحت التطوير",
-      description: "ميزة تعديل الفاتورة ستكون متاحة قريباً",
-    });
+    // تحويل التواريخ إلى صيغة صحيحة
+    const formattedInvoice = {
+      ...invoice,
+      issue_date: invoice.issue_date ? new Date(invoice.issue_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      due_date: invoice.due_date ? new Date(invoice.due_date).toISOString().split('T')[0] : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      amount: Number(invoice.amount) || 0,
+      tax_amount: Number(invoice.tax_amount) || 0,
+      total_amount: Number(invoice.total_amount) || 0,
+      paid_amount: Number(invoice.paid_amount) || 0
+    };
+    setEditingInvoice(formattedInvoice);
   };
 
   const handleAddInvoice = () => {
+    // توليد رقم فاتورة جديد
+    const invoiceNumber = `INV-${String(invoices.length + 1).padStart(3, '0')}`;
+    
     // إعداد فاتورة جديدة
     const newInvoice = {
-      invoice_number: `INV-${String(invoices.length + 1).padStart(3, '0')}`,
+      invoice_number: invoiceNumber,
       customer_id: '',
       issue_date: new Date().toISOString().split('T')[0],
       due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -568,17 +580,52 @@ const Invoices = () => {
       payment_type: 'دفع آجل',
       notes: ''
     };
+    
     setEditingInvoice(newInvoice);
     setIsAddDialogOpen(false);
   };
 
   const saveInvoice = async (invoiceData) => {
     try {
+      // التحقق من البيانات المطلوبة
+      if (!invoiceData.customer_id) {
+        toast({
+          title: "خطأ",
+          description: "يجب اختيار العميل",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!invoiceData.amount || invoiceData.amount <= 0) {
+        toast({
+          title: "خطأ",
+          description: "يجب إدخال مبلغ صحيح",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // إعداد البيانات للحفظ
+      const dataToSave = {
+        invoice_number: invoiceData.invoice_number,
+        customer_id: invoiceData.customer_id,
+        issue_date: invoiceData.issue_date,
+        due_date: invoiceData.due_date,
+        amount: Number(invoiceData.amount),
+        tax_amount: Number(invoiceData.tax_amount),
+        total_amount: Number(invoiceData.total_amount),
+        status: invoiceData.status,
+        payment_type: invoiceData.payment_type,
+        notes: invoiceData.notes || null,
+        order_id: invoiceData.order_id || null
+      };
+
       if (invoiceData.id) {
         // تحديث فاتورة موجودة
         const { error } = await supabase
           .from('invoices')
-          .update(invoiceData)
+          .update(dataToSave)
           .eq('id', invoiceData.id);
         
         if (error) throw error;
@@ -591,7 +638,7 @@ const Invoices = () => {
         // إضافة فاتورة جديدة
         const { error } = await supabase
           .from('invoices')
-          .insert([invoiceData]);
+          .insert([dataToSave]);
         
         if (error) throw error;
         
@@ -607,7 +654,7 @@ const Invoices = () => {
       console.error('Error saving invoice:', error);
       toast({
         title: "خطأ",
-        description: "حدث خطأ أثناء حفظ الفاتورة",
+        description: error.message || "حدث خطأ أثناء حفظ الفاتورة",
         variant: "destructive",
       });
     }
