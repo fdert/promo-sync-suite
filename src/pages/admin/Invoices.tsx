@@ -84,370 +84,81 @@ const Invoices = () => {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>فاتورة ${invoice.invoice_number}</title>
         <style>
-          * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-          }
+          * { margin: 0; padding: 0; box-sizing: border-box; }
           
           body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            font-size: 13px;
-            line-height: 1.5;
-            color: #2c3e50;
+            font-size: 13px; line-height: 1.5; color: #2c3e50;
             background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            padding: 20px;
-            max-width: 210mm;
-            margin: 0 auto;
+            padding: 20px; max-width: 210mm; margin: 0 auto;
           }
           
           .invoice-container {
-            width: 100%;
-            background: #ffffff;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            border-radius: 15px;
-            overflow: hidden;
+            background: #ffffff; box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            border-radius: 15px; overflow: hidden;
           }
           
-          .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 25px 30px;
-            position: relative;
-          }
+          .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px 30px; }
+          .header-content { display: flex; justify-content: space-between; align-items: flex-start; }
           
-          .header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="75" cy="75" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="50" cy="10" r="0.5" fill="rgba(255,255,255,0.05)"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
-            opacity: 0.3;
-          }
+          .company-info { flex: 1; text-align: right; }
+          .company-name { font-size: 22px; font-weight: 700; margin-bottom: 10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+          .company-details { font-size: 13px; line-height: 1.6; opacity: 0.95; }
           
-          .header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            position: relative;
-            z-index: 1;
-          }
+          .logo-section { flex: 0 0 90px; text-align: center; margin: 0 25px; }
+          .company-logo { max-width: 80px; max-height: 80px; object-fit: contain; border: 3px solid rgba(255,255,255,0.3); border-radius: 12px; padding: 8px; background: rgba(255,255,255,0.1); }
           
-          .company-info {
-            flex: 1;
-            text-align: right;
-          }
+          .invoice-info { flex: 1; text-align: left; }
+          .invoice-title { font-size: 28px; font-weight: 700; margin-bottom: 12px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+          .invoice-details { font-size: 13px; line-height: 1.6; opacity: 0.95; }
           
-          .company-name {
-            font-size: 22px;
-            font-weight: 700;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-          }
+          .content-section { padding: 30px; }
+          .section { margin-bottom: 25px; }
+          .section-title { font-size: 16px; font-weight: 700; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 12px 20px; border-radius: 8px 8px 0 0; text-shadow: 1px 1px 2px rgba(0,0,0,0.2); }
+          .section-content { background: #f8fafc; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 8px 8px; padding: 20px; }
           
-          .company-details {
-            font-size: 13px;
-            line-height: 1.6;
-            opacity: 0.95;
-          }
+          .customer-name { font-size: 18px; font-weight: 700; color: #2d3748; margin-bottom: 8px; }
           
-          .logo-section {
-            flex: 0 0 90px;
-            text-align: center;
-            margin: 0 25px;
-          }
+          .items-table { width: 100%; border-collapse: collapse; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+          .items-table th { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: #ffffff !important; padding: 15px 12px; font-weight: 700; border: none; text-shadow: 1px 1px 2px rgba(0,0,0,0.2); text-align: center; }
+          .items-table td { padding: 15px 12px; border: 1px solid #e2e8f0; background: #ffffff; font-size: 12px; }
+          .items-table tr:nth-child(even) td { background: #f8fafc; }
+          .item-name { font-weight: 600; color: #2d3748; margin-bottom: 4px; }
+          .item-description { font-size: 11px; color: #718096; font-style: italic; }
           
-          .company-logo {
-            max-width: 80px;
-            max-height: 80px;
-            object-fit: contain;
-            border: 3px solid rgba(255,255,255,0.3);
-            border-radius: 12px;
-            padding: 8px;
-            background: rgba(255,255,255,0.1);
-          }
+          .total-row { background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%) !important; font-weight: 700; color: #2d3748; }
+          .total-row td { border-top: 3px solid #4facfe !important; padding: 18px 12px !important; }
           
-          .invoice-info {
-            flex: 1;
-            text-align: left;
-          }
+          .summary-section { background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); border-radius: 12px; padding: 20px; margin: 25px 0; }
+          .summary-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.3); }
+          .summary-row:last-child { border-bottom: none; font-size: 16px; font-weight: 700; padding-top: 15px; border-top: 2px solid rgba(255,255,255,0.5); }
+          .tax-row { background: rgba(255,193,7,0.2); border-radius: 8px; padding: 10px 15px; margin: 8px 0; }
           
-          .invoice-title {
-            font-size: 28px;
-            font-weight: 700;
-            margin-bottom: 12px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-          }
+          .payment-info { background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%); border-radius: 12px; padding: 20px; }
+          .payment-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size: 13px; }
+          .payment-item { display: flex; align-items: center; gap: 8px; }
           
-          .invoice-details {
-            font-size: 13px;
-            line-height: 1.6;
-            opacity: 0.95;
-          }
+          .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+          .status-paid { background: #d4edda; color: #155724; }
+          .status-pending { background: #fff3cd; color: #856404; }
+          .status-overdue { background: #f8d7da; color: #721c24; }
           
-          .content-section {
-            padding: 30px;
-          }
+          .footer-section { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px 30px; text-align: center; position: relative; }
+          .footer-content { position: relative; z-index: 1; }
+          .total-amount-footer { font-size: 24px; font-weight: 700; margin-bottom: 15px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+          .thanks-message { font-size: 18px; font-weight: 600; margin-bottom: 8px; text-shadow: 1px 1px 2px rgba(0,0,0,0.2); }
+          .tagline { font-style: italic; margin-bottom: 10px; opacity: 0.9; }
+          .contact-info { font-size: 13px; opacity: 0.8; }
           
-          .section {
-            margin-bottom: 25px;
-          }
+          .stamp-section { position: absolute; bottom: 20px; left: 30px; }
+          .company-stamp { max-width: 90px; max-height: 70px; object-fit: contain; border: 2px solid rgba(255,255,255,0.3); border-radius: 8px; padding: 5px; background: rgba(255,255,255,0.1); }
           
-          .section-title {
-            font-size: 16px;
-            font-weight: 700;
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            color: white;
-            padding: 12px 20px;
-            border-radius: 8px 8px 0 0;
-            margin-bottom: 0;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
-          }
-          
-          .section-content {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-top: none;
-            border-radius: 0 0 8px 8px;
-            padding: 20px;
-          }
-          
-          .customer-info {
-            font-size: 14px;
-          }
-          
-          .customer-name {
-            font-size: 18px;
-            font-weight: 700;
-            color: #2d3748;
-            margin-bottom: 8px;
-          }
-          
-          .items-table {
-            width: 100%;
-            border-collapse: collapse;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-          }
-          
-          .items-table th {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            color: white;
-            padding: 15px 12px;
-            font-weight: 700;
-            font-size: 13px;
-            text-align: center;
-            border: none;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
-          }
-          
-          .items-table td {
-            padding: 15px 12px;
-            border: 1px solid #e2e8f0;
-            font-size: 12px;
-            background: #ffffff;
-          }
-          
-          .items-table tr:nth-child(even) td {
-            background: #f8fafc;
-          }
-          
-          .items-table tr:hover td {
-            background: #e6fffa;
-            transition: background-color 0.3s ease;
-          }
-          
-          .item-name {
-            font-weight: 600;
-            color: #2d3748;
-            margin-bottom: 4px;
-          }
-          
-          .item-description {
-            font-size: 11px;
-            color: #718096;
-            font-style: italic;
-          }
-          
-          .total-row {
-            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%) !important;
-            font-weight: 700;
-            color: #2d3748;
-          }
-          
-          .total-row td {
-            border-top: 3px solid #4facfe !important;
-            padding: 18px 12px !important;
-          }
-          
-          .summary-section {
-            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
-            border-radius: 12px;
-            padding: 20px;
-            margin: 25px 0;
-          }
-          
-          .summary-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 0;
-            border-bottom: 1px solid rgba(255,255,255,0.3);
-          }
-          
-          .summary-row:last-child {
-            border-bottom: none;
-            font-size: 16px;
-            font-weight: 700;
-            color: #2d3748;
-            padding-top: 15px;
-            border-top: 2px solid rgba(255,255,255,0.5);
-          }
-          
-          .tax-row {
-            background: rgba(255,193,7,0.2);
-            border-radius: 8px;
-            padding: 10px 15px;
-            margin: 8px 0;
-          }
-          
-          .payment-info {
-            background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);
-            border-radius: 12px;
-            padding: 20px;
-            margin: 20px 0;
-          }
-          
-          .payment-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            font-size: 13px;
-          }
-          
-          .payment-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-          }
-          
-          .status-badge {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
-          }
-          
-          .status-paid {
-            background: #d4edda;
-            color: #155724;
-          }
-          
-          .status-pending {
-            background: #fff3cd;
-            color: #856404;
-          }
-          
-          .status-overdue {
-            background: #f8d7da;
-            color: #721c24;
-          }
-          
-          .footer-section {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 25px 30px;
-            text-align: center;
-            position: relative;
-          }
-          
-          .footer-section::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="footerGrain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="75" cy="75" r="1" fill="rgba(255,255,255,0.1)"/></pattern></defs><rect width="100" height="100" fill="url(%23footerGrain)"/></svg>');
-            opacity: 0.3;
-          }
-          
-          .footer-content {
-            position: relative;
-            z-index: 1;
-          }
-          
-          .total-amount-footer {
-            font-size: 24px;
-            font-weight: 700;
-            margin-bottom: 15px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-          }
-          
-          .stamp-section {
-            position: absolute;
-            bottom: 20px;
-            left: 30px;
-          }
-          
-          .company-stamp {
-            max-width: 90px;
-            max-height: 70px;
-            object-fit: contain;
-            border: 2px solid rgba(255,255,255,0.3);
-            border-radius: 8px;
-            padding: 5px;
-            background: rgba(255,255,255,0.1);
-          }
-          
-          .notes-section {
-            background: #f7fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 10px;
-            padding: 18px;
-            margin: 20px 0;
-            font-size: 12px;
-            line-height: 1.6;
-          }
-          
-          .thanks-message {
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 8px;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
-          }
-          
-          .tagline {
-            font-style: italic;
-            margin-bottom: 10px;
-            opacity: 0.9;
-          }
-          
-          .contact-info {
-            font-size: 13px;
-            opacity: 0.8;
-          }
+          .notes-section { background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 18px; margin: 20px 0; font-size: 12px; line-height: 1.6; }
           
           @media print {
-            body {
-              padding: 0;
-              background: white;
-            }
-            
-            .invoice-container {
-              box-shadow: none;
-              border-radius: 0;
-            }
-            
-            @page {
-              size: A4;
-              margin: 15mm;
-            }
+            body { padding: 0; background: white; }
+            .invoice-container { box-shadow: none; border-radius: 0; }
+            @page { size: A4; margin: 15mm; }
           }
         </style>
       </head>
