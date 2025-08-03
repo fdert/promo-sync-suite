@@ -292,15 +292,19 @@ const Orders = () => {
         return;
       }
 
-      // الحصول على رابط الملف من التخزين
-      const { data: fileData } = await supabase.storage
+      // إنشاء رابط عام للملف (بدلاً من الرابط المؤقت)
+      const supabaseUrl = 'https://gcuqfxacnbxdldsbmgvf.supabase.co';
+      const publicFileUrl = `${supabaseUrl}/storage/v1/object/public/print-files/${proofFile.file_path}`;
+      
+      // التحقق من وجود الملف
+      const { data: fileCheck } = await supabase.storage
         .from('print-files')
-        .createSignedUrl(proofFile.file_path, 3600); // رابط صالح لساعة واحدة
+        .list(proofFile.file_path.split('/')[0]);
 
-      if (!fileData?.signedUrl) {
+      if (!fileCheck) {
         toast({
           title: "خطأ",
-          description: "خطأ في الحصول على رابط الملف",
+          description: "خطأ في الحصول على الملف",
           variant: "destructive",
         });
         return;
@@ -368,7 +372,7 @@ ${orderItemsText}
           to_number: order.customers?.whatsapp_number || '',
           message_type: messageType,
           message_content: proofMessage,
-          media_url: fileData.signedUrl,
+          media_url: publicFileUrl,
           status: 'pending',
           customer_id: order.customer_id || (order as any).customer_id
         });
