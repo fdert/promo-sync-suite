@@ -209,12 +209,12 @@ const Invoices = () => {
               <div class="section-content">
                 <table class="items-table">
                   <thead>
-                    <tr>
-                      <th style="width: 8%; color: #ffffff; font-weight: bold;">م</th>
-                      <th style="width: 40%; color: #ffffff; font-weight: bold;">اسم البند / الخدمة</th>
-                      <th style="width: 15%; color: #ffffff; font-weight: bold;">الكمية</th>
-                      <th style="width: 17%; color: #ffffff; font-weight: bold;">السعر (ر.س)</th>
-                      <th style="width: 20%; color: #ffffff; font-weight: bold;">الإجمالي (ر.س)</th>
+                    <tr style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                      <th style="width: 8%; color: #ffffff; font-weight: bold; border: 1px solid #555; padding: 8px;">م</th>
+                      <th style="width: 40%; color: #ffffff; font-weight: bold; border: 1px solid #555; padding: 8px;">اسم البند / الخدمة</th>
+                      <th style="width: 15%; color: #ffffff; font-weight: bold; border: 1px solid #555; padding: 8px;">الكمية</th>
+                      <th style="width: 17%; color: #ffffff; font-weight: bold; border: 1px solid #555; padding: 8px;">السعر (ر.س)</th>
+                      <th style="width: 20%; color: #ffffff; font-weight: bold; border: 1px solid #555; padding: 8px;">الإجمالي (ر.س)</th>
                     </tr>
                   </thead>
                   <tbody>
