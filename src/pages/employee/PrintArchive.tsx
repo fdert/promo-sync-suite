@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { 
   Search, 
@@ -14,7 +15,8 @@ import {
   Archive,
   Printer,
   Eye,
-  ArrowLeft
+  ArrowLeft,
+  Palette
 } from "lucide-react";
 import {
   Table,
@@ -576,45 +578,111 @@ const PrintArchive = () => {
                             <div className="border-t pt-4">
                               <h4 className="font-medium mb-3 flex items-center gap-2">
                                 <FileText className="h-4 w-4" />
-                                ملفات الطباعة ({orderFiles.length})
+                                ملفات الطلب ({orderFiles.length})
                               </h4>
                               {orderFiles.length === 0 ? (
                                 <p className="text-sm text-muted-foreground">لا توجد ملفات مرفوعة لهذا الطلب</p>
                               ) : (
-                                <div className="grid gap-3">
-                                  {orderFiles.map((file) => (
-                                    <div key={file.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                                      <div className="flex items-center gap-3">
-                                        <FileText className="h-5 w-5 text-muted-foreground" />
-                                        <div>
-                                          <p className="font-medium text-sm">{file.file_name}</p>
-                                          <p className="text-xs text-muted-foreground">
-                                            {new Date(file.upload_date).toLocaleDateString('ar-SA')} • 
-                                            {(file.file_size / 1024 / 1024).toFixed(2)} MB • 
-                                            {file.file_type}
-                                          </p>
-                                          {file.notes && (
-                                            <p className="text-xs text-muted-foreground mt-1">{file.notes}</p>
-                                          )}
-                                        </div>
-                                        {file.is_approved && (
-                                          <Badge variant="secondary" className="bg-green-500 text-white text-xs">
-                                            معتمد
-                                          </Badge>
-                                        )}
+                                <Tabs defaultValue="design" className="w-full">
+                                  <TabsList className="grid w-full grid-cols-2">
+                                    <TabsTrigger value="design" className="flex items-center gap-2">
+                                      <Palette className="h-4 w-4" />
+                                      ملفات البروفة ({orderFiles.filter(f => f.file_category === 'design').length})
+                                    </TabsTrigger>
+                                    <TabsTrigger value="print" className="flex items-center gap-2">
+                                      <Printer className="h-4 w-4" />
+                                      ملفات الطباعة ({orderFiles.filter(f => f.file_category === 'print').length})
+                                    </TabsTrigger>
+                                  </TabsList>
+                                  
+                                  <TabsContent value="design" className="mt-4">
+                                    {orderFiles.filter(f => f.file_category === 'design').length === 0 ? (
+                                      <div className="text-center py-8 bg-blue-50 rounded-lg">
+                                        <Palette className="mx-auto h-8 w-8 text-blue-400 mb-2" />
+                                        <p className="text-sm text-muted-foreground">لا توجد ملفات بروفة لهذا الطلب</p>
                                       </div>
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => downloadFile(file.file_path, file.file_name)}
-                                        className="gap-2"
-                                      >
-                                        <Download className="h-3 w-3" />
-                                        تحميل
-                                      </Button>
-                                    </div>
-                                  ))}
-                                </div>
+                                    ) : (
+                                      <div className="grid gap-3">
+                                        {orderFiles.filter(f => f.file_category === 'design').map((file) => (
+                                          <div key={file.id} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                            <div className="flex items-center gap-3">
+                                              <Palette className="h-5 w-5 text-blue-600" />
+                                              <div>
+                                                <p className="font-medium text-sm">{file.file_name}</p>
+                                                <p className="text-xs text-muted-foreground">
+                                                  {new Date(file.upload_date).toLocaleDateString('ar-SA')} • 
+                                                  {(file.file_size / 1024 / 1024).toFixed(2)} MB • 
+                                                  {file.file_type}
+                                                </p>
+                                                {file.notes && (
+                                                  <p className="text-xs text-muted-foreground mt-1">{file.notes}</p>
+                                                )}
+                                              </div>
+                                              {file.is_approved && (
+                                                <Badge variant="secondary" className="bg-green-500 text-white text-xs">
+                                                  معتمد
+                                                </Badge>
+                                              )}
+                                            </div>
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              onClick={() => downloadFile(file.file_path, file.file_name)}
+                                              className="gap-2"
+                                            >
+                                              <Download className="h-3 w-3" />
+                                              تحميل
+                                            </Button>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </TabsContent>
+                                  
+                                  <TabsContent value="print" className="mt-4">
+                                    {orderFiles.filter(f => f.file_category === 'print').length === 0 ? (
+                                      <div className="text-center py-8 bg-green-50 rounded-lg">
+                                        <Printer className="mx-auto h-8 w-8 text-green-400 mb-2" />
+                                        <p className="text-sm text-muted-foreground">لا توجد ملفات طباعة لهذا الطلب</p>
+                                      </div>
+                                    ) : (
+                                      <div className="grid gap-3">
+                                        {orderFiles.filter(f => f.file_category === 'print').map((file) => (
+                                          <div key={file.id} className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
+                                            <div className="flex items-center gap-3">
+                                              <Printer className="h-5 w-5 text-green-600" />
+                                              <div>
+                                                <p className="font-medium text-sm">{file.file_name}</p>
+                                                <p className="text-xs text-muted-foreground">
+                                                  {new Date(file.upload_date).toLocaleDateString('ar-SA')} • 
+                                                  {(file.file_size / 1024 / 1024).toFixed(2)} MB • 
+                                                  {file.file_type}
+                                                </p>
+                                                {file.notes && (
+                                                  <p className="text-xs text-muted-foreground mt-1">{file.notes}</p>
+                                                )}
+                                              </div>
+                                              {file.is_approved && (
+                                                <Badge variant="secondary" className="bg-green-500 text-white text-xs">
+                                                  معتمد
+                                                </Badge>
+                                              )}
+                                            </div>
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              onClick={() => downloadFile(file.file_path, file.file_name)}
+                                              className="gap-2"
+                                            >
+                                              <Download className="h-3 w-3" />
+                                              تحميل
+                                            </Button>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </TabsContent>
+                                </Tabs>
                               )}
                             </div>
                           </div>
