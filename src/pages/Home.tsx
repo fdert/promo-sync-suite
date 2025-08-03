@@ -15,8 +15,43 @@ const Home = () => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [companyInfo, setCompanyInfo] = useState({
+    name: "وكالة ابداع واحتراف للدعاية والاعلان",
+    tagline: "نبني الأحلام بالإبداع والاحتراف",
+    logo: "https://gcuqfxacnbxdldsbmgvf.supabase.co/storage/v1/object/public/logos/logo-1754189656106.jpg"
+  });
   const { signIn, user } = useAuth();
   const navigate = useNavigate();
+
+  // جلب بيانات الشركة من قاعدة البيانات
+  useEffect(() => {
+    const loadCompanyData = async () => {
+      try {
+        const { data } = await supabase
+          .from('website_settings')
+          .select('setting_value')
+          .eq('setting_key', 'website_content')
+          .maybeSingle();
+
+        if (data?.setting_value && typeof data.setting_value === 'object') {
+          const settingValue = data.setting_value as any;
+          const company = settingValue.companyInfo;
+          
+          if (company) {
+            setCompanyInfo({
+              name: company.name || "وكالة ابداع واحتراف للدعاية والاعلان",
+              tagline: company.tagline || "نبني الأحلام بالإبداع والاحتراف",
+              logo: company.logo || "https://gcuqfxacnbxdldsbmgvf.supabase.co/storage/v1/object/public/logos/logo-1754189656106.jpg"
+            });
+          }
+        }
+      } catch (error) {
+        console.error('خطأ في تحميل بيانات الشركة:', error);
+      }
+    };
+
+    loadCompanyData();
+  }, []);
 
   // إعادة توجيه المستخدم المسجل دخوله
   useEffect(() => {
@@ -79,17 +114,21 @@ const Home = () => {
           <div className="text-center space-y-6">
             <div className="flex justify-center">
               <img 
-                src={logo} 
-                alt="شعار وكالة الإبداع" 
-                className="w-24 h-24 object-contain drop-shadow-lg"
+                src={companyInfo.logo} 
+                alt="شعار الشركة" 
+                className="w-24 h-24 object-contain drop-shadow-lg rounded-lg"
+                onError={(e) => {
+                  // في حالة فشل تحميل الصورة، استخدم الشعار الافتراضي
+                  e.currentTarget.src = logo;
+                }}
               />
             </div>
             <div className="space-y-2">
               <h1 className="text-4xl font-amiri font-bold text-foreground bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                وكالة الإبداع
+                {companyInfo.name}
               </h1>
               <p className="text-lg font-cairo font-medium text-muted-foreground">
-                للدعاية والإعلان
+                {companyInfo.tagline}
               </p>
               <p className="text-sm text-muted-foreground">
                 نظام إدارة شامل ومتطور
@@ -175,7 +214,7 @@ const Home = () => {
           {/* Footer */}
           <div className="text-center space-y-2">
             <p className="text-sm text-muted-foreground font-cairo">
-              © 2024 وكالة الإبداع للدعاية والإعلان
+              © 2024 {companyInfo.name}
             </p>
             <p className="text-xs text-muted-foreground">
               جميع الحقوق محفوظة
