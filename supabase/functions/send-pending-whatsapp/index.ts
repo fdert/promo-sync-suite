@@ -78,25 +78,37 @@ Deno.serve(async (req) => {
         let messagePayload;
         
         if (message.message_type === 'image' && message.media_url) {
-          // رسالة مع صورة
+          // رسالة مع صورة - تنسيق محسن للواتس اب
           messagePayload = {
-            to: message.to_number,
-            type: 'image',
+            messaging_product: "whatsapp",
+            to: message.to_number.replace('+', ''),
+            type: "image",
             image: {
               link: message.media_url,
               caption: message.message_content
-            },
-            timestamp: Math.floor(Date.now() / 1000)
+            }
+          };
+        } else if (message.message_type === 'document' && message.media_url) {
+          // ملف PDF أو مستند
+          messagePayload = {
+            messaging_product: "whatsapp",
+            to: message.to_number.replace('+', ''),
+            type: "document",
+            document: {
+              link: message.media_url,
+              caption: message.message_content,
+              filename: "proof.pdf"
+            }
           };
         } else {
           // رسالة نصية عادية
           messagePayload = {
-            to: message.to_number,
-            type: message.message_type || 'text',
-            message: {
-              text: message.message_content
-            },
-            timestamp: Math.floor(Date.now() / 1000)
+            messaging_product: "whatsapp",
+            to: message.to_number.replace('+', ''),
+            type: "text",
+            text: {
+              body: message.message_content
+            }
           };
         }
 

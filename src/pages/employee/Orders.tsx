@@ -336,27 +336,38 @@ const Orders = () => {
         orderItemsText += `📊 إجمالي البنود: ${totalAmount} ر.س\n`;
       }
 
-      // إرسال الرسالة باستخدام قالب البروفة
+      // تحديد نوع الملف
+      const isImageFile = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(
+        proofFile.file_name.split('.').pop()?.toLowerCase() || ''
+      );
+      const messageType = isImageFile ? 'image' : 'document';
+
+      // إرسال الرسالة باستخدام قالب البروفة المحسن
+      const proofMessage = `🎨 *بروفة التصميم جاهزة للمراجعة*
+
+📋 *تفاصيل الطلب:*
+• رقم الطلب: ${order.order_number}
+• العميل: ${order.customers?.name || 'عزيزنا العميل'}
+• الخدمة: ${order.service_name}
+${orderItemsText}
+
+📎 *الملف المرفق:* ${proofFile.file_name}
+
+*يرجى مراجعة البروفة المرفقة:*
+
+✅ *للموافقة:* أرسل "موافق"
+📝 *للتعديل:* اكتب التعديلات المطلوبة
+
+شكراً لكم،
+*وكالة الإبداع للدعاية والإعلان*`;
+
       const { error: notificationError } = await supabase
         .from('whatsapp_messages')
         .insert({
           from_number: 'system',
           to_number: order.customers?.whatsapp_number || '',
-          message_type: 'image',
-          message_content: `🎨 بروفة التصميم جاهزة للمراجعة!
-
-رقم الطلب: ${order.order_number}
-العميل: ${order.customers?.name || 'عزيزنا العميل'}
-الخدمة: ${order.service_name}
-${orderItemsText}
-📄 الملف المرفق: ${proofFile.file_name}
-
-يرجى مراجعة البروفة المرفقة:
-✅ للموافقة: أرسل "موافق"
-📝 للتعديل: اكتب التعديلات المطلوبة
-
-شكراً لكم،
-وكالة الإبداع للدعاية والإعلان`,
+          message_type: messageType,
+          message_content: proofMessage,
           media_url: fileData.signedUrl,
           status: 'pending',
           customer_id: order.customer_id || (order as any).customer_id
