@@ -461,21 +461,21 @@ const Invoices = () => {
                 <div class="company-name">${companyInfo.name}</div>
                 <div class="company-details">
                   <div>${companyInfo.address}</div>
-                  <div>📞 ${companyInfo.phone}</div>
-                  <div>📧 ${companyInfo.email}</div>
+                  <div>هاتف: ${companyInfo.phone}</div>
+                  <div>البريد: ${companyInfo.email}</div>
                 </div>
               </div>
               
               <div class="logo-section">
-                ${companyInfo.logo ? `<img src="${companyInfo.logo}" alt="شعار الوكالة" class="company-logo">` : ''}
+                ${companyInfo.logo ? `<img src="${companyInfo.logo}" alt="شعار الوكالة" class="company-logo">` : '<div style="width: 80px; height: 80px; border: 2px dashed rgba(255,255,255,0.5); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 12px; opacity: 0.7;">الشعار</div>'}
               </div>
               
               <div class="invoice-info">
                 <div class="invoice-title">فـاتـورة</div>
                 <div class="invoice-details">
-                  <div><strong>🔢 رقم الفاتورة:</strong> ${invoice.invoice_number}</div>
-                  <div><strong>📅 تاريخ الإصدار:</strong> ${new Date(invoice.issue_date).toLocaleDateString('ar-SA')}</div>
-                  <div><strong>⏰ تاريخ الاستحقاق:</strong> ${new Date(invoice.due_date).toLocaleDateString('ar-SA')}</div>
+                  <div><strong>رقم الفاتورة:</strong> ${invoice.invoice_number}</div>
+                  <div><strong>تاريخ الإصدار:</strong> ${new Date(invoice.issue_date).toLocaleDateString('ar-SA')}</div>
+                  <div><strong>تاريخ الاستحقاق:</strong> ${new Date(invoice.due_date).toLocaleDateString('ar-SA')}</div>
                 </div>
               </div>
             </div>
@@ -484,33 +484,33 @@ const Invoices = () => {
           <div class="content-section">
             <!-- Customer Section -->
             <div class="section">
-              <div class="section-title">👤 بيانات العميل</div>
+              <div class="section-title">بيانات العميل</div>
               <div class="section-content">
                 <div class="customer-name">${invoice.customers?.name || 'غير محدد'}</div>
-                ${invoice.customers?.phone ? `<div>📱 الهاتف: ${invoice.customers.phone}</div>` : ''}
-                ${invoice.customers?.address ? `<div>🏠 العنوان: ${invoice.customers.address}</div>` : ''}
+                ${invoice.customers?.phone ? `<div>الهاتف: ${invoice.customers.phone}</div>` : ''}
+                ${invoice.customers?.address ? `<div>العنوان: ${invoice.customers.address}</div>` : ''}
               </div>
             </div>
             
             <!-- Items Section -->
             <div class="section">
-              <div class="section-title">📋 تفاصيل الفاتورة</div>
+              <div class="section-title">تفاصيل الفاتورة</div>
               <div class="section-content">
                 <table class="items-table">
                   <thead>
                     <tr>
-                      <th style="width: 8%;">#</th>
-                      <th style="width: 40%;">اسم البند / الخدمة</th>
-                      <th style="width: 15%;">الكمية</th>
-                      <th style="width: 17%;">السعر (ر.س)</th>
-                      <th style="width: 20%;">الإجمالي (ر.س)</th>
+                      <th style="width: 8%; color: #ffffff; font-weight: bold;">م</th>
+                      <th style="width: 40%; color: #ffffff; font-weight: bold;">اسم البند / الخدمة</th>
+                      <th style="width: 15%; color: #ffffff; font-weight: bold;">الكمية</th>
+                      <th style="width: 17%; color: #ffffff; font-weight: bold;">السعر (ر.س)</th>
+                      <th style="width: 20%; color: #ffffff; font-weight: bold;">الإجمالي (ر.س)</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr>
                       <td style="text-align: center; font-weight: bold;">1</td>
                       <td style="text-align: right;">
-                        <div class="item-name">🎨 خدمات التصميم والإبداع</div>
+                        <div class="item-name">خدمات التصميم والإبداع</div>
                         <div class="item-description">تصميم هوية بصرية وإعلانات احترافية</div>
                       </td>
                       <td style="text-align: center;">1 خدمة</td>
@@ -524,7 +524,7 @@ const Invoices = () => {
                     <tr>
                       <td style="text-align: center; font-weight: bold;">2</td>
                       <td style="text-align: right;">
-                        <div class="item-name">🖨️ خدمات الطباعة والإنتاج</div>
+                        <div class="item-name">خدمات الطباعة والإنتاج</div>
                         <div class="item-description">طباعة رقمية وتشطيب احترافي عالي الجودة</div>
                       </td>
                       <td style="text-align: center;">1 خدمة</td>
@@ -537,7 +537,7 @@ const Invoices = () => {
                     </tr>
                     <tr class="total-row">
                       <td colspan="4" style="text-align: right; font-weight: bold;">
-                        💰 المجموع الفرعي:
+                        المجموع الفرعي:
                       </td>
                       <td style="text-align: center; font-weight: bold;">
                         ${invoice.amount?.toLocaleString('ar-SA')} ر.س
@@ -551,29 +551,29 @@ const Invoices = () => {
             <!-- Summary Section -->
             <div class="summary-section">
               <div class="summary-row">
-                <span>💵 المجموع الفرعي:</span>
+                <span>المجموع الفرعي:</span>
                 <span>${invoice.amount?.toLocaleString('ar-SA')} ر.س</span>
               </div>
               <div class="summary-row tax-row">
-                <span>🧾 ضريبة القيمة المضافة (15%):</span>
+                <span>ضريبة القيمة المضافة (15%):</span>
                 <span>${invoice.tax_amount?.toLocaleString('ar-SA')} ر.س</span>
               </div>
               <div class="summary-row">
-                <span>💎 إجمالي المبلغ المستحق:</span>
+                <span>إجمالي المبلغ المستحق:</span>
                 <span>${invoice.total_amount?.toLocaleString('ar-SA')} ر.س</span>
               </div>
             </div>
             
             <!-- Payment Info -->
             <div class="payment-info">
-              <div style="font-weight: bold; margin-bottom: 15px; font-size: 14px; color: #2d3748;">💳 معلومات الدفع:</div>
+              <div style="font-weight: bold; margin-bottom: 15px; font-size: 14px; color: #2d3748;">معلومات الدفع:</div>
               <div class="payment-grid">
                 <div class="payment-item">
-                  <span>💱 نوع الدفع:</span>
+                  <span>نوع الدفع:</span>
                   <span style="font-weight: bold;">${invoice.payment_type}</span>
                 </div>
                 <div class="payment-item">
-                  <span>📊 حالة الفاتورة:</span>
+                  <span>حالة الفاتورة:</span>
                   <span class="status-badge ${
                     invoice.status === 'مدفوع' ? 'status-paid' : 
                     invoice.status === 'قيد الانتظار' ? 'status-pending' : 
@@ -586,7 +586,7 @@ const Invoices = () => {
             <!-- Notes -->
             ${invoice.notes ? `
               <div class="notes-section">
-                <strong style="color: #2d3748;">📝 ملاحظات:</strong><br>
+                <strong style="color: #2d3748;">ملاحظات:</strong><br>
                 ${invoice.notes}
               </div>
             ` : ''}
@@ -596,10 +596,10 @@ const Invoices = () => {
           <div class="footer-section">
             <div class="footer-content">
               <div class="total-amount-footer">
-                💰 المجموع الكلي: ${invoice.total_amount?.toLocaleString('ar-SA')} ر.س
+                المجموع الكلي: ${invoice.total_amount?.toLocaleString('ar-SA')} ر.س
               </div>
-              <div class="thanks-message">🙏 شكراً لك على التعامل معنا</div>
-              <div class="tagline">✨ ${companyInfo.tagline}</div>
+              <div class="thanks-message">شكراً لك على التعامل معنا</div>
+              <div class="tagline">${companyInfo.tagline}</div>
               <div class="contact-info">للاستفسارات: ${companyInfo.phone} | ${companyInfo.email}</div>
             </div>
             <div class="stamp-section">
