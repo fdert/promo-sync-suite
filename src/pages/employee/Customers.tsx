@@ -90,6 +90,8 @@ const Customers = () => {
   );
 
   const handleAddCustomer = async () => {
+    console.log('handleAddCustomer called with data:', newCustomer);
+    
     if (!newCustomer.name) {
       toast({
         title: "خطأ",
@@ -100,6 +102,7 @@ const Customers = () => {
     }
 
     try {
+      console.log('Attempting to insert customer into database...');
       const { error } = await supabase
         .from('customers')
         .insert([{
@@ -117,11 +120,13 @@ const Customers = () => {
         console.error('Error adding customer:', error);
         toast({
           title: "خطأ",
-          description: "حدث خطأ في إضافة العميل",
+          description: `حدث خطأ في إضافة العميل: ${error.message}`,
           variant: "destructive",
         });
         return;
       }
+
+      console.log('Customer added successfully, refreshing list...');
 
       await fetchCustomers();
       setNewCustomer({
@@ -161,6 +166,9 @@ const Customers = () => {
   };
 
   const handleUpdateCustomer = async () => {
+    console.log('handleUpdateCustomer called with data:', newCustomer);
+    console.log('Editing customer:', editingCustomer);
+    
     if (!newCustomer.name) {
       toast({
         title: "خطأ",
@@ -171,6 +179,7 @@ const Customers = () => {
     }
 
     try {
+      console.log('Attempting to update customer in database...');
       const { error } = await supabase
         .from('customers')
         .update({
@@ -189,11 +198,13 @@ const Customers = () => {
         console.error('Error updating customer:', error);
         toast({
           title: "خطأ",
-          description: "حدث خطأ في تحديث العميل",
+          description: `حدث خطأ في تحديث العميل: ${error.message}`,
           variant: "destructive",
         });
         return;
       }
+
+      console.log('Customer updated successfully, refreshing list...');
 
       await fetchCustomers();
       setNewCustomer({
