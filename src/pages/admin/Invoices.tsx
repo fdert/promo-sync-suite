@@ -421,57 +421,101 @@ const Invoices = () => {
             <DialogHeader>
               <DialogTitle>معاينة الفاتورة {viewingInvoice.invoice_number}</DialogTitle>
             </DialogHeader>
-            <div className="bg-white p-8 rounded-lg shadow-lg max-w-4xl mx-auto" dir="rtl">
+            <div className="bg-white p-6 rounded-lg shadow-lg" dir="rtl">
+              
               {/* Header */}
-              <div className="flex justify-between items-start mb-8">
-                <div>
-                  <h1 className="text-3xl font-bold text-primary mb-2">فاتورة</h1>
-                  <p className="text-sm text-gray-600">رقم الفاتورة: {viewingInvoice.invoice_number}</p>
-                  <p className="text-sm text-gray-600">تاريخ الإصدار: {new Date(viewingInvoice.issue_date).toLocaleDateString('ar-SA')}</p>
-                  <p className="text-sm text-gray-600">تاريخ الاستحقاق: {new Date(viewingInvoice.due_date).toLocaleDateString('ar-SA')}</p>
+              <div className="flex justify-between items-start mb-6 pb-4 border-b-2 border-blue-800">
+                {/* بيانات الشركة والشعار - اليمين */}
+                <div className="flex items-start gap-3">
+                  {companyInfo.logo && (
+                    <img 
+                      src={companyInfo.logo} 
+                      alt="شعار الوكالة" 
+                      className="w-12 h-12 object-contain"
+                    />
+                  )}
+                  <div>
+                    <h2 className="text-xl font-bold text-blue-800 mb-1">{companyInfo.name}</h2>
+                    <p className="text-sm text-gray-600">{companyInfo.address}</p>
+                    <p className="text-sm text-gray-600">هاتف: {companyInfo.phone}</p>
+                    <p className="text-sm text-gray-600">البريد: {companyInfo.email}</p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <h2 className="text-xl font-bold text-primary">{companyInfo.name}</h2>
-                  <p className="text-sm text-gray-600">{companyInfo.address}</p>
-                  <p className="text-sm text-gray-600">هاتف: {companyInfo.phone}</p>
-                  <p className="text-sm text-gray-600">البريد: {companyInfo.email}</p>
+
+                {/* بيانات الفاتورة - اليسار */}
+                <div className="text-left">
+                  <h1 className="text-2xl font-bold text-blue-800 mb-2">فـاتـورة</h1>
+                  <p className="text-sm text-gray-600 mb-1"><strong>رقم الفاتورة:</strong> {viewingInvoice.invoice_number}</p>
+                  <p className="text-sm text-gray-600 mb-1"><strong>تاريخ الإصدار:</strong> {new Date(viewingInvoice.issue_date).toLocaleDateString('ar-SA')}</p>
+                  <p className="text-sm text-gray-600"><strong>تاريخ الاستحقاق:</strong> {new Date(viewingInvoice.due_date).toLocaleDateString('ar-SA')}</p>
                 </div>
               </div>
 
               {/* Customer Info */}
               <div className="mb-6">
-                <h3 className="text-lg font-semibold mb-2">بيانات العميل:</h3>
-                <p className="font-medium">{viewingInvoice.customers?.name}</p>
-                {viewingInvoice.customers?.phone && <p className="text-sm">{viewingInvoice.customers.phone}</p>}
-                {viewingInvoice.customers?.address && <p className="text-sm">{viewingInvoice.customers.address}</p>}
+                <h3 className="text-lg font-semibold mb-3 bg-gray-100 p-2 rounded">بيانات العميل:</h3>
+                <div className="pr-4">
+                  <p className="font-medium text-lg mb-1">{viewingInvoice.customers?.name}</p>
+                  {viewingInvoice.customers?.phone && <p className="text-sm text-gray-600">الهاتف: {viewingInvoice.customers.phone}</p>}
+                  {viewingInvoice.customers?.address && <p className="text-sm text-gray-600">العنوان: {viewingInvoice.customers.address}</p>}
+                </div>
               </div>
 
               {/* Invoice Details */}
-              <div className="border rounded-lg p-4 mb-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <span className="font-semibold">المبلغ الأساسي:</span>
-                    <span className="mr-2">{viewingInvoice.amount?.toLocaleString('ar-SA')} ر.س</span>
-                  </div>
-                  <div>
-                    <span className="font-semibold">الضريبة (15%):</span>
-                    <span className="mr-2">{viewingInvoice.tax_amount?.toLocaleString('ar-SA')} ر.س</span>
-                  </div>
-                  <div>
-                    <span className="font-semibold">نوع الدفع:</span>
-                    <span className="mr-2">{viewingInvoice.payment_type}</span>
-                  </div>
-                  <div>
-                    <span className="font-semibold">الحالة:</span>
-                    <span className="mr-2">{viewingInvoice.status}</span>
-                  </div>
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold mb-3 bg-gray-100 p-2 rounded">تفاصيل الفاتورة:</h3>
+                <div className="border border-gray-300 rounded-lg overflow-hidden">
+                  <table className="w-full">
+                    <tbody>
+                      <tr className="border-b bg-gray-50">
+                        <td className="p-3 font-medium">الوصف</td>
+                        <td className="p-3">خدمات الدعاية والإعلان</td>
+                      </tr>
+                      <tr className="border-b">
+                        <td className="p-3 font-medium">المبلغ الأساسي</td>
+                        <td className="p-3">{viewingInvoice.amount?.toLocaleString('ar-SA')} ر.س</td>
+                      </tr>
+                      <tr className="border-b bg-gray-50">
+                        <td className="p-3 font-medium">ضريبة القيمة المضافة (15%)</td>
+                        <td className="p-3">{viewingInvoice.tax_amount?.toLocaleString('ar-SA')} ر.س</td>
+                      </tr>
+                      <tr className="border-b">
+                        <td className="p-3 font-medium">نوع الدفع</td>
+                        <td className="p-3">{viewingInvoice.payment_type}</td>
+                      </tr>
+                      <tr>
+                        <td className="p-3 font-medium">الحالة</td>
+                        <td className="p-3">
+                          <Badge 
+                            variant={
+                              viewingInvoice.status === 'مدفوع' ? 'default' :
+                              viewingInvoice.status === 'قيد الانتظار' ? 'secondary' :
+                              viewingInvoice.status === 'متأخر' ? 'destructive' : 'outline'
+                            }
+                          >
+                            {viewingInvoice.status}
+                          </Badge>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
               </div>
 
               {/* Total */}
-              <div className="border-t-2 border-primary pt-4 mb-6">
-                <div className="text-left">
-                  <span className="text-2xl font-bold">المجموع الكلي: {viewingInvoice.total_amount?.toLocaleString('ar-SA')} ر.س</span>
+              <div className="border-t-2 border-blue-800 pt-4 mb-6">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h2 className="text-2xl font-bold text-blue-800">
+                      المجموع الكلي: {viewingInvoice.total_amount?.toLocaleString('ar-SA')} ر.س
+                    </h2>
+                  </div>
+                  {/* الختم */}
+                  {companyInfo.stamp && (
+                    <div className="flex justify-center">
+                      <img src={companyInfo.stamp} alt="ختم الوكالة" className="h-16 w-auto" />
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -479,19 +523,21 @@ const Invoices = () => {
               {viewingInvoice.notes && (
                 <div className="mb-6">
                   <h4 className="font-semibold mb-2">ملاحظات:</h4>
-                  <p className="text-sm">{viewingInvoice.notes}</p>
+                  <div className="bg-gray-50 p-3 rounded">
+                    <p className="text-sm">{viewingInvoice.notes}</p>
+                  </div>
                 </div>
               )}
 
               {/* Footer */}
-              <div className="text-center mt-8 pt-4 border-t">
-                <p className="text-sm text-gray-600 mb-2">شكراً لك على التعامل معنا</p>
-                <p className="text-blue-600 italic text-sm">{companyInfo.tagline}</p>
-                {companyInfo.stamp && (
-                  <div className="mt-4 flex justify-center">
-                    <img src={companyInfo.stamp} alt="ختم الوكالة" className="h-16" />
-                  </div>
-                )}
+              <div className="text-center mt-6 pt-4 border-t border-gray-300">
+                <p className="text-gray-700 mb-2 font-medium">شكراً لك على التعامل معنا</p>
+                <p className="text-blue-600 italic">{companyInfo.tagline}</p>
+                <div className="mt-2">
+                  <p className="text-xs text-gray-500">
+                    للاستفسارات: {companyInfo.phone} | {companyInfo.email}
+                  </p>
+                </div>
               </div>
             </div>
           </DialogContent>
@@ -524,125 +570,141 @@ const Invoices = () => {
                     position: absolute;
                     left: 0;
                     top: 0;
-                    width: 100%;
-                    height: 100%;
+                    width: 100% !important;
+                    height: 100% !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
                   }
                   @page {
-                    size: A5;
-                    margin: 10mm;
+                    size: A5 portrait;
+                    margin: 8mm !important;
                   }
                   .invoice-container {
-                    width: 100%;
-                    height: 190mm;
-                    font-size: 11px;
-                    line-height: 1.3;
+                    width: 100% !important;
+                    height: 100% !important;
+                    max-height: 185mm !important;
+                    font-size: 10px !important;
+                    line-height: 1.2 !important;
+                    box-sizing: border-box;
+                    overflow: hidden;
                   }
                   .header-section {
-                    height: 60mm;
-                    border-bottom: 2px solid #000;
-                    margin-bottom: 5mm;
+                    height: 50mm !important;
+                    display: flex !important;
+                    align-items: flex-start !important;
+                    border-bottom: 2px solid #1e40af !important;
+                    margin-bottom: 3mm !important;
+                    padding-bottom: 2mm !important;
                   }
                   .customer-section {
-                    height: 25mm;
-                    margin-bottom: 5mm;
+                    height: 22mm !important;
+                    margin-bottom: 3mm !important;
                   }
                   .details-section {
-                    height: 40mm;
-                    margin-bottom: 5mm;
+                    height: 35mm !important;
+                    margin-bottom: 3mm !important;
                   }
                   .total-section {
-                    height: 30mm;
-                    border-top: 2px solid #000;
-                    margin-bottom: 5mm;
+                    height: 25mm !important;
+                    border-top: 2px solid #1e40af !important;
+                    padding-top: 2mm !important;
+                    margin-bottom: 3mm !important;
                   }
                   .footer-section {
-                    height: 25mm;
-                    text-align: center;
+                    height: 18mm !important;
+                    text-align: center !important;
                   }
                   .company-logo {
-                    max-height: 40mm;
-                    max-width: 40mm;
+                    max-height: 25mm !important;
+                    max-width: 25mm !important;
+                    object-fit: contain !important;
                   }
                   .company-stamp {
-                    max-height: 20mm;
-                    max-width: 30mm;
+                    max-height: 15mm !important;
+                    max-width: 20mm !important;
+                    object-fit: contain !important;
                   }
+                  .text-xs { font-size: 8px !important; }
+                  .text-sm { font-size: 9px !important; }
+                  .text-lg { font-size: 11px !important; }
+                  .text-xl { font-size: 12px !important; }
+                  .text-2xl { font-size: 14px !important; }
+                  table { border-collapse: collapse !important; }
+                  td { padding: 1mm !important; }
                 }
               `}</style>
 
-              <div className="print-content bg-white p-6 rounded-lg shadow-lg max-w-4xl mx-auto" dir="rtl">
+              <div className="print-content bg-white p-4 rounded-lg shadow-lg max-w-4xl mx-auto" dir="rtl">
                 <div className="invoice-container">
                   
                   {/* Header Section */}
-                  <div className="header-section flex justify-between items-start relative">
-                    {/* بيانات الشركة - اليمين */}
-                    <div className="w-1/3 text-right">
-                      <h2 className="text-lg font-bold text-blue-800 mb-2">{companyInfo.name}</h2>
-                      <p className="text-xs mb-1">{companyInfo.address}</p>
-                      <p className="text-xs mb-1">هاتف: {companyInfo.phone}</p>
-                      <p className="text-xs mb-1">البريد: {companyInfo.email}</p>
-                    </div>
-
-                    {/* شعار الوكالة - المنتصف */}
-                    <div className="w-1/3 flex justify-center items-center">
+                  <div className="header-section">
+                    {/* بيانات الشركة والشعار - اليمين */}
+                    <div className="w-2/5 flex items-start gap-2">
                       {companyInfo.logo && (
                         <img 
                           src={companyInfo.logo} 
                           alt="شعار الوكالة" 
-                          className="company-logo object-contain"
+                          className="company-logo flex-shrink-0"
                         />
                       )}
+                      <div className="flex-grow">
+                        <h2 className="text-lg font-bold text-blue-800 mb-1">{companyInfo.name}</h2>
+                        <p className="text-xs mb-1">{companyInfo.address}</p>
+                        <p className="text-xs mb-1">هاتف: {companyInfo.phone}</p>
+                        <p className="text-xs">البريد: {companyInfo.email}</p>
+                      </div>
                     </div>
 
                     {/* بيانات الفاتورة - اليسار */}
-                    <div className="w-1/3 text-left">
+                    <div className="w-3/5 text-left">
                       <h1 className="text-2xl font-bold text-blue-800 mb-2">فـاتـورة</h1>
                       <p className="text-xs mb-1"><strong>رقم الفاتورة:</strong> {printingInvoice.invoice_number}</p>
                       <p className="text-xs mb-1"><strong>تاريخ الإصدار:</strong> {new Date(printingInvoice.issue_date).toLocaleDateString('ar-SA')}</p>
-                      <p className="text-xs mb-1"><strong>تاريخ الاستحقاق:</strong> {new Date(printingInvoice.due_date).toLocaleDateString('ar-SA')}</p>
+                      <p className="text-xs"><strong>تاريخ الاستحقاق:</strong> {new Date(printingInvoice.due_date).toLocaleDateString('ar-SA')}</p>
                     </div>
                   </div>
 
                   {/* Customer Section */}
                   <div className="customer-section">
-                    <h3 className="text-sm font-bold mb-2 bg-gray-100 p-2">بيانات العميل:</h3>
-                    <div className="pr-4">
-                      <p className="text-sm font-medium mb-1">{printingInvoice.customers?.name}</p>
+                    <h3 className="text-sm font-bold mb-1 bg-gray-100 p-1">بيانات العميل:</h3>
+                    <div className="pr-2">
+                      <p className="text-sm font-medium mb-0">{printingInvoice.customers?.name}</p>
                       {printingInvoice.customers?.phone && (
-                        <p className="text-xs mb-1">الهاتف: {printingInvoice.customers.phone}</p>
+                        <p className="text-xs mb-0">الهاتف: {printingInvoice.customers.phone}</p>
                       )}
                       {printingInvoice.customers?.address && (
-                        <p className="text-xs mb-1">العنوان: {printingInvoice.customers.address}</p>
+                        <p className="text-xs">العنوان: {printingInvoice.customers.address}</p>
                       )}
                     </div>
                   </div>
 
                   {/* Details Section */}
                   <div className="details-section">
-                    <h3 className="text-sm font-bold mb-2 bg-gray-100 p-2">تفاصيل الفاتورة:</h3>
-                    <div className="border border-gray-300 rounded">
+                    <h3 className="text-sm font-bold mb-1 bg-gray-100 p-1">تفاصيل الفاتورة:</h3>
+                    <div className="border border-gray-300 rounded overflow-hidden">
                       <table className="w-full text-xs">
                         <tbody>
                           <tr className="border-b">
-                            <td className="p-2 font-medium">الوصف</td>
-                            <td className="p-2 text-left">خدمات الدعاية والإعلان</td>
+                            <td className="p-1 font-medium bg-gray-50">الوصف</td>
+                            <td className="p-1">خدمات الدعاية والإعلان</td>
                           </tr>
                           <tr className="border-b">
-                            <td className="p-2 font-medium">المبلغ الأساسي</td>
-                            <td className="p-2 text-left">{printingInvoice.amount?.toLocaleString('ar-SA')} ر.س</td>
+                            <td className="p-1 font-medium">المبلغ الأساسي</td>
+                            <td className="p-1">{printingInvoice.amount?.toLocaleString('ar-SA')} ر.س</td>
                           </tr>
                           <tr className="border-b">
-                            <td className="p-2 font-medium">ضريبة القيمة المضافة (15%)</td>
-                            <td className="p-2 text-left">{printingInvoice.tax_amount?.toLocaleString('ar-SA')} ر.س</td>
+                            <td className="p-1 font-medium bg-gray-50">ضريبة القيمة المضافة (15%)</td>
+                            <td className="p-1">{printingInvoice.tax_amount?.toLocaleString('ar-SA')} ر.س</td>
                           </tr>
                           <tr className="border-b">
-                            <td className="p-2 font-medium">نوع الدفع</td>
-                            <td className="p-2 text-left">{printingInvoice.payment_type}</td>
+                            <td className="p-1 font-medium">نوع الدفع</td>
+                            <td className="p-1">{printingInvoice.payment_type}</td>
                           </tr>
                           <tr>
-                            <td className="p-2 font-medium">الحالة</td>
-                            <td className="p-2 text-left">
-                              <span className={`px-2 py-1 rounded text-xs ${
+                            <td className="p-1 font-medium bg-gray-50">الحالة</td>
+                            <td className="p-1">
+                              <span className={`px-1 py-0 rounded text-xs ${
                                 printingInvoice.status === 'مدفوع' ? 'bg-green-100' :
                                 printingInvoice.status === 'قيد الانتظار' ? 'bg-yellow-100' :
                                 'bg-red-100'
@@ -658,14 +720,14 @@ const Invoices = () => {
 
                   {/* Total Section */}
                   <div className="total-section">
-                    <div className="flex justify-between items-center mb-4">
-                      <div className="text-right">
-                        <h2 className="text-xl font-bold text-blue-800">
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="text-right flex-grow">
+                        <h2 className="text-lg font-bold text-blue-800">
                           المجموع الكلي: {printingInvoice.total_amount?.toLocaleString('ar-SA')} ر.س
                         </h2>
                       </div>
                       {/* الختم أسفل المجموع الكلي */}
-                      <div className="flex justify-center">
+                      <div className="flex justify-end mr-4">
                         {companyInfo.stamp && (
                           <img 
                             src={companyInfo.stamp} 
@@ -678,19 +740,19 @@ const Invoices = () => {
 
                     {/* Notes */}
                     {printingInvoice.notes && (
-                      <div className="mt-3">
+                      <div className="mt-2">
                         <h4 className="text-xs font-bold mb-1">ملاحظات:</h4>
-                        <p className="text-xs bg-gray-50 p-2 rounded">{printingInvoice.notes}</p>
+                        <p className="text-xs bg-gray-50 p-1 rounded">{printingInvoice.notes}</p>
                       </div>
                     )}
                   </div>
 
                   {/* Footer Section */}
                   <div className="footer-section">
-                    <div className="border-t border-gray-300 pt-3">
-                      <p className="text-sm font-medium text-gray-700 mb-2">شكراً لك على التعامل معنا</p>
+                    <div className="border-t border-gray-300 pt-2">
+                      <p className="text-sm font-medium text-gray-700 mb-1">شكراً لك على التعامل معنا</p>
                       <p className="text-blue-600 italic text-xs font-medium">{companyInfo.tagline}</p>
-                      <div className="mt-2">
+                      <div className="mt-1">
                         <p className="text-xs text-gray-500">
                           للاستفسارات: {companyInfo.phone} | {companyInfo.email}
                         </p>
