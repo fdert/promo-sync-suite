@@ -42,49 +42,28 @@ const Auth = () => {
 
   // تحديث بيانات الشركة من قاعدة البيانات
   useEffect(() => {
-    console.log('🚀 تم تشغيل useEffect لجلب بيانات الشركة');
-    
     const loadCompanyData = async () => {
       try {
-        console.log('🔍 بدء جلب بيانات الشركة من قاعدة البيانات...');
-        
-        const { data, error } = await supabase
+        const { data } = await supabase
           .from('website_settings')
           .select('setting_value')
           .eq('setting_key', 'website_content')
           .maybeSingle();
 
-        console.log('📊 استجابة قاعدة البيانات:', { data, error });
-
-        if (error) {
-          console.error('❌ خطأ في قاعدة البيانات:', error);
-          return;
-        }
-
-        if (data?.setting_value) {
+        if (data?.setting_value && typeof data.setting_value === 'object') {
           const settingValue = data.setting_value as any;
-          console.log('📄 قيم الإعدادات الكاملة:', settingValue);
+          const company = settingValue.companyInfo;
           
-          const companyData = settingValue.companyInfo;
-          console.log('🏢 بيانات الشركة المستخرجة:', companyData);
-          
-          if (companyData && companyData.name) {
-            const updatedInfo = {
-              name: companyData.name,
-              tagline: companyData.tagline || "نبني الأحلام بالإبداع والاحتراف",
-              logo: companyData.logo || "https://gcuqfxacnbxdldsbmgvf.supabase.co/storage/v1/object/public/logos/logo-1754189656106.jpg"
-            };
-            
-            console.log('✅ تطبيق بيانات الشركة الجديدة:', updatedInfo);
-            setCompanyInfo(updatedInfo);
-          } else {
-            console.warn('⚠️ لم يتم العثور على بيانات الشركة في companyInfo');
+          if (company) {
+            setCompanyInfo({
+              name: company.name || "وكالة ابداع واحتراف للدعاية والاعلان",
+              tagline: company.tagline || "نبني الأحلام بالإبداع والاحتراف",
+              logo: company.logo || "https://gcuqfxacnbxdldsbmgvf.supabase.co/storage/v1/object/public/logos/logo-1754189656106.jpg"
+            });
           }
-        } else {
-          console.warn('⚠️ لا توجد بيانات setting_value');
         }
       } catch (error) {
-        console.error('💥 خطأ في تحميل بيانات الشركة:', error);
+        console.error('خطأ في تحميل بيانات الشركة:', error);
       }
     };
 
