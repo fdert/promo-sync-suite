@@ -38,6 +38,7 @@ interface InvoicePreviewProps {
     phone?: string;
     email?: string;
     logo?: string;
+    stamp?: string;
     tagline?: string;
   };
 }
@@ -184,7 +185,18 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({
                    <p className="text-gray-600">{invoice.notes}</p>
                  </div>
                )}
-             </div>
+              </div>
+
+              {/* Stamp */}
+              {companyInfo.stamp && (
+                <div className="flex justify-center mb-6 mt-4">
+                  <img 
+                    src={companyInfo.stamp} 
+                    alt="ختم الوكالة" 
+                    className="w-24 h-24 object-contain"
+                  />
+                </div>
+              )}
 
              {/* Footer */}
               <div className="text-center text-gray-500 border-t border-gray-200 pt-6">

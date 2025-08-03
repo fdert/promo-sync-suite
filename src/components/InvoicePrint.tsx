@@ -32,6 +32,7 @@ interface InvoicePrintProps {
     phone?: string;
     email?: string;
     logo?: string;
+    stamp?: string;
     tagline?: string;
   };
 }
@@ -270,6 +271,25 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
           color: '#666'
         }}>
           <strong>ملاحظات:</strong> {invoice.notes}
+        </div>
+      )}
+
+      {/* Stamp */}
+      {companyInfo.stamp && (
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          margin: '6px 0 4px 0' 
+        }}>
+          <img 
+            src={companyInfo.stamp} 
+            alt="ختم الوكالة" 
+            style={{ 
+              width: '60px', 
+              height: '60px', 
+              objectFit: 'contain' 
+            }}
+          />
         </div>
       )}
 
