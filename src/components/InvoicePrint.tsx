@@ -48,76 +48,61 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
   return (
     <div className="print-invoice" style={{ display: 'none' }} dir="rtl">
       
-      {/* Header with Logo */}
+      {/* Header with Logo in Center */}
       <div style={{ 
-        textAlign: 'center',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
         marginBottom: '12px',
         borderBottom: '2px solid #000',
         paddingBottom: '8px'
       }}>
-        {companyInfo.logo && (
-          <div style={{ marginBottom: '8px' }}>
+        {/* Company Info - Right Side */}
+        <div style={{ flex: 1, textAlign: 'right' }}>
+          <h1 style={{ 
+            fontSize: '16px', 
+            fontWeight: 'bold', 
+            margin: '0 0 4px 0',
+            color: '#000'
+          }}>
+            {companyInfo.name}
+          </h1>
+          <div style={{ fontSize: '10px', color: '#555', lineHeight: '1.3' }}>
+            <div>{companyInfo.address}</div>
+            <div>هاتف: {companyInfo.phone}</div>
+            <div>البريد: {companyInfo.email}</div>
+          </div>
+        </div>
+        
+        {/* Logo - Center */}
+        <div style={{ flexShrink: 0, margin: '0 12px' }}>
+          {companyInfo.logo && (
             <img 
               src={companyInfo.logo} 
               alt="شعار الشركة" 
               style={{ 
-                width: '60px', 
-                height: '60px', 
-                objectFit: 'contain',
-                margin: '0 auto',
-                display: 'block'
+                width: '50px', 
+                height: '50px', 
+                objectFit: 'contain'
               }}
             />
-          </div>
-        )}
-        <h1 style={{ 
-          fontSize: '20px', 
-          fontWeight: 'bold', 
-          margin: '0 0 6px 0',
-          color: '#000'
-        }}>
-          {companyInfo.name}
-        </h1>
-        <div style={{ fontSize: '12px', color: '#555', lineHeight: '1.4' }}>
-          <div>{companyInfo.address}</div>
-          <div>هاتف: {companyInfo.phone}</div>
-          <div>البريد: {companyInfo.email}</div>
+          )}
         </div>
-      </div>
-
-      {/* Invoice Info */}
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center',
-        backgroundColor: '#f8f9fa', 
-        padding: '8px', 
-        border: '1px solid #ccc',
-        borderRadius: '4px',
-        marginBottom: '12px',
-        fontSize: '12px'
-      }}>
-        <div>
+        
+        {/* Invoice Info - Left Side */}
+        <div style={{ flex: 1, textAlign: 'left' }}>
           <h2 style={{ 
-            fontSize: '18px', 
+            fontSize: '16px', 
             fontWeight: 'bold', 
-            margin: '0 0 6px 0',
+            margin: '0 0 4px 0',
             color: '#000'
           }}>
             فاتورة
           </h2>
-          <div style={{ fontSize: '11px', color: '#555' }}>
+          <div style={{ fontSize: '10px', color: '#555', lineHeight: '1.3' }}>
             <div><strong>رقم:</strong> {invoice.invoice_number}</div>
             <div><strong>التاريخ:</strong> {new Date(invoice.issue_date).toLocaleDateString('ar-SA')}</div>
             <div><strong>الاستحقاق:</strong> {new Date(invoice.due_date).toLocaleDateString('ar-SA')}</div>
-          </div>
-        </div>
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#0066cc' }}>
-            المبلغ: {invoice.total_amount} ر.س
-          </div>
-          <div style={{ fontSize: '10px', color: '#666', marginTop: '4px' }}>
-            نوع الدفع: {invoice.payment_type}
           </div>
         </div>
       </div>

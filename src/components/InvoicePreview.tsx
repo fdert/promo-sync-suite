@@ -72,42 +72,47 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({
         
         <div className="mt-6">
           <div className="bg-white p-8 border rounded-lg shadow-sm" dir="rtl">
-            {/* Header with Logo */}
-            <div className="text-center mb-8 border-b-2 border-gray-300 pb-6">
-              {companyInfo.logo && (
-                <div className="mb-4">
+            {/* Header with Logo in Center */}
+            <div className="flex justify-between items-center mb-8 border-b-2 border-gray-300 pb-6">
+              {/* Company Info - Right Side */}
+              <div className="flex-1 text-right">
+                <h1 className="text-3xl font-bold text-gray-800 mb-3">{companyInfo.name}</h1>
+                <div className="text-gray-600 text-base space-y-1">
+                  <p>{companyInfo.address}</p>
+                  <p>هاتف: {companyInfo.phone}</p>
+                  <p>البريد: {companyInfo.email}</p>
+                </div>
+              </div>
+              
+              {/* Logo - Center */}
+              <div className="flex-shrink-0 mx-8">
+                {companyInfo.logo && (
                   <img 
                     src={companyInfo.logo} 
                     alt="شعار الشركة" 
-                    className="w-24 h-24 object-contain mx-auto"
+                    className="w-20 h-20 object-contain"
                   />
-                </div>
-              )}
-              <h1 className="text-4xl font-bold text-gray-800 mb-2">{companyInfo.name}</h1>
-              <div className="text-gray-600 text-lg space-y-1">
-                <p>{companyInfo.address}</p>
-                <p>هاتف: {companyInfo.phone}</p>
-                <p>البريد الإلكتروني: {companyInfo.email}</p>
+                )}
               </div>
-            </div>
-
-            {/* Invoice Info */}
-            <div className="flex justify-between items-center mb-8 bg-gray-50 p-6 rounded-lg">
-              <div>
+              
+              {/* Invoice Info - Left Side */}
+              <div className="flex-1 text-left">
                 <h2 className="text-3xl font-bold text-gray-800 mb-3">فاتورة</h2>
-                <div className="text-gray-600 text-lg space-y-2">
+                <div className="text-gray-600 text-base space-y-1">
                   <p><strong>رقم الفاتورة:</strong> {invoice.invoice_number}</p>
                   <p><strong>تاريخ الإصدار:</strong> {new Date(invoice.issue_date).toLocaleDateString('ar-SA')}</p>
                   <p><strong>تاريخ الاستحقاق:</strong> {new Date(invoice.due_date).toLocaleDateString('ar-SA')}</p>
                 </div>
               </div>
-              <div className="text-right">
-                <div className="text-2xl font-bold text-blue-600">
-                  المبلغ الإجمالي: {invoice.total_amount} ر.س
-                </div>
-                <div className="text-lg text-gray-600 mt-2">
-                  نوع الدفع: {invoice.payment_type}
-                </div>
+            </div>
+
+            {/* Additional Invoice Info */}
+            <div className="text-center mb-8 bg-gray-50 p-4 rounded-lg">
+              <div className="text-2xl font-bold text-blue-600 mb-2">
+                المبلغ الإجمالي: {invoice.total_amount} ر.س
+              </div>
+              <div className="text-lg text-gray-600">
+                نوع الدفع: {invoice.payment_type}
               </div>
             </div>
 

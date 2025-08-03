@@ -470,50 +470,53 @@ const Invoices = () => {
         }
         
         .header {
-            text-align: center;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 12px;
             border-bottom: 2px solid #000;
             padding-bottom: 8px;
         }
         
-        .company-logo {
-            width: 60px;
-            height: 60px;
-            object-fit: contain;
-            margin: 0 auto 8px auto;
-            display: block;
+        .company-section {
+            flex: 1;
+            text-align: right;
         }
         
-        .invoice-info {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background-color: #f8f9fa;
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            margin-bottom: 12px;
-            font-size: 12px;
+        .logo-section {
+            flex-shrink: 0;
+            margin: 0 12px;
+        }
+        
+        .invoice-section {
+            flex: 1;
+            text-align: left;
+        }
+        
+        .company-logo {
+            width: 50px;
+            height: 50px;
+            object-fit: contain;
         }
         
         .header h1 {
-            font-size: 20px;
+            font-size: 16px;
             font-weight: bold;
-            margin: 0 0 6px 0;
+            margin: 0 0 4px 0;
             color: #000;
         }
         
         .header h2 {
-            font-size: 18px;
+            font-size: 16px;
             font-weight: bold;
-            margin: 0 0 6px 0;
+            margin: 0 0 4px 0;
             color: #000;
         }
         
         .header-info {
-            font-size: 12px;
+            font-size: 10px;
             color: #555;
-            line-height: 1.4;
+            line-height: 1.3;
         }
         
         .customer-info {
@@ -597,31 +600,39 @@ const Invoices = () => {
 </head>
 <body>
     <div class="header">
-        ${companyInfo.logo ? `<img src="${companyInfo.logo}" alt="شعار الشركة" class="company-logo" />` : ''}
-        <h1>${companyInfo.name}</h1>
-        <div class="header-info">
-            <div>${companyInfo.address}</div>
-            <div>هاتف: ${companyInfo.phone}</div>
-            <div>البريد: ${companyInfo.email}</div>
+        <!-- Company Info - Right Side -->
+        <div class="company-section">
+            <h1>${companyInfo.name}</h1>
+            <div class="header-info">
+                <div>${companyInfo.address}</div>
+                <div>هاتف: ${companyInfo.phone}</div>
+                <div>البريد: ${companyInfo.email}</div>
+            </div>
         </div>
-    </div>
-
-    <div class="invoice-info">
-        <div>
+        
+        <!-- Logo - Center -->
+        <div class="logo-section">
+            ${companyInfo.logo ? `<img src="${companyInfo.logo}" alt="شعار الشركة" class="company-logo" />` : ''}
+        </div>
+        
+        <!-- Invoice Info - Left Side -->
+        <div class="invoice-section">
             <h2>فاتورة</h2>
-            <div style="font-size: 11px; color: #555;">
+            <div class="header-info">
                 <div><strong>رقم:</strong> ${invoice.invoice_number}</div>
                 <div><strong>التاريخ:</strong> ${new Date(invoice.issue_date).toLocaleDateString('ar-SA')}</div>
                 <div><strong>الاستحقاق:</strong> ${new Date(invoice.due_date).toLocaleDateString('ar-SA')}</div>
             </div>
         </div>
-        <div style="text-align: right;">
-            <div style="font-size: 14px; font-weight: bold; color: #0066cc;">
-                المبلغ: ${invoice.total_amount} ر.س
-            </div>
-            <div style="font-size: 10px; color: #666; margin-top: 4px;">
-                نوع الدفع: ${invoice.payment_type}
-            </div>
+    </div>
+
+    <!-- Total Amount Section -->
+    <div style="text-align: center; background-color: #f8f9fa; padding: 6px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 8px;">
+        <div style="font-size: 12px; font-weight: bold; color: #0066cc; margin-bottom: 2px;">
+            المبلغ الإجمالي: ${invoice.total_amount} ر.س
+        </div>
+        <div style="font-size: 9px; color: #666;">
+            نوع الدفع: ${invoice.payment_type}
         </div>
     </div>
 
