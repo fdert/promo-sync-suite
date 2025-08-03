@@ -14,6 +14,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -530,6 +531,9 @@ const Orders = () => {
             <DialogTitle>
               رفع {fileCategory === 'design' ? 'ملفات بروفة التصميم' : 'ملفات الطباعة'}
             </DialogTitle>
+            <DialogDescription>
+              اختر الملفات المراد رفعها للطلب المحدد
+            </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">
@@ -570,6 +574,9 @@ const Orders = () => {
             <DialogTitle>
               ملفات الطلب {selectedOrderFiles?.order_number}
             </DialogTitle>
+            <DialogDescription>
+              عرض وإدارة جميع الملفات المرفوعة للطلب
+            </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">
