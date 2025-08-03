@@ -186,7 +186,7 @@ const Invoices = () => {
           }
           
           .customer-section {
-            background: #e11d48 !important;
+            background: #fb7185 !important;
             color: white !important;
             padding: 15px 25px;
             margin: 0;
@@ -252,8 +252,8 @@ const Invoices = () => {
           }
           
           .summary-section {
-            background: #f59e0b !important;
-            color: #1f2937 !important;
+            background: #94a3b8 !important;
+            color: white !important;
             border-radius: 8px;
             padding: 18px;
             margin: 20px 0;
@@ -268,8 +268,9 @@ const Invoices = () => {
             display: flex;
             justify-content: space-between;
             padding: 6px 0;
-            border-bottom: 1px solid rgba(0,0,0,0.1);
+            border-bottom: 1px solid rgba(255,255,255,0.3);
             font-size: 12px;
+            color: white;
           }
           
           .summary-row:last-child {
@@ -277,8 +278,8 @@ const Invoices = () => {
             font-size: 14px;
             font-weight: 700;
             padding-top: 10px;
-            border-top: 2px solid #1f2937;
-            color: #1f2937;
+            border-top: 2px solid rgba(255,255,255,0.5);
+            color: white;
           }
           
           .payment-info {
@@ -375,7 +376,7 @@ const Invoices = () => {
               color: white !important;
             }
             .customer-section {
-              background: #e11d48 !important;
+              background: #fb7185 !important;
               color: white !important;
             }
             .items-table th {
@@ -383,8 +384,8 @@ const Invoices = () => {
               color: white !important;
             }
             .summary-section {
-              background: #f59e0b !important;
-              color: #1f2937 !important;
+              background: #94a3b8 !important;
+              color: white !important;
             }
             .payment-info {
               background: #3b82f6 !important;
