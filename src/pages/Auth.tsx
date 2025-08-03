@@ -55,7 +55,7 @@ const Auth = () => {
           
           if (companyData) {
             setCompanyInfo({
-              name: companyData.name || "وكالة الإبداع للدعاية والإعلان",
+              name: companyData.name || "وكالة ابداع واحتراف للدعاية والاعلان",
               tagline: companyData.tagline || "نبني الأحلام بالإبداع والاحتراف",
               logo: companyData.logo || null
             });
@@ -63,6 +63,12 @@ const Auth = () => {
         }
       } catch (error) {
         console.error('Error fetching company info:', error);
+        // في حالة الخطأ، استخدم البيانات الافتراضية
+        setCompanyInfo({
+          name: "وكالة ابداع واحتراف للدعاية والاعلان",
+          tagline: "نبني الأحلام بالإبداع والاحتراف",
+          logo: null
+        });
       }
     };
 
@@ -195,68 +201,69 @@ const Auth = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-accent/5 to-background p-4">
       <Card className="w-full max-w-md shadow-2xl border-0 bg-card/50 backdrop-blur-sm">
-        <CardHeader className="text-center pb-6">
-          <div className="flex flex-col items-center gap-4 mb-4">
+        <CardHeader className="text-center pb-8">
+          <div className="flex flex-col items-center gap-6 mb-6">
             {companyInfo.logo ? (
               <div className="relative">
                 <img 
                   src={companyInfo.logo} 
                   alt="شعار الشركة"
-                  className="w-16 h-16 object-contain rounded-xl bg-white p-2 shadow-lg"
+                  className="w-20 h-20 object-contain rounded-2xl bg-white p-3 shadow-2xl ring-4 ring-primary/10"
                 />
               </div>
             ) : (
-              <div className="w-16 h-16 bg-gradient-to-r from-primary to-accent rounded-xl flex items-center justify-center shadow-lg">
-                <Palette className="h-8 w-8 text-white" />
+              <div className="w-20 h-20 bg-gradient-to-r from-primary to-accent rounded-2xl flex items-center justify-center shadow-2xl ring-4 ring-primary/10">
+                <Palette className="h-10 w-10 text-white" />
               </div>
             )}
             
-            <div className="text-center">
-              <h1 className="text-2xl font-bold text-foreground bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            <div className="text-center space-y-2">
+              <h1 className="text-3xl font-black text-foreground leading-tight" style={{ fontFamily: 'Cairo, Tajawal, -apple-system, BlinkMacSystemFont, sans-serif' }}>
                 {companyInfo.name}
               </h1>
-              <p className="text-sm text-muted-foreground mt-1 font-medium">
+              <p className="text-base text-muted-foreground font-semibold leading-relaxed" style={{ fontFamily: 'Cairo, Tajawal, -apple-system, BlinkMacSystemFont, sans-serif' }}>
                 {companyInfo.tagline}
               </p>
+              <div className="w-16 h-1 bg-gradient-to-r from-primary to-accent rounded-full mx-auto"></div>
             </div>
           </div>
         </CardHeader>
         
-        <CardContent>
+        <CardContent className="space-y-6" style={{ fontFamily: 'Cairo, Tajawal, -apple-system, BlinkMacSystemFont, sans-serif' }}>
           <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="login" className="gap-2">
+            <TabsList className="grid w-full grid-cols-3 bg-muted/50 p-1 rounded-xl">
+              <TabsTrigger value="login" className="gap-2 text-sm font-semibold rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-md">
                 <LogIn className="h-4 w-4" />
                 تسجيل الدخول
               </TabsTrigger>
-              <TabsTrigger value="signup" className="gap-2">
+              <TabsTrigger value="signup" className="gap-2 text-sm font-semibold rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-md">
                 <UserPlus className="h-4 w-4" />
                 إنشاء حساب
               </TabsTrigger>
-              <TabsTrigger value="admin" className="gap-2">
+              <TabsTrigger value="admin" className="gap-2 text-sm font-semibold rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-md">
                 <Shield className="h-4 w-4" />
                 تسجيل موظف
               </TabsTrigger>
             </TabsList>
             
             {error && (
-              <Alert variant="destructive" className="mt-4">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
+              <Alert variant="destructive" className="mt-6 border-destructive/20 bg-destructive/5">
+                <AlertCircle className="h-5 w-5" />
+                <AlertDescription className="text-sm font-medium leading-relaxed">{error}</AlertDescription>
               </Alert>
             )}
 
-            <TabsContent value="login">
-              <form onSubmit={handleLogin} className="space-y-4">
+            <TabsContent value="login" className="space-y-6 mt-6">
+              <form onSubmit={handleLogin} className="space-y-6">
                 <CardHeader className="px-0 pb-4">
-                  <CardTitle>تسجيل الدخول</CardTitle>
-                  <CardDescription>
+                  <CardTitle className="text-xl font-bold text-right">تسجيل الدخول</CardTitle>
+                  <CardDescription className="text-sm text-muted-foreground text-right font-medium leading-relaxed">
                     أدخل بيانات حسابك للوصول إلى النظام
                   </CardDescription>
                 </CardHeader>
                 
-                <div className="space-y-2">
-                  <Label htmlFor="login-email">البريد الإلكتروني</Label>
+                <div className="space-y-3">
+                  <Label htmlFor="login-email" className="text-sm font-semibold text-right block">البريد الإلكتروني</Label>
                   <Input
                     id="login-email"
                     type="email"
@@ -264,11 +271,12 @@ const Auth = () => {
                     onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
                     placeholder="أدخل بريدك الإلكتروني"
                     disabled={loading}
+                    className="h-12 text-base font-medium rounded-xl border-2 focus:border-primary transition-colors"
                   />
                 </div>
                 
-                <div className="space-y-2">
-                  <Label htmlFor="login-password">كلمة المرور</Label>
+                <div className="space-y-3">
+                  <Label htmlFor="login-password" className="text-sm font-semibold text-right block">كلمة المرور</Label>
                   <Input
                     id="login-password"
                     type="password"
@@ -276,26 +284,27 @@ const Auth = () => {
                     onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
                     placeholder="أدخل كلمة المرور"
                     disabled={loading}
+                    className="h-12 text-base font-medium rounded-xl border-2 focus:border-primary transition-colors"
                   />
                 </div>
                 
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button type="submit" className="w-full h-12 text-base font-bold rounded-xl bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 transition-all duration-200 shadow-lg hover:shadow-xl" disabled={loading}>
                   {loading ? "جاري تسجيل الدخول..." : "تسجيل الدخول"}
                 </Button>
               </form>
             </TabsContent>
 
-            <TabsContent value="signup">
-              <form onSubmit={handleSignup} className="space-y-4">
+            <TabsContent value="signup" className="space-y-6 mt-6">
+              <form onSubmit={handleSignup} className="space-y-6">
                 <CardHeader className="px-0 pb-4">
-                  <CardTitle>إنشاء حساب جديد</CardTitle>
-                  <CardDescription>
+                  <CardTitle className="text-xl font-bold text-right">إنشاء حساب جديد</CardTitle>
+                  <CardDescription className="text-sm text-muted-foreground text-right font-medium leading-relaxed">
                     أنشئ حسابك الجديد للانضمام إلى النظام
                   </CardDescription>
                 </CardHeader>
                 
-                <div className="space-y-2">
-                  <Label htmlFor="signup-name">الاسم الكامل</Label>
+                <div className="space-y-3">
+                  <Label htmlFor="signup-name" className="text-sm font-semibold text-right block">الاسم الكامل</Label>
                   <Input
                     id="signup-name"
                     type="text"
@@ -303,11 +312,12 @@ const Auth = () => {
                     onChange={(e) => setSignupForm({ ...signupForm, fullName: e.target.value })}
                     placeholder="أدخل اسمك الكامل"
                     disabled={loading}
+                    className="h-12 text-base font-medium rounded-xl border-2 focus:border-primary transition-colors"
                   />
                 </div>
                 
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email">البريد الإلكتروني</Label>
+                <div className="space-y-3">
+                  <Label htmlFor="signup-email" className="text-sm font-semibold text-right block">البريد الإلكتروني</Label>
                   <Input
                     id="signup-email"
                     type="email"
@@ -315,11 +325,12 @@ const Auth = () => {
                     onChange={(e) => setSignupForm({ ...signupForm, email: e.target.value })}
                     placeholder="أدخل بريدك الإلكتروني"
                     disabled={loading}
+                    className="h-12 text-base font-medium rounded-xl border-2 focus:border-primary transition-colors"
                   />
                 </div>
                 
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">كلمة المرور</Label>
+                <div className="space-y-3">
+                  <Label htmlFor="signup-password" className="text-sm font-semibold text-right block">كلمة المرور</Label>
                   <Input
                     id="signup-password"
                     type="password"
@@ -327,11 +338,12 @@ const Auth = () => {
                     onChange={(e) => setSignupForm({ ...signupForm, password: e.target.value })}
                     placeholder="أدخل كلمة المرور (6 أحرف على الأقل)"
                     disabled={loading}
+                    className="h-12 text-base font-medium rounded-xl border-2 focus:border-primary transition-colors"
                   />
                 </div>
                 
-                <div className="space-y-2">
-                  <Label htmlFor="signup-confirm">تأكيد كلمة المرور</Label>
+                <div className="space-y-3">
+                  <Label htmlFor="signup-confirm" className="text-sm font-semibold text-right block">تأكيد كلمة المرور</Label>
                   <Input
                     id="signup-confirm"
                     type="password"
@@ -339,26 +351,27 @@ const Auth = () => {
                     onChange={(e) => setSignupForm({ ...signupForm, confirmPassword: e.target.value })}
                     placeholder="أعد إدخال كلمة المرور"
                     disabled={loading}
+                    className="h-12 text-base font-medium rounded-xl border-2 focus:border-primary transition-colors"
                   />
                 </div>
                 
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button type="submit" className="w-full h-12 text-base font-bold rounded-xl bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 transition-all duration-200 shadow-lg hover:shadow-xl" disabled={loading}>
                   {loading ? "جاري إنشاء الحساب..." : "إنشاء حساب"}
                 </Button>
               </form>
             </TabsContent>
 
-            <TabsContent value="admin">
-              <form onSubmit={handleAdminSignup} className="space-y-4">
+            <TabsContent value="admin" className="space-y-6 mt-6">
+              <form onSubmit={handleAdminSignup} className="space-y-6">
                 <CardHeader className="px-0 pb-4">
-                  <CardTitle>تسجيل موظف إداري</CardTitle>
-                  <CardDescription>
+                  <CardTitle className="text-xl font-bold text-right">تسجيل موظف إداري</CardTitle>
+                  <CardDescription className="text-sm text-muted-foreground text-right font-medium leading-relaxed">
                     إنشاء حساب جديد للموظفين والإدارة
                   </CardDescription>
                 </CardHeader>
                 
-                <div className="space-y-2">
-                  <Label htmlFor="admin-name">الاسم الكامل</Label>
+                <div className="space-y-3">
+                  <Label htmlFor="admin-name" className="text-sm font-semibold text-right block">الاسم الكامل</Label>
                   <Input
                     id="admin-name"
                     type="text"
@@ -366,11 +379,12 @@ const Auth = () => {
                     onChange={(e) => setAdminForm({ ...adminForm, fullName: e.target.value })}
                     placeholder="أدخل اسم الموظف الكامل"
                     disabled={loading}
+                    className="h-12 text-base font-medium rounded-xl border-2 focus:border-primary transition-colors"
                   />
                 </div>
                 
-                <div className="space-y-2">
-                  <Label htmlFor="admin-email">البريد الإلكتروني</Label>
+                <div className="space-y-3">
+                  <Label htmlFor="admin-email" className="text-sm font-semibold text-right block">البريد الإلكتروني</Label>
                   <Input
                     id="admin-email"
                     type="email"
@@ -378,17 +392,18 @@ const Auth = () => {
                     onChange={(e) => setAdminForm({ ...adminForm, email: e.target.value })}
                     placeholder="أدخل بريد الموظف الإلكتروني"
                     disabled={loading}
+                    className="h-12 text-base font-medium rounded-xl border-2 focus:border-primary transition-colors"
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="admin-role">نوع الحساب</Label>
+                <div className="space-y-3">
+                  <Label htmlFor="admin-role" className="text-sm font-semibold text-right block">نوع الحساب</Label>
                   <Select 
                     value={adminForm.role} 
                     onValueChange={(value) => setAdminForm({ ...adminForm, role: value })}
                     disabled={loading}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="h-12 text-base font-medium rounded-xl border-2 focus:border-primary transition-colors">
                       <SelectValue placeholder="اختر نوع الحساب" />
                     </SelectTrigger>
                     <SelectContent>
@@ -399,8 +414,8 @@ const Auth = () => {
                   </Select>
                 </div>
                 
-                <div className="space-y-2">
-                  <Label htmlFor="admin-password">كلمة المرور</Label>
+                <div className="space-y-3">
+                  <Label htmlFor="admin-password" className="text-sm font-semibold text-right block">كلمة المرور</Label>
                   <Input
                     id="admin-password"
                     type="password"
@@ -408,11 +423,12 @@ const Auth = () => {
                     onChange={(e) => setAdminForm({ ...adminForm, password: e.target.value })}
                     placeholder="أدخل كلمة المرور (6 أحرف على الأقل)"
                     disabled={loading}
+                    className="h-12 text-base font-medium rounded-xl border-2 focus:border-primary transition-colors"
                   />
                 </div>
                 
-                <div className="space-y-2">
-                  <Label htmlFor="admin-confirm">تأكيد كلمة المرور</Label>
+                <div className="space-y-3">
+                  <Label htmlFor="admin-confirm" className="text-sm font-semibold text-right block">تأكيد كلمة المرور</Label>
                   <Input
                     id="admin-confirm"
                     type="password"
@@ -420,10 +436,11 @@ const Auth = () => {
                     onChange={(e) => setAdminForm({ ...adminForm, confirmPassword: e.target.value })}
                     placeholder="أعد إدخال كلمة المرور"
                     disabled={loading}
+                    className="h-12 text-base font-medium rounded-xl border-2 focus:border-primary transition-colors"
                   />
                 </div>
                 
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button type="submit" className="w-full h-12 text-base font-bold rounded-xl bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 transition-all duration-200 shadow-lg hover:shadow-xl" disabled={loading}>
                   {loading ? "جاري إنشاء الحساب..." : "إنشاء حساب موظف"}
                 </Button>
               </form>
