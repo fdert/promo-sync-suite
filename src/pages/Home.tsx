@@ -64,15 +64,22 @@ const Home = () => {
     if (!user) return;
     
     try {
-      const { data: userRole } = await supabase
+      const { data: userRoles } = await supabase
         .from('user_roles')
         .select('role')
-        .eq('user_id', user.id)
-        .single();
+        .eq('user_id', user.id);
 
-      if (userRole?.role === 'admin' || userRole?.role === 'manager') {
+      if (!userRoles || userRoles.length === 0) {
+        navigate('/user');
+        return;
+      }
+
+      // فحص الأدوار بترتيب الأولوية
+      const roles = userRoles.map(r => r.role);
+      
+      if (roles.includes('admin') || roles.includes('manager')) {
         navigate('/admin');
-      } else if (userRole?.role === 'employee') {
+      } else if (roles.includes('employee')) {
         navigate('/employee');
       } else {
         navigate('/user');
