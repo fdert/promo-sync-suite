@@ -161,8 +161,9 @@ const Orders = () => {
   };
 
   // رفع الملفات
-  const handleFileUpload = async (files: FileList) => {
-    if (!files || files.length === 0 || !selectedOrderForUpload) {
+  const handleFileUpload = async (files: FileList | File[]) => {
+    const fileArray = Array.from(files);
+    if (!fileArray || fileArray.length === 0 || !selectedOrderForUpload) {
       toast({
         title: "خطأ",
         description: "يرجى اختيار ملفات للرفع",
@@ -201,8 +202,8 @@ const Orders = () => {
       }
 
       // رفع الملفات
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
+      for (let i = 0; i < fileArray.length; i++) {
+        const file = fileArray[i];
         const fileExt = file.name.split('.').pop();
         const fileName = `${printOrderId}_${Date.now()}_${i}.${fileExt}`;
         const filePath = `${printOrderId}/${fileName}`;
@@ -233,7 +234,7 @@ const Orders = () => {
 
       toast({
         title: "تم رفع الملفات",
-        description: `تم رفع ${files.length} ملف بنجاح`,
+        description: `تم رفع ${fileArray.length} ملف بنجاح`,
       });
 
       setIsUploadDialogOpen(false);
@@ -652,21 +653,65 @@ const Orders = () => {
             )}
             
             <div>
-              <Label htmlFor="file-upload">اختر الملفات</Label>
-              <Input
-                id="file-upload"
-                type="file"
-                multiple
-                accept="image/*,.pdf,.doc,.docx,.ai,.psd"
-                onChange={(e) => {
-                  if (e.target.files) {
-                    handleFileUpload(e.target.files);
+              <Label htmlFor="file-upload">اختر الملفات أو اسحبها هنا أو الصقها</Label>
+              <div 
+                className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center hover:border-muted-foreground/50 transition-colors"
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const files = Array.from(e.dataTransfer.files);
+                  if (files.length > 0) {
+                    handleFileUpload(files);
                   }
                 }}
-                disabled={uploading}
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                يمكنك رفع ملفات الصور، PDF، Word، AI، PSD
+                onDragOver={(e) => {
+                  e.preventDefault();
+                }}
+                onPaste={(e) => {
+                  e.preventDefault();
+                  const items = Array.from(e.clipboardData.items);
+                  const files = items
+                    .filter(item => item.kind === 'file')
+                    .map(item => item.getAsFile())
+                    .filter(file => file !== null) as File[];
+                  
+                  if (files.length > 0) {
+                    handleFileUpload(files);
+                  }
+                }}
+                tabIndex={0}
+              >
+                <Upload className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground">
+                  اسحب وأفلت الملفات هنا أو انقر لاختيار الملفات
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  أو استخدم Ctrl+V للصق الملفات من الحافظة
+                </p>
+                <Input
+                  id="file-upload"
+                  type="file"
+                  multiple
+                  accept="image/*,.pdf,.doc,.docx,.ai,.psd"
+                  onChange={(e) => {
+                    if (e.target.files) {
+                      handleFileUpload(e.target.files);
+                    }
+                  }}
+                  disabled={uploading}
+                  className="hidden"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="mt-2"
+                  onClick={() => document.getElementById('file-upload')?.click()}
+                  disabled={uploading}
+                >
+                  اختر الملفات
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                الأنواع المدعومة: صور، PDF، Word، AI، PSD
               </p>
             </div>
           </div>
