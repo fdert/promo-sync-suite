@@ -292,24 +292,9 @@ const Orders = () => {
         return;
       }
 
-      // إنشاء رابط عام للملف (بدلاً من الرابط المؤقت)
-      const supabaseUrl = 'https://gcuqfxacnbxdldsbmgvf.supabase.co';
-      const publicFileUrl = `${supabaseUrl}/storage/v1/object/public/print-files/${proofFile.file_path}`;
+      // إنشاء رابط عام للملف
+      const publicFileUrl = `https://gcuqfxacnbxdldsbmgvf.supabase.co/storage/v1/object/public/print-files/${proofFile.file_path}`;
       
-      // التحقق من وجود الملف
-      const { data: fileCheck } = await supabase.storage
-        .from('print-files')
-        .list(proofFile.file_path.split('/')[0]);
-
-      if (!fileCheck) {
-        toast({
-          title: "خطأ",
-          description: "خطأ في الحصول على الملف",
-          variant: "destructive",
-        });
-        return;
-      }
-
       // جلب بنود الطلب
       const { data: orderItems, error: itemsError } = await supabase
         .from('order_items')
@@ -340,22 +325,14 @@ const Orders = () => {
         orderItemsText += `📊 إجمالي البنود: ${totalAmount} ر.س\n`;
       }
 
-      // تحديد نوع الملف
-      const isImageFile = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(
-        proofFile.file_name.split('.').pop()?.toLowerCase() || ''
-      );
-      const messageType = isImageFile ? 'image' : 'document';
-
-      // إرسال الرسالة باستخدام قالب البروفة المحسن
-      const proofMessage = `🎨 *بروفة التصميم جاهزة للمراجعة*
+      // إنشاء رسالة البروفة النصية أولاً
+      const textMessage = `🎨 *بروفة التصميم جاهزة للمراجعة*
 
 📋 *تفاصيل الطلب:*
 • رقم الطلب: ${order.order_number}
 • العميل: ${order.customers?.name || 'عزيزنا العميل'}
 • الخدمة: ${order.service_name}
 ${orderItemsText}
-
-📎 *الملف المرفق:* ${proofFile.file_name}
 
 *يرجى مراجعة البروفة المرفقة:*
 
@@ -365,19 +342,41 @@ ${orderItemsText}
 شكراً لكم،
 *وكالة الإبداع للدعاية والإعلان*`;
 
-      const { error: notificationError } = await supabase
+      // إرسال الرسالة النصية أولاً
+      const { error: textError } = await supabase
         .from('whatsapp_messages')
         .insert({
           from_number: 'system',
           to_number: order.customers?.whatsapp_number || '',
-          message_type: messageType,
-          message_content: proofMessage,
+          message_type: 'text',
+          message_content: textMessage,
+          status: 'pending',
+          customer_id: order.customer_id || (order as any).customer_id
+        });
+
+      if (textError) throw textError;
+
+      // تحديد نوع الملف للرسالة الثانية
+      const isImageFile = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(
+        proofFile.file_name.split('.').pop()?.toLowerCase() || ''
+      );
+      
+      // إرسال الملف منفصلاً مع رسالة بسيطة
+      const fileMessage = `📎 *ملف البروفة*\n${proofFile.file_name}`;
+      
+      const { error: fileError } = await supabase
+        .from('whatsapp_messages')
+        .insert({
+          from_number: 'system',
+          to_number: order.customers?.whatsapp_number || '',
+          message_type: isImageFile ? 'image' : 'document',
+          message_content: fileMessage,
           media_url: publicFileUrl,
           status: 'pending',
           customer_id: order.customer_id || (order as any).customer_id
         });
 
-      if (notificationError) throw notificationError;
+      if (fileError) throw fileError;
 
       // تحديث حالة الملف
       const { error: updateError } = await supabase
@@ -392,7 +391,7 @@ ${orderItemsText}
 
       toast({
         title: "تم إرسال البروفة",
-        description: "تم إرسال البروفة للعميل بنجاح مع الصورة المرفقة",
+        description: "تم إرسال البروفة النصية والملف للعميل بنجاح",
       });
 
       // تحديث قائمة الملفات
