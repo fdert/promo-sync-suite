@@ -48,12 +48,14 @@ Deno.serve(async (req) => {
 
     console.log(`Found ${pendingMessages.length} pending messages`);
 
-    // الحصول على إعدادات الويب هوك للإرسال
+    // الحصول على إعدادات الويب هوك للإرسال (دعم أنواع مختلفة)
     const { data: webhookSettings } = await supabase
       .from('webhook_settings')
-      .select('webhook_url')
-      .eq('webhook_type', 'outgoing')
+      .select('webhook_url, webhook_type')
+      .in('webhook_type', ['outgoing', 'proof'])
       .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
       .single();
 
     if (!webhookSettings?.webhook_url) {
