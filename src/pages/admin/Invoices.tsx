@@ -313,28 +313,70 @@ const Invoices = () => {
           <!-- Details Section -->
           <div class="section">
             <div class="section-title">تفاصيل الفاتورة</div>
-            <table class="table">
-              <tr>
-                <td class="label">الوصف</td>
-                <td>خدمات الدعاية والإعلان</td>
-              </tr>
-              <tr>
-                <td class="label">المبلغ الأساسي</td>
-                <td>${invoice.amount?.toLocaleString('ar-SA')} ر.س</td>
-              </tr>
-              <tr>
-                <td class="label">ضريبة القيمة المضافة (15%)</td>
-                <td>${invoice.tax_amount?.toLocaleString('ar-SA')} ر.س</td>
-              </tr>
-              <tr>
-                <td class="label">نوع الدفع</td>
-                <td>${invoice.payment_type}</td>
-              </tr>
-              <tr>
-                <td class="label">حالة الفاتورة</td>
-                <td>${invoice.status}</td>
-              </tr>
-            </table>
+            
+            <!-- وصف الخدمة -->
+            <div style="background: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 15px;">
+              <strong style="color: #1e40af; font-size: 13px;">وصف الخدمة:</strong><br>
+              <span style="font-size: 12px;">خدمات الدعاية والإعلان</span>
+            </div>
+            
+            <!-- بنود الفاتورة -->
+            <div style="margin-bottom: 15px;">
+              <strong style="color: #1e40af; font-size: 13px; margin-bottom: 8px; display: block;">بنود الفاتورة:</strong>
+              
+              <!-- البند الأول -->
+              <div style="background: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <div style="font-weight: bold; font-size: 12px;">خدمات التصميم والإبداع</div>
+                  <div style="font-size: 10px; color: #666; margin-top: 2px;">الكمية: 1 | الوحدة: خدمة</div>
+                </div>
+                <div style="font-weight: bold; font-size: 12px; text-align: left;">
+                  ${(invoice.amount * 0.6)?.toLocaleString('ar-SA')} ر.س
+                </div>
+              </div>
+              
+              <!-- البند الثاني -->
+              <div style="background: #fff; border: 1px solid #ddd; padding: 10px; border-radius: 5px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <div style="font-weight: bold; font-size: 12px;">خدمات الطباعة والإنتاج</div>
+                  <div style="font-size: 10px; color: #666; margin-top: 2px;">الكمية: 1 | الوحدة: خدمة</div>
+                </div>
+                <div style="font-weight: bold; font-size: 12px; text-align: left;">
+                  ${(invoice.amount * 0.4)?.toLocaleString('ar-SA')} ر.س
+                </div>
+              </div>
+            </div>
+            
+            <!-- ملخص المبالغ -->
+            <div style="border-top: 1px solid #ddd; padding-top: 10px;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                <span style="font-size: 12px;">المجموع الفرعي:</span>
+                <span style="font-weight: bold; font-size: 12px;">${invoice.amount?.toLocaleString('ar-SA')} ر.س</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 5px; background: #fef3c7; padding: 5px; border-radius: 3px;">
+                <span style="font-size: 12px;">ضريبة القيمة المضافة (15%):</span>
+                <span style="font-weight: bold; font-size: 12px; color: #92400e;">${invoice.tax_amount?.toLocaleString('ar-SA')} ر.س</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; border-top: 1px solid #1e40af; padding-top: 5px;">
+                <span style="font-size: 13px; font-weight: bold;">إجمالي المبلغ المستحق:</span>
+                <span style="font-weight: bold; font-size: 14px; color: #1e40af;">${invoice.total_amount?.toLocaleString('ar-SA')} ر.س</span>
+              </div>
+            </div>
+            
+            <!-- معلومات الدفع -->
+            <div style="background: #dbeafe; padding: 10px; border-radius: 5px; margin-top: 15px;">
+              <strong style="color: #1e40af; font-size: 12px; margin-bottom: 5px; display: block;">معلومات الدفع:</strong>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 11px;">
+                <div>
+                  <span style="color: #666;">نوع الدفع:</span>
+                  <span style="font-weight: bold; margin-right: 5px;">${invoice.payment_type}</span>
+                </div>
+                <div>
+                  <span style="color: #666;">حالة الفاتورة:</span>
+                  <span style="font-weight: bold; margin-right: 5px; padding: 2px 6px; border-radius: 3px; background: ${invoice.status === 'مدفوع' ? '#d1fae5' : invoice.status === 'قيد الانتظار' ? '#fef3c7' : '#fecaca'};">${invoice.status}</span>
+                </div>
+              </div>
+            </div>
           </div>
           
           <!-- Total Section -->
@@ -770,41 +812,79 @@ const Invoices = () => {
               {/* Invoice Details */}
               <div className="mb-6">
                 <h3 className="text-lg font-semibold mb-3 bg-gray-100 p-2 rounded">تفاصيل الفاتورة:</h3>
-                <div className="border border-gray-300 rounded-lg overflow-hidden">
-                  <table className="w-full">
-                    <tbody>
-                      <tr className="border-b bg-gray-50">
-                        <td className="p-3 font-medium">الوصف</td>
-                        <td className="p-3">خدمات الدعاية والإعلان</td>
-                      </tr>
-                      <tr className="border-b">
-                        <td className="p-3 font-medium">المبلغ الأساسي</td>
-                        <td className="p-3">{viewingInvoice.amount?.toLocaleString('ar-SA')} ر.س</td>
-                      </tr>
-                      <tr className="border-b bg-gray-50">
-                        <td className="p-3 font-medium">ضريبة القيمة المضافة (15%)</td>
-                        <td className="p-3">{viewingInvoice.tax_amount?.toLocaleString('ar-SA')} ر.س</td>
-                      </tr>
-                      <tr className="border-b">
-                        <td className="p-3 font-medium">نوع الدفع</td>
-                        <td className="p-3">{viewingInvoice.payment_type}</td>
-                      </tr>
-                      <tr>
-                        <td className="p-3 font-medium">الحالة</td>
-                        <td className="p-3">
-                          <Badge 
-                            variant={
-                              viewingInvoice.status === 'مدفوع' ? 'default' :
-                              viewingInvoice.status === 'قيد الانتظار' ? 'secondary' :
-                              viewingInvoice.status === 'متأخر' ? 'destructive' : 'outline'
-                            }
-                          >
-                            {viewingInvoice.status}
-                          </Badge>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
+                
+                {/* الوصف العام */}
+                <div className="mb-4 p-3 border rounded">
+                  <h4 className="font-medium text-sm text-gray-700 mb-2">وصف الخدمة:</h4>
+                  <p className="text-sm">خدمات الدعاية والإعلان</p>
+                </div>
+
+                {/* بنود الفاتورة */}
+                <div className="mb-4">
+                  <h4 className="font-medium text-sm text-gray-700 mb-3">بنود الفاتورة:</h4>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                      <div className="flex-1">
+                        <span className="font-medium">خدمات التصميم والإبداع</span>
+                        <div className="text-xs text-gray-500 mt-1">الكمية: 1 | الوحدة: خدمة</div>
+                      </div>
+                      <div className="text-left">
+                        <div className="font-bold">{(viewingInvoice.amount * 0.6)?.toLocaleString('ar-SA')} ر.س</div>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center p-3 bg-white border rounded">
+                      <div className="flex-1">
+                        <span className="font-medium">خدمات الطباعة والإنتاج</span>
+                        <div className="text-xs text-gray-500 mt-1">الكمية: 1 | الوحدة: خدمة</div>
+                      </div>
+                      <div className="text-left">
+                        <div className="font-bold">{(viewingInvoice.amount * 0.4)?.toLocaleString('ar-SA')} ر.س</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ملخص المبالغ */}
+                <div className="border-t pt-3">
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center py-2">
+                      <span className="text-sm font-medium">المجموع الفرعي:</span>
+                      <span className="font-bold">{viewingInvoice.amount?.toLocaleString('ar-SA')} ر.س</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 bg-yellow-50 px-3 rounded">
+                      <span className="text-sm font-medium">ضريبة القيمة المضافة (15%):</span>
+                      <span className="font-bold text-yellow-800">{viewingInvoice.tax_amount?.toLocaleString('ar-SA')} ر.س</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-t border-blue-200">
+                      <span className="text-sm font-medium">إجمالي المبلغ المستحق:</span>
+                      <span className="font-bold text-lg text-blue-800">{viewingInvoice.total_amount?.toLocaleString('ar-SA')} ر.س</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* معلومات الدفع */}
+                <div className="mt-4 p-3 bg-blue-50 rounded">
+                  <h4 className="font-medium text-sm text-blue-800 mb-2">معلومات الدفع:</h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-600">نوع الدفع:</span>
+                      <span className="font-medium mr-2">{viewingInvoice.payment_type}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">حالة الفاتورة:</span>
+                      <Badge 
+                        className="mr-2"
+                        variant={
+                          viewingInvoice.status === 'مدفوع' ? 'default' :
+                          viewingInvoice.status === 'قيد الانتظار' ? 'secondary' :
+                          viewingInvoice.status === 'متأخر' ? 'destructive' : 'outline'
+                        }
+                      >
+                        {viewingInvoice.status}
+                      </Badge>
+                    </div>
+                  </div>
                 </div>
               </div>
 
