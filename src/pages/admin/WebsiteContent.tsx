@@ -170,13 +170,37 @@ const WebsiteContent = () => {
       };
 
       // حفظ البيانات في قاعدة البيانات
-      const { error } = await supabase
+      const user = await supabase.auth.getUser();
+      
+      // التحقق من وجود السجل أولاً
+      const { data: existingData } = await supabase
         .from('website_settings')
-        .upsert({
-          setting_key: 'website_content',
-          setting_value: websiteData,
-          created_by: (await supabase.auth.getUser()).data.user?.id
-        });
+        .select('id')
+        .eq('setting_key', 'website_content')
+        .maybeSingle();
+
+      let error;
+      if (existingData) {
+        // تحديث السجل الموجود
+        const { error: updateError } = await supabase
+          .from('website_settings')
+          .update({
+            setting_value: websiteData,
+            updated_at: new Date().toISOString()
+          })
+          .eq('setting_key', 'website_content');
+        error = updateError;
+      } else {
+        // إدراج سجل جديد
+        const { error: insertError } = await supabase
+          .from('website_settings')
+          .insert({
+            setting_key: 'website_content',
+            setting_value: websiteData,
+            created_by: user.data.user?.id
+          });
+        error = insertError;
+      }
 
       if (error) {
         console.error('Error saving website settings:', error);
