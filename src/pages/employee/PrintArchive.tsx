@@ -64,6 +64,7 @@ interface PrintFile {
   file_path: string;
   file_type: string;
   file_size: number;
+  file_category: string;
   is_approved: boolean;
   upload_date: string;
   notes?: string;
@@ -624,51 +625,105 @@ const PrintArchive = () => {
                 </CardContent>
               </Card>
 
-              {/* الملفات */}
+              {/* ملفات البروفة */}
               <Card>
                 <CardHeader>
-                  <CardTitle>ملفات الطباعة ({customerPrintFiles.length})</CardTitle>
+                  <CardTitle>ملفات البروفة ({customerPrintFiles.filter(f => f.file_category === 'design').length})</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {customerPrintFiles.length === 0 ? (
+                  {customerPrintFiles.filter(f => f.file_category === 'design').length === 0 ? (
                     <div className="text-center py-8">
                       <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                      <p className="text-muted-foreground">لا توجد ملفات مرفوعة</p>
+                      <p className="text-muted-foreground">لا توجد ملفات بروفة مرفوعة</p>
                     </div>
                   ) : (
                     <div className="grid gap-3">
-                      {customerPrintFiles.map((file) => (
-                        <div key={file.id} className="flex items-center justify-between p-4 border rounded-lg">
-                          <div className="flex items-center gap-3">
-                            <FileText className="h-6 w-6 text-muted-foreground" />
-                            <div>
-                              <p className="font-medium">{file.file_name}</p>
-                              <p className="text-sm text-muted-foreground">
-                                {new Date(file.upload_date).toLocaleDateString('ar-SA')} • 
-                                {(file.file_size / 1024 / 1024).toFixed(2)} MB • 
-                                {file.file_type}
-                              </p>
-                              {file.notes && (
-                                <p className="text-xs text-muted-foreground mt-1">{file.notes}</p>
+                      {customerPrintFiles
+                        .filter(f => f.file_category === 'design')
+                        .map((file) => (
+                          <div key={file.id} className="flex items-center justify-between p-4 border rounded-lg bg-blue-50">
+                            <div className="flex items-center gap-3">
+                              <FileText className="h-6 w-6 text-blue-600" />
+                              <div>
+                                <p className="font-medium">{file.file_name}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  {new Date(file.upload_date).toLocaleDateString('ar-SA')} • 
+                                  {(file.file_size / 1024 / 1024).toFixed(2)} MB • 
+                                  {file.file_type}
+                                </p>
+                                {file.notes && (
+                                  <p className="text-xs text-muted-foreground mt-1">{file.notes}</p>
+                                )}
+                              </div>
+                              {file.is_approved && (
+                                <Badge variant="secondary" className="bg-green-500 text-white">
+                                  معتمد
+                                </Badge>
                               )}
                             </div>
-                            {file.is_approved && (
-                              <Badge variant="secondary" className="bg-green-500 text-white">
-                                معتمد
-                              </Badge>
-                            )}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => downloadFile(file.file_path, file.file_name)}
+                              className="gap-2"
+                            >
+                              <Download className="h-4 w-4" />
+                              تحميل
+                            </Button>
                           </div>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => downloadFile(file.file_path, file.file_name)}
-                            className="gap-2"
-                          >
-                            <Download className="h-4 w-4" />
-                            تحميل
-                          </Button>
-                        </div>
-                      ))}
+                        ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* ملفات الطباعة */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>ملفات الطباعة ({customerPrintFiles.filter(f => f.file_category === 'print').length})</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {customerPrintFiles.filter(f => f.file_category === 'print').length === 0 ? (
+                    <div className="text-center py-8">
+                      <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                      <p className="text-muted-foreground">لا توجد ملفات طباعة مرفوعة</p>
+                    </div>
+                  ) : (
+                    <div className="grid gap-3">
+                      {customerPrintFiles
+                        .filter(f => f.file_category === 'print')
+                        .map((file) => (
+                          <div key={file.id} className="flex items-center justify-between p-4 border rounded-lg bg-green-50">
+                            <div className="flex items-center gap-3">
+                              <Printer className="h-6 w-6 text-green-600" />
+                              <div>
+                                <p className="font-medium">{file.file_name}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  {new Date(file.upload_date).toLocaleDateString('ar-SA')} • 
+                                  {(file.file_size / 1024 / 1024).toFixed(2)} MB • 
+                                  {file.file_type}
+                                </p>
+                                {file.notes && (
+                                  <p className="text-xs text-muted-foreground mt-1">{file.notes}</p>
+                                )}
+                              </div>
+                              {file.is_approved && (
+                                <Badge variant="secondary" className="bg-green-500 text-white">
+                                  معتمد
+                                </Badge>
+                              )}
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => downloadFile(file.file_path, file.file_name)}
+                              className="gap-2"
+                            >
+                              <Download className="h-4 w-4" />
+                              تحميل
+                            </Button>
+                          </div>
+                        ))}
                     </div>
                   )}
                 </CardContent>
