@@ -310,42 +310,68 @@ const Invoices = () => {
             </div>
           </div>
           
-          <!-- Details Section -->
-          <div class="section">
-            <div class="section-title">تفاصيل الفاتورة</div>
-            
-            <!-- وصف الخدمة -->
-            <div style="background: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 15px;">
-              <strong style="color: #1e40af; font-size: 13px;">وصف الخدمة:</strong><br>
-              <span style="font-size: 12px;">خدمات الدعاية والإعلان</span>
-            </div>
-            
-            <!-- بنود الفاتورة -->
-            <div style="margin-bottom: 15px;">
-              <strong style="color: #1e40af; font-size: 13px; margin-bottom: 8px; display: block;">بنود الفاتورة:</strong>
-              
-              <!-- البند الأول -->
-              <div style="background: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                  <div style="font-weight: bold; font-size: 12px;">خدمات التصميم والإبداع</div>
-                  <div style="font-size: 10px; color: #666; margin-top: 2px;">الكمية: 1 | الوحدة: خدمة</div>
-                </div>
-                <div style="font-weight: bold; font-size: 12px; text-align: left;">
-                  ${(invoice.amount * 0.6)?.toLocaleString('ar-SA')} ر.س
-                </div>
-              </div>
-              
-              <!-- البند الثاني -->
-              <div style="background: #fff; border: 1px solid #ddd; padding: 10px; border-radius: 5px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                  <div style="font-weight: bold; font-size: 12px;">خدمات الطباعة والإنتاج</div>
-                  <div style="font-size: 10px; color: #666; margin-top: 2px;">الكمية: 1 | الوحدة: خدمة</div>
-                </div>
-                <div style="font-weight: bold; font-size: 12px; text-align: left;">
-                  ${(invoice.amount * 0.4)?.toLocaleString('ar-SA')} ر.س
-                </div>
-              </div>
-            </div>
+           <!-- Details Section -->
+           <div class="section">
+             <div class="section-title">تفاصيل الفاتورة</div>
+             
+             <!-- جدول البنود -->
+             <table style="width: 100%; border-collapse: collapse; margin: 15px 0; border: 1px solid #ddd;">
+               <!-- رأس الجدول -->
+               <thead>
+                 <tr style="background: #1e40af; color: white;">
+                   <th style="padding: 12px 8px; text-align: center; border: 1px solid #ddd; font-size: 13px; font-weight: bold; width: 8%;">#</th>
+                   <th style="padding: 12px 8px; text-align: center; border: 1px solid #ddd; font-size: 13px; font-weight: bold; width: 40%;">اسم البند / الخدمة</th>
+                   <th style="padding: 12px 8px; text-align: center; border: 1px solid #ddd; font-size: 13px; font-weight: bold; width: 15%;">الكمية</th>
+                   <th style="padding: 12px 8px; text-align: center; border: 1px solid #ddd; font-size: 13px; font-weight: bold; width: 17%;">السعر (ر.س)</th>
+                   <th style="padding: 12px 8px; text-align: center; border: 1px solid #ddd; font-size: 13px; font-weight: bold; width: 20%;">الإجمالي (ر.س)</th>
+                 </tr>
+               </thead>
+               
+               <!-- محتوى الجدول -->
+               <tbody>
+                 <!-- البند الأول -->
+                 <tr style="background: #f8f9fa;">
+                   <td style="padding: 10px 8px; text-align: center; border: 1px solid #ddd; font-size: 12px; font-weight: bold;">1</td>
+                   <td style="padding: 10px 8px; text-align: right; border: 1px solid #ddd; font-size: 12px;">
+                     <div style="font-weight: bold; margin-bottom: 3px;">خدمات التصميم والإبداع</div>
+                     <div style="font-size: 10px; color: #666;">تصميم هوية بصرية وإعلانات</div>
+                   </td>
+                   <td style="padding: 10px 8px; text-align: center; border: 1px solid #ddd; font-size: 12px;">1 خدمة</td>
+                   <td style="padding: 10px 8px; text-align: center; border: 1px solid #ddd; font-size: 12px; font-weight: bold;">
+                     ${(invoice.amount * 0.6)?.toLocaleString('ar-SA')}
+                   </td>
+                   <td style="padding: 10px 8px; text-align: center; border: 1px solid #ddd; font-size: 12px; font-weight: bold; color: #1e40af;">
+                     ${(invoice.amount * 0.6)?.toLocaleString('ar-SA')}
+                   </td>
+                 </tr>
+                 
+                 <!-- البند الثاني -->
+                 <tr style="background: #fff;">
+                   <td style="padding: 10px 8px; text-align: center; border: 1px solid #ddd; font-size: 12px; font-weight: bold;">2</td>
+                   <td style="padding: 10px 8px; text-align: right; border: 1px solid #ddd; font-size: 12px;">
+                     <div style="font-weight: bold; margin-bottom: 3px;">خدمات الطباعة والإنتاج</div>
+                     <div style="font-size: 10px; color: #666;">طباعة رقمية وتشطيب احترافي</div>
+                   </td>
+                   <td style="padding: 10px 8px; text-align: center; border: 1px solid #ddd; font-size: 12px;">1 خدمة</td>
+                   <td style="padding: 10px 8px; text-align: center; border: 1px solid #ddd; font-size: 12px; font-weight: bold;">
+                     ${(invoice.amount * 0.4)?.toLocaleString('ar-SA')}
+                   </td>
+                   <td style="padding: 10px 8px; text-align: center; border: 1px solid #ddd; font-size: 12px; font-weight: bold; color: #1e40af;">
+                     ${(invoice.amount * 0.4)?.toLocaleString('ar-SA')}
+                   </td>
+                 </tr>
+                 
+                 <!-- إجمالي البنود -->
+                 <tr style="background: #f1f5f9; border-top: 2px solid #1e40af;">
+                   <td colspan="4" style="padding: 12px 8px; text-align: right; border: 1px solid #ddd; font-size: 13px; font-weight: bold;">
+                     المجموع الفرعي:
+                   </td>
+                   <td style="padding: 12px 8px; text-align: center; border: 1px solid #ddd; font-size: 13px; font-weight: bold; color: #1e40af;">
+                     ${invoice.amount?.toLocaleString('ar-SA')}
+                   </td>
+                 </tr>
+               </tbody>
+             </table>
             
             <!-- ملخص المبالغ -->
             <div style="border-top: 1px solid #ddd; padding-top: 10px;">
