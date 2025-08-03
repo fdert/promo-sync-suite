@@ -58,6 +58,7 @@ interface Order {
   payment_type?: string;
   due_date: string;
   created_at: string;
+  customer_id?: string;
   customers?: {
     name: string;
     whatsapp_number: string;
@@ -253,12 +254,57 @@ const Orders = () => {
     }
   };
 
-  // إرسال بروفة التصميم للعميل
   const sendDesignProofToCustomer = async (fileId: string, orderId: string) => {
     try {
       // إرسال رسالة واتساب للعميل
       const order = orders.find(o => o.id === orderId);
       if (!order) throw new Error('الطلب غير موجود');
+
+      // الحصول على طلب الطباعة
+      const { data: printOrder } = await supabase
+        .from('print_orders')
+        .select('id')
+        .eq('order_id', orderId)
+        .single();
+
+      if (!printOrder) {
+        toast({
+          title: "خطأ",
+          description: "طلب الطباعة غير موجود",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // الحصول على ملف البروفة
+      const { data: proofFile } = await supabase
+        .from('print_files')
+        .select('*')
+        .eq('id', fileId)
+        .single();
+
+      if (!proofFile) {
+        toast({
+          title: "خطأ",
+          description: "ملف البروفة غير موجود",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // الحصول على رابط الملف من التخزين
+      const { data: fileData } = await supabase.storage
+        .from('print-files')
+        .createSignedUrl(proofFile.file_path, 3600); // رابط صالح لساعة واحدة
+
+      if (!fileData?.signedUrl) {
+        toast({
+          title: "خطأ",
+          description: "خطأ في الحصول على رابط الملف",
+          variant: "destructive",
+        });
+        return;
+      }
 
       // جلب بنود الطلب
       const { data: orderItems, error: itemsError } = await supabase
@@ -290,16 +336,10 @@ const Orders = () => {
         orderItemsText += `📊 إجمالي البنود: ${totalAmount} ر.س\n`;
       }
 
-      // إرسال الإشعار
-      const { error: notificationError } = await supabase
-        .from('whatsapp_messages')
-        .insert({
-          from_number: 'system',
-          to_number: order.customers?.whatsapp_number || '',
-          message_type: 'text',
-          message_content: `مرحبا ${order.customers?.name}،
+      // إرسال الرسالة مع صورة البروفة
+      const messageContent = `مرحبا ${order.customers?.name || 'عزيزنا العميل'}،
 
-يسعدنا إبلاغكم بأن بروفة التصميم للطلب ${order.order_number} جاهزة للمراجعة.
+🎨 البروفة جاهزة للمراجعة! 
 
 تفاصيل الطلب:
 📦 الخدمة: ${order.service_name}
@@ -311,14 +351,29 @@ const Orders = () => {
 📅 تاريخ التسليم: ${order.due_date ? new Date(order.due_date).toLocaleDateString('ar-SA') : 'غير محدد'}
 ⭐ الأولوية: ${order.priority || 'متوسطة'}
 ${orderItemsText}
-يرجى مراجعة البروفة والموافقة عليها أو إرسال أي تعديلات مطلوبة.
+📄 اسم الملف: ${proofFile.file_name}
+
+يرجى مراجعة البروفة المرفقة والموافقة عليها أو إرسال أي تعديلات مطلوبة.
+
+للموافقة: أرسل "موافق" ✅
+للتعديل: اكتب التعديلات المطلوبة 📝
 
 شكراً لكم،
 وكالة الإبداع للدعاية والإعلان
 
-التاريخ: ${new Date().toLocaleDateString('ar-SA')}`,
+التاريخ: ${new Date().toLocaleDateString('ar-SA')}`;
+
+      // إضافة رسالة مع الصورة
+      const { error: notificationError } = await supabase
+        .from('whatsapp_messages')
+        .insert({
+          from_number: 'system',
+          to_number: order.customers?.whatsapp_number || '',
+          message_type: 'image',
+          message_content: messageContent,
+          media_url: fileData.signedUrl,
           status: 'pending',
-          customer_id: order.customers ? (order as any).customer_id : null
+          customer_id: order.customer_id || (order as any).customer_id
         });
 
       if (notificationError) throw notificationError;
@@ -336,7 +391,7 @@ ${orderItemsText}
 
       toast({
         title: "تم إرسال البروفة",
-        description: "تم إرسال بروفة التصميم للعميل عبر الواتساب",
+        description: "تم إرسال البروفة للعميل بنجاح مع الصورة المرفقة",
       });
 
       // تحديث قائمة الملفات
