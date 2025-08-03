@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { supabase } from "@/integrations/supabase/client";
 
 const Auth = () => {
   const [loginForm, setLoginForm] = useState({ email: "", password: "" });
@@ -28,10 +29,45 @@ const Auth = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [companyInfo, setCompanyInfo] = useState({
+    name: "وكالة الإبداع للدعاية والإعلان",
+    tagline: "نبني الأحلام بالإبداع والاحتراف",
+    logo: null
+  });
 
   const { signIn, signUp, signUpAdmin, user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // جلب بيانات الشركة
+  useEffect(() => {
+    const fetchCompanyInfo = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('website_settings')
+          .select('setting_value')
+          .eq('setting_key', 'website_content')
+          .single();
+
+        if (!error && data?.setting_value && typeof data.setting_value === 'object') {
+          const settingValue = data.setting_value as any;
+          const companyData = settingValue.companyInfo;
+          
+          if (companyData) {
+            setCompanyInfo({
+              name: companyData.name || "وكالة الإبداع للدعاية والإعلان",
+              tagline: companyData.tagline || "نبني الأحلام بالإبداع والاحتراف",
+              logo: companyData.logo || null
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching company info:', error);
+      }
+    };
+
+    fetchCompanyInfo();
+  }, []);
 
   // إعادة توجيه المستخدمين المسجلين إلى لوحة الإدارة
   useEffect(() => {
@@ -158,15 +194,30 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-accent/5 to-background p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <div className="w-10 h-10 bg-gradient-to-r from-primary to-accent rounded-xl flex items-center justify-center">
-              <Palette className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-foreground">وكالة الإبداع</h1>
-              <p className="text-sm text-muted-foreground">للدعاية والإعلان</p>
+      <Card className="w-full max-w-md shadow-2xl border-0 bg-card/50 backdrop-blur-sm">
+        <CardHeader className="text-center pb-6">
+          <div className="flex flex-col items-center gap-4 mb-4">
+            {companyInfo.logo ? (
+              <div className="relative">
+                <img 
+                  src={companyInfo.logo} 
+                  alt="شعار الشركة"
+                  className="w-16 h-16 object-contain rounded-xl bg-white p-2 shadow-lg"
+                />
+              </div>
+            ) : (
+              <div className="w-16 h-16 bg-gradient-to-r from-primary to-accent rounded-xl flex items-center justify-center shadow-lg">
+                <Palette className="h-8 w-8 text-white" />
+              </div>
+            )}
+            
+            <div className="text-center">
+              <h1 className="text-2xl font-bold text-foreground bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                {companyInfo.name}
+              </h1>
+              <p className="text-sm text-muted-foreground mt-1 font-medium">
+                {companyInfo.tagline}
+              </p>
             </div>
           </div>
         </CardHeader>
