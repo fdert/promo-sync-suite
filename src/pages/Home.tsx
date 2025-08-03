@@ -124,7 +124,7 @@ const Home = () => {
               />
             </div>
             <div className="space-y-2">
-              <h1 className="text-4xl font-amiri font-bold text-foreground bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+              <h1 className="text-2xl sm:text-3xl font-amiri font-bold text-foreground bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent leading-tight whitespace-nowrap">
                 {companyInfo.name}
               </h1>
               <p className="text-lg font-cairo font-medium text-muted-foreground">
@@ -218,6 +218,9 @@ const Home = () => {
             </p>
             <p className="text-xs text-muted-foreground">
               جميع الحقوق محفوظة
+            </p>
+            <p className="text-xs text-muted-foreground/80 font-cairo mt-2">
+              تصميم وفكرة عبدالمحسن الميلبي
             </p>
           </div>
         </div>
