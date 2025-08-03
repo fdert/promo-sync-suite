@@ -78,16 +78,31 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
         
         {/* Logo - Center */}
         <div style={{ flexShrink: 0, margin: '0 12px' }}>
-          {companyInfo.logo && (
+          {companyInfo.logo ? (
             <img 
               src={companyInfo.logo} 
               alt="شعار الشركة" 
               style={{ 
-                width: '50px', 
-                height: '50px', 
+                width: '60px', 
+                height: '60px', 
                 objectFit: 'contain'
               }}
             />
+          ) : (
+            <div style={{
+              width: '60px',
+              height: '60px',
+              backgroundColor: '#f0f0f0',
+              border: '2px dashed #ccc',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '10px',
+              color: '#999',
+              textAlign: 'center'
+            }}>
+              شعار الشركة
+            </div>
           )}
         </div>
         
@@ -134,36 +149,50 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
          marginBottom: '8px'
        }}>
         <thead>
-          <tr style={{ backgroundColor: '#f0f0f0' }}>
+          <tr style={{ 
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: '#ffffff'
+          }}>
             <th style={{ 
               border: '1px solid #555', 
-              padding: '2px', 
+              padding: '4px', 
               textAlign: 'right',
-              fontWeight: 'bold'
+              fontWeight: 'bold',
+              color: '#ffffff',
+              fontSize: '12px'
             }}>
               البند
             </th>
             <th style={{ 
               border: '1px solid #555', 
-              padding: '2px', 
+              padding: '4px', 
               textAlign: 'center',
-              width: '15%'
+              width: '15%',
+              color: '#ffffff',
+              fontSize: '12px',
+              fontWeight: 'bold'
             }}>
               الكمية
             </th>
             <th style={{ 
               border: '1px solid #555', 
-              padding: '2px', 
+              padding: '4px', 
               textAlign: 'center',
-              width: '20%'
+              width: '20%',
+              color: '#ffffff',
+              fontSize: '12px',
+              fontWeight: 'bold'
             }}>
               السعر
             </th>
             <th style={{ 
               border: '1px solid #555', 
-              padding: '2px', 
+              padding: '4px', 
               textAlign: 'center',
-              width: '20%'
+              width: '20%',
+              color: '#ffffff',
+              fontSize: '12px',
+              fontWeight: 'bold'
             }}>
               المجموع
             </th>
