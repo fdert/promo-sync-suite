@@ -206,7 +206,7 @@ const WebhookSettings = () => {
       </div>
 
       <Tabs defaultValue="whatsapp" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="whatsapp" className="gap-2">
             <MessageSquare className="h-4 w-4" />
             واتساب
@@ -218,6 +218,10 @@ const WebhookSettings = () => {
           <TabsTrigger value="invoices" className="gap-2">
             <FileText className="h-4 w-4" />
             الفواتير
+          </TabsTrigger>
+          <TabsTrigger value="proof" className="gap-2">
+            <Eye className="h-4 w-4" />
+            البروفة
           </TabsTrigger>
           <TabsTrigger value="logs" className="gap-2">
             <Webhook className="h-4 w-4" />
@@ -281,6 +285,31 @@ const WebhookSettings = () => {
                 onTest={testWebhook}
                 loading={loading}
                 webhookType="invoice"
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Proof Webhooks */}
+        <TabsContent value="proof">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Eye className="h-5 w-5" />
+                ويب هوك البروفة
+              </CardTitle>
+              <CardDescription>
+                إضافة وإدارة ويب هوك لإشعارات إرسال البروفة
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <WebhookManagement 
+                webhookSettings={webhookSettings.filter(w => w.webhook_type === 'proof')}
+                onSave={saveWebhookSetting}
+                onUpdate={updateWebhookSetting}
+                onTest={testWebhook}
+                loading={loading}
+                webhookType="proof"
               />
             </CardContent>
           </Card>
