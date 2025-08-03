@@ -225,6 +225,22 @@ const Orders = () => {
         return false;
       }
 
+      // التحقق من وجود فاتورة مسبقة لهذا الطلب
+      const { data: existingInvoice } = await supabase
+        .from('invoices')
+        .select('id, invoice_number')
+        .eq('order_id', orderId)
+        .maybeSingle();
+
+      if (existingInvoice) {
+        toast({
+          title: "تنبيه",
+          description: `تم إنشاء فاتورة لهذا الطلب مسبقاً: ${existingInvoice.invoice_number}`,
+          variant: "destructive",
+        });
+        return false;
+      }
+
       // التحقق من أن الطلب مكتمل
       if (order.status !== 'مكتمل') {
         toast({
