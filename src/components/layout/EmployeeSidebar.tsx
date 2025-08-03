@@ -9,6 +9,7 @@ import {
   ChevronLeft,
   Palette,
   Printer,
+  TrendingUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -61,9 +62,9 @@ const employeeMenuItems = [
     allowedRoles: ['employee'] as UserRole[],
   },
   {
-    title: "رسائل WhatsApp",
-    icon: MessageSquare,
-    href: "/employee/whatsapp",
+    title: "التقارير المالية",
+    icon: TrendingUp,
+    href: "/employee/reports",
     allowedRoles: ['employee'] as UserRole[],
   },
 ];

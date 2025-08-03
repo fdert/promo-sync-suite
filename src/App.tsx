@@ -17,6 +17,9 @@ import Orders from "./pages/admin/Orders";
 import Invoices from "./pages/admin/Invoices";
 import Accounts from "./pages/admin/Accounts";
 import Reports from "./pages/admin/Reports";
+import EmployeeReports from "./pages/employee/Reports";
+import EmployeeCustomers from "./pages/employee/Customers";
+import EmployeePrintOrders from "./pages/employee/PrintOrders";
 import WhatsApp from "./pages/admin/WhatsApp";
 import WebhookSettings from "./pages/admin/WebhookSettings";
 import WebsiteContent from "./pages/admin/WebsiteContent";
@@ -64,12 +67,12 @@ const App = () => (
               </ProtectedRoute>
             }>
               <Route index element={<EmployeeDashboard />} />
-              <Route path="customers" element={<Customers />} />
+              <Route path="customers" element={<EmployeeCustomers />} />
               <Route path="orders" element={<Orders />} />
               <Route path="invoices" element={<Invoices />} />
-              <Route path="print-orders" element={<PrintOrders />} />
+              <Route path="print-orders" element={<EmployeePrintOrders />} />
               <Route path="evaluations" element={<Evaluations />} />
-              <Route path="whatsapp" element={<WhatsApp />} />
+              <Route path="reports" element={<EmployeeReports />} />
             </Route>
             <Route path="/admin" element={
               <ProtectedRoute>
