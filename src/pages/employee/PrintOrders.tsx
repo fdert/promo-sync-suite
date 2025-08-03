@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { FileText, Printer, Package } from "lucide-react";
+import { FileText, Printer, Package, Download, Eye } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -12,6 +13,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface PrintOrder {
   id: string;
@@ -34,9 +41,23 @@ interface PrintOrder {
   };
 }
 
+interface PrintFile {
+  id: string;
+  file_name: string;
+  file_path: string;
+  file_type: string;
+  file_size: number;
+  is_approved: boolean;
+  upload_date: string;
+  notes?: string;
+}
+
 const PrintOrders = () => {
   const { user } = useAuth();
   const [printOrders, setPrintOrders] = useState<PrintOrder[]>([]);
+  const [printFiles, setPrintFiles] = useState<PrintFile[]>([]);
+  const [selectedOrder, setSelectedOrder] = useState<PrintOrder | null>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const statusLabels = {
@@ -90,6 +111,47 @@ const PrintOrders = () => {
       console.error("Error fetching print orders:", error);
     } finally {
       setLoading(false);
+    }
+  };
+  const fetchPrintFiles = async (printOrderId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("print_files")
+        .select("*")
+        .eq("print_order_id", printOrderId)
+        .order("upload_date", { ascending: false });
+
+      if (error) throw error;
+      setPrintFiles(data || []);
+    } catch (error) {
+      console.error("Error fetching print files:", error);
+    }
+  };
+
+  const handleViewDetails = async (order: PrintOrder) => {
+    setSelectedOrder(order);
+    await fetchPrintFiles(order.id);
+    setIsDetailsOpen(true);
+  };
+
+  const downloadFile = async (filePath: string, fileName: string) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from("print-files")
+        .download(filePath);
+
+      if (error) throw error;
+
+      const url = URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error downloading file:", error);
     }
   };
 
@@ -174,6 +236,7 @@ const PrintOrders = () => {
                   <TableHead>التكلفة المتوقعة</TableHead>
                   <TableHead>الحالة</TableHead>
                   <TableHead>تاريخ الإنشاء</TableHead>
+                  <TableHead>الإجراءات</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -198,6 +261,17 @@ const PrintOrders = () => {
                     <TableCell>
                       {new Date(order.created_at).toLocaleDateString('ar-SA')}
                     </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleViewDetails(order)}
+                        className="gap-2"
+                      >
+                        <Eye className="h-4 w-4" />
+                        عرض التفاصيل
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -205,6 +279,116 @@ const PrintOrders = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Dialog لعرض تفاصيل الطلب */}
+      <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              تفاصيل طلب الطباعة {selectedOrder?.print_order_number}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedOrder && (
+            <div className="space-y-6">
+              {/* معلومات الطلب */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>معلومات الطلب</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">العميل: </span>
+                      <span className="font-medium">{selectedOrder.orders.customers.name}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">الطلب الأصلي: </span>
+                      <span className="font-medium">{selectedOrder.orders.order_number}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">الخدمة: </span>
+                      <span className="font-medium">{selectedOrder.orders.service_name}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">الكمية: </span>
+                      <span className="font-medium">{selectedOrder.quantity}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">التكلفة المتوقعة: </span>
+                      <span className="font-medium">{selectedOrder.estimated_cost} ر.س</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">الحالة: </span>
+                      <Badge 
+                        variant="secondary" 
+                        className={`${statusColors[selectedOrder.status as keyof typeof statusColors]} text-white text-xs`}
+                      >
+                        {statusLabels[selectedOrder.status as keyof typeof statusLabels]}
+                      </Badge>
+                    </div>
+                  </div>
+                  {selectedOrder.design_notes && (
+                    <div className="mt-4">
+                      <span className="text-muted-foreground">ملاحظات التصميم: </span>
+                      <p className="text-sm mt-1">{selectedOrder.design_notes}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* الملفات المرسلة */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>الملفات المرسلة ({printFiles.length})</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {printFiles.length === 0 ? (
+                    <div className="text-center py-8">
+                      <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                      <p className="text-muted-foreground">لا توجد ملفات مرسلة</p>
+                    </div>
+                  ) : (
+                    <div className="grid gap-3">
+                      {printFiles.map((file) => (
+                        <div key={file.id} className="flex items-center justify-between p-4 border rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <FileText className="h-6 w-6 text-muted-foreground" />
+                            <div>
+                              <p className="font-medium">{file.file_name}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {new Date(file.upload_date).toLocaleDateString('ar-SA')} • 
+                                {(file.file_size / 1024 / 1024).toFixed(2)} MB
+                              </p>
+                              {file.notes && (
+                                <p className="text-xs text-muted-foreground mt-1">{file.notes}</p>
+                              )}
+                            </div>
+                            {file.is_approved && (
+                              <Badge variant="secondary" className="bg-green-500 text-white">
+                                معتمد
+                              </Badge>
+                            )}
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => downloadFile(file.file_path, file.file_name)}
+                            className="gap-2"
+                          >
+                            <Download className="h-4 w-4" />
+                            تحميل
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
