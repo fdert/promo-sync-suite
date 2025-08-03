@@ -22,6 +22,9 @@ const Invoices = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [viewingInvoice, setViewingInvoice] = useState(null);
+  const [editingInvoice, setEditingInvoice] = useState(null);
+  const [printingInvoice, setPrintingInvoice] = useState(null);
   const [companyInfo, setCompanyInfo] = useState({
     name: "وكالة الإبداع للدعاية والإعلان",
     address: "المملكة العربية السعودية",
@@ -66,8 +69,82 @@ const Invoices = () => {
     }
   };
 
+  // دوال التحكم
+  const handleViewInvoice = (invoice) => {
+    setViewingInvoice(invoice);
+  };
 
-  // جلب البيانات
+  const handlePrintInvoice = (invoice) => {
+    setPrintingInvoice(invoice);
+  };
+
+  const handleEditInvoice = (invoice) => {
+    setEditingInvoice(invoice);
+    toast({
+      title: "تحت التطوير",
+      description: "ميزة تعديل الفاتورة ستكون متاحة قريباً",
+    });
+  };
+
+  const handleAddInvoice = () => {
+    // إعداد فاتورة جديدة
+    const newInvoice = {
+      invoice_number: `INV-${String(invoices.length + 1).padStart(3, '0')}`,
+      customer_id: '',
+      issue_date: new Date().toISOString().split('T')[0],
+      due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      amount: 0,
+      tax_amount: 0,
+      total_amount: 0,
+      status: 'قيد الانتظار',
+      payment_type: 'دفع آجل',
+      notes: ''
+    };
+    setEditingInvoice(newInvoice);
+    setIsAddDialogOpen(false);
+  };
+
+  const saveInvoice = async (invoiceData) => {
+    try {
+      if (invoiceData.id) {
+        // تحديث فاتورة موجودة
+        const { error } = await supabase
+          .from('invoices')
+          .update(invoiceData)
+          .eq('id', invoiceData.id);
+        
+        if (error) throw error;
+        
+        toast({
+          title: "تم التحديث",
+          description: "تم تحديث الفاتورة بنجاح",
+        });
+      } else {
+        // إضافة فاتورة جديدة
+        const { error } = await supabase
+          .from('invoices')
+          .insert([invoiceData]);
+        
+        if (error) throw error;
+        
+        toast({
+          title: "تم الحفظ",
+          description: "تم إنشاء الفاتورة بنجاح",
+        });
+      }
+      
+      await fetchInvoices();
+      setEditingInvoice(null);
+    } catch (error) {
+      console.error('Error saving invoice:', error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ أثناء حفظ الفاتورة",
+        variant: "destructive",
+      });
+    }
+  };
+
   const fetchInvoices = async () => {
     try {
       const { data, error } = await supabase
@@ -141,14 +218,23 @@ const Invoices = () => {
             </DialogHeader>
             <div className="space-y-4">
               <p className="text-muted-foreground">
-                سيتم تطوير هذه الميزة قريباً لإضافة فواتير جديدة
+                هل تريد إنشاء فاتورة جديدة؟
               </p>
-              <Button 
-                onClick={() => setIsAddDialogOpen(false)}
-                className="w-full"
-              >
-                حسناً
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  onClick={handleAddInvoice}
+                  className="flex-1"
+                >
+                  نعم، إنشاء فاتورة
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => setIsAddDialogOpen(false)}
+                  className="flex-1"
+                >
+                  إلغاء
+                </Button>
+              </div>
             </div>
           </DialogContent>
         </Dialog>
@@ -291,15 +377,30 @@ const Invoices = () => {
                         </div>
                         
                         <div className="flex items-center gap-2">
-                          <Button variant="outline" size="sm" className="gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="gap-2"
+                            onClick={() => handleViewInvoice(invoice)}
+                          >
                             <Eye className="h-4 w-4" />
                             عرض
                           </Button>
-                          <Button variant="outline" size="sm" className="gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="gap-2"
+                            onClick={() => handlePrintInvoice(invoice)}
+                          >
                             <Printer className="h-4 w-4" />
                             طباعة
                           </Button>
-                          <Button variant="outline" size="sm" className="gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="gap-2"
+                            onClick={() => handleEditInvoice(invoice)}
+                          >
                             <Edit2 className="h-4 w-4" />
                             تعديل
                           </Button>
@@ -312,6 +413,339 @@ const Invoices = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* نافذة عرض الفاتورة */}
+      {viewingInvoice && (
+        <Dialog open={!!viewingInvoice} onOpenChange={() => setViewingInvoice(null)}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>معاينة الفاتورة {viewingInvoice.invoice_number}</DialogTitle>
+            </DialogHeader>
+            <div className="bg-white p-8 rounded-lg shadow-lg max-w-4xl mx-auto" dir="rtl">
+              {/* Header */}
+              <div className="flex justify-between items-start mb-8">
+                <div>
+                  <h1 className="text-3xl font-bold text-primary mb-2">فاتورة</h1>
+                  <p className="text-sm text-gray-600">رقم الفاتورة: {viewingInvoice.invoice_number}</p>
+                  <p className="text-sm text-gray-600">تاريخ الإصدار: {new Date(viewingInvoice.issue_date).toLocaleDateString('ar-SA')}</p>
+                  <p className="text-sm text-gray-600">تاريخ الاستحقاق: {new Date(viewingInvoice.due_date).toLocaleDateString('ar-SA')}</p>
+                </div>
+                <div className="text-right">
+                  <h2 className="text-xl font-bold text-primary">{companyInfo.name}</h2>
+                  <p className="text-sm text-gray-600">{companyInfo.address}</p>
+                  <p className="text-sm text-gray-600">هاتف: {companyInfo.phone}</p>
+                  <p className="text-sm text-gray-600">البريد: {companyInfo.email}</p>
+                </div>
+              </div>
+
+              {/* Customer Info */}
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold mb-2">بيانات العميل:</h3>
+                <p className="font-medium">{viewingInvoice.customers?.name}</p>
+                {viewingInvoice.customers?.phone && <p className="text-sm">{viewingInvoice.customers.phone}</p>}
+                {viewingInvoice.customers?.address && <p className="text-sm">{viewingInvoice.customers.address}</p>}
+              </div>
+
+              {/* Invoice Details */}
+              <div className="border rounded-lg p-4 mb-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <span className="font-semibold">المبلغ الأساسي:</span>
+                    <span className="mr-2">{viewingInvoice.amount?.toLocaleString('ar-SA')} ر.س</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold">الضريبة (15%):</span>
+                    <span className="mr-2">{viewingInvoice.tax_amount?.toLocaleString('ar-SA')} ر.س</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold">نوع الدفع:</span>
+                    <span className="mr-2">{viewingInvoice.payment_type}</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold">الحالة:</span>
+                    <span className="mr-2">{viewingInvoice.status}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Total */}
+              <div className="border-t-2 border-primary pt-4 mb-6">
+                <div className="text-left">
+                  <span className="text-2xl font-bold">المجموع الكلي: {viewingInvoice.total_amount?.toLocaleString('ar-SA')} ر.س</span>
+                </div>
+              </div>
+
+              {/* Notes */}
+              {viewingInvoice.notes && (
+                <div className="mb-6">
+                  <h4 className="font-semibold mb-2">ملاحظات:</h4>
+                  <p className="text-sm">{viewingInvoice.notes}</p>
+                </div>
+              )}
+
+              {/* Footer */}
+              <div className="text-center mt-8 pt-4 border-t">
+                <p className="text-sm text-gray-600 mb-2">شكراً لك على التعامل معنا</p>
+                <p className="text-blue-600 italic text-sm">{companyInfo.tagline}</p>
+                {companyInfo.stamp && (
+                  <div className="mt-4 flex justify-center">
+                    <img src={companyInfo.stamp} alt="ختم الوكالة" className="h-16" />
+                  </div>
+                )}
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* نافذة طباعة الفاتورة */}
+      {printingInvoice && (
+        <Dialog open={!!printingInvoice} onOpenChange={() => setPrintingInvoice(null)}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>طباعة الفاتورة {printingInvoice.invoice_number}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <Button 
+                onClick={() => window.print()} 
+                className="w-full gap-2"
+              >
+                <Printer className="h-4 w-4" />
+                طباعة الفاتورة
+              </Button>
+              <div className="bg-white p-8 rounded-lg shadow-lg max-w-4xl mx-auto print:shadow-none" dir="rtl">
+                {/* نفس محتوى العرض */}
+                <div className="flex justify-between items-start mb-8">
+                  <div>
+                    <h1 className="text-3xl font-bold text-primary mb-2">فاتورة</h1>
+                    <p className="text-sm text-gray-600">رقم الفاتورة: {printingInvoice.invoice_number}</p>
+                    <p className="text-sm text-gray-600">تاريخ الإصدار: {new Date(printingInvoice.issue_date).toLocaleDateString('ar-SA')}</p>
+                    <p className="text-sm text-gray-600">تاريخ الاستحقاق: {new Date(printingInvoice.due_date).toLocaleDateString('ar-SA')}</p>
+                  </div>
+                  <div className="text-right">
+                    <h2 className="text-xl font-bold text-primary">{companyInfo.name}</h2>
+                    <p className="text-sm text-gray-600">{companyInfo.address}</p>
+                    <p className="text-sm text-gray-600">هاتف: {companyInfo.phone}</p>
+                    <p className="text-sm text-gray-600">البريد: {companyInfo.email}</p>
+                  </div>
+                </div>
+
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold mb-2">بيانات العميل:</h3>
+                  <p className="font-medium">{printingInvoice.customers?.name}</p>
+                  {printingInvoice.customers?.phone && <p className="text-sm">{printingInvoice.customers.phone}</p>}
+                  {printingInvoice.customers?.address && <p className="text-sm">{printingInvoice.customers.address}</p>}
+                </div>
+
+                <div className="border rounded-lg p-4 mb-6">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <span className="font-semibold">المبلغ الأساسي:</span>
+                      <span className="mr-2">{printingInvoice.amount?.toLocaleString('ar-SA')} ر.س</span>
+                    </div>
+                    <div>
+                      <span className="font-semibold">الضريبة (15%):</span>
+                      <span className="mr-2">{printingInvoice.tax_amount?.toLocaleString('ar-SA')} ر.س</span>
+                    </div>
+                    <div>
+                      <span className="font-semibold">نوع الدفع:</span>
+                      <span className="mr-2">{printingInvoice.payment_type}</span>
+                    </div>
+                    <div>
+                      <span className="font-semibold">الحالة:</span>
+                      <span className="mr-2">{printingInvoice.status}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t-2 border-primary pt-4 mb-6">
+                  <div className="text-left">
+                    <span className="text-2xl font-bold">المجموع الكلي: {printingInvoice.total_amount?.toLocaleString('ar-SA')} ر.س</span>
+                  </div>
+                </div>
+
+                {printingInvoice.notes && (
+                  <div className="mb-6">
+                    <h4 className="font-semibold mb-2">ملاحظات:</h4>
+                    <p className="text-sm">{printingInvoice.notes}</p>
+                  </div>
+                )}
+
+                <div className="text-center mt-8 pt-4 border-t">
+                  <p className="text-sm text-gray-600 mb-2">شكراً لك على التعامل معنا</p>
+                  <p className="text-blue-600 italic text-sm">{companyInfo.tagline}</p>
+                  {companyInfo.stamp && (
+                    <div className="mt-4 flex justify-center">
+                      <img src={companyInfo.stamp} alt="ختم الوكالة" className="h-16" />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* نافذة تعديل/إضافة الفاتورة */}
+      {editingInvoice && (
+        <Dialog open={!!editingInvoice} onOpenChange={() => setEditingInvoice(null)}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                {editingInvoice.id ? `تعديل الفاتورة ${editingInvoice.invoice_number}` : 'إضافة فاتورة جديدة'}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>رقم الفاتورة</Label>
+                  <Input
+                    value={editingInvoice.invoice_number}
+                    onChange={(e) => setEditingInvoice({...editingInvoice, invoice_number: e.target.value})}
+                    placeholder="رقم الفاتورة"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>العميل</Label>
+                  <Select 
+                    value={editingInvoice.customer_id}
+                    onValueChange={(value) => setEditingInvoice({...editingInvoice, customer_id: value})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="اختر العميل" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {customers.map((customer) => (
+                        <SelectItem key={customer.id} value={customer.id}>
+                          {customer.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>تاريخ الإصدار</Label>
+                  <Input
+                    type="date"
+                    value={editingInvoice.issue_date}
+                    onChange={(e) => setEditingInvoice({...editingInvoice, issue_date: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>تاريخ الاستحقاق</Label>
+                  <Input
+                    type="date"
+                    value={editingInvoice.due_date}
+                    onChange={(e) => setEditingInvoice({...editingInvoice, due_date: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label>المبلغ</Label>
+                  <Input
+                    type="number"
+                    value={editingInvoice.amount}
+                    onChange={(e) => {
+                      const amount = parseFloat(e.target.value) || 0;
+                      const taxAmount = amount * 0.15; // 15% ضريبة القيمة المضافة
+                      setEditingInvoice({
+                        ...editingInvoice, 
+                        amount: amount,
+                        tax_amount: taxAmount,
+                        total_amount: amount + taxAmount
+                      });
+                    }}
+                    placeholder="المبلغ"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>الضريبة (15%)</Label>
+                  <Input
+                    type="number"
+                    value={editingInvoice.tax_amount}
+                    readOnly
+                    className="bg-muted"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>المجموع الكلي</Label>
+                  <Input
+                    type="number"
+                    value={editingInvoice.total_amount}
+                    readOnly
+                    className="bg-muted font-bold"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>الحالة</Label>
+                  <Select 
+                    value={editingInvoice.status}
+                    onValueChange={(value) => setEditingInvoice({...editingInvoice, status: value})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="قيد الانتظار">قيد الانتظار</SelectItem>
+                      <SelectItem value="مدفوع">مدفوع</SelectItem>
+                      <SelectItem value="متأخر">متأخر</SelectItem>
+                      <SelectItem value="ملغي">ملغي</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>نوع الدفع</Label>
+                  <Select 
+                    value={editingInvoice.payment_type}
+                    onValueChange={(value) => setEditingInvoice({...editingInvoice, payment_type: value})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="دفع آجل">دفع آجل</SelectItem>
+                      <SelectItem value="دفع فوري">دفع فوري</SelectItem>
+                      <SelectItem value="نقدي">نقدي</SelectItem>
+                      <SelectItem value="تحويل بنكي">تحويل بنكي</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>ملاحظات</Label>
+                <Textarea
+                  value={editingInvoice.notes || ''}
+                  onChange={(e) => setEditingInvoice({...editingInvoice, notes: e.target.value})}
+                  placeholder="ملاحظات إضافية..."
+                  rows={3}
+                />
+              </div>
+
+              <div className="flex gap-2 pt-4">
+                <Button onClick={() => saveInvoice(editingInvoice)} className="flex-1">
+                  {editingInvoice.id ? 'تحديث الفاتورة' : 'حفظ الفاتورة'}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setEditingInvoice(null)}
+                  className="flex-1"
+                >
+                  إلغاء
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };
