@@ -30,9 +30,9 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [companyInfo, setCompanyInfo] = useState({
-    name: "وكالة الإبداع للدعاية والإعلان",
+    name: "وكالة ابداع واحتراف للدعاية والاعلان",
     tagline: "نبني الأحلام بالإبداع والاحتراف",
-    logo: null
+    logo: "https://gcuqfxacnbxdldsbmgvf.supabase.co/storage/v1/object/public/logos/logo-1754189656106.jpg"
   });
 
   const { signIn, signUp, signUpAdmin, user } = useAuth();
@@ -43,20 +43,26 @@ const Auth = () => {
   useEffect(() => {
     const fetchCompanyInfo = async () => {
       try {
-        console.log('جاري جلب بيانات الشركة...');
+        console.log('🔍 بدء جلب بيانات الشركة...');
         const { data, error } = await supabase
           .from('website_settings')
           .select('setting_value')
           .eq('setting_key', 'website_content')
           .single();
 
-        console.log('استجابة قاعدة البيانات:', { data, error });
+        console.log('📊 استجابة قاعدة البيانات:', { data, error });
 
-        if (!error && data?.setting_value && typeof data.setting_value === 'object') {
+        if (error) {
+          console.error('❌ خطأ في قاعدة البيانات:', error);
+          throw error;
+        }
+
+        if (data?.setting_value && typeof data.setting_value === 'object') {
           const settingValue = data.setting_value as any;
-          const companyData = settingValue.companyInfo;
+          console.log('📄 قيم الإعدادات الكاملة:', settingValue);
           
-          console.log('بيانات الشركة المستخرجة:', companyData);
+          const companyData = settingValue.companyInfo;
+          console.log('🏢 بيانات الشركة المستخرجة:', companyData);
           
           if (companyData) {
             const newCompanyInfo = {
@@ -65,18 +71,25 @@ const Auth = () => {
               logo: companyData.logo || null
             };
             
-            console.log('بيانات الشركة الجديدة:', newCompanyInfo);
+            console.log('✅ بيانات الشركة الجديدة التي ستطبق:', newCompanyInfo);
             setCompanyInfo(newCompanyInfo);
+            console.log('🎯 تم تحديث حالة بيانات الشركة بنجاح');
+          } else {
+            console.warn('⚠️ لم يتم العثور على بيانات companyInfo');
           }
+        } else {
+          console.warn('⚠️ لا توجد بيانات setting_value أو النوع غير صحيح');
         }
       } catch (error) {
-        console.error('خطأ في جلب بيانات الشركة:', error);
+        console.error('💥 خطأ في جلب بيانات الشركة:', error);
         // في حالة الخطأ، استخدم البيانات الافتراضية
-        setCompanyInfo({
+        const fallbackInfo = {
           name: "وكالة ابداع واحتراف للدعاية والاعلان",
           tagline: "نبني الأحلام بالإبداع والاحتراف",
           logo: null
-        });
+        };
+        console.log('🔄 استخدام البيانات الافتراضية:', fallbackInfo);
+        setCompanyInfo(fallbackInfo);
       }
     };
 
