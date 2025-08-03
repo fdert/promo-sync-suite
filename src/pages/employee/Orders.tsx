@@ -55,6 +55,7 @@ interface Order {
   priority: string;
   amount: number;
   paid_amount: number;
+  payment_type?: string;
   due_date: string;
   created_at: string;
   customers?: {
@@ -259,6 +260,36 @@ const Orders = () => {
       const order = orders.find(o => o.id === orderId);
       if (!order) throw new Error('الطلب غير موجود');
 
+      // جلب بنود الطلب
+      const { data: orderItems, error: itemsError } = await supabase
+        .from('order_items')
+        .select('*')
+        .eq('order_id', orderId);
+
+      if (itemsError) {
+        console.warn('Error fetching order items:', itemsError);
+      }
+
+      // إعداد قائمة بنود الطلب
+      let orderItemsText = '';
+      let totalAmount = 0;
+      
+      if (orderItems && orderItems.length > 0) {
+        orderItemsText = '\n📋 بنود الطلب:\n';
+        orderItems.forEach((item, index) => {
+          orderItemsText += `${index + 1}. ${item.item_name}\n`;
+          orderItemsText += `   الكمية: ${item.quantity}\n`;
+          orderItemsText += `   السعر: ${item.unit_price} ر.س\n`;
+          orderItemsText += `   الإجمالي: ${item.total_amount} ر.س\n`;
+          if (item.description) {
+            orderItemsText += `   الوصف: ${item.description}\n`;
+          }
+          orderItemsText += '\n';
+          totalAmount += Number(item.total_amount);
+        });
+        orderItemsText += `📊 إجمالي البنود: ${totalAmount} ر.س\n`;
+      }
+
       // إرسال الإشعار
       const { error: notificationError } = await supabase
         .from('whatsapp_messages')
@@ -273,8 +304,13 @@ const Orders = () => {
 تفاصيل الطلب:
 📦 الخدمة: ${order.service_name}
 📝 الوصف: ${order.description}
-💰 المبلغ: ${order.amount} ر.س
-
+💰 المبلغ الإجمالي: ${order.amount} ر.س
+💳 نوع الدفع: ${order.payment_type || 'غير محدد'}
+💵 المبلغ المدفوع: ${order.paid_amount || 0} ر.س
+💲 المبلغ المتبقي: ${(Number(order.amount) - Number(order.paid_amount || 0))} ر.س
+📅 تاريخ التسليم: ${order.due_date ? new Date(order.due_date).toLocaleDateString('ar-SA') : 'غير محدد'}
+⭐ الأولوية: ${order.priority || 'متوسطة'}
+${orderItemsText}
 يرجى مراجعة البروفة والموافقة عليها أو إرسال أي تعديلات مطلوبة.
 
 شكراً لكم،
