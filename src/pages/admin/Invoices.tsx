@@ -470,44 +470,50 @@ const Invoices = () => {
         }
         
         .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 8px;
+            text-align: center;
+            margin-bottom: 12px;
             border-bottom: 2px solid #000;
-            padding-bottom: 5px;
-        }
-        
-        .company-section {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex: 1;
+            padding-bottom: 8px;
         }
         
         .company-logo {
-            width: 40px;
-            height: 40px;
+            width: 60px;
+            height: 60px;
             object-fit: contain;
+            margin: 0 auto 8px auto;
+            display: block;
+        }
+        
+        .invoice-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #f8f9fa;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-bottom: 12px;
+            font-size: 12px;
         }
         
         .header h1 {
-            font-size: 14px;
+            font-size: 20px;
             font-weight: bold;
-            margin: 0 0 3px 0;
+            margin: 0 0 6px 0;
             color: #000;
         }
         
         .header h2 {
-            font-size: 13px;
+            font-size: 18px;
             font-weight: bold;
-            margin: 0 0 3px 0;
+            margin: 0 0 6px 0;
             color: #000;
         }
         
         .header-info {
-            font-size: 9px;
+            font-size: 12px;
             color: #555;
+            line-height: 1.4;
         }
         
         .customer-info {
@@ -591,22 +597,30 @@ const Invoices = () => {
 </head>
 <body>
     <div class="header">
-        <div class="company-section">
-            ${companyInfo.logo ? `<img src="${companyInfo.logo}" alt="شعار الشركة" class="company-logo" />` : ''}
-            <div>
-                <h1>${companyInfo.name}</h1>
-                <div class="header-info">
-                    <div>${companyInfo.address}</div>
-                    <div>هاتف: ${companyInfo.phone}</div>
-                    <div>البريد: ${companyInfo.email}</div>
-                </div>
-            </div>
+        ${companyInfo.logo ? `<img src="${companyInfo.logo}" alt="شعار الشركة" class="company-logo" />` : ''}
+        <h1>${companyInfo.name}</h1>
+        <div class="header-info">
+            <div>${companyInfo.address}</div>
+            <div>هاتف: ${companyInfo.phone}</div>
+            <div>البريد: ${companyInfo.email}</div>
         </div>
-        <div style="text-align: left; flex: 1;">
+    </div>
+
+    <div class="invoice-info">
+        <div>
             <h2>فاتورة</h2>
-            <div class="header-info">
+            <div style="font-size: 11px; color: #555;">
                 <div><strong>رقم:</strong> ${invoice.invoice_number}</div>
                 <div><strong>التاريخ:</strong> ${new Date(invoice.issue_date).toLocaleDateString('ar-SA')}</div>
+                <div><strong>الاستحقاق:</strong> ${new Date(invoice.due_date).toLocaleDateString('ar-SA')}</div>
+            </div>
+        </div>
+        <div style="text-align: right;">
+            <div style="font-size: 14px; font-weight: bold; color: #0066cc;">
+                المبلغ: ${invoice.total_amount} ر.س
+            </div>
+            <div style="font-size: 10px; color: #666; margin-top: 4px;">
+                نوع الدفع: ${invoice.payment_type}
             </div>
         </div>
     </div>
