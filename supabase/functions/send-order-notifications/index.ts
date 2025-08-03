@@ -92,10 +92,12 @@ Deno.serve(async (req) => {
         // تنسيق بنود الطلب
         if (orderDetails.order_items && orderDetails.order_items.length > 0) {
           orderItemsText = orderDetails.order_items.map((item: any, index: number) => 
-            `${index + 1}. ${item.item_name}\n   الكمية: ${item.quantity}\n   السعر: ${item.unit_price} ر.س\n   المجموع: ${item.total_amount} ر.س${item.description ? `\n   الوصف: ${item.description}` : ''}`
+            `${index + 1}. ${item.item_name} \n   الكمية: ${item.quantity}\n   السعر: ${item.unit_price} ر.س\n   المجموع: ${item.total_amount} ر.س`
           ).join('\n\n');
+          console.log('Order items formatted:', orderItemsText);
         } else {
           orderItemsText = 'لا توجد بنود محددة';
+          console.log('No order items found');
         }
         
         // حساب المبلغ المتبقي
