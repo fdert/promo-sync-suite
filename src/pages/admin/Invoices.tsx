@@ -148,22 +148,31 @@ const Invoices = () => {
     try {
       const { data, error } = await supabase
         .from('website_settings')
-        .select('setting_key, setting_value')
-        .in('setting_key', ['company_name', 'company_address', 'company_phone', 'company_email', 'company_logo']);
+        .select('setting_value')
+        .eq('setting_key', 'website_content')
+        .maybeSingle();
       
-      if (!error && data) {
-        const settings: any = {};
-        data.forEach(setting => {
-          settings[setting.setting_key] = setting.setting_value;
-        });
+      if (!error && data?.setting_value) {
+        const websiteData = data.setting_value as any;
+        const companyData = websiteData.companyInfo;
+        const contactData = websiteData.contactInfo;
         
-        setCompanyInfo({
-          name: settings.company_name || "وكالة الإبداع للدعاية والإعلان",
-          address: settings.company_address || "المملكة العربية السعودية",
-          phone: settings.company_phone || "+966535983261",
-          email: settings.company_email || "info@alibdaa.com",
-          logo: settings.company_logo || ""
-        });
+        console.log('جلب بيانات الشركة:', { companyData, contactData });
+        
+        if (companyData) {
+          const newCompanyInfo = {
+            name: companyData.name || "وكالة الإبداع للدعاية والإعلان",
+            address: contactData?.address || "المملكة العربية السعودية",
+            phone: contactData?.phone || "+966535983261",
+            email: contactData?.email || "info@alibdaa.com",
+            logo: companyData.logo || ""
+          };
+          
+          console.log('بيانات الشركة المحدثة:', newCompanyInfo);
+          setCompanyInfo(newCompanyInfo);
+        }
+      } else {
+        console.log('لم يتم العثور على بيانات الشركة في قاعدة البيانات');
       }
     } catch (error) {
       console.error('Error fetching company info:', error);
