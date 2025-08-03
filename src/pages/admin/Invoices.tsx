@@ -423,23 +423,25 @@ const Invoices = () => {
             </DialogHeader>
             <div className="bg-white p-6 rounded-lg shadow-lg" dir="rtl">
               
-              {/* Header */}
-              <div className="flex justify-between items-start mb-6 pb-4 border-b-2 border-blue-800">
-                {/* بيانات الشركة والشعار - اليمين */}
-                <div className="flex items-start gap-3">
+              {/* Header - ثلاثة أقسام */}
+              <div className="grid grid-cols-3 gap-4 items-start mb-6 pb-4 border-b-2 border-blue-800">
+                {/* بيانات الشركة - اليمين */}
+                <div className="text-right">
+                  <h2 className="text-lg font-bold text-blue-800 mb-2">{companyInfo.name}</h2>
+                  <p className="text-sm text-gray-600 mb-1">{companyInfo.address}</p>
+                  <p className="text-sm text-gray-600 mb-1">هاتف: {companyInfo.phone}</p>
+                  <p className="text-sm text-gray-600">البريد: {companyInfo.email}</p>
+                </div>
+
+                {/* الشعار - المنتصف */}
+                <div className="flex justify-center items-center">
                   {companyInfo.logo && (
                     <img 
                       src={companyInfo.logo} 
                       alt="شعار الوكالة" 
-                      className="w-12 h-12 object-contain"
+                      className="w-16 h-16 object-contain"
                     />
                   )}
-                  <div>
-                    <h2 className="text-xl font-bold text-blue-800 mb-1">{companyInfo.name}</h2>
-                    <p className="text-sm text-gray-600">{companyInfo.address}</p>
-                    <p className="text-sm text-gray-600">هاتف: {companyInfo.phone}</p>
-                    <p className="text-sm text-gray-600">البريد: {companyInfo.email}</p>
-                  </div>
                 </div>
 
                 {/* بيانات الفاتورة - اليسار */}
@@ -567,70 +569,86 @@ const Invoices = () => {
                   body * { visibility: hidden; }
                   .print-content, .print-content * { visibility: visible; }
                   .print-content { 
-                    position: absolute;
-                    left: 0;
-                    top: 0;
+                    position: absolute !important;
+                    left: 0 !important;
+                    top: 0 !important;
                     width: 100% !important;
                     height: 100% !important;
                     margin: 0 !important;
                     padding: 0 !important;
+                    box-sizing: border-box !important;
                   }
                   @page {
-                    size: A5 portrait;
-                    margin: 8mm !important;
+                    size: A5 portrait !important;
+                    margin: 5mm !important;
                   }
                   .invoice-container {
                     width: 100% !important;
-                    height: 100% !important;
-                    max-height: 185mm !important;
-                    font-size: 10px !important;
-                    line-height: 1.2 !important;
-                    box-sizing: border-box;
-                    overflow: hidden;
+                    height: 100vh !important;
+                    max-height: 200mm !important;
+                    font-size: 9px !important;
+                    line-height: 1.1 !important;
+                    box-sizing: border-box !important;
+                    overflow: hidden !important;
+                    padding: 2mm !important;
+                    page-break-inside: avoid !important;
                   }
                   .header-section {
-                    height: 50mm !important;
-                    display: flex !important;
+                    height: 35mm !important;
+                    display: grid !important;
+                    grid-template-columns: 1fr 1fr 1fr !important;
+                    gap: 2mm !important;
                     align-items: flex-start !important;
-                    border-bottom: 2px solid #1e40af !important;
-                    margin-bottom: 3mm !important;
-                    padding-bottom: 2mm !important;
+                    border-bottom: 1px solid #1e40af !important;
+                    margin-bottom: 2mm !important;
+                    padding-bottom: 1mm !important;
+                    page-break-inside: avoid !important;
                   }
                   .customer-section {
-                    height: 22mm !important;
-                    margin-bottom: 3mm !important;
+                    height: 18mm !important;
+                    margin-bottom: 2mm !important;
+                    page-break-inside: avoid !important;
                   }
                   .details-section {
-                    height: 35mm !important;
-                    margin-bottom: 3mm !important;
+                    height: 30mm !important;
+                    margin-bottom: 2mm !important;
+                    page-break-inside: avoid !important;
                   }
                   .total-section {
-                    height: 25mm !important;
-                    border-top: 2px solid #1e40af !important;
-                    padding-top: 2mm !important;
-                    margin-bottom: 3mm !important;
+                    height: 20mm !important;
+                    border-top: 1px solid #1e40af !important;
+                    padding-top: 1mm !important;
+                    margin-bottom: 2mm !important;
+                    page-break-inside: avoid !important;
                   }
                   .footer-section {
-                    height: 18mm !important;
+                    height: 12mm !important;
                     text-align: center !important;
+                    page-break-inside: avoid !important;
                   }
                   .company-logo {
-                    max-height: 25mm !important;
-                    max-width: 25mm !important;
+                    max-height: 18mm !important;
+                    max-width: 18mm !important;
                     object-fit: contain !important;
                   }
                   .company-stamp {
-                    max-height: 15mm !important;
-                    max-width: 20mm !important;
+                    max-height: 12mm !important;
+                    max-width: 15mm !important;
                     object-fit: contain !important;
                   }
-                  .text-xs { font-size: 8px !important; }
-                  .text-sm { font-size: 9px !important; }
-                  .text-lg { font-size: 11px !important; }
-                  .text-xl { font-size: 12px !important; }
-                  .text-2xl { font-size: 14px !important; }
-                  table { border-collapse: collapse !important; }
-                  td { padding: 1mm !important; }
+                  .text-xs { font-size: 7px !important; line-height: 1.1 !important; }
+                  .text-sm { font-size: 8px !important; line-height: 1.1 !important; }
+                  .text-lg { font-size: 10px !important; line-height: 1.1 !important; }
+                  .text-xl { font-size: 11px !important; line-height: 1.1 !important; }
+                  .text-2xl { font-size: 12px !important; line-height: 1.1 !important; }
+                  table { border-collapse: collapse !important; width: 100% !important; }
+                  td { padding: 0.5mm !important; vertical-align: top !important; }
+                  h1, h2, h3, h4 { margin: 0 !important; padding: 0 !important; }
+                  p { margin: 0 !important; padding: 0 !important; }
+                  .border-b { border-bottom: 1px solid #e5e7eb !important; }
+                  .bg-gray-50 { background-color: #f9fafb !important; }
+                  .bg-gray-100 { background-color: #f3f4f6 !important; }
+                  .text-blue-800 { color: #1e40af !important; }
                 }
               `}</style>
 
@@ -638,27 +656,29 @@ const Invoices = () => {
                 <div className="invoice-container">
                   
                   {/* Header Section */}
-                  <div className="header-section">
-                    {/* بيانات الشركة والشعار - اليمين */}
-                    <div className="w-2/5 flex items-start gap-2">
+                  <div className="header-section grid grid-cols-3 gap-2 items-start">
+                    {/* بيانات الشركة - اليمين */}
+                    <div className="text-right">
+                      <h2 className="text-lg font-bold text-blue-800 mb-1">{companyInfo.name}</h2>
+                      <p className="text-xs mb-1">{companyInfo.address}</p>
+                      <p className="text-xs mb-1">هاتف: {companyInfo.phone}</p>
+                      <p className="text-xs">البريد: {companyInfo.email}</p>
+                    </div>
+
+                    {/* الشعار - المنتصف */}
+                    <div className="flex justify-center items-center">
                       {companyInfo.logo && (
                         <img 
                           src={companyInfo.logo} 
                           alt="شعار الوكالة" 
-                          className="company-logo flex-shrink-0"
+                          className="company-logo"
                         />
                       )}
-                      <div className="flex-grow">
-                        <h2 className="text-lg font-bold text-blue-800 mb-1">{companyInfo.name}</h2>
-                        <p className="text-xs mb-1">{companyInfo.address}</p>
-                        <p className="text-xs mb-1">هاتف: {companyInfo.phone}</p>
-                        <p className="text-xs">البريد: {companyInfo.email}</p>
-                      </div>
                     </div>
 
                     {/* بيانات الفاتورة - اليسار */}
-                    <div className="w-3/5 text-left">
-                      <h1 className="text-2xl font-bold text-blue-800 mb-2">فـاتـورة</h1>
+                    <div className="text-left">
+                      <h1 className="text-2xl font-bold text-blue-800 mb-1">فـاتـورة</h1>
                       <p className="text-xs mb-1"><strong>رقم الفاتورة:</strong> {printingInvoice.invoice_number}</p>
                       <p className="text-xs mb-1"><strong>تاريخ الإصدار:</strong> {new Date(printingInvoice.issue_date).toLocaleDateString('ar-SA')}</p>
                       <p className="text-xs"><strong>تاريخ الاستحقاق:</strong> {new Date(printingInvoice.due_date).toLocaleDateString('ar-SA')}</p>
