@@ -78,16 +78,14 @@ Deno.serve(async (req) => {
         let messagePayload;
         
         if (message.message_type === 'image' && message.media_url) {
-          // رسالة مع صورة - تقسيم النص لتجنب تقييد WhatsApp
-          const shortCaption = "🎨 بروفة التصميم جاهزة للمراجعة";
-          
+          // رسالة مع صورة - إرسال الصورة فقط مع عنوان بسيط
           messagePayload = {
             messaging_product: "whatsapp",
             to: message.to_number.replace('+', ''),
             type: "image",
             image: {
               link: message.media_url,
-              caption: shortCaption
+              caption: "📎 بروفة التصميم"
             }
           };
         } else if (message.message_type === 'document' && message.media_url) {
@@ -135,32 +133,8 @@ Deno.serve(async (req) => {
           newStatus = 'failed';
         }
 
-        // بعد إرسال الصورة، إرسال رسالة نصية منفصلة مع التفاصيل
-        if (message.message_type === 'image' && newStatus === 'sent') {
-          const textMessagePayload = {
-            messaging_product: "whatsapp",
-            to: message.to_number.replace('+', ''),
-            type: "text",
-            text: {
-              body: message.message_content
-            }
-          };
-          
-          console.log(`Sending follow-up text message:`, JSON.stringify(textMessagePayload, null, 2));
-          
-          // إرسال الرسالة النصية
-          const textResponse = await fetch(webhookSettings.webhook_url, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(textMessagePayload)
-          });
-          
-          if (!textResponse.ok) {
-            console.error(`Text message failed for message ${message.id}:`, textResponse.status);
-          }
-        }
+        // إذا كانت رسالة نصية منفصلة للبروفة، لا تُرسل رسالة إضافية
+        // النظام الآن يرسل رسالة نصية ورسالة صورة منفصلتين من التطبيق
 
         // تحديث حالة الرسالة
         const { error: updateError } = await supabase
