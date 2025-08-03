@@ -863,6 +863,7 @@ export type Database = {
         Row: {
           approval_date: string | null
           approved_by: string | null
+          file_category: string | null
           file_name: string
           file_path: string
           file_size: number | null
@@ -872,6 +873,8 @@ export type Database = {
           mime_type: string | null
           notes: string | null
           print_order_id: string
+          sent_at: string | null
+          sent_to_customer: boolean | null
           upload_date: string | null
           uploaded_by: string | null
           version_number: number | null
@@ -879,6 +882,7 @@ export type Database = {
         Insert: {
           approval_date?: string | null
           approved_by?: string | null
+          file_category?: string | null
           file_name: string
           file_path: string
           file_size?: number | null
@@ -888,6 +892,8 @@ export type Database = {
           mime_type?: string | null
           notes?: string | null
           print_order_id: string
+          sent_at?: string | null
+          sent_to_customer?: boolean | null
           upload_date?: string | null
           uploaded_by?: string | null
           version_number?: number | null
@@ -895,6 +901,7 @@ export type Database = {
         Update: {
           approval_date?: string | null
           approved_by?: string | null
+          file_category?: string | null
           file_name?: string
           file_path?: string
           file_size?: number | null
@@ -904,6 +911,8 @@ export type Database = {
           mime_type?: string | null
           notes?: string | null
           print_order_id?: string
+          sent_at?: string | null
+          sent_to_customer?: boolean | null
           upload_date?: string | null
           uploaded_by?: string | null
           version_number?: number | null
