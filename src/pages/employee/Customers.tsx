@@ -38,6 +38,8 @@ const Customers = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
+  const [existingCustomer, setExistingCustomer] = useState(null);
+  const [showExistingCustomer, setShowExistingCustomer] = useState(false);
   const [newCustomer, setNewCustomer] = useState({
     name: "",
     email: "",
@@ -83,6 +85,31 @@ const Customers = () => {
     fetchCustomers();
   }, []);
 
+  // التحقق من وجود رقم الجوال
+  const checkExistingPhone = async (phone) => {
+    if (!phone || phone.length < 10) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('phone', phone)
+        .single();
+
+      if (data && !error) {
+        setExistingCustomer(data);
+        setShowExistingCustomer(true);
+      } else {
+        setExistingCustomer(null);
+        setShowExistingCustomer(false);
+      }
+    } catch (error) {
+      // العميل غير موجود
+      setExistingCustomer(null);
+      setShowExistingCustomer(false);
+    }
+  };
+
   const filteredCustomers = customers.filter(customer =>
     customer.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     customer.company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -96,6 +123,25 @@ const Customers = () => {
       toast({
         title: "خطأ",
         description: "يرجى ملء اسم العميل",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!newCustomer.phone) {
+      toast({
+        title: "خطأ",
+        description: "يرجى ملء رقم الجوال",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // التحقق من عدم وجود رقم الجوال مسبقاً
+    if (existingCustomer) {
+      toast({
+        title: "عميل موجود",
+        description: "يوجد عميل بنفس رقم الجوال",
         variant: "destructive",
       });
       return;
@@ -139,6 +185,8 @@ const Customers = () => {
         address: "",
         notes: ""
       });
+      setExistingCustomer(null);
+      setShowExistingCustomer(false);
       setIsAddDialogOpen(false);
       
       toast({
@@ -297,13 +345,38 @@ const Customers = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="phone">رقم الجوال</Label>
+                  <Label htmlFor="phone">رقم الجوال *</Label>
                   <Input 
                     id="phone" 
                     value={newCustomer.phone}
-                    onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
+                    onChange={(e) => {
+                      setNewCustomer({ ...newCustomer, phone: e.target.value });
+                      checkExistingPhone(e.target.value);
+                    }}
                     placeholder="+966501234567" 
                   />
+                  {showExistingCustomer && existingCustomer && (
+                    <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                      <p className="text-sm font-medium text-yellow-800">
+                        ⚠️ يوجد عميل بنفس رقم الجوال:
+                      </p>
+                      <p className="text-sm text-yellow-700">
+                        الاسم: {existingCustomer.name}
+                      </p>
+                      {existingCustomer.company && (
+                        <p className="text-sm text-yellow-700">
+                          الشركة: {existingCustomer.company}
+                        </p>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleEditCustomer(existingCustomer)}
+                        className="mt-2 text-xs text-blue-600 underline"
+                      >
+                        تعديل بيانات العميل الموجود
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <Label htmlFor="company">اسم الشركة/المؤسسة</Label>
