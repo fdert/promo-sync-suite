@@ -691,7 +691,7 @@ const Orders = () => {
                   id="file-upload"
                   type="file"
                   multiple
-                  accept="image/*,.pdf,.doc,.docx,.ai,.psd"
+                  accept={fileCategory === 'design' ? "image/*" : "image/*,.pdf,.doc,.docx,.ai,.psd"}
                   onChange={(e) => {
                     if (e.target.files) {
                       handleFileUpload(e.target.files);
@@ -711,7 +711,10 @@ const Orders = () => {
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground mt-2">
-                الأنواع المدعومة: صور، PDF، Word، AI، PSD
+                {fileCategory === 'design' 
+                  ? 'الأنواع المدعومة: ملفات الصور فقط (JPG, PNG, GIF, إلخ)'
+                  : 'الأنواع المدعومة: صور، PDF، Word، AI، PSD'
+                }
               </p>
             </div>
           </div>
