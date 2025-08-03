@@ -34,6 +34,7 @@ const WebsiteContent = () => {
     subtitle: "للدعاية والإعلان",
     tagline: "نبني الأحلام بالإبداع والتميز",
     logo: "", // رابط الشعار
+    stamp: "", // رابط الختم
   });
 
   const [heroSection, setHeroSection] = useState({
@@ -420,6 +421,42 @@ const WebsiteContent = () => {
                 <p className="text-xs text-muted-foreground">
                   يُفضل استخدام صور بصيغة PNG أو JPG بحجم لا يزيد عن 2MB
                 </p>
+              </div>
+
+              <Separator />
+
+              {/* إعدادات الختم */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="company-stamp">رابط ختم الوكالة</Label>
+                  <Input
+                    id="company-stamp"
+                    type="url"
+                    value={companyInfo.stamp}
+                    onChange={(e) => setCompanyInfo({ ...companyInfo, stamp: e.target.value })}
+                    placeholder="أدخل رابط صورة الختم"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    سيظهر الختم في الفواتير أسفل المجموع الكلي
+                  </p>
+                </div>
+
+                {/* معاينة الختم */}
+                {companyInfo.stamp && (
+                  <div className="space-y-2">
+                    <Label>معاينة الختم</Label>
+                    <div className="flex justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg bg-muted">
+                      <img 
+                        src={companyInfo.stamp} 
+                        alt="معاينة الختم" 
+                        className="w-20 h-20 object-contain"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* معاينة مباشرة */}

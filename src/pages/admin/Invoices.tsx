@@ -77,8 +77,53 @@ const Invoices = () => {
     });
   };
 
+  // جلب البيانات
+  const fetchInvoices = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('invoices')
+        .select(`
+          *,
+          customers:customer_id (
+            id,
+            name,
+            phone,
+            address
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (!error) {
+        setInvoices(data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching invoices:', error);
+    }
+  };
+
+  const fetchCustomers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('customers')
+        .select('*')
+        .order('name');
+
+      if (!error) {
+        setCustomers(data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+    }
+  };
+
   useEffect(() => {
-    fetchCompanyInfo();
+    const loadData = async () => {
+      setLoading(true);
+      await Promise.all([fetchInvoices(), fetchCustomers(), fetchCompanyInfo()]);
+      setLoading(false);
+    };
+    
+    loadData();
   }, []);
 
   if (loading) {
