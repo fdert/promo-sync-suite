@@ -215,12 +215,12 @@ const Customers = () => {
         .from('customers')
         .insert([{
           name: newCustomer.name,
-          email: newCustomer.email,
-          phone: newCustomer.phone,
-          company: newCustomer.company,
-          address: newCustomer.city,
-          city: newCustomer.city,
-          notes: newCustomer.notes
+          email: newCustomer.email || null,
+          phone: newCustomer.phone || null,
+          company: newCustomer.company || null,
+          address: newCustomer.address || null,
+          city: newCustomer.city || null,
+          notes: newCustomer.notes || null
         }]);
 
       if (error) {
@@ -285,12 +285,12 @@ const Customers = () => {
         .from('customers')
         .update({
           name: newCustomer.name,
-          email: newCustomer.email,
-          phone: newCustomer.phone,
-          company: newCustomer.company,
-          address: newCustomer.city,
-          city: newCustomer.city,
-          notes: newCustomer.notes
+          email: newCustomer.email || null,
+          phone: newCustomer.phone || null,
+          company: newCustomer.company || null,
+          address: newCustomer.address || null,
+          city: newCustomer.city || null,
+          notes: newCustomer.notes || null
         })
         .eq('id', editingCustomer.id);
 

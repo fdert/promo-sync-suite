@@ -107,13 +107,13 @@ const Customers = () => {
         .from('customers')
         .insert([{
           name: newCustomer.name,
-          email: newCustomer.email,
-          phone: newCustomer.phone,
-          whatsapp_number: newCustomer.whatsapp_number,
-          company: newCustomer.company,
-          address: newCustomer.address,
-          city: newCustomer.city,
-          notes: newCustomer.notes
+          email: newCustomer.email || null,
+          phone: newCustomer.phone || null,
+          whatsapp_number: newCustomer.whatsapp_number || null,
+          company: newCustomer.company || null,
+          address: newCustomer.address || null,
+          city: newCustomer.city || null,
+          notes: newCustomer.notes || null
         }]);
 
       if (error) {
@@ -184,13 +184,13 @@ const Customers = () => {
         .from('customers')
         .update({
           name: newCustomer.name,
-          email: newCustomer.email,
-          phone: newCustomer.phone,
-          whatsapp_number: newCustomer.whatsapp_number,
-          company: newCustomer.company,
-          address: newCustomer.address,
-          city: newCustomer.city,
-          notes: newCustomer.notes
+          email: newCustomer.email || null,
+          phone: newCustomer.phone || null,
+          whatsapp_number: newCustomer.whatsapp_number || null,
+          company: newCustomer.company || null,
+          address: newCustomer.address || null,
+          city: newCustomer.city || null,
+          notes: newCustomer.notes || null
         })
         .eq('id', editingCustomer.id);
 
@@ -306,15 +306,6 @@ const Customers = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="whatsapp">رقم الواتساب</Label>
-                  <Input 
-                    id="whatsapp" 
-                    value={newCustomer.whatsapp_number}
-                    onChange={(e) => setNewCustomer({ ...newCustomer, whatsapp_number: e.target.value })}
-                    placeholder="+966501234567" 
-                  />
-                </div>
-                <div>
                   <Label htmlFor="company">اسم الشركة/المؤسسة</Label>
                   <Input 
                     id="company" 
@@ -392,15 +383,6 @@ const Customers = () => {
                     id="edit-phone" 
                     value={newCustomer.phone}
                     onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
-                    placeholder="+966501234567" 
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="edit-whatsapp">رقم الواتساب</Label>
-                  <Input 
-                    id="edit-whatsapp" 
-                    value={newCustomer.whatsapp_number}
-                    onChange={(e) => setNewCustomer({ ...newCustomer, whatsapp_number: e.target.value })}
                     placeholder="+966501234567" 
                   />
                 </div>
