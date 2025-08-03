@@ -75,14 +75,30 @@ Deno.serve(async (req) => {
     for (const message of pendingMessages) {
       try {
         // إعداد بيانات الرسالة للإرسال عبر n8n
-        const messagePayload = {
-          to: message.to_number,
-          type: message.message_type || 'text',
-          message: {
-            text: message.message_content
-          },
-          timestamp: Math.floor(Date.now() / 1000)
-        };
+        let messagePayload;
+        
+        if (message.message_type === 'image' && message.media_url) {
+          // رسالة مع صورة
+          messagePayload = {
+            to: message.to_number,
+            type: 'image',
+            image: {
+              link: message.media_url,
+              caption: message.message_content
+            },
+            timestamp: Math.floor(Date.now() / 1000)
+          };
+        } else {
+          // رسالة نصية عادية
+          messagePayload = {
+            to: message.to_number,
+            type: message.message_type || 'text',
+            message: {
+              text: message.message_content
+            },
+            timestamp: Math.floor(Date.now() / 1000)
+          };
+        }
 
         console.log(`Sending message to ${message.to_number}:`, JSON.stringify(messagePayload, null, 2));
 

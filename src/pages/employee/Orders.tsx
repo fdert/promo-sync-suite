@@ -336,41 +336,27 @@ const Orders = () => {
         orderItemsText += `📊 إجمالي البنود: ${totalAmount} ر.س\n`;
       }
 
-      // إرسال الرسالة مع صورة البروفة
-      const messageContent = `مرحبا ${order.customers?.name || 'عزيزنا العميل'}،
-
-🎨 البروفة جاهزة للمراجعة! 
-
-تفاصيل الطلب:
-📦 الخدمة: ${order.service_name}
-📝 الوصف: ${order.description}
-💰 المبلغ الإجمالي: ${order.amount} ر.س
-💳 نوع الدفع: ${order.payment_type || 'غير محدد'}
-💵 المبلغ المدفوع: ${order.paid_amount || 0} ر.س
-💲 المبلغ المتبقي: ${(Number(order.amount) - Number(order.paid_amount || 0))} ر.س
-📅 تاريخ التسليم: ${order.due_date ? new Date(order.due_date).toLocaleDateString('ar-SA') : 'غير محدد'}
-⭐ الأولوية: ${order.priority || 'متوسطة'}
-${orderItemsText}
-📄 اسم الملف: ${proofFile.file_name}
-
-يرجى مراجعة البروفة المرفقة والموافقة عليها أو إرسال أي تعديلات مطلوبة.
-
-للموافقة: أرسل "موافق" ✅
-للتعديل: اكتب التعديلات المطلوبة 📝
-
-شكراً لكم،
-وكالة الإبداع للدعاية والإعلان
-
-التاريخ: ${new Date().toLocaleDateString('ar-SA')}`;
-
-      // إضافة رسالة مع الصورة
+      // إرسال الرسالة باستخدام قالب البروفة
       const { error: notificationError } = await supabase
         .from('whatsapp_messages')
         .insert({
           from_number: 'system',
           to_number: order.customers?.whatsapp_number || '',
           message_type: 'image',
-          message_content: messageContent,
+          message_content: `🎨 بروفة التصميم جاهزة للمراجعة!
+
+رقم الطلب: ${order.order_number}
+العميل: ${order.customers?.name || 'عزيزنا العميل'}
+الخدمة: ${order.service_name}
+${orderItemsText}
+📄 الملف المرفق: ${proofFile.file_name}
+
+يرجى مراجعة البروفة المرفقة:
+✅ للموافقة: أرسل "موافق"
+📝 للتعديل: اكتب التعديلات المطلوبة
+
+شكراً لكم،
+وكالة الإبداع للدعاية والإعلان`,
           media_url: fileData.signedUrl,
           status: 'pending',
           customer_id: order.customer_id || (order as any).customer_id
