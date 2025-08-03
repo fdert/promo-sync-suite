@@ -59,6 +59,7 @@ interface PrintOrder {
 
 interface PrintFile {
   id: string;
+  print_order_id: string;
   file_name: string;
   file_path: string;
   file_type: string;
@@ -520,50 +521,105 @@ const PrintArchive = () => {
                       <p className="text-muted-foreground">لا توجد طلبات طباعة</p>
                     </div>
                   ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>رقم الطلب</TableHead>
-                          <TableHead>الخدمة</TableHead>
-                          <TableHead>الكمية</TableHead>
-                          <TableHead>التكلفة</TableHead>
-                          <TableHead>الحالة</TableHead>
-                          <TableHead>التاريخ</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {customerPrintOrders.map((order) => (
-                          <TableRow key={order.id}>
-                            <TableCell className="font-medium">
-                              {order.print_order_number}
-                            </TableCell>
-                            <TableCell>{order.orders.service_name}</TableCell>
-                            <TableCell>{order.quantity}</TableCell>
-                            <TableCell>
+                    <div className="space-y-6">
+                      {customerPrintOrders.map((order) => {
+                        const orderFiles = customerPrintFiles.filter(file => file.print_order_id === order.id);
+                        
+                        return (
+                          <div key={order.id} className="border rounded-lg p-4">
+                            {/* معلومات طلب الطباعة */}
+                            <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-4">
                               <div>
-                                <div>متوقعة: {order.estimated_cost} ر.س</div>
-                                {order.actual_cost > 0 && (
-                                  <div className="text-sm text-muted-foreground">
-                                    فعلية: {order.actual_cost} ر.س
-                                  </div>
-                                )}
+                                <span className="text-sm text-muted-foreground">رقم الطلب</span>
+                                <p className="font-medium">{order.print_order_number}</p>
                               </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge 
-                                variant="secondary" 
-                                className={`${statusColors[order.status as keyof typeof statusColors]} text-white text-xs`}
-                              >
-                                {statusLabels[order.status as keyof typeof statusLabels]}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              {new Date(order.created_at).toLocaleDateString('ar-SA')}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                              <div>
+                                <span className="text-sm text-muted-foreground">الخدمة</span>
+                                <p className="font-medium">{order.orders.service_name}</p>
+                              </div>
+                              <div>
+                                <span className="text-sm text-muted-foreground">الكمية</span>
+                                <p className="font-medium">{order.quantity}</p>
+                              </div>
+                              <div>
+                                <span className="text-sm text-muted-foreground">التكلفة</span>
+                                <div>
+                                  <div className="text-sm">متوقعة: {order.estimated_cost} ر.س</div>
+                                  {order.actual_cost > 0 && (
+                                    <div className="text-xs text-muted-foreground">
+                                      فعلية: {order.actual_cost} ر.س
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              <div>
+                                <span className="text-sm text-muted-foreground">الحالة</span>
+                                <div className="mt-1">
+                                  <Badge 
+                                    variant="secondary" 
+                                    className={`${statusColors[order.status as keyof typeof statusColors]} text-white text-xs`}
+                                  >
+                                    {statusLabels[order.status as keyof typeof statusLabels]}
+                                  </Badge>
+                                </div>
+                              </div>
+                              <div>
+                                <span className="text-sm text-muted-foreground">التاريخ</span>
+                                <p className="font-medium text-sm">
+                                  {new Date(order.created_at).toLocaleDateString('ar-SA')}
+                                </p>
+                              </div>
+                            </div>
+                            
+                            {/* ملفات الطباعة لهذا الطلب */}
+                            <div className="border-t pt-4">
+                              <h4 className="font-medium mb-3 flex items-center gap-2">
+                                <FileText className="h-4 w-4" />
+                                ملفات الطباعة ({orderFiles.length})
+                              </h4>
+                              {orderFiles.length === 0 ? (
+                                <p className="text-sm text-muted-foreground">لا توجد ملفات مرفوعة لهذا الطلب</p>
+                              ) : (
+                                <div className="grid gap-3">
+                                  {orderFiles.map((file) => (
+                                    <div key={file.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                                      <div className="flex items-center gap-3">
+                                        <FileText className="h-5 w-5 text-muted-foreground" />
+                                        <div>
+                                          <p className="font-medium text-sm">{file.file_name}</p>
+                                          <p className="text-xs text-muted-foreground">
+                                            {new Date(file.upload_date).toLocaleDateString('ar-SA')} • 
+                                            {(file.file_size / 1024 / 1024).toFixed(2)} MB • 
+                                            {file.file_type}
+                                          </p>
+                                          {file.notes && (
+                                            <p className="text-xs text-muted-foreground mt-1">{file.notes}</p>
+                                          )}
+                                        </div>
+                                        {file.is_approved && (
+                                          <Badge variant="secondary" className="bg-green-500 text-white text-xs">
+                                            معتمد
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => downloadFile(file.file_path, file.file_name)}
+                                        className="gap-2"
+                                      >
+                                        <Download className="h-3 w-3" />
+                                        تحميل
+                                      </Button>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   )}
                 </CardContent>
               </Card>
