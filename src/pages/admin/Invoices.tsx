@@ -839,40 +839,69 @@ const Invoices = () => {
               <div className="mb-6">
                 <h3 className="text-lg font-semibold mb-3 bg-gray-100 p-2 rounded">تفاصيل الفاتورة:</h3>
                 
-                {/* الوصف العام */}
-                <div className="mb-4 p-3 border rounded">
-                  <h4 className="font-medium text-sm text-gray-700 mb-2">وصف الخدمة:</h4>
-                  <p className="text-sm">خدمات الدعاية والإعلان</p>
-                </div>
-
-                {/* بنود الفاتورة */}
-                <div className="mb-4">
-                  <h4 className="font-medium text-sm text-gray-700 mb-3">بنود الفاتورة:</h4>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
-                      <div className="flex-1">
-                        <span className="font-medium">خدمات التصميم والإبداع</span>
-                        <div className="text-xs text-gray-500 mt-1">الكمية: 1 | الوحدة: خدمة</div>
-                      </div>
-                      <div className="text-left">
-                        <div className="font-bold">{(viewingInvoice.amount * 0.6)?.toLocaleString('ar-SA')} ر.س</div>
-                      </div>
-                    </div>
-
-                    <div className="flex justify-between items-center p-3 bg-white border rounded">
-                      <div className="flex-1">
-                        <span className="font-medium">خدمات الطباعة والإنتاج</span>
-                        <div className="text-xs text-gray-500 mt-1">الكمية: 1 | الوحدة: خدمة</div>
-                      </div>
-                      <div className="text-left">
-                        <div className="font-bold">{(viewingInvoice.amount * 0.4)?.toLocaleString('ar-SA')} ر.س</div>
-                      </div>
-                    </div>
-                  </div>
+                {/* جدول البنود */}
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse border border-gray-300 text-sm">
+                    {/* رأس الجدول */}
+                    <thead>
+                      <tr className="bg-blue-600 text-white">
+                        <th className="border border-gray-300 p-3 text-center font-bold w-8">#</th>
+                        <th className="border border-gray-300 p-3 text-center font-bold w-40">اسم البند / الخدمة</th>
+                        <th className="border border-gray-300 p-3 text-center font-bold w-16">الكمية</th>
+                        <th className="border border-gray-300 p-3 text-center font-bold w-20">السعر (ر.س)</th>
+                        <th className="border border-gray-300 p-3 text-center font-bold w-24">الإجمالي (ر.س)</th>
+                      </tr>
+                    </thead>
+                    
+                    {/* محتوى الجدول */}
+                    <tbody>
+                      {/* البند الأول */}
+                      <tr className="bg-gray-50">
+                        <td className="border border-gray-300 p-3 text-center font-bold">1</td>
+                        <td className="border border-gray-300 p-3 text-right">
+                          <div className="font-bold mb-1">خدمات التصميم والإبداع</div>
+                          <div className="text-xs text-gray-600">تصميم هوية بصرية وإعلانات</div>
+                        </td>
+                        <td className="border border-gray-300 p-3 text-center">1 خدمة</td>
+                        <td className="border border-gray-300 p-3 text-center font-bold">
+                          {(viewingInvoice.amount * 0.6)?.toLocaleString('ar-SA')}
+                        </td>
+                        <td className="border border-gray-300 p-3 text-center font-bold text-blue-600">
+                          {(viewingInvoice.amount * 0.6)?.toLocaleString('ar-SA')}
+                        </td>
+                      </tr>
+                      
+                      {/* البند الثاني */}
+                      <tr className="bg-white">
+                        <td className="border border-gray-300 p-3 text-center font-bold">2</td>
+                        <td className="border border-gray-300 p-3 text-right">
+                          <div className="font-bold mb-1">خدمات الطباعة والإنتاج</div>
+                          <div className="text-xs text-gray-600">طباعة رقمية وتشطيب احترافي</div>
+                        </td>
+                        <td className="border border-gray-300 p-3 text-center">1 خدمة</td>
+                        <td className="border border-gray-300 p-3 text-center font-bold">
+                          {(viewingInvoice.amount * 0.4)?.toLocaleString('ar-SA')}
+                        </td>
+                        <td className="border border-gray-300 p-3 text-center font-bold text-blue-600">
+                          {(viewingInvoice.amount * 0.4)?.toLocaleString('ar-SA')}
+                        </td>
+                      </tr>
+                      
+                      {/* إجمالي البنود */}
+                      <tr className="bg-blue-50 border-t-2 border-blue-600">
+                        <td colSpan={4} className="border border-gray-300 p-3 text-right font-bold">
+                          المجموع الفرعي:
+                        </td>
+                        <td className="border border-gray-300 p-3 text-center font-bold text-blue-600">
+                          {viewingInvoice.amount?.toLocaleString('ar-SA')}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
 
                 {/* ملخص المبالغ */}
-                <div className="border-t pt-3">
+                <div className="mt-4 border-t pt-3">
                   <div className="space-y-2">
                     <div className="flex justify-between items-center py-2">
                       <span className="text-sm font-medium">المجموع الفرعي:</span>
