@@ -124,7 +124,7 @@ const Home = () => {
               />
             </div>
             <div className="space-y-2">
-              <h1 className="text-2xl sm:text-3xl font-amiri font-bold text-foreground bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent leading-tight whitespace-nowrap">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-amiri font-bold text-foreground bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent leading-tight text-center px-2">
                 {companyInfo.name}
               </h1>
               <p className="text-lg font-cairo font-medium text-muted-foreground">
