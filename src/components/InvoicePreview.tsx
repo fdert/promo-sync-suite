@@ -37,6 +37,7 @@ interface InvoicePreviewProps {
     address?: string;
     phone?: string;
     email?: string;
+    logo?: string;
   };
 }
 
@@ -73,13 +74,22 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({
           <div className="bg-white p-8 border rounded-lg shadow-sm" dir="rtl">
             {/* Header */}
             <div className="flex justify-between items-start mb-8 border-b-2 border-gray-300 pb-6">
-              <div>
-                <h1 className="text-4xl font-bold text-gray-800 mb-3">{companyInfo.name}</h1>
-                 <div className="text-gray-600 text-lg">
-                   <p>{companyInfo.address}</p>
-                   <p>هاتف: {companyInfo.phone}</p>
-                   <p>البريد الإلكتروني: {companyInfo.email}</p>
-                 </div>
+              <div className="flex items-start gap-4">
+                {companyInfo.logo && (
+                  <img 
+                    src={companyInfo.logo} 
+                    alt="شعار الشركة" 
+                    className="w-16 h-16 object-contain"
+                  />
+                )}
+                <div>
+                  <h1 className="text-4xl font-bold text-gray-800 mb-3">{companyInfo.name}</h1>
+                   <div className="text-gray-600 text-lg">
+                     <p>{companyInfo.address}</p>
+                     <p>هاتف: {companyInfo.phone}</p>
+                     <p>البريد الإلكتروني: {companyInfo.email}</p>
+                   </div>
+                </div>
               </div>
               <div className="text-left">
                  <h2 className="text-3xl font-bold text-gray-800 mb-3">فاتورة</h2>

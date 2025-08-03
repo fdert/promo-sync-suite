@@ -24,6 +24,13 @@ const Invoices = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState(null);
+  const [companyInfo, setCompanyInfo] = useState({
+    name: "وكالة الإبداع للدعاية والإعلان",
+    address: "المملكة العربية السعودية",
+    phone: "+966535983261",
+    email: "info@alibdaa.com",
+    logo: ""
+  });
   const [newInvoice, setNewInvoice] = useState({
     customer_id: "",
     order_id: "",
@@ -136,11 +143,39 @@ const Invoices = () => {
     }
   };
 
+  // جلب بيانات الشركة من إعدادات الموقع
+  const fetchCompanyInfo = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('website_settings')
+        .select('setting_key, setting_value')
+        .in('setting_key', ['company_name', 'company_address', 'company_phone', 'company_email', 'company_logo']);
+      
+      if (!error && data) {
+        const settings: any = {};
+        data.forEach(setting => {
+          settings[setting.setting_key] = setting.setting_value;
+        });
+        
+        setCompanyInfo({
+          name: settings.company_name || "وكالة الإبداع للدعاية والإعلان",
+          address: settings.company_address || "المملكة العربية السعودية",
+          phone: settings.company_phone || "+966535983261",
+          email: settings.company_email || "info@alibdaa.com",
+          logo: settings.company_logo || ""
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching company info:', error);
+    }
+  };
+
   useEffect(() => {
     fetchInvoices();
     fetchCustomers();
     fetchUserRole();
     fetchOrders();
+    fetchCompanyInfo();
   }, []);
 
   // إضافة بند جديد
@@ -1376,6 +1411,7 @@ const Invoices = () => {
         <InvoicePrint 
           invoice={printInvoice} 
           items={printItems}
+          companyInfo={companyInfo}
         />
       )}
 
@@ -1618,6 +1654,7 @@ const Invoices = () => {
           onClose={() => setIsPreviewOpen(false)}
           invoice={previewInvoice} 
           items={previewItems}
+          companyInfo={companyInfo}
           onPrint={() => {
             setIsPreviewOpen(false);
             handlePrintInvoice(previewInvoice);

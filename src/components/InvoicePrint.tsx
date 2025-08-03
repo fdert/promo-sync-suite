@@ -31,6 +31,7 @@ interface InvoicePrintProps {
     address?: string;
     phone?: string;
     email?: string;
+    logo?: string;
   };
 }
 
@@ -56,18 +57,27 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
         borderBottom: '2px solid #000',
         paddingBottom: '5px'
       }}>
-        <div style={{ flex: 1 }}>
-           <h1 style={{ 
-             fontSize: '18px', 
-             fontWeight: 'bold', 
-             margin: '0 0 4px 0',
-             color: '#000'
-           }}>
-             {companyInfo.name}
-           </h1>
-           <div style={{ fontSize: '12px', color: '#555' }}>
-            {companyInfo.phone}
-          </div>
+         <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px' }}>
+           {companyInfo.logo && (
+             <img 
+               src={companyInfo.logo} 
+               alt="شعار الشركة" 
+               style={{ width: '40px', height: '40px', objectFit: 'contain' }}
+             />
+           )}
+           <div>
+             <h1 style={{ 
+               fontSize: '18px', 
+               fontWeight: 'bold', 
+               margin: '0 0 4px 0',
+               color: '#000'
+             }}>
+               {companyInfo.name}
+             </h1>
+             <div style={{ fontSize: '12px', color: '#555' }}>
+              {companyInfo.phone}
+            </div>
+           </div>
         </div>
         
          <div style={{ textAlign: 'left', flex: 1 }}>
