@@ -14,17 +14,14 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import InvoicePrint from "@/components/InvoicePrint";
 import InvoicePreview from "@/components/InvoicePreview";
-import CompanyStampSettings from "@/components/CompanyStampSettings";
 
 const Invoices = () => {
   const [invoices, setInvoices] = useState([]);
   const [customers, setCustomers] = useState([]);
-  const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [editingInvoice, setEditingInvoice] = useState(null);
   const [companyInfo, setCompanyInfo] = useState({
     name: "وكالة الإبداع للدعاية والإعلان",
     address: "المملكة العربية السعودية",
@@ -69,13 +66,6 @@ const Invoices = () => {
     }
   };
 
-  const handleStampUpdate = (stampUrl: string) => {
-    setCompanyInfo(prev => ({ ...prev, stamp: stampUrl }));
-    toast({
-      title: "تم الحفظ",
-      description: "تم تحديث ختم الوكالة بنجاح",
-    });
-  };
 
   // جلب البيانات
   const fetchInvoices = async () => {
@@ -138,16 +128,30 @@ const Invoices = () => {
           <p className="text-muted-foreground">إنشاء ومتابعة الفواتير والمدفوعات</p>
         </div>
         
-        <div className="flex gap-2">
-          <CompanyStampSettings 
-            stampUrl={companyInfo.stamp}
-            onStampUpdate={handleStampUpdate}
-          />
-          <Button variant="outline" className="gap-2">
-            <Plus className="h-4 w-4" />
-            إضافة فاتورة جديدة
-          </Button>
-        </div>
+        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="gap-2">
+              <Plus className="h-4 w-4" />
+              إضافة فاتورة جديدة
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>إضافة فاتورة جديدة</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-muted-foreground">
+                سيتم تطوير هذه الميزة قريباً لإضافة فواتير جديدة
+              </p>
+              <Button 
+                onClick={() => setIsAddDialogOpen(false)}
+                className="w-full"
+              >
+                حسناً
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Statistics Cards */}
@@ -199,18 +203,113 @@ const Invoices = () => {
         </Card>
       </div>
 
-      {/* Content Placeholder - will be expanded later */}
+      {/* Filters and Search */}
       <Card>
         <CardHeader>
-          <CardTitle>قائمة الفواتير</CardTitle>
-          <CardDescription>
-            تم إضافة إعدادات ختم الوكالة بنجاح. الختم سيظهر في الفواتير أسفل المجموع الكلي.
-          </CardDescription>
+          <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
+            <div>
+              <CardTitle>قائمة الفواتير</CardTitle>
+              <CardDescription>
+                إدارة ومتابعة جميع الفواتير والمدفوعات
+              </CardDescription>
+            </div>
+            
+            <div className="flex gap-2">
+              <div className="relative">
+                <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="البحث في الفواتير..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full md:w-64 pr-10"
+                />
+              </div>
+              
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="حالة الفاتورة" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">جميع الحالات</SelectItem>
+                  <SelectItem value="قيد الانتظار">قيد الانتظار</SelectItem>
+                  <SelectItem value="مدفوع">مدفوع</SelectItem>
+                  <SelectItem value="متأخر">متأخر</SelectItem>
+                  <SelectItem value="ملغي">ملغي</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </CardHeader>
+        
         <CardContent>
-          <p className="text-muted-foreground">
-            تم تحديث نظام الفواتير لدعم ختم الوكالة. يمكنك الآن إضافة رابط صورة الختم عبر زر "إعدادات الختم" في الأعلى.
-          </p>
+          {/* قائمة الفواتير */}
+          <div className="space-y-4">
+            {invoices.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">لا توجد فواتير حالياً</p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  ابدأ بإنشاء فاتورة جديدة
+                </p>
+              </div>
+            ) : (
+              invoices
+                .filter(invoice => {
+                  const matchesSearch = searchTerm === "" || 
+                    invoice.invoice_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    invoice.customers?.name?.toLowerCase().includes(searchTerm.toLowerCase());
+                  
+                  const matchesStatus = statusFilter === "all" || invoice.status === statusFilter;
+                  
+                  return matchesSearch && matchesStatus;
+                })
+                .map((invoice) => (
+                  <Card key={invoice.id} className="hover:shadow-md transition-shadow">
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-3">
+                            <h3 className="font-semibold">{invoice.invoice_number}</h3>
+                            <Badge 
+                              variant={
+                                invoice.status === 'مدفوع' ? 'default' :
+                                invoice.status === 'قيد الانتظار' ? 'secondary' :
+                                invoice.status === 'متأخر' ? 'destructive' : 'outline'
+                              }
+                            >
+                              {invoice.status}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            العميل: {invoice.customers?.name || 'غير محدد'}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            المبلغ: {invoice.total_amount?.toLocaleString('ar-SA')} ر.س
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            تاريخ الإصدار: {new Date(invoice.issue_date).toLocaleDateString('ar-SA')}
+                          </p>
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                          <Button variant="outline" size="sm" className="gap-2">
+                            <Eye className="h-4 w-4" />
+                            عرض
+                          </Button>
+                          <Button variant="outline" size="sm" className="gap-2">
+                            <Printer className="h-4 w-4" />
+                            طباعة
+                          </Button>
+                          <Button variant="outline" size="sm" className="gap-2">
+                            <Edit2 className="h-4 w-4" />
+                            تعديل
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>
