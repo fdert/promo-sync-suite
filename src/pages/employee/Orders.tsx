@@ -40,6 +40,7 @@ import {
   XCircle,
   Image,
   Printer,
+  Edit,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -91,6 +92,11 @@ const Orders = () => {
   const [isFilesDialogOpen, setIsFilesDialogOpen] = useState(false);
   const [selectedOrderFiles, setSelectedOrderFiles] = useState<Order | null>(null);
   const [orderFiles, setOrderFiles] = useState<PrintFile[]>([]);
+  
+  // حالات تعديل حالة الطلب
+  const [isEditStatusDialogOpen, setIsEditStatusDialogOpen] = useState(false);
+  const [selectedOrderForEdit, setSelectedOrderForEdit] = useState<Order | null>(null);
+  const [newStatus, setNewStatus] = useState("");
   
   const { toast } = useToast();
 
@@ -339,6 +345,36 @@ const Orders = () => {
     }
   };
 
+  // تحديث حالة الطلب
+  const updateOrderStatus = async (orderId: string, status: string) => {
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ status })
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      toast({
+        title: "تم تحديث الحالة",
+        description: "تم تحديث حالة الطلب بنجاح",
+      });
+
+      // إعادة تحميل الطلبات
+      fetchOrders();
+      setIsEditStatusDialogOpen(false);
+      setSelectedOrderForEdit(null);
+
+    } catch (error) {
+      console.error('Error updating order status:', error);
+      toast({
+        title: "خطأ في التحديث",
+        description: "فشل في تحديث حالة الطلب",
+        variant: "destructive",
+      });
+    }
+  };
+  
   // فلترة الطلبات
   const filteredOrders = orders.filter(order => {
     const matchesSearch = 
@@ -473,6 +509,20 @@ const Orders = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
+                        {/* تعديل حالة الطلب */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedOrderForEdit(order);
+                            setNewStatus(order.status);
+                            setIsEditStatusDialogOpen(true);
+                          }}
+                        >
+                          <Edit className="h-4 w-4 mr-1" />
+                          تعديل الحالة
+                        </Button>
+                        
                         {/* رفع ملفات التصميم */}
                         <Button
                           variant="outline"
@@ -523,6 +573,62 @@ const Orders = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* حوار تعديل حالة الطلب */}
+      <Dialog open={isEditStatusDialogOpen} onOpenChange={setIsEditStatusDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>تعديل حالة الطلب</DialogTitle>
+            <DialogDescription>
+              اختر الحالة الجديدة للطلب
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {selectedOrderForEdit && (
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="text-sm"><strong>الطلب:</strong> {selectedOrderForEdit.order_number}</p>
+                <p className="text-sm"><strong>العميل:</strong> {selectedOrderForEdit.customers?.name}</p>
+                <p className="text-sm"><strong>الحالة الحالية:</strong> {selectedOrderForEdit.status}</p>
+              </div>
+            )}
+            
+            <div>
+              <Label htmlFor="status-select">الحالة الجديدة</Label>
+              <Select value={newStatus} onValueChange={setNewStatus}>
+                <SelectTrigger>
+                  <SelectValue placeholder="اختر الحالة الجديدة" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="جديد">جديد</SelectItem>
+                  <SelectItem value="مؤكد">مؤكد</SelectItem>
+                  <SelectItem value="قيد التنفيذ">قيد التنفيذ</SelectItem>
+                  <SelectItem value="قيد المراجعة">قيد المراجعة</SelectItem>
+                  <SelectItem value="جاهز للتسليم">جاهز للتسليم</SelectItem>
+                  <SelectItem value="مكتمل">مكتمل</SelectItem>
+                  <SelectItem value="ملغي">ملغي</SelectItem>
+                  <SelectItem value="قيد الانتظار">قيد الانتظار</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="flex gap-2 justify-end">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsEditStatusDialogOpen(false)}
+              >
+                إلغاء
+              </Button>
+              <Button 
+                onClick={() => selectedOrderForEdit && updateOrderStatus(selectedOrderForEdit.id, newStatus)}
+                disabled={!newStatus || newStatus === selectedOrderForEdit?.status}
+              >
+                حفظ التغييرات
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* حوار رفع الملفات */}
       <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
