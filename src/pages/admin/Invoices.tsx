@@ -105,7 +105,7 @@ const Invoices = () => {
           }
           
           .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #4f46e5;
             color: white;
             padding: 20px 25px;
             position: relative;
@@ -184,7 +184,7 @@ const Invoices = () => {
           }
           
           .customer-section {
-            background: linear-gradient(135deg, #f093fb 10%, #f5576c 100%);
+            background: #e11d48;
             color: white;
             padding: 15px 25px;
             margin: 0;
@@ -210,7 +210,7 @@ const Invoices = () => {
           }
           
           .items-table th {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            background: #0ea5e9;
             color: #ffffff !important;
             padding: 12px 10px;
             font-weight: 700;
@@ -246,7 +246,8 @@ const Invoices = () => {
           }
           
           .summary-section {
-            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            background: #f59e0b;
+            color: #1f2937;
             border-radius: 8px;
             padding: 18px;
             margin: 20px 0;
@@ -259,7 +260,7 @@ const Invoices = () => {
             display: flex;
             justify-content: space-between;
             padding: 6px 0;
-            border-bottom: 1px solid rgba(255,255,255,0.3);
+            border-bottom: 1px solid rgba(0,0,0,0.1);
             font-size: 12px;
           }
           
@@ -268,13 +269,14 @@ const Invoices = () => {
             font-size: 14px;
             font-weight: 700;
             padding-top: 10px;
-            border-top: 2px solid rgba(255,255,255,0.5);
-            color: #2d3748;
+            border-top: 2px solid #1f2937;
+            color: #1f2937;
           }
           
           .payment-info {
             clear: both;
-            background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);
+            background: #3b82f6;
+            color: white;
             border-radius: 8px;
             padding: 15px;
             margin-bottom: 15px;
@@ -324,7 +326,7 @@ const Invoices = () => {
           }
           
           .footer {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #4f46e5;
             color: white;
             text-align: center;
             padding: 15px;
