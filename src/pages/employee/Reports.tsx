@@ -266,18 +266,18 @@ const Reports = () => {
     }
 
     // فلترة بالشهر والسنة
-    if (searchMonth && searchYear) {
+    if (searchMonth && searchMonth !== "all" && searchYear && searchYear !== "all") {
       filtered = filtered.filter(invoice => {
         const issueDate = new Date(invoice.issue_date);
         return issueDate.getMonth() + 1 === parseInt(searchMonth) && 
                issueDate.getFullYear() === parseInt(searchYear);
       });
-    } else if (searchYear) {
+    } else if (searchYear && searchYear !== "all") {
       filtered = filtered.filter(invoice => {
         const issueDate = new Date(invoice.issue_date);
         return issueDate.getFullYear() === parseInt(searchYear);
       });
-    } else if (searchMonth) {
+    } else if (searchMonth && searchMonth !== "all") {
       filtered = filtered.filter(invoice => {
         const issueDate = new Date(invoice.issue_date);
         return issueDate.getMonth() + 1 === parseInt(searchMonth);
@@ -765,7 +765,7 @@ const Reports = () => {
                       <SelectValue placeholder="اختر الشهر" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">جميع الأشهر</SelectItem>
+                      <SelectItem value="all">جميع الأشهر</SelectItem>
                       <SelectItem value="1">يناير</SelectItem>
                       <SelectItem value="2">فبراير</SelectItem>
                       <SelectItem value="3">مارس</SelectItem>
@@ -788,7 +788,7 @@ const Reports = () => {
                       <SelectValue placeholder="اختر السنة" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">جميع السنوات</SelectItem>
+                      <SelectItem value="all">جميع السنوات</SelectItem>
                       <SelectItem value="2023">2023</SelectItem>
                       <SelectItem value="2024">2024</SelectItem>
                       <SelectItem value="2025">2025</SelectItem>
