@@ -29,7 +29,8 @@ const Invoices = () => {
     address: "المملكة العربية السعودية",
     phone: "+966535983261",
     email: "info@alibdaa.com",
-    logo: ""
+    logo: "",
+    tagline: "نبني الأحلام بالإبداع والتميز"
   });
   const [newInvoice, setNewInvoice] = useState({
     customer_id: "",
@@ -165,7 +166,8 @@ const Invoices = () => {
             address: contactData?.address || "المملكة العربية السعودية",
             phone: contactData?.phone || "+966535983261",
             email: contactData?.email || "info@alibdaa.com",
-            logo: companyData.logo || ""
+            logo: companyData.logo || "",
+            tagline: companyData.tagline || "نبني الأحلام بالإبداع والتميز"
           };
           
           console.log('بيانات الشركة المحدثة:', newCompanyInfo);
@@ -691,7 +693,14 @@ const Invoices = () => {
     ` : ''}
 
     <div class="footer">
-        شكراً لثقتكم
+        <div style="font-weight: bold; margin-bottom: 2px; font-size: 8px;">
+            شكراً لثقتكم
+        </div>
+        ${companyInfo.tagline ? `
+            <div style="font-style: italic; color: #0066cc; font-size: 7px; font-weight: normal;">
+                "${companyInfo.tagline}"
+            </div>
+        ` : ''}
     </div>
 </body>
 </html>

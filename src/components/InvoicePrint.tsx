@@ -32,6 +32,7 @@ interface InvoicePrintProps {
     phone?: string;
     email?: string;
     logo?: string;
+    tagline?: string;
   };
 }
 
@@ -278,10 +279,26 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
          fontSize: '10px',
         color: '#888',
         borderTop: '1px solid #ccc',
-        paddingTop: '3px',
-        marginTop: '5px'
+        paddingTop: '4px',
+        marginTop: '6px'
       }}>
-        شكراً لثقتكم
+        <div style={{ 
+          fontWeight: 'bold',
+          marginBottom: '2px',
+          fontSize: '11px'
+        }}>
+          شكراً لثقتكم
+        </div>
+        {companyInfo.tagline && (
+          <div style={{ 
+            fontStyle: 'italic',
+            color: '#0066cc',
+            fontSize: '9px',
+            fontWeight: 'normal'
+          }}>
+            "{companyInfo.tagline}"
+          </div>
+        )}
       </div>
     </div>
   );

@@ -38,6 +38,7 @@ interface InvoicePreviewProps {
     phone?: string;
     email?: string;
     logo?: string;
+    tagline?: string;
   };
 }
 
@@ -185,11 +186,16 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({
                )}
              </div>
 
-            {/* Footer */}
-             <div className="text-center text-gray-500 border-t border-gray-200 pt-6">
-               <p className="text-lg">شكراً لك على التعامل معنا</p>
-               <p>تم إنشاء هذه الفاتورة بتاريخ {new Date().toLocaleDateString('ar-SA')}</p>
-             </div>
+             {/* Footer */}
+              <div className="text-center text-gray-500 border-t border-gray-200 pt-6">
+                <p className="text-lg font-semibold mb-2">شكراً لك على التعامل معنا</p>
+                {companyInfo.tagline && (
+                  <p className="text-base italic text-blue-600 font-medium mb-3">
+                    "{companyInfo.tagline}"
+                  </p>
+                )}
+                <p className="text-sm">تم إنشاء هذه الفاتورة بتاريخ {new Date().toLocaleDateString('ar-SA')}</p>
+              </div>
           </div>
         </div>
       </DialogContent>
