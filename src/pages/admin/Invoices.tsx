@@ -90,7 +90,7 @@ const Invoices = () => {
             font-size: 12px;
             line-height: 1.4;
             color: #2d3748;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: white;
             padding: 15mm;
             min-height: 100vh;
           }
@@ -99,9 +99,9 @@ const Invoices = () => {
             max-width: 190mm;
             margin: 0 auto;
             background: white;
-            border-radius: 12px;
+            border-radius: 8px;
             overflow: hidden;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+            border: 1px solid #e2e8f0;
           }
           
           .header {
@@ -109,18 +109,6 @@ const Invoices = () => {
             color: white;
             padding: 20px 25px;
             position: relative;
-            overflow: hidden;
-          }
-          
-          .header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 100%;
-            height: 100%;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="2"/></svg>');
-            opacity: 0.3;
           }
           
           .header-content {
@@ -128,7 +116,6 @@ const Invoices = () => {
             justify-content: space-between;
             align-items: flex-start;
             position: relative;
-            z-index: 1;
           }
           
           .company-info {
@@ -140,14 +127,12 @@ const Invoices = () => {
             font-size: 20px;
             font-weight: 700;
             margin-bottom: 8px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
             color: #ffffff;
           }
           
           .company-details {
             font-size: 11px;
             line-height: 1.6;
-            opacity: 0.95;
             color: #f7fafc;
           }
           
@@ -161,25 +146,23 @@ const Invoices = () => {
             max-width: 70px;
             max-height: 70px;
             object-fit: contain;
-            border: 3px solid rgba(255,255,255,0.3);
-            border-radius: 12px;
-            padding: 8px;
-            background: rgba(255,255,255,0.15);
-            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 8px;
+            padding: 6px;
+            background: rgba(255,255,255,0.1);
           }
           
           .logo-placeholder {
             width: 70px;
             height: 70px;
-            border: 3px dashed rgba(255,255,255,0.5);
-            border-radius: 12px;
+            border: 2px dashed rgba(255,255,255,0.5);
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 10px;
             color: rgba(255,255,255,0.8);
             background: rgba(255,255,255,0.1);
-            backdrop-filter: blur(10px);
           }
           
           .invoice-info {
@@ -191,14 +174,12 @@ const Invoices = () => {
             font-size: 22px;
             font-weight: 700;
             margin-bottom: 8px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
             color: #ffffff;
           }
           
           .invoice-details {
             font-size: 11px;
             line-height: 1.6;
-            opacity: 0.95;
             color: #f7fafc;
           }
           
@@ -213,7 +194,6 @@ const Invoices = () => {
             font-weight: 700;
             margin-bottom: 5px;
             font-size: 14px;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
           }
           
           .content-section {
@@ -224,9 +204,9 @@ const Invoices = () => {
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 20px;
-            border-radius: 8px;
+            border-radius: 6px;
             overflow: hidden;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border: 1px solid #e2e8f0;
           }
           
           .items-table th {
@@ -236,7 +216,6 @@ const Invoices = () => {
             font-weight: 700;
             text-align: center;
             border: none;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
             font-size: 11px;
           }
           
@@ -268,12 +247,12 @@ const Invoices = () => {
           
           .summary-section {
             background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
-            border-radius: 12px;
+            border-radius: 8px;
             padding: 18px;
             margin: 20px 0;
             float: right;
             width: 45%;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border: 1px solid #e2e8f0;
           }
           
           .summary-row {
@@ -296,10 +275,10 @@ const Invoices = () => {
           .payment-info {
             clear: both;
             background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);
-            border-radius: 12px;
+            border-radius: 8px;
             padding: 15px;
             margin-bottom: 15px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border: 1px solid #e2e8f0;
           }
           
           .payment-grid {
@@ -311,7 +290,7 @@ const Invoices = () => {
           
           .status-badge {
             padding: 4px 12px;
-            border-radius: 20px;
+            border-radius: 15px;
             font-size: 10px;
             font-weight: 600;
             text-transform: uppercase;
@@ -319,30 +298,29 @@ const Invoices = () => {
           }
           
           .status-paid { 
-            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            background: #d4edda;
             color: #155724;
             border: 1px solid #c3e6cb;
           }
           .status-pending { 
-            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            background: #fff3cd;
             color: #856404;
             border: 1px solid #ffeaa7;
           }
           .status-overdue { 
-            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+            background: #f8d7da;
             color: #721c24;
             border: 1px solid #f5c6cb;
           }
           
           .notes-section {
-            background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+            background: #f7fafc;
             border: 1px solid #e2e8f0;
-            border-radius: 10px;
+            border-radius: 8px;
             padding: 15px;
             margin-bottom: 15px;
             font-size: 11px;
             line-height: 1.6;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
           }
           
           .footer {
@@ -352,23 +330,10 @@ const Invoices = () => {
             padding: 15px;
             font-size: 12px;
             position: relative;
-            overflow: hidden;
-          }
-          
-          .footer::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><polygon points="50,5 95,75 5,75" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="2"/></svg>');
-            opacity: 0.3;
           }
           
           .footer-content {
             position: relative;
-            z-index: 1;
           }
           
           @media print {
@@ -378,7 +343,7 @@ const Invoices = () => {
               font-size: 11px;
             }
             .invoice-container { 
-              box-shadow: none !important;
+              border: none !important;
               border-radius: 0 !important;
               max-width: 100% !important;
             }
@@ -403,24 +368,24 @@ const Invoices = () => {
                 <div class="company-name">${companyInfo.name}</div>
                 <div class="company-details">
                   <div>${companyInfo.address}</div>
-                  <div>📞 ${companyInfo.phone}</div>
-                  <div>📧 ${companyInfo.email}</div>
+                  <div>هاتف: ${companyInfo.phone}</div>
+                  <div>البريد: ${companyInfo.email}</div>
                 </div>
               </div>
               
               <div class="logo-section">
                 ${companyInfo.logo ? 
                   `<img src="${companyInfo.logo}" alt="شعار الشركة" class="company-logo">` : 
-                  '<div class="logo-placeholder">🏢<br>الشعار</div>'
+                  '<div class="logo-placeholder">الشعار</div>'
                 }
               </div>
               
               <div class="invoice-info">
-                <div class="invoice-title">🧾 فاتورة</div>
+                <div class="invoice-title">فاتورة</div>
                 <div class="invoice-details">
                   <div><strong>رقم:</strong> ${invoice.invoice_number}</div>
-                  <div><strong>📅 التاريخ:</strong> ${new Date(invoice.issue_date).toLocaleDateString('ar-SA')}</div>
-                  <div><strong>⏰ الاستحقاق:</strong> ${new Date(invoice.due_date).toLocaleDateString('ar-SA')}</div>
+                  <div><strong>التاريخ:</strong> ${new Date(invoice.issue_date).toLocaleDateString('ar-SA')}</div>
+                  <div><strong>الاستحقاق:</strong> ${new Date(invoice.due_date).toLocaleDateString('ar-SA')}</div>
                 </div>
               </div>
             </div>
@@ -428,9 +393,9 @@ const Invoices = () => {
           
           <!-- Customer Info -->
           <div class="customer-section">
-            <div class="customer-name">👤 العميل: ${invoice.customers?.name || 'غير محدد'}</div>
-            ${invoice.customers?.phone ? `<div>📱 الهاتف: ${invoice.customers.phone}</div>` : ''}
-            ${invoice.customers?.address ? `<div>🏠 العنوان: ${invoice.customers.address}</div>` : ''}
+            <div class="customer-name">العميل: ${invoice.customers?.name || 'غير محدد'}</div>
+            ${invoice.customers?.phone ? `<div>الهاتف: ${invoice.customers.phone}</div>` : ''}
+            ${invoice.customers?.address ? `<div>العنوان: ${invoice.customers.address}</div>` : ''}
           </div>
           
           <div class="content-section">
@@ -440,10 +405,10 @@ const Invoices = () => {
             <thead>
               <tr>
                 <th style="width: 8%;">م</th>
-                <th style="width: 40%;">🛍️ اسم البند / الخدمة</th>
-                <th style="width: 15%;">📦 الكمية</th>
-                <th style="width: 17%;">💰 السعر (ر.س)</th>
-                <th style="width: 20%;">💎 الإجمالي (ر.س)</th>
+                <th style="width: 40%;">اسم البند / الخدمة</th>
+                <th style="width: 15%;">الكمية</th>
+                <th style="width: 17%;">السعر (ر.س)</th>
+                <th style="width: 20%;">الإجمالي (ر.س)</th>
               </tr>
             </thead>
             <tbody>
@@ -473,15 +438,15 @@ const Invoices = () => {
           <!-- Summary -->
           <div class="summary-section">
             <div class="summary-row">
-              <span>💰 المجموع الفرعي:</span>
+              <span>المجموع الفرعي:</span>
               <span>${invoice.amount?.toLocaleString('ar-SA')} ر.س</span>
             </div>
             <div class="summary-row">
-              <span>📊 ضريبة القيمة المضافة (15%):</span>
+              <span>ضريبة القيمة المضافة (15%):</span>
               <span>${invoice.tax_amount?.toLocaleString('ar-SA')} ر.س</span>
             </div>
             <div class="summary-row">
-              <span>💎 إجمالي المبلغ المستحق:</span>
+              <span>إجمالي المبلغ المستحق:</span>
               <span>${invoice.total_amount?.toLocaleString('ar-SA')} ر.س</span>
             </div>
           </div>
@@ -489,8 +454,8 @@ const Invoices = () => {
           <!-- Payment Info -->
           <div class="payment-info">
             <div class="payment-grid">
-              <div><strong>💳 نوع الدفع:</strong> ${invoice.payment_type}</div>
-              <div><strong>📋 الحالة:</strong> 
+              <div><strong>نوع الدفع:</strong> ${invoice.payment_type}</div>
+              <div><strong>الحالة:</strong> 
                 <span class="status-badge ${
                   invoice.status === 'مدفوع' ? 'status-paid' : 
                   invoice.status === 'قيد الانتظار' ? 'status-pending' : 
@@ -503,7 +468,7 @@ const Invoices = () => {
           <!-- Notes -->
           ${invoice.notes ? `
             <div class="notes-section">
-              <strong>📝 ملاحظات:</strong><br>
+              <strong>ملاحظات:</strong><br>
               ${invoice.notes}
             </div>
           ` : ''}
@@ -513,8 +478,8 @@ const Invoices = () => {
           <!-- Footer -->
           <div class="footer">
             <div class="footer-content">
-              🙏 شكراً لثقتكم بنا
-              ${companyInfo.tagline ? `<br><em>✨ "${companyInfo.tagline}"</em>` : ''}
+              شكراً لثقتكم بنا
+              ${companyInfo.tagline ? `<br><em>"${companyInfo.tagline}"</em>` : ''}
             </div>
           </div>
           
