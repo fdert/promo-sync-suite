@@ -105,10 +105,12 @@ const Invoices = () => {
           }
           
           .header {
-            background: #4f46e5;
-            color: white;
+            background: #4f46e5 !important;
+            color: white !important;
             padding: 20px 25px;
             position: relative;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
           
           .header-content {
@@ -184,10 +186,12 @@ const Invoices = () => {
           }
           
           .customer-section {
-            background: #e11d48;
-            color: white;
+            background: #e11d48 !important;
+            color: white !important;
             padding: 15px 25px;
             margin: 0;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
           
           .customer-name {
@@ -210,13 +214,15 @@ const Invoices = () => {
           }
           
           .items-table th {
-            background: #0ea5e9;
+            background: #0ea5e9 !important;
             color: #ffffff !important;
             padding: 12px 10px;
             font-weight: 700;
             text-align: center;
             border: none;
             font-size: 11px;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
           
           .items-table td {
@@ -246,14 +252,16 @@ const Invoices = () => {
           }
           
           .summary-section {
-            background: #f59e0b;
-            color: #1f2937;
+            background: #f59e0b !important;
+            color: #1f2937 !important;
             border-radius: 8px;
             padding: 18px;
             margin: 20px 0;
             float: right;
             width: 45%;
             border: 1px solid #e2e8f0;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
           
           .summary-row {
@@ -275,12 +283,14 @@ const Invoices = () => {
           
           .payment-info {
             clear: both;
-            background: #3b82f6;
-            color: white;
+            background: #3b82f6 !important;
+            color: white !important;
             border-radius: 8px;
             padding: 15px;
             margin-bottom: 15px;
             border: 1px solid #e2e8f0;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
           
           .payment-grid {
@@ -326,12 +336,14 @@ const Invoices = () => {
           }
           
           .footer {
-            background: #4f46e5;
-            color: white;
+            background: #4f46e5 !important;
+            color: white !important;
             text-align: center;
             padding: 15px;
             font-size: 12px;
             position: relative;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
           
           .footer-content {
@@ -339,6 +351,10 @@ const Invoices = () => {
           }
           
           @media print {
+            * {
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
             body { 
               padding: 0 !important;
               background: white !important;
@@ -353,7 +369,31 @@ const Invoices = () => {
               size: A4;
               margin: 10mm;
             }
-            .header { page-break-inside: avoid; }
+            .header { 
+              page-break-inside: avoid;
+              background: #4f46e5 !important;
+              color: white !important;
+            }
+            .customer-section {
+              background: #e11d48 !important;
+              color: white !important;
+            }
+            .items-table th {
+              background: #0ea5e9 !important;
+              color: white !important;
+            }
+            .summary-section {
+              background: #f59e0b !important;
+              color: #1f2937 !important;
+            }
+            .payment-info {
+              background: #3b82f6 !important;
+              color: white !important;
+            }
+            .footer {
+              background: #4f46e5 !important;
+              color: white !important;
+            }
             .items-table { page-break-inside: avoid; }
             .summary-section { page-break-inside: avoid; }
             .content-section { padding: 15px 20px; }
