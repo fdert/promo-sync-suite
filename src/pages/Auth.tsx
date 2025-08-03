@@ -13,6 +13,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
 
 const Auth = () => {
+  console.log('🔥 تم تحميل صفحة Auth');
   const [loginForm, setLoginForm] = useState({ email: "", password: "" });
   const [signupForm, setSignupForm] = useState({ 
     email: "", 
@@ -39,62 +40,55 @@ const Auth = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // جلب بيانات الشركة
+  // تحديث بيانات الشركة من قاعدة البيانات
   useEffect(() => {
     console.log('🚀 تم تشغيل useEffect لجلب بيانات الشركة');
-    const fetchCompanyInfo = async () => {
+    
+    const loadCompanyData = async () => {
       try {
-        console.log('🔍 بدء جلب بيانات الشركة...');
+        console.log('🔍 بدء جلب بيانات الشركة من قاعدة البيانات...');
+        
         const { data, error } = await supabase
           .from('website_settings')
           .select('setting_value')
           .eq('setting_key', 'website_content')
-          .single();
+          .maybeSingle();
 
         console.log('📊 استجابة قاعدة البيانات:', { data, error });
 
         if (error) {
           console.error('❌ خطأ في قاعدة البيانات:', error);
-          throw error;
+          return;
         }
 
-        if (data?.setting_value && typeof data.setting_value === 'object') {
+        if (data?.setting_value) {
           const settingValue = data.setting_value as any;
           console.log('📄 قيم الإعدادات الكاملة:', settingValue);
           
           const companyData = settingValue.companyInfo;
           console.log('🏢 بيانات الشركة المستخرجة:', companyData);
           
-          if (companyData) {
-            const newCompanyInfo = {
-              name: companyData.name || "وكالة ابداع واحتراف للدعاية والاعلان",
+          if (companyData && companyData.name) {
+            const updatedInfo = {
+              name: companyData.name,
               tagline: companyData.tagline || "نبني الأحلام بالإبداع والاحتراف",
-              logo: companyData.logo || null
+              logo: companyData.logo || "https://gcuqfxacnbxdldsbmgvf.supabase.co/storage/v1/object/public/logos/logo-1754189656106.jpg"
             };
             
-            console.log('✅ بيانات الشركة الجديدة التي ستطبق:', newCompanyInfo);
-            setCompanyInfo(newCompanyInfo);
-            console.log('🎯 تم تحديث حالة بيانات الشركة بنجاح');
+            console.log('✅ تطبيق بيانات الشركة الجديدة:', updatedInfo);
+            setCompanyInfo(updatedInfo);
           } else {
-            console.warn('⚠️ لم يتم العثور على بيانات companyInfo');
+            console.warn('⚠️ لم يتم العثور على بيانات الشركة في companyInfo');
           }
         } else {
-          console.warn('⚠️ لا توجد بيانات setting_value أو النوع غير صحيح');
+          console.warn('⚠️ لا توجد بيانات setting_value');
         }
       } catch (error) {
-        console.error('💥 خطأ في جلب بيانات الشركة:', error);
-        // في حالة الخطأ، استخدم البيانات الافتراضية
-        const fallbackInfo = {
-          name: "وكالة ابداع واحتراف للدعاية والاعلان",
-          tagline: "نبني الأحلام بالإبداع والاحتراف",
-          logo: null
-        };
-        console.log('🔄 استخدام البيانات الافتراضية:', fallbackInfo);
-        setCompanyInfo(fallbackInfo);
+        console.error('💥 خطأ في تحميل بيانات الشركة:', error);
       }
     };
 
-    fetchCompanyInfo();
+    loadCompanyData();
   }, []);
 
   // إعادة توجيه المستخدمين المسجلين إلى لوحة الإدارة
