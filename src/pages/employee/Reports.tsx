@@ -27,7 +27,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, TrendingUp, TrendingDown, DollarSign, Calendar, Edit } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plus, TrendingUp, TrendingDown, DollarSign, Calendar, Edit, Search, AlertCircle, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -52,6 +53,19 @@ interface Expense {
   created_at: string;
 }
 
+interface UnpaidInvoice {
+  id: string;
+  invoice_number: string;
+  total_amount: number;
+  issue_date: string;
+  due_date: string;
+  customers: {
+    id: string;
+    name: string;
+    phone: string;
+  };
+}
+
 const Reports = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -65,13 +79,24 @@ const Reports = () => {
   });
   
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [unpaidInvoices, setUnpaidInvoices] = useState<UnpaidInvoice[]>([]);
+  const [filteredUnpaidInvoices, setFilteredUnpaidInvoices] = useState<UnpaidInvoice[]>([]);
   const [loading, setLoading] = useState(true);
+  const [unpaidLoading, setUnpaidLoading] = useState(false);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [selectedPeriod, setSelectedPeriod] = useState("this_month");
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
   const [isEditExpenseOpen, setIsEditExpenseOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  
+  // Search filters for unpaid invoices
+  const [searchName, setSearchName] = useState("");
+  const [searchPhone, setSearchPhone] = useState("");
+  const [searchStartDate, setSearchStartDate] = useState("");
+  const [searchEndDate, setSearchEndDate] = useState("");
+  const [searchMonth, setSearchMonth] = useState("");
+  const [searchYear, setSearchYear] = useState("");
   
   const [newExpense, setNewExpense] = useState({
     description: "",
@@ -91,6 +116,14 @@ const Reports = () => {
       fetchReportData();
     }
   }, [startDate, endDate]);
+
+  useEffect(() => {
+    fetchUnpaidInvoices();
+  }, []);
+
+  useEffect(() => {
+    filterUnpaidInvoices();
+  }, [unpaidInvoices, searchName, searchPhone, searchStartDate, searchEndDate, searchMonth, searchYear]);
 
   const setDateRangeFromPeriod = (period: string) => {
     const now = new Date();
@@ -168,6 +201,99 @@ const Reports = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchUnpaidInvoices = async () => {
+    try {
+      setUnpaidLoading(true);
+      const { data, error } = await supabase
+        .from('invoices')
+        .select(`
+          id,
+          invoice_number,
+          total_amount,
+          issue_date,
+          due_date,
+          customers:customer_id (
+            id,
+            name,
+            phone
+          )
+        `)
+        .neq('status', 'مدفوع')
+        .order('due_date', { ascending: true });
+
+      if (error) throw error;
+
+      setUnpaidInvoices(data || []);
+    } catch (error) {
+      console.error('Error fetching unpaid invoices:', error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ في جلب الفواتير غير المدفوعة",
+        variant: "destructive",
+      });
+    } finally {
+      setUnpaidLoading(false);
+    }
+  };
+
+  const filterUnpaidInvoices = () => {
+    let filtered = [...unpaidInvoices];
+
+    // فلترة بالاسم
+    if (searchName) {
+      filtered = filtered.filter(invoice => 
+        invoice.customers?.name.toLowerCase().includes(searchName.toLowerCase())
+      );
+    }
+
+    // فلترة برقم الجوال
+    if (searchPhone) {
+      filtered = filtered.filter(invoice => 
+        invoice.customers?.phone.includes(searchPhone)
+      );
+    }
+
+    // فلترة بالتاريخ من إلى
+    if (searchStartDate && searchEndDate) {
+      filtered = filtered.filter(invoice => {
+        const issueDate = new Date(invoice.issue_date);
+        const start = new Date(searchStartDate);
+        const end = new Date(searchEndDate);
+        return issueDate >= start && issueDate <= end;
+      });
+    }
+
+    // فلترة بالشهر والسنة
+    if (searchMonth && searchYear) {
+      filtered = filtered.filter(invoice => {
+        const issueDate = new Date(invoice.issue_date);
+        return issueDate.getMonth() + 1 === parseInt(searchMonth) && 
+               issueDate.getFullYear() === parseInt(searchYear);
+      });
+    } else if (searchYear) {
+      filtered = filtered.filter(invoice => {
+        const issueDate = new Date(invoice.issue_date);
+        return issueDate.getFullYear() === parseInt(searchYear);
+      });
+    } else if (searchMonth) {
+      filtered = filtered.filter(invoice => {
+        const issueDate = new Date(invoice.issue_date);
+        return issueDate.getMonth() + 1 === parseInt(searchMonth);
+      });
+    }
+
+    setFilteredUnpaidInvoices(filtered);
+  };
+
+  const clearSearchFilters = () => {
+    setSearchName("");
+    setSearchPhone("");
+    setSearchStartDate("");
+    setSearchEndDate("");
+    setSearchMonth("");
+    setSearchYear("");
   };
 
   const handleAddExpense = async () => {
@@ -511,71 +637,251 @@ const Reports = () => {
         </Card>
       </div>
 
-      {/* جدول المصروفات */}
-      <Card>
-        <CardHeader>
-          <CardTitle>المصروفات</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {expenses.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">لا توجد مصروفات في هذه الفترة</p>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>رقم المصروف</TableHead>
-                  <TableHead>الوصف</TableHead>
-                  <TableHead>الفئة</TableHead>
-                  <TableHead>المبلغ</TableHead>
-                  <TableHead>طريقة الدفع</TableHead>
-                  <TableHead>التاريخ</TableHead>
-                  <TableHead>الإجراءات</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {expenses.map((expense) => (
-                  <TableRow key={expense.id}>
-                    <TableCell className="font-medium">
-                      {expense.expense_number}
-                    </TableCell>
-                    <TableCell>{expense.description}</TableCell>
-                    <TableCell>
-                      {expense.category && (
-                        <Badge variant="outline">
-                          {expense.category === 'office_supplies' && 'مستلزمات مكتبية'}
-                          {expense.category === 'marketing' && 'تسويق'}
-                          {expense.category === 'utilities' && 'خدمات'}
-                          {expense.category === 'transportation' && 'مواصلات'}
-                          {expense.category === 'equipment' && 'معدات'}
-                          {expense.category === 'other' && 'أخرى'}
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="font-bold text-red-600">
-                      {expense.amount.toLocaleString()} ر.س
-                    </TableCell>
-                    <TableCell>{expense.payment_method}</TableCell>
-                    <TableCell>
-                      {new Date(expense.date).toLocaleDateString('ar-SA')}
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEditExpense(expense)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+      {/* Content Tabs */}
+      <Tabs defaultValue="expenses" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="expenses">المصروفات</TabsTrigger>
+          <TabsTrigger value="unpaid">الفواتير غير المدفوعة</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="expenses" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>المصروفات</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {expenses.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">لا توجد مصروفات في هذه الفترة</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>رقم المصروف</TableHead>
+                      <TableHead>الوصف</TableHead>
+                      <TableHead>الفئة</TableHead>
+                      <TableHead>المبلغ</TableHead>
+                      <TableHead>طريقة الدفع</TableHead>
+                      <TableHead>التاريخ</TableHead>
+                      <TableHead>الإجراءات</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {expenses.map((expense) => (
+                      <TableRow key={expense.id}>
+                        <TableCell className="font-medium">
+                          {expense.expense_number}
+                        </TableCell>
+                        <TableCell>{expense.description}</TableCell>
+                        <TableCell>
+                          {expense.category && (
+                            <Badge variant="outline">
+                              {expense.category === 'office_supplies' && 'مستلزمات مكتبية'}
+                              {expense.category === 'marketing' && 'تسويق'}
+                              {expense.category === 'utilities' && 'خدمات'}
+                              {expense.category === 'transportation' && 'مواصلات'}
+                              {expense.category === 'equipment' && 'معدات'}
+                              {expense.category === 'other' && 'أخرى'}
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="font-bold text-red-600">
+                          {expense.amount.toLocaleString()} ر.س
+                        </TableCell>
+                        <TableCell>{expense.payment_method}</TableCell>
+                        <TableCell>
+                          {new Date(expense.date).toLocaleDateString('ar-SA')}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditExpense(expense)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="unpaid" className="space-y-4">
+          {/* Search Filters */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Search className="h-5 w-5" />
+                فلاتر البحث
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                <div>
+                  <Label htmlFor="search-name">اسم العميل</Label>
+                  <Input
+                    id="search-name"
+                    placeholder="البحث بالاسم..."
+                    value={searchName}
+                    onChange={(e) => setSearchName(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="search-phone">رقم الجوال</Label>
+                  <Input
+                    id="search-phone"
+                    placeholder="رقم الجوال..."
+                    value={searchPhone}
+                    onChange={(e) => setSearchPhone(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="search-start-date">من تاريخ</Label>
+                  <Input
+                    id="search-start-date"
+                    type="date"
+                    value={searchStartDate}
+                    onChange={(e) => setSearchStartDate(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="search-end-date">إلى تاريخ</Label>
+                  <Input
+                    id="search-end-date"
+                    type="date"
+                    value={searchEndDate}
+                    onChange={(e) => setSearchEndDate(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="search-month">الشهر</Label>
+                  <Select value={searchMonth} onValueChange={setSearchMonth}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="اختر الشهر" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">جميع الأشهر</SelectItem>
+                      <SelectItem value="1">يناير</SelectItem>
+                      <SelectItem value="2">فبراير</SelectItem>
+                      <SelectItem value="3">مارس</SelectItem>
+                      <SelectItem value="4">أبريل</SelectItem>
+                      <SelectItem value="5">مايو</SelectItem>
+                      <SelectItem value="6">يونيو</SelectItem>
+                      <SelectItem value="7">يوليو</SelectItem>
+                      <SelectItem value="8">أغسطس</SelectItem>
+                      <SelectItem value="9">سبتمبر</SelectItem>
+                      <SelectItem value="10">أكتوبر</SelectItem>
+                      <SelectItem value="11">نوفمبر</SelectItem>
+                      <SelectItem value="12">ديسمبر</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="search-year">السنة</Label>
+                  <Select value={searchYear} onValueChange={setSearchYear}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="اختر السنة" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">جميع السنوات</SelectItem>
+                      <SelectItem value="2023">2023</SelectItem>
+                      <SelectItem value="2024">2024</SelectItem>
+                      <SelectItem value="2025">2025</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="mt-4">
+                <Button variant="outline" onClick={clearSearchFilters}>
+                  مسح الفلاتر
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Unpaid Invoices Table */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <AlertCircle className="h-5 w-5 text-red-500" />
+                الفواتير غير المدفوعة ({filteredUnpaidInvoices.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {unpaidLoading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                  <p className="text-muted-foreground">جاري تحميل الفواتير...</p>
+                </div>
+              ) : filteredUnpaidInvoices.length === 0 ? (
+                <div className="text-center py-8">
+                  <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">لا توجد فواتير غير مدفوعة</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>رقم الفاتورة</TableHead>
+                      <TableHead>اسم العميل</TableHead>
+                      <TableHead>رقم الجوال</TableHead>
+                      <TableHead>المبلغ</TableHead>
+                      <TableHead>تاريخ الإصدار</TableHead>
+                      <TableHead>تاريخ الاستحقاق</TableHead>
+                      <TableHead>حالة التأخير</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredUnpaidInvoices.map((invoice) => {
+                      const dueDate = new Date(invoice.due_date);
+                      const today = new Date();
+                      const isOverdue = dueDate < today;
+                      const daysDiff = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 3600 * 24));
+                      
+                      return (
+                        <TableRow key={invoice.id}>
+                          <TableCell className="font-medium">
+                            {invoice.invoice_number}
+                          </TableCell>
+                          <TableCell>{invoice.customers?.name || 'غير محدد'}</TableCell>
+                          <TableCell>{invoice.customers?.phone || 'غير محدد'}</TableCell>
+                          <TableCell className="font-bold text-red-600">
+                            {invoice.total_amount.toLocaleString()} ر.س
+                          </TableCell>
+                          <TableCell>
+                            {new Date(invoice.issue_date).toLocaleDateString('ar-SA')}
+                          </TableCell>
+                          <TableCell>
+                            {new Date(invoice.due_date).toLocaleDateString('ar-SA')}
+                          </TableCell>
+                          <TableCell>
+                            {isOverdue ? (
+                              <Badge variant="destructive" className="gap-1">
+                                <Clock className="h-3 w-3" />
+                                متأخر {daysDiff} يوم
+                              </Badge>
+                            ) : (
+                              <Badge variant="secondary" className="gap-1">
+                                <Clock className="h-3 w-3" />
+                                مستحق قريباً
+                              </Badge>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Edit Expense Dialog */}
       <Dialog open={isEditExpenseOpen} onOpenChange={setIsEditExpenseOpen}>
