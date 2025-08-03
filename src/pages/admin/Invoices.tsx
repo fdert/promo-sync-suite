@@ -549,10 +549,11 @@ const Invoices = () => {
       {/* نافذة طباعة الفاتورة */}
       {printingInvoice && (
         <Dialog open={!!printingInvoice} onOpenChange={() => setPrintingInvoice(null)}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>طباعة الفاتورة {printingInvoice.invoice_number}</DialogTitle>
             </DialogHeader>
+            
             <div className="space-y-4">
               <Button 
                 onClick={() => window.print()} 
@@ -562,225 +563,270 @@ const Invoices = () => {
                 طباعة الفاتورة
               </Button>
               
-              {/* إضافة CSS للطباعة */}
-              <style>{`
-                @media print {
-                  .no-print { display: none !important; }
-                  body * { visibility: hidden; }
-                  .print-content, .print-content * { visibility: visible; }
-                  .print-content { 
-                    position: absolute !important;
-                    left: 0 !important;
-                    top: 0 !important;
-                    width: 100% !important;
-                    height: 100% !important;
-                    margin: 0 !important;
-                    padding: 0 !important;
-                    box-sizing: border-box !important;
+              {/* CSS الطباعة المحسن */}
+              <style dangerouslySetInnerHTML={{
+                __html: `
+                  @media print {
+                    * {
+                      -webkit-print-color-adjust: exact !important;
+                      color-adjust: exact !important;
+                    }
+                    
+                    @page {
+                      size: A4 portrait !important;
+                      margin: 10mm !important;
+                    }
+                    
+                    body {
+                      font-family: Arial, sans-serif !important;
+                      font-size: 11px !important;
+                      line-height: 1.3 !important;
+                      color: #000 !important;
+                      background: #fff !important;
+                    }
+                    
+                    .no-print,
+                    .no-print * {
+                      display: none !important;
+                      visibility: hidden !important;
+                    }
+                    
+                    .print-invoice {
+                      display: block !important;
+                      visibility: visible !important;
+                      width: 100% !important;
+                      max-width: none !important;
+                      margin: 0 !important;
+                      padding: 0 !important;
+                      box-shadow: none !important;
+                      border: none !important;
+                      background: #fff !important;
+                      page-break-inside: avoid !important;
+                    }
+                    
+                    .print-invoice * {
+                      visibility: visible !important;
+                    }
+                    
+                    .print-header {
+                      display: grid !important;
+                      grid-template-columns: 1fr auto 1fr !important;
+                      gap: 10px !important;
+                      align-items: start !important;
+                      margin-bottom: 15px !important;
+                      padding-bottom: 10px !important;
+                      border-bottom: 2px solid #1e40af !important;
+                    }
+                    
+                    .print-logo {
+                      max-width: 50px !important;
+                      max-height: 50px !important;
+                      object-fit: contain !important;
+                    }
+                    
+                    .print-stamp {
+                      max-width: 60px !important;
+                      max-height: 40px !important;
+                      object-fit: contain !important;
+                    }
+                    
+                    .print-section {
+                      margin-bottom: 10px !important;
+                      page-break-inside: avoid !important;
+                    }
+                    
+                    .print-table {
+                      width: 100% !important;
+                      border-collapse: collapse !important;
+                      margin: 5px 0 !important;
+                    }
+                    
+                    .print-table td {
+                      padding: 5px !important;
+                      border: 1px solid #ddd !important;
+                      font-size: 10px !important;
+                    }
+                    
+                    .print-total {
+                      border-top: 2px solid #1e40af !important;
+                      padding-top: 10px !important;
+                      margin-top: 10px !important;
+                      display: flex !important;
+                      justify-content: space-between !important;
+                      align-items: center !important;
+                    }
+                    
+                    .company-name {
+                      font-size: 14px !important;
+                      font-weight: bold !important;
+                      color: #1e40af !important;
+                      margin-bottom: 3px !important;
+                    }
+                    
+                    .invoice-title {
+                      font-size: 18px !important;
+                      font-weight: bold !important;
+                      color: #1e40af !important;
+                      margin-bottom: 5px !important;
+                    }
+                    
+                    .total-amount {
+                      font-size: 16px !important;
+                      font-weight: bold !important;
+                      color: #1e40af !important;
+                    }
+                    
+                    .section-title {
+                      font-size: 12px !important;
+                      font-weight: bold !important;
+                      background-color: #f3f4f6 !important;
+                      padding: 5px !important;
+                      margin-bottom: 5px !important;
+                    }
                   }
-                  @page {
-                    size: A5 portrait !important;
-                    margin: 5mm !important;
-                  }
-                  .invoice-container {
-                    width: 100% !important;
-                    height: 100vh !important;
-                    max-height: 200mm !important;
-                    font-size: 9px !important;
-                    line-height: 1.1 !important;
-                    box-sizing: border-box !important;
-                    overflow: hidden !important;
-                    padding: 2mm !important;
-                    page-break-inside: avoid !important;
-                  }
-                  .header-section {
-                    height: 35mm !important;
-                    display: grid !important;
-                    grid-template-columns: 1fr 1fr 1fr !important;
-                    gap: 2mm !important;
-                    align-items: flex-start !important;
-                    border-bottom: 1px solid #1e40af !important;
-                    margin-bottom: 2mm !important;
-                    padding-bottom: 1mm !important;
-                    page-break-inside: avoid !important;
-                  }
-                  .customer-section {
-                    height: 18mm !important;
-                    margin-bottom: 2mm !important;
-                    page-break-inside: avoid !important;
-                  }
-                  .details-section {
-                    height: 30mm !important;
-                    margin-bottom: 2mm !important;
-                    page-break-inside: avoid !important;
-                  }
-                  .total-section {
-                    height: 20mm !important;
-                    border-top: 1px solid #1e40af !important;
-                    padding-top: 1mm !important;
-                    margin-bottom: 2mm !important;
-                    page-break-inside: avoid !important;
-                  }
-                  .footer-section {
-                    height: 12mm !important;
-                    text-align: center !important;
-                    page-break-inside: avoid !important;
-                  }
-                  .company-logo {
-                    max-height: 18mm !important;
-                    max-width: 18mm !important;
-                    object-fit: contain !important;
-                  }
-                  .company-stamp {
-                    max-height: 12mm !important;
-                    max-width: 15mm !important;
-                    object-fit: contain !important;
-                  }
-                  .text-xs { font-size: 7px !important; line-height: 1.1 !important; }
-                  .text-sm { font-size: 8px !important; line-height: 1.1 !important; }
-                  .text-lg { font-size: 10px !important; line-height: 1.1 !important; }
-                  .text-xl { font-size: 11px !important; line-height: 1.1 !important; }
-                  .text-2xl { font-size: 12px !important; line-height: 1.1 !important; }
-                  table { border-collapse: collapse !important; width: 100% !important; }
-                  td { padding: 0.5mm !important; vertical-align: top !important; }
-                  h1, h2, h3, h4 { margin: 0 !important; padding: 0 !important; }
-                  p { margin: 0 !important; padding: 0 !important; }
-                  .border-b { border-bottom: 1px solid #e5e7eb !important; }
-                  .bg-gray-50 { background-color: #f9fafb !important; }
-                  .bg-gray-100 { background-color: #f3f4f6 !important; }
-                  .text-blue-800 { color: #1e40af !important; }
-                }
-              `}</style>
-
-              <div className="print-content bg-white p-4 rounded-lg shadow-lg max-w-4xl mx-auto" dir="rtl">
-                <div className="invoice-container">
-                  
-                  {/* Header Section */}
-                  <div className="header-section grid grid-cols-3 gap-2 items-start">
-                    {/* بيانات الشركة - اليمين */}
-                    <div className="text-right">
-                      <h2 className="text-lg font-bold text-blue-800 mb-1">{companyInfo.name}</h2>
-                      <p className="text-xs mb-1">{companyInfo.address}</p>
-                      <p className="text-xs mb-1">هاتف: {companyInfo.phone}</p>
-                      <p className="text-xs">البريد: {companyInfo.email}</p>
-                    </div>
-
-                    {/* الشعار - المنتصف */}
-                    <div className="flex justify-center items-center">
-                      {companyInfo.logo && (
-                        <img 
-                          src={companyInfo.logo} 
-                          alt="شعار الوكالة" 
-                          className="company-logo"
-                        />
-                      )}
-                    </div>
-
-                    {/* بيانات الفاتورة - اليسار */}
-                    <div className="text-left">
-                      <h1 className="text-2xl font-bold text-blue-800 mb-1">فـاتـورة</h1>
-                      <p className="text-xs mb-1"><strong>رقم الفاتورة:</strong> {printingInvoice.invoice_number}</p>
-                      <p className="text-xs mb-1"><strong>تاريخ الإصدار:</strong> {new Date(printingInvoice.issue_date).toLocaleDateString('ar-SA')}</p>
-                      <p className="text-xs"><strong>تاريخ الاستحقاق:</strong> {new Date(printingInvoice.due_date).toLocaleDateString('ar-SA')}</p>
-                    </div>
+                `
+              }} />
+              
+              {/* محتوى الفاتورة للطباعة */}
+              <div className="print-invoice bg-white p-6" dir="rtl">
+                
+                {/* Header */}
+                <div className="print-header">
+                  {/* بيانات الشركة - اليمين */}
+                  <div className="text-right">
+                    <div className="company-name">{companyInfo.name}</div>
+                    <div style={{fontSize: '10px', marginBottom: '2px'}}>{companyInfo.address}</div>
+                    <div style={{fontSize: '10px', marginBottom: '2px'}}>هاتف: {companyInfo.phone}</div>
+                    <div style={{fontSize: '10px'}}>البريد: {companyInfo.email}</div>
                   </div>
 
-                  {/* Customer Section */}
-                  <div className="customer-section">
-                    <h3 className="text-sm font-bold mb-1 bg-gray-100 p-1">بيانات العميل:</h3>
-                    <div className="pr-2">
-                      <p className="text-sm font-medium mb-0">{printingInvoice.customers?.name}</p>
-                      {printingInvoice.customers?.phone && (
-                        <p className="text-xs mb-0">الهاتف: {printingInvoice.customers.phone}</p>
-                      )}
-                      {printingInvoice.customers?.address && (
-                        <p className="text-xs">العنوان: {printingInvoice.customers.address}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Details Section */}
-                  <div className="details-section">
-                    <h3 className="text-sm font-bold mb-1 bg-gray-100 p-1">تفاصيل الفاتورة:</h3>
-                    <div className="border border-gray-300 rounded overflow-hidden">
-                      <table className="w-full text-xs">
-                        <tbody>
-                          <tr className="border-b">
-                            <td className="p-1 font-medium bg-gray-50">الوصف</td>
-                            <td className="p-1">خدمات الدعاية والإعلان</td>
-                          </tr>
-                          <tr className="border-b">
-                            <td className="p-1 font-medium">المبلغ الأساسي</td>
-                            <td className="p-1">{printingInvoice.amount?.toLocaleString('ar-SA')} ر.س</td>
-                          </tr>
-                          <tr className="border-b">
-                            <td className="p-1 font-medium bg-gray-50">ضريبة القيمة المضافة (15%)</td>
-                            <td className="p-1">{printingInvoice.tax_amount?.toLocaleString('ar-SA')} ر.س</td>
-                          </tr>
-                          <tr className="border-b">
-                            <td className="p-1 font-medium">نوع الدفع</td>
-                            <td className="p-1">{printingInvoice.payment_type}</td>
-                          </tr>
-                          <tr>
-                            <td className="p-1 font-medium bg-gray-50">الحالة</td>
-                            <td className="p-1">
-                              <span className={`px-1 py-0 rounded text-xs ${
-                                printingInvoice.status === 'مدفوع' ? 'bg-green-100' :
-                                printingInvoice.status === 'قيد الانتظار' ? 'bg-yellow-100' :
-                                'bg-red-100'
-                              }`}>
-                                {printingInvoice.status}
-                              </span>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-
-                  {/* Total Section */}
-                  <div className="total-section">
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="text-right flex-grow">
-                        <h2 className="text-lg font-bold text-blue-800">
-                          المجموع الكلي: {printingInvoice.total_amount?.toLocaleString('ar-SA')} ر.س
-                        </h2>
-                      </div>
-                      {/* الختم أسفل المجموع الكلي */}
-                      <div className="flex justify-end mr-4">
-                        {companyInfo.stamp && (
-                          <img 
-                            src={companyInfo.stamp} 
-                            alt="ختم الوكالة" 
-                            className="company-stamp object-contain"
-                          />
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Notes */}
-                    {printingInvoice.notes && (
-                      <div className="mt-2">
-                        <h4 className="text-xs font-bold mb-1">ملاحظات:</h4>
-                        <p className="text-xs bg-gray-50 p-1 rounded">{printingInvoice.notes}</p>
-                      </div>
+                  {/* الشعار - المنتصف */}
+                  <div className="text-center">
+                    {companyInfo.logo && (
+                      <img 
+                        src={companyInfo.logo} 
+                        alt="شعار الوكالة" 
+                        className="print-logo"
+                      />
                     )}
                   </div>
 
-                  {/* Footer Section */}
-                  <div className="footer-section">
-                    <div className="border-t border-gray-300 pt-2">
-                      <p className="text-sm font-medium text-gray-700 mb-1">شكراً لك على التعامل معنا</p>
-                      <p className="text-blue-600 italic text-xs font-medium">{companyInfo.tagline}</p>
-                      <div className="mt-1">
-                        <p className="text-xs text-gray-500">
-                          للاستفسارات: {companyInfo.phone} | {companyInfo.email}
-                        </p>
-                      </div>
+                  {/* بيانات الفاتورة - اليسار */}
+                  <div className="text-left">
+                    <div className="invoice-title">فـاتـورة</div>
+                    <div style={{fontSize: '10px', marginBottom: '2px'}}>
+                      <strong>رقم الفاتورة:</strong> {printingInvoice.invoice_number}
+                    </div>
+                    <div style={{fontSize: '10px', marginBottom: '2px'}}>
+                      <strong>تاريخ الإصدار:</strong> {new Date(printingInvoice.issue_date).toLocaleDateString('ar-SA')}
+                    </div>
+                    <div style={{fontSize: '10px'}}>
+                      <strong>تاريخ الاستحقاق:</strong> {new Date(printingInvoice.due_date).toLocaleDateString('ar-SA')}
                     </div>
                   </div>
-
                 </div>
+
+                {/* Customer Section */}
+                <div className="print-section">
+                  <div className="section-title">بيانات العميل:</div>
+                  <div style={{paddingRight: '10px'}}>
+                    <div style={{fontSize: '11px', fontWeight: 'bold', marginBottom: '2px'}}>
+                      {printingInvoice.customers?.name}
+                    </div>
+                    {printingInvoice.customers?.phone && (
+                      <div style={{fontSize: '10px', marginBottom: '2px'}}>
+                        الهاتف: {printingInvoice.customers.phone}
+                      </div>
+                    )}
+                    {printingInvoice.customers?.address && (
+                      <div style={{fontSize: '10px'}}>
+                        العنوان: {printingInvoice.customers.address}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Details Section */}
+                <div className="print-section">
+                  <div className="section-title">تفاصيل الفاتورة:</div>
+                  <table className="print-table">
+                    <tbody>
+                      <tr>
+                        <td style={{fontWeight: 'bold', backgroundColor: '#f9fafb'}}>الوصف</td>
+                        <td>خدمات الدعاية والإعلان</td>
+                      </tr>
+                      <tr>
+                        <td style={{fontWeight: 'bold'}}>المبلغ الأساسي</td>
+                        <td>{printingInvoice.amount?.toLocaleString('ar-SA')} ر.س</td>
+                      </tr>
+                      <tr>
+                        <td style={{fontWeight: 'bold', backgroundColor: '#f9fafb'}}>ضريبة القيمة المضافة (15%)</td>
+                        <td>{printingInvoice.tax_amount?.toLocaleString('ar-SA')} ر.س</td>
+                      </tr>
+                      <tr>
+                        <td style={{fontWeight: 'bold'}}>نوع الدفع</td>
+                        <td>{printingInvoice.payment_type}</td>
+                      </tr>
+                      <tr>
+                        <td style={{fontWeight: 'bold', backgroundColor: '#f9fafb'}}>الحالة</td>
+                        <td>
+                          <span style={{
+                            padding: '2px 6px',
+                            borderRadius: '3px',
+                            fontSize: '9px',
+                            backgroundColor: printingInvoice.status === 'مدفوع' ? '#d1fae5' :
+                                           printingInvoice.status === 'قيد الانتظار' ? '#fef3c7' : '#fecaca'
+                          }}>
+                            {printingInvoice.status}
+                          </span>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Total Section */}
+                <div className="print-total">
+                  <div>
+                    <div className="total-amount">
+                      المجموع الكلي: {printingInvoice.total_amount?.toLocaleString('ar-SA')} ر.س
+                    </div>
+                  </div>
+                  {/* الختم */}
+                  <div>
+                    {companyInfo.stamp && (
+                      <img 
+                        src={companyInfo.stamp} 
+                        alt="ختم الوكالة" 
+                        className="print-stamp"
+                      />
+                    )}
+                  </div>
+                </div>
+
+                {/* Notes */}
+                {printingInvoice.notes && (
+                  <div className="print-section" style={{marginTop: '10px'}}>
+                    <div style={{fontSize: '11px', fontWeight: 'bold', marginBottom: '3px'}}>ملاحظات:</div>
+                    <div style={{fontSize: '10px', backgroundColor: '#f9fafb', padding: '5px', borderRadius: '3px'}}>
+                      {printingInvoice.notes}
+                    </div>
+                  </div>
+                )}
+
+                {/* Footer */}
+                <div style={{textAlign: 'center', marginTop: '15px', paddingTop: '10px', borderTop: '1px solid #e5e7eb'}}>
+                  <div style={{fontSize: '11px', fontWeight: 'bold', marginBottom: '3px', color: '#374151'}}>
+                    شكراً لك على التعامل معنا
+                  </div>
+                  <div style={{fontSize: '10px', color: '#2563eb', fontStyle: 'italic'}}>
+                    {companyInfo.tagline}
+                  </div>
+                  <div style={{fontSize: '9px', color: '#6b7280', marginTop: '5px'}}>
+                    للاستفسارات: {companyInfo.phone} | {companyInfo.email}
+                  </div>
+                </div>
+
               </div>
             </div>
           </DialogContent>
