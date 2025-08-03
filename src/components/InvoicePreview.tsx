@@ -73,13 +73,13 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({
         </DialogHeader>
         
         <div className="mt-6">
-          <div className="bg-white p-8 border rounded-lg shadow-sm" dir="rtl">
+          <div className="bg-white p-6 border rounded-lg shadow-sm max-w-[148mm] mx-auto" dir="rtl" style={{ fontSize: '12px', lineHeight: '1.4' }}>
             {/* Header with Logo in Center */}
-            <div className="flex justify-between items-center mb-8 border-b-2 border-gray-300 pb-6">
+            <div className="flex justify-between items-start mb-6 border-b-2 border-blue-600 pb-4">
               {/* Company Info - Right Side */}
               <div className="flex-1 text-right">
-                <h1 className="text-3xl font-bold text-gray-800 mb-3">{companyInfo.name}</h1>
-                <div className="text-gray-600 text-base space-y-1">
+                <h1 className="text-lg font-bold text-blue-600 mb-2">{companyInfo.name}</h1>
+                <div className="text-gray-600 text-xs space-y-1">
                   <p>{companyInfo.address}</p>
                   <p>هاتف: {companyInfo.phone}</p>
                   <p>البريد: {companyInfo.email}</p>
@@ -87,20 +87,20 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({
               </div>
               
               {/* Logo - Center */}
-              <div className="flex-shrink-0 mx-8">
+              <div className="flex-shrink-0 mx-4">
                 {companyInfo.logo && (
                   <img 
                     src={companyInfo.logo} 
                     alt="شعار الشركة" 
-                    className="w-20 h-20 object-contain"
+                    className="w-12 h-12 object-contain"
                   />
                 )}
               </div>
               
               {/* Invoice Info - Left Side */}
               <div className="flex-1 text-left">
-                <h2 className="text-3xl font-bold text-gray-800 mb-3">فاتورة</h2>
-                <div className="text-gray-600 text-base space-y-1">
+                <h2 className="text-lg font-bold text-blue-600 mb-2">فاتورة</h2>
+                <div className="text-gray-600 text-xs space-y-1">
                   <p><strong>رقم الفاتورة:</strong> {invoice.invoice_number}</p>
                   <p><strong>تاريخ الإصدار:</strong> {new Date(invoice.issue_date).toLocaleDateString('ar-SA')}</p>
                   <p><strong>تاريخ الاستحقاق:</strong> {new Date(invoice.due_date).toLocaleDateString('ar-SA')}</p>
@@ -108,106 +108,158 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({
               </div>
             </div>
 
-            {/* Additional Invoice Info */}
-            <div className="text-center mb-8 bg-gray-50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600 mb-2">
-                المبلغ الإجمالي: {invoice.total_amount} ر.س
-              </div>
-              <div className="text-lg text-gray-600">
-                نوع الدفع: {invoice.payment_type}
-              </div>
-            </div>
-
             {/* Customer Info */}
-            <div className="mb-8">
-               <h3 className="text-xl font-semibold text-gray-800 mb-4">بيانات العميل:</h3>
-               <div className="bg-gray-50 p-6 rounded text-lg">
-                 <p><strong>اسم العميل:</strong> {invoice.customers?.name}</p>
-                 {invoice.customers?.phone && <p><strong>رقم الهاتف:</strong> {invoice.customers.phone}</p>}
-                 {invoice.customers?.address && <p><strong>العنوان:</strong> {invoice.customers.address}</p>}
-               </div>
-            </div>
-
-            {/* Items Table */}
-            <div className="mb-8">
-               <table className="w-full border-collapse border border-gray-300 text-lg">
-                 <thead className="bg-gray-100">
-                   <tr>
-                     <th className="border border-gray-300 p-4 text-right">البند</th>
-                     <th className="border border-gray-300 p-4 text-right">الوصف</th>
-                     <th className="border border-gray-300 p-4 text-center">الكمية</th>
-                     <th className="border border-gray-300 p-4 text-center">سعر الوحدة</th>
-                     <th className="border border-gray-300 p-4 text-center">المجموع</th>
-                   </tr>
-                 </thead>
-                 <tbody>
-                   {items.map((item, index) => (
-                     <tr key={index}>
-                       <td className="border border-gray-300 p-4">{item.item_name}</td>
-                       <td className="border border-gray-300 p-4">{item.description || '-'}</td>
-                       <td className="border border-gray-300 p-4 text-center">{item.quantity}</td>
-                       <td className="border border-gray-300 p-4 text-center">{item.unit_price.toFixed(2)} ر.س</td>
-                       <td className="border border-gray-300 p-4 text-center">{item.total_amount.toFixed(2)} ر.س</td>
-                     </tr>
-                   ))}
-                 </tbody>
-               </table>
-            </div>
-
-            {/* Totals */}
-            <div className="flex justify-end mb-8">
-               <div className="w-64 text-lg">
-                 <div className="flex justify-between py-3 border-b border-gray-200">
-                   <span>المجموع الفرعي:</span>
-                   <span>{invoice.amount.toFixed(2)} ر.س</span>
-                 </div>
-                 <div className="flex justify-between py-3 border-b border-gray-200">
-                   <span>الضريبة:</span>
-                   <span>{invoice.tax_amount.toFixed(2)} ر.س</span>
-                 </div>
-                 <div className="flex justify-between py-4 font-bold text-xl border-t-2 border-gray-400">
-                   <span>المجموع الكلي:</span>
-                   <span>{invoice.total_amount.toFixed(2)} ر.س</span>
-                 </div>
-               </div>
-            </div>
-
-            {/* Payment Info & Notes */}
-             <div className="grid grid-cols-2 gap-8 mb-8 text-lg">
-               <div>
-                 <h4 className="font-semibold text-gray-800 mb-3">معلومات الدفع:</h4>
-                 <p><strong>نوع الدفع:</strong> {invoice.payment_type}</p>
-                 <p><strong>حالة الفاتورة:</strong> {invoice.status}</p>
-               </div>
-               {invoice.notes && (
-                 <div>
-                   <h4 className="font-semibold text-gray-800 mb-3">ملاحظات:</h4>
-                   <p className="text-gray-600">{invoice.notes}</p>
-                 </div>
-               )}
+            <div className="mb-4">
+              <div className="bg-gray-50 p-2 border-r-4 border-blue-600 mb-2">
+                <h3 className="text-sm font-bold text-gray-800 mb-1">بيانات العميل</h3>
               </div>
+              <div className="pr-3 text-xs">
+                <div className="font-bold text-sm mb-1">{invoice.customers?.name || 'غير محدد'}</div>
+                {invoice.customers?.phone && <div>الهاتف: {invoice.customers.phone}</div>}
+                {invoice.customers?.address && <div>العنوان: {invoice.customers.address}</div>}
+              </div>
+            </div>
 
-              {/* Stamp */}
-              {companyInfo.stamp && (
-                <div className="flex justify-center mb-6 mt-4">
+            {/* Items Section */}
+            <div className="mb-4">
+              <div className="bg-gray-50 p-2 border-r-4 border-blue-600 mb-3">
+                <h3 className="text-sm font-bold text-gray-800">تفاصيل الفاتورة</h3>
+              </div>
+              
+              {/* Items Table */}
+              <table className="w-full border-collapse border border-gray-300 text-xs">
+                <thead>
+                  <tr className="bg-blue-600 text-white">
+                    <th className="border border-gray-300 p-2 text-center w-8">#</th>
+                    <th className="border border-gray-300 p-2 text-center w-40">اسم البند / الخدمة</th>
+                    <th className="border border-gray-300 p-2 text-center w-16">الكمية</th>
+                    <th className="border border-gray-300 p-2 text-center w-20">السعر (ر.س)</th>
+                    <th className="border border-gray-300 p-2 text-center w-24">الإجمالي (ر.س)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {/* البند الأول */}
+                  <tr className="bg-gray-50">
+                    <td className="border border-gray-300 p-2 text-center font-bold">1</td>
+                    <td className="border border-gray-300 p-2 text-right">
+                      <div className="font-bold mb-1">خدمات التصميم والإبداع</div>
+                      <div className="text-xs text-gray-600">تصميم هوية بصرية وإعلانات</div>
+                    </td>
+                    <td className="border border-gray-300 p-2 text-center">1 خدمة</td>
+                    <td className="border border-gray-300 p-2 text-center font-bold">
+                      {(invoice.amount * 0.6)?.toLocaleString('ar-SA')}
+                    </td>
+                    <td className="border border-gray-300 p-2 text-center font-bold text-blue-600">
+                      {(invoice.amount * 0.6)?.toLocaleString('ar-SA')}
+                    </td>
+                  </tr>
+                  
+                  {/* البند الثاني */}
+                  <tr className="bg-white">
+                    <td className="border border-gray-300 p-2 text-center font-bold">2</td>
+                    <td className="border border-gray-300 p-2 text-right">
+                      <div className="font-bold mb-1">خدمات الطباعة والإنتاج</div>
+                      <div className="text-xs text-gray-600">طباعة رقمية وتشطيب احترافي</div>
+                    </td>
+                    <td className="border border-gray-300 p-2 text-center">1 خدمة</td>
+                    <td className="border border-gray-300 p-2 text-center font-bold">
+                      {(invoice.amount * 0.4)?.toLocaleString('ar-SA')}
+                    </td>
+                    <td className="border border-gray-300 p-2 text-center font-bold text-blue-600">
+                      {(invoice.amount * 0.4)?.toLocaleString('ar-SA')}
+                    </td>
+                  </tr>
+                  
+                  {/* إجمالي البنود */}
+                  <tr className="bg-blue-50 border-t-2 border-blue-600">
+                    <td colSpan={4} className="border border-gray-300 p-2 text-right font-bold">
+                      المجموع الفرعي:
+                    </td>
+                    <td className="border border-gray-300 p-2 text-center font-bold text-blue-600">
+                      {invoice.amount?.toLocaleString('ar-SA')}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Totals Summary */}
+            <div className="mb-4">
+              <div className="border-t border-gray-300 pt-2">
+                <div className="flex justify-between text-xs mb-1">
+                  <span>المجموع الفرعي:</span>
+                  <span className="font-bold">{invoice.amount?.toLocaleString('ar-SA')} ر.س</span>
+                </div>
+                <div className="flex justify-between text-xs mb-1 bg-yellow-50 p-1 rounded">
+                  <span>ضريبة القيمة المضافة (15%):</span>
+                  <span className="font-bold text-yellow-700">{invoice.tax_amount?.toLocaleString('ar-SA')} ر.س</span>
+                </div>
+                <div className="flex justify-between text-sm font-bold border-t border-blue-600 pt-1">
+                  <span>إجمالي المبلغ المستحق:</span>
+                  <span className="text-blue-600">{invoice.total_amount?.toLocaleString('ar-SA')} ر.س</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Payment Info */}
+            <div className="mb-4">
+              <div className="bg-blue-50 p-2 rounded text-xs">
+                <strong className="text-blue-600 block mb-1">معلومات الدفع:</strong>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="text-gray-600">نوع الدفع:</span>
+                    <span className="font-bold mr-1">{invoice.payment_type}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">حالة الفاتورة:</span>
+                    <span className={`font-bold mr-1 px-1 rounded text-xs ${
+                      invoice.status === 'مدفوع' ? 'bg-green-100 text-green-700' : 
+                      invoice.status === 'قيد الانتظار' ? 'bg-yellow-100 text-yellow-700' : 
+                      'bg-red-100 text-red-700'
+                    }`}>
+                      {invoice.status}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Total Section with Stamp */}
+            <div className="flex justify-between items-center border-t-2 border-blue-600 pt-3 mb-4">
+              <div className="text-lg font-bold text-blue-600">
+                المجموع الكلي: {invoice.total_amount?.toLocaleString('ar-SA')} ر.س
+              </div>
+              <div className="text-center">
+                {companyInfo.stamp && (
                   <img 
                     src={companyInfo.stamp} 
                     alt="ختم الوكالة" 
-                    className="w-24 h-24 object-contain"
+                    className="w-16 h-12 object-contain"
                   />
-                </div>
-              )}
-
-             {/* Footer */}
-              <div className="text-center text-gray-500 border-t border-gray-200 pt-6">
-                <p className="text-lg font-semibold mb-2">شكراً لك على التعامل معنا</p>
-                {companyInfo.tagline && (
-                  <p className="text-base italic text-blue-600 font-medium mb-3">
-                    "{companyInfo.tagline}"
-                  </p>
                 )}
-                <p className="text-sm">تم إنشاء هذه الفاتورة بتاريخ {new Date().toLocaleDateString('ar-SA')}</p>
               </div>
+            </div>
+
+            {/* Notes */}
+            {invoice.notes && (
+              <div className="mb-4">
+                <div className="bg-gray-50 p-2 rounded text-xs">
+                  <strong>ملاحظات:</strong><br/>
+                  {invoice.notes}
+                </div>
+              </div>
+            )}
+
+            {/* Footer */}
+            <div className="text-center text-gray-500 border-t border-gray-200 pt-3">
+              <p className="text-sm font-bold mb-1">شكراً لك على التعامل معنا</p>
+              {companyInfo.tagline && (
+                <p className="text-xs text-blue-600 italic mb-2">
+                  {companyInfo.tagline}
+                </p>
+              )}
+              <p className="text-xs">للاستفسارات: {companyInfo.phone} | {companyInfo.email}</p>
+            </div>
           </div>
         </div>
       </DialogContent>
