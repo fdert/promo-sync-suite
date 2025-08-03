@@ -41,6 +41,7 @@ const Auth = () => {
 
   // جلب بيانات الشركة
   useEffect(() => {
+    console.log('🚀 تم تشغيل useEffect لجلب بيانات الشركة');
     const fetchCompanyInfo = async () => {
       try {
         console.log('🔍 بدء جلب بيانات الشركة...');
