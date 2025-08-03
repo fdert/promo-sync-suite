@@ -72,6 +72,19 @@ Deno.serve(async (req) => {
       }
     }
 
+    // تنسيق بنود الطلب أولاً (سواء كان هناك template أم لا)
+    if (orderDetails) {
+      if (orderDetails.order_items && orderDetails.order_items.length > 0) {
+        orderItemsText = orderDetails.order_items.map((item: any, index: number) => 
+          `${index + 1}. ${item.item_name} \n   الكمية: ${item.quantity}\n   السعر: ${item.unit_price} ر.س\n   المجموع: ${item.total_amount} ر.س`
+        ).join('\n\n');
+        console.log('Order items formatted:', orderItemsText);
+      } else {
+        orderItemsText = 'لا توجد بنود محددة';
+        console.log('No order items found');
+      }
+    }
+
     // محاولة الحصول على قالب الرسالة من قاعدة البيانات
     const { data: templateData, error: templateError } = await supabase
       .from('message_templates')
@@ -89,16 +102,6 @@ Deno.serve(async (req) => {
       // إذا كانت هناك تفاصيل طلب، استخدمها
       let description = data.description || 'غير محدد';
       if (orderDetails) {
-        // تنسيق بنود الطلب
-        if (orderDetails.order_items && orderDetails.order_items.length > 0) {
-          orderItemsText = orderDetails.order_items.map((item: any, index: number) => 
-            `${index + 1}. ${item.item_name} \n   الكمية: ${item.quantity}\n   السعر: ${item.unit_price} ر.س\n   المجموع: ${item.total_amount} ر.س`
-          ).join('\n\n');
-          console.log('Order items formatted:', orderItemsText);
-        } else {
-          orderItemsText = 'لا توجد بنود محددة';
-          console.log('No order items found');
-        }
         
         // حساب المبلغ المتبقي
         const totalAmount = parseFloat(orderDetails.amount?.toString() || '0');
