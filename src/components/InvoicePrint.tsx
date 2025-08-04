@@ -48,27 +48,16 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
   }
 }) => {
   return (
-    <div className="print-invoice" style={{ 
-      display: 'none',
-      maxWidth: '100%',
-      minHeight: '100vh',
-      margin: '0',
-      padding: '10px',
-      boxSizing: 'border-box',
-      fontSize: '11px',
-      lineHeight: '1.2',
-      pageBreakAfter: 'avoid'
-    }} dir="rtl">
+    <div className="print-invoice" style={{ display: 'none' }} dir="rtl">
       
       {/* Header with Logo in Center */}
       <div style={{ 
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: '8px',
+        marginBottom: '12px',
         borderBottom: '2px solid #000',
-        paddingBottom: '6px',
-        pageBreakInside: 'avoid'
+        paddingBottom: '8px'
       }}>
         {/* Company Info - Right Side */}
         <div style={{ flex: 1, textAlign: 'right' }}>
@@ -153,13 +142,12 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
       </div>
 
       {/* Items Table */}
-      <table style={{ 
-        width: '100%', 
-        borderCollapse: 'collapse',
-        fontSize: '11px',
-        marginBottom: '6px',
-        pageBreakInside: 'avoid'
-      }}>
+       <table style={{ 
+         width: '100%', 
+         borderCollapse: 'collapse',
+         fontSize: '12px',
+         marginBottom: '8px'
+       }}>
         <thead>
           <tr style={{ 
             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -167,83 +155,82 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
           }}>
             <th style={{ 
               border: '1px solid #555', 
-              padding: '3px', 
-              textAlign: 'center',
-              width: '20%',
+              padding: '4px', 
+              textAlign: 'right',
+              fontWeight: 'bold',
               color: '#ffffff',
-              fontSize: '11px',
-              fontWeight: 'bold'
+              fontSize: '12px'
             }}>
-              المجموع
+              البند
             </th>
             <th style={{ 
               border: '1px solid #555', 
-              padding: '3px', 
-              textAlign: 'center',
-              width: '20%',
-              color: '#ffffff',
-              fontSize: '11px',
-              fontWeight: 'bold'
-            }}>
-              السعر
-            </th>
-            <th style={{ 
-              border: '1px solid #555', 
-              padding: '3px', 
+              padding: '4px', 
               textAlign: 'center',
               width: '15%',
               color: '#ffffff',
-              fontSize: '11px',
+              fontSize: '12px',
               fontWeight: 'bold'
             }}>
               الكمية
             </th>
             <th style={{ 
               border: '1px solid #555', 
-              padding: '3px', 
-              textAlign: 'right',
-              fontWeight: 'bold',
+              padding: '4px', 
+              textAlign: 'center',
+              width: '20%',
               color: '#ffffff',
-              fontSize: '11px'
+              fontSize: '12px',
+              fontWeight: 'bold'
             }}>
-              البند
+              السعر
+            </th>
+            <th style={{ 
+              border: '1px solid #555', 
+              padding: '4px', 
+              textAlign: 'center',
+              width: '20%',
+              color: '#ffffff',
+              fontSize: '12px',
+              fontWeight: 'bold'
+            }}>
+              المجموع
             </th>
           </tr>
         </thead>
         <tbody>
           {items.map((item, index) => (
             <tr key={index}>
-              <td style={{ 
-                border: '1px solid #555', 
-                padding: '2px', 
-                textAlign: 'center',
-                fontSize: '10px'
-              }}>
-                {item.total_amount.toFixed(2)}
-              </td>
-              <td style={{ 
-                border: '1px solid #555', 
-                padding: '2px', 
-                textAlign: 'center',
-                fontSize: '10px'
-              }}>
-                {item.unit_price.toFixed(2)}
-              </td>
-              <td style={{ 
-                border: '1px solid #555', 
-                padding: '2px', 
-                textAlign: 'center',
-                fontSize: '10px'
-              }}>
-                {item.quantity}
-              </td>
-              <td style={{ 
-                border: '1px solid #555', 
-                padding: '2px',
-                fontSize: '10px',
-                textAlign: 'right'
-              }}>
+               <td style={{ 
+                 border: '1px solid #555', 
+                 padding: '2px',
+                 fontSize: '11px'
+               }}>
                 {item.item_name}
+              </td>
+               <td style={{ 
+                 border: '1px solid #555', 
+                 padding: '2px', 
+                 textAlign: 'center',
+                 fontSize: '11px'
+               }}>
+                 {item.quantity}
+               </td>
+               <td style={{ 
+                 border: '1px solid #555', 
+                 padding: '2px', 
+                 textAlign: 'center',
+                 fontSize: '11px'
+               }}>
+                 {item.unit_price.toFixed(2)}
+               </td>
+               <td style={{ 
+                 border: '1px solid #555', 
+                 padding: '2px', 
+                 textAlign: 'center',
+                 fontSize: '11px'
+               }}>
+                {item.total_amount.toFixed(2)}
               </td>
             </tr>
           ))}
@@ -254,14 +241,13 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
       <div style={{ 
         display: 'flex', 
         justifyContent: 'flex-end', 
-        marginBottom: '5px',
-        pageBreakInside: 'avoid'
+        marginBottom: '8px' 
       }}>
-        <div style={{ width: '120px', fontSize: '11px' }}>
+        <div style={{ width: '120px', fontSize: '12px' }}>
           <div style={{ 
             display: 'flex', 
             justifyContent: 'space-between', 
-            padding: '1px 0',
+            padding: '2px 0',
             borderBottom: '1px solid #ccc'
           }}>
             <span>المجموع:</span>
@@ -270,7 +256,7 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
           <div style={{ 
             display: 'flex', 
             justifyContent: 'space-between', 
-            padding: '1px 0',
+            padding: '2px 0',
             borderBottom: '1px solid #ccc'
           }}>
             <span>الضريبة:</span>
@@ -279,9 +265,9 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
           <div style={{ 
             display: 'flex', 
             justifyContent: 'space-between', 
-            padding: '2px 0',
-            fontWeight: 'bold',
-            fontSize: '12px',
+            padding: '3px 0',
+             fontWeight: 'bold',
+             fontSize: '13px',
             borderTop: '2px solid #000'
           }}>
             <span>الإجمالي:</span>
@@ -293,13 +279,12 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
       {/* Payment Info */}
       <div style={{ 
         display: 'flex', 
-        justifyContent: 'space-between',
-        fontSize: '10px',
-        marginBottom: '4px',
-        padding: '2px',
+         justifyContent: 'space-between',
+         fontSize: '11px',
+        marginBottom: '6px',
+        padding: '3px',
         backgroundColor: '#f9f9f9',
-        border: '1px solid #ddd',
-        pageBreakInside: 'avoid'
+        border: '1px solid #ddd'
       }}>
         <span><strong>نوع الدفع:</strong> {invoice.payment_type}</span>
         <span><strong>الحالة:</strong> {invoice.status}</span>
@@ -307,13 +292,12 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
 
       {/* Notes */}
       {invoice.notes && (
-        <div style={{ 
-          fontSize: '10px',
-          marginBottom: '4px',
+         <div style={{ 
+           fontSize: '11px',
+          marginBottom: '6px',
           padding: '2px',
           fontStyle: 'italic',
-          color: '#666',
-          pageBreakInside: 'avoid'
+          color: '#666'
         }}>
           <strong>ملاحظات:</strong> {invoice.notes}
         </div>
