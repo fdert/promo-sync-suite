@@ -1075,7 +1075,7 @@ const Accounts = () => {
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold">العملاء المدينون</h2>
             <div className="text-sm text-muted-foreground">
-              إجمالي المبالغ المستحقة: <span className="font-bold text-warning">{totalDebts.toLocaleString()} ر.س</span>
+              إجمالي المبالغ المستحقة: <span className="font-bold text-warning">{(totalDebts || 0).toLocaleString()} ر.س</span>
             </div>
           </div>
 
@@ -1157,68 +1157,63 @@ const Accounts = () => {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {debtorInvoices.map((invoice) => {
-                    const remainingAmount = invoice.total_amount - (invoice.paid_amount || 0);
-                    const daysPastDue = Math.floor((new Date().getTime() - new Date(invoice.due_date).getTime()) / (1000 * 60 * 60 * 24));
+                  {debtorInvoices.map((customer) => {
+                    const remainingAmount = customer.remaining_amount || 0;
+                    const totalAmount = customer.total_amount || 0;
+                    const paidAmount = customer.calculated_paid_amount || 0;
+                    const daysPastDue = customer.latest_due_date ? 
+                      Math.floor((new Date().getTime() - new Date(customer.latest_due_date).getTime()) / (1000 * 60 * 60 * 24)) : 0;
                     
                     return (
-                      <div key={invoice.id} className="flex items-center justify-between p-4 border-b hover:bg-muted/50">
+                      <div key={customer.id || customer.customer_id} className="flex items-center justify-between p-4 border-b hover:bg-muted/50">
                         <div className="flex items-center gap-4">
                           <div className="w-12 h-12 bg-warning/10 rounded-full flex items-center justify-center">
                             <Receipt className="h-6 w-6 text-warning" />
                           </div>
                           <div>
-                            <h3 className="font-medium">{invoice.customers?.name || 'عميل غير محدد'}</h3>
+                            <h3 className="font-medium">{customer.customer_name || 'عميل غير محدد'}</h3>
                             <p className="text-sm text-muted-foreground">
-                              فاتورة: {invoice.invoice_number} • تاريخ الإصدار: {invoice.issue_date}
+                              عدد الطلبات: {customer.total_orders || 0} • طلبات غير مدفوعة: {customer.unpaid_orders_count || 0}
                             </p>
-                            <p className="text-sm text-muted-foreground">
-                              تاريخ الاستحقاق: {invoice.due_date}
-                              {daysPastDue > 0 && (
-                                <span className="text-destructive font-medium"> • متأخر {daysPastDue} يوم</span>
-                              )}
-                            </p>
+                            {customer.latest_due_date && (
+                              <p className="text-sm text-muted-foreground">
+                                آخر تاريخ استحقاق: {customer.latest_due_date}
+                                {daysPastDue > 0 && (
+                                  <span className="text-destructive font-medium"> • متأخر {daysPastDue} يوم</span>
+                                )}
+                              </p>
+                            )}
                           </div>
                         </div>
                         
                         <div className="text-right">
                           <div className="flex flex-col gap-1">
-                            <Badge variant={invoice.status === 'قيد الانتظار' ? 'destructive' : 'secondary'}>
-                              {invoice.status}
+                            <Badge variant={remainingAmount > 0 ? 'destructive' : 'secondary'}>
+                              {remainingAmount > 0 ? 'مدين' : 'مدفوع'}
                             </Badge>
                             <p className="font-bold text-lg text-warning">
                               {remainingAmount.toLocaleString()} ر.س
                             </p>
                             <p className="text-sm text-muted-foreground">
-                              من أصل {invoice.total_amount.toLocaleString()} ر.س
+                              من أصل {totalAmount.toLocaleString()} ر.س
                             </p>
-                            {invoice.paid_amount > 0 && (
+                            {paidAmount > 0 && (
                               <p className="text-sm text-success">
-                                مدفوع: {invoice.paid_amount.toLocaleString()} ر.س
+                                مدفوع: {paidAmount.toLocaleString()} ر.س
                               </p>
                             )}
                           </div>
                         </div>
                         
                         <div className="flex items-center gap-2">
-                          {invoice.customers?.phone && (
-                            <Button variant="outline" size="sm" asChild>
-                              <a href={`tel:${invoice.customers.phone}`}>
-                                <Receipt className="h-4 w-4" />
-                              </a>
-                            </Button>
-                          )}
-                          {invoice.customers?.whatsapp_number && (
-                            <Button variant="outline" size="sm" asChild>
-                              <a 
-                                href={`https://wa.me/${invoice.customers.whatsapp_number.replace(/[^0-9]/g, '')}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                              >
-                                <Eye className="h-4 w-4" />
-                              </a>
-                            </Button>
-                          )}
+                          <Button variant="outline" size="sm" onClick={() => {
+                            toast({
+                              title: "معلومات العميل",
+                              description: `العميل: ${customer.customer_name} - إجمالي الديون: ${remainingAmount.toLocaleString()} ر.س`,
+                            });
+                          }}>
+                            <Eye className="h-4 w-4" />
+                          </Button>
                         </div>
                       </div>
                     );
@@ -1305,16 +1300,16 @@ const Accounts = () => {
                 <div className="space-y-3">
                   <div className="flex justify-between items-center py-2 border-b">
                     <span className="font-medium text-success">الإيرادات</span>
-                    <span className="font-bold text-success">{monthlyIncome.toLocaleString()} ر.س</span>
+                    <span className="font-bold text-success">{(monthlyIncome || 0).toLocaleString()} ر.س</span>
                   </div>
                   <div className="flex justify-between items-center py-2 border-b">
                     <span className="font-medium text-destructive">المصروفات</span>
-                    <span className="font-bold text-destructive">{monthlyExpenses.toLocaleString()} ر.س</span>
+                    <span className="font-bold text-destructive">{(monthlyExpenses || 0).toLocaleString()} ر.س</span>
                   </div>
                   <div className="flex justify-between items-center py-2 border-t border-gray-300">
                     <span className="font-bold">صافي الربح</span>
                     <span className={`font-bold text-lg ${netProfit >= 0 ? 'text-success' : 'text-destructive'}`}>
-                      {netProfit.toLocaleString()} ر.س
+                      {(netProfit || 0).toLocaleString()} ر.س
                     </span>
                   </div>
                 </div>
