@@ -1483,6 +1483,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      sync_accounts_receivable_balance: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       update_last_login: {
         Args: { _user_id: string }
         Returns: undefined
