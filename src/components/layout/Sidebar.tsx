@@ -131,6 +131,7 @@ const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
   const { user } = useAuth();
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
   const [filteredMenuItems, setFilteredMenuItems] = useState(menuItems);
+  const [companyInfo, setCompanyInfo] = useState<any>(null);
 
   useEffect(() => {
     const fetchUserRoles = async () => {
@@ -155,7 +156,25 @@ const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
       }
     };
 
+    const fetchCompanyInfo = async () => {
+      try {
+        const { data } = await supabase
+          .from('website_settings')
+          .select('setting_value')
+          .eq('setting_key', 'website_content')
+          .maybeSingle();
+
+        if (data?.setting_value && typeof data.setting_value === 'object') {
+          const websiteContent = data.setting_value as any;
+          setCompanyInfo(websiteContent.companyInfo);
+        }
+      } catch (error) {
+        console.error('Error fetching company info:', error);
+      }
+    };
+
     fetchUserRoles();
+    fetchCompanyInfo();
   }, [user]);
 
   return (
@@ -170,11 +189,17 @@ const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
         <div className="flex items-center justify-between">
           {!collapsed && (
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-r from-primary to-accent rounded-lg flex items-center justify-center">
-                <Palette className="h-5 w-5 text-white" />
-              </div>
+              {companyInfo?.logo ? (
+                <img src={companyInfo.logo} alt="شعار الشركة" className="w-8 h-8 object-contain rounded" />
+              ) : (
+                <div className="w-8 h-8 bg-gradient-to-r from-primary to-accent rounded-lg flex items-center justify-center">
+                  <Palette className="h-5 w-5 text-white" />
+                </div>
+              )}
               <div>
-                <h2 className="text-sm font-bold text-foreground">وكالة الإبداع</h2>
+                <h2 className="text-sm font-bold text-foreground">
+                  {companyInfo?.name || "وكالة الإبداع"}
+                </h2>
                 <p className="text-xs text-muted-foreground">للدعاية والإعلان</p>
               </div>
             </div>
