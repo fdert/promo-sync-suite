@@ -41,6 +41,8 @@ import {
   Image,
   Printer,
   Edit,
+  CreditCard,
+  Receipt,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -99,6 +101,14 @@ const Orders = () => {
   const [isEditStatusDialogOpen, setIsEditStatusDialogOpen] = useState(false);
   const [selectedOrderForEdit, setSelectedOrderForEdit] = useState<Order | null>(null);
   const [newStatus, setNewStatus] = useState("");
+  
+  // حالات حوار المدفوعات
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [selectedOrderForPayment, setSelectedOrderForPayment] = useState<Order | null>(null);
+  
+  // حالات حوار تحويل إلى فاتورة
+  const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
+  const [selectedOrderForInvoice, setSelectedOrderForInvoice] = useState<Order | null>(null);
   
   const { toast } = useToast();
 
@@ -260,6 +270,23 @@ const Orders = () => {
       const order = orders.find(o => o.id === orderId);
       if (!order) throw new Error('الطلب غير موجود');
 
+      // جلب اسم الشركة من قاعدة البيانات
+      let companyName = 'وكالة الإبداع للدعاية والإعلان';
+      try {
+        const { data: companyData } = await supabase
+          .from('website_settings')
+          .select('setting_value')
+          .eq('setting_key', 'company_info')
+          .maybeSingle();
+
+        if (companyData?.setting_value && typeof companyData.setting_value === 'object' && 
+            'companyName' in companyData.setting_value && companyData.setting_value.companyName) {
+          companyName = companyData.setting_value.companyName as string;
+        }
+      } catch (error) {
+        console.log('Could not fetch company name, using default');
+      }
+
       // الحصول على طلب الطباعة
       const { data: printOrder } = await supabase
         .from('print_orders')
@@ -344,7 +371,7 @@ ${publicFileUrl}
 📝 *للتعديل:* اكتب التعديلات المطلوبة
 
 شكراً لكم،
-*وكالة الإبداع للدعاية والإعلان*`;
+*${companyName}*`;
 
       // إرسال رسالة نصية تحتوي على الرابط
       const { error: messageError } = await supabase
@@ -444,6 +471,35 @@ ${publicFileUrl}
       toast({
         title: "خطأ في التحديث",
         description: "فشل في تحديث حالة الطلب",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // فتح صفحة المدفوعات
+  const openPaymentDialog = (order: Order) => {
+    setSelectedOrderForPayment(order);
+    setIsPaymentDialogOpen(true);
+  };
+
+  // فتح حوار تحويل إلى فاتورة
+  const openInvoiceDialog = (order: Order) => {
+    setSelectedOrderForInvoice(order);
+    setIsInvoiceDialogOpen(true);
+  };
+
+  // تحويل الطلب إلى فاتورة
+  const convertToInvoice = async (orderId: string) => {
+    try {
+      // فتح صفحة إنشاء فاتورة جديدة مع معرف الطلب
+      window.open(`/admin/invoices?order_id=${orderId}`, '_blank');
+      setIsInvoiceDialogOpen(false);
+      setSelectedOrderForInvoice(null);
+    } catch (error) {
+      console.error('Error converting to invoice:', error);
+      toast({
+        title: "خطأ",
+        description: "فشل في تحويل الطلب إلى فاتورة",
         variant: "destructive",
       });
     }
@@ -582,7 +638,7 @@ ${publicFileUrl}
                       {order.due_date ? new Date(order.due_date).toLocaleDateString('ar-SA') : '-'}
                     </TableCell>
                     <TableCell>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 flex-wrap">
                         {/* تعديل حالة الطلب */}
                         <Button
                           variant="outline"
@@ -595,6 +651,28 @@ ${publicFileUrl}
                         >
                           <Edit className="h-4 w-4 mr-1" />
                           تعديل الحالة
+                        </Button>
+                        
+                        {/* المدفوعات */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-green-600 border-green-200 hover:bg-green-50"
+                          onClick={() => openPaymentDialog(order)}
+                        >
+                          <CreditCard className="h-4 w-4 mr-1" />
+                          المدفوعات
+                        </Button>
+                        
+                        {/* تحويل إلى فاتورة */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                          onClick={() => openInvoiceDialog(order)}
+                        >
+                          <Receipt className="h-4 w-4 mr-1" />
+                          تحويل لفاتورة
                         </Button>
                         
                         {/* رفع ملفات التصميم */}
@@ -876,6 +954,89 @@ ${publicFileUrl}
                 ))}
               </div>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* حوار المدفوعات */}
+      <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>إدارة مدفوعات الطلب</DialogTitle>
+            <DialogDescription>
+              عرض وإدارة المدفوعات الخاصة بالطلب
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {selectedOrderForPayment && (
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="text-sm"><strong>الطلب:</strong> {selectedOrderForPayment.order_number}</p>
+                <p className="text-sm"><strong>العميل:</strong> {selectedOrderForPayment.customers?.name}</p>
+                <p className="text-sm"><strong>المبلغ الكلي:</strong> {selectedOrderForPayment.amount} ر.س</p>
+                <p className="text-sm"><strong>المبلغ المدفوع:</strong> {selectedOrderForPayment.paid_amount || 0} ر.س</p>
+                <p className="text-sm"><strong>المبلغ المتبقي:</strong> {selectedOrderForPayment.amount - (selectedOrderForPayment.paid_amount || 0)} ر.س</p>
+              </div>
+            )}
+            
+            <div className="flex gap-2 justify-end">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsPaymentDialogOpen(false)}
+              >
+                إغلاق
+              </Button>
+              <Button 
+                onClick={() => {
+                  // فتح صفحة المدفوعات في نافذة جديدة
+                  window.open(`/admin/payments?order_id=${selectedOrderForPayment?.id}`, '_blank');
+                  setIsPaymentDialogOpen(false);
+                }}
+              >
+                إدارة المدفوعات
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* حوار تحويل إلى فاتورة */}
+      <Dialog open={isInvoiceDialogOpen} onOpenChange={setIsInvoiceDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>تحويل الطلب إلى فاتورة</DialogTitle>
+            <DialogDescription>
+              سيتم إنشاء فاتورة جديدة بناءً على بيانات هذا الطلب
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {selectedOrderForInvoice && (
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="text-sm"><strong>الطلب:</strong> {selectedOrderForInvoice.order_number}</p>
+                <p className="text-sm"><strong>العميل:</strong> {selectedOrderForInvoice.customers?.name}</p>
+                <p className="text-sm"><strong>الخدمة:</strong> {selectedOrderForInvoice.service_name}</p>
+                <p className="text-sm"><strong>المبلغ:</strong> {selectedOrderForInvoice.amount} ر.س</p>
+              </div>
+            )}
+            
+            <div className="text-sm text-muted-foreground bg-blue-50 p-3 rounded-lg">
+              <p>سيتم فتح صفحة إنشاء فاتورة جديدة مع تعبئة البيانات من هذا الطلب تلقائياً.</p>
+            </div>
+            
+            <div className="flex gap-2 justify-end">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsInvoiceDialogOpen(false)}
+              >
+                إلغاء
+              </Button>
+              <Button 
+                onClick={() => selectedOrderForInvoice && convertToInvoice(selectedOrderForInvoice.id)}
+              >
+                تحويل إلى فاتورة
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
