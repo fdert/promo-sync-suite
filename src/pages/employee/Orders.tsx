@@ -109,6 +109,14 @@ const Orders = () => {
   // حالات حوار تحويل إلى فاتورة
   const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
   const [selectedOrderForInvoice, setSelectedOrderForInvoice] = useState<Order | null>(null);
+
+  // حالات المدفوعات
+  const [payments, setPayments] = useState<any[]>([]);
+  const [newPayment, setNewPayment] = useState({
+    amount: 0,
+    payment_type: 'نقدي',
+    notes: ''
+  });
   
   const { toast } = useToast();
 
@@ -476,10 +484,91 @@ ${publicFileUrl}
     }
   };
 
+  // جلب المدفوعات للطلب المحدد
+  const fetchPayments = async (orderId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('payments')
+        .select('*')
+        .eq('order_id', orderId)
+        .order('payment_date', { ascending: false });
+
+      if (error) throw error;
+      setPayments(data || []);
+    } catch (error) {
+      console.error('Error fetching payments:', error);
+      toast({
+        title: "خطأ",
+        description: "فشل في جلب المدفوعات",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // إضافة دفعة جديدة
+  const handleAddPayment = async (orderId: string) => {
+    try {
+      if (!newPayment.amount || newPayment.amount <= 0) {
+        toast({
+          title: "خطأ",
+          description: "يرجى إدخال مبلغ صحيح",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const { error } = await supabase
+        .from('payments')
+        .insert({
+          order_id: orderId,
+          amount: newPayment.amount,
+          payment_type: newPayment.payment_type,
+          notes: newPayment.notes || null,
+          payment_date: new Date().toISOString().split('T')[0]
+        });
+
+      if (error) throw error;
+
+      // تحديث المبلغ المدفوع في الطلب
+      const currentOrder = orders.find(o => o.id === orderId);
+      if (currentOrder) {
+        const newPaidAmount = (currentOrder.paid_amount || 0) + newPayment.amount;
+        
+        const { error: updateError } = await supabase
+          .from('orders')
+          .update({ paid_amount: newPaidAmount })
+          .eq('id', orderId);
+
+        if (updateError) throw updateError;
+      }
+
+      toast({
+        title: "تم إضافة الدفعة",
+        description: "تم إضافة الدفعة بنجاح",
+      });
+
+      // إعادة تعيين النموذج
+      setNewPayment({ amount: 0, payment_type: 'نقدي', notes: '' });
+      
+      // إعادة جلب المدفوعات والطلبات
+      fetchPayments(orderId);
+      fetchOrders();
+
+    } catch (error) {
+      console.error('Error adding payment:', error);
+      toast({
+        title: "خطأ في إضافة الدفعة",
+        description: "حدث خطأ أثناء إضافة الدفعة",
+        variant: "destructive",
+      });
+    }
+  };
+
   // فتح صفحة المدفوعات
   const openPaymentDialog = (order: Order) => {
     setSelectedOrderForPayment(order);
     setIsPaymentDialogOpen(true);
+    fetchPayments(order.id);
   };
 
   // فتح حوار تحويل إلى فاتورة
@@ -967,7 +1056,7 @@ ${publicFileUrl}
 
       {/* حوار المدفوعات */}
       <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>إدارة مدفوعات الطلب</DialogTitle>
             <DialogDescription>
@@ -975,18 +1064,127 @@ ${publicFileUrl}
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4">
+          <div className="space-y-6">
             {selectedOrderForPayment && (
-              <div className="p-3 bg-muted rounded-lg">
-                <p className="text-sm"><strong>الطلب:</strong> {selectedOrderForPayment.order_number}</p>
-                <p className="text-sm"><strong>العميل:</strong> {selectedOrderForPayment.customers?.name}</p>
-                <p className="text-sm"><strong>المبلغ الكلي:</strong> {selectedOrderForPayment.amount} ر.س</p>
-                <p className="text-sm"><strong>المبلغ المدفوع:</strong> {selectedOrderForPayment.paid_amount || 0} ر.س</p>
-                <p className="text-sm"><strong>المبلغ المتبقي:</strong> {selectedOrderForPayment.amount - (selectedOrderForPayment.paid_amount || 0)} ر.س</p>
-              </div>
+              <>
+                {/* معلومات الطلب */}
+                <div className="p-4 bg-muted rounded-lg">
+                  <h3 className="font-semibold mb-2">تفاصيل الطلب</h3>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p><strong>رقم الطلب:</strong> {selectedOrderForPayment.order_number}</p>
+                      <p><strong>العميل:</strong> {selectedOrderForPayment.customers?.name}</p>
+                    </div>
+                    <div>
+                      <p><strong>الخدمة:</strong> {selectedOrderForPayment.service_name}</p>
+                      <p><strong>نوع الدفع:</strong> {selectedOrderForPayment.payment_type}</p>
+                    </div>
+                  </div>
+                  
+                  {/* ملخص المدفوعات */}
+                  <div className="mt-4 p-3 bg-white rounded border">
+                    <div className="grid grid-cols-3 gap-4 text-center">
+                      <div>
+                        <p className="text-xs text-muted-foreground">المبلغ الكلي</p>
+                        <p className="text-lg font-bold text-blue-600">{selectedOrderForPayment.amount?.toLocaleString()} ر.س</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">المبلغ المدفوع</p>
+                        <p className="text-lg font-bold text-green-600">{(selectedOrderForPayment.paid_amount || 0).toLocaleString()} ر.س</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">المبلغ المتبقي</p>
+                        <p className="text-lg font-bold text-red-600">{(selectedOrderForPayment.amount - (selectedOrderForPayment.paid_amount || 0)).toLocaleString()} ر.س</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* قائمة المدفوعات السابقة */}
+                <div>
+                  <h3 className="font-semibold mb-3">المدفوعات السابقة</h3>
+                  {payments.length > 0 ? (
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {payments.map((payment) => (
+                        <div key={payment.id} className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                          <div>
+                            <p className="font-medium">{payment.amount?.toLocaleString()} ر.س</p>
+                            <p className="text-xs text-muted-foreground">
+                              {payment.payment_type} • {new Date(payment.payment_date).toLocaleDateString('ar-SA')}
+                            </p>
+                          </div>
+                          <Badge variant="outline" className="text-xs">
+                            {payment.payment_type}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-4 text-muted-foreground">
+                      <p>لا توجد مدفوعات سابقة</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* نموذج إضافة دفعة جديدة */}
+                <div className="p-4 border rounded-lg">
+                  <h3 className="font-semibold mb-3">إضافة دفعة جديدة</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="payment-amount">المبلغ (ر.س)</Label>
+                      <Input
+                        id="payment-amount"
+                        type="number"
+                        placeholder="أدخل المبلغ"
+                        value={newPayment.amount}
+                        onChange={(e) => setNewPayment({...newPayment, amount: parseFloat(e.target.value) || 0})}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="payment-type">طريقة الدفع</Label>
+                      <Select value={newPayment.payment_type} onValueChange={(value) => setNewPayment({...newPayment, payment_type: value})}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="اختر طريقة الدفع" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="نقدي">نقدي</SelectItem>
+                          <SelectItem value="تحويل بنكي">تحويل بنكي</SelectItem>
+                          <SelectItem value="الشبكة">الشبكة</SelectItem>
+                          <SelectItem value="شيك">شيك</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="md:col-span-2">
+                      <Label htmlFor="payment-notes">ملاحظات (اختياري)</Label>
+                      <Input
+                        id="payment-notes"
+                        placeholder="أدخل أي ملاحظات إضافية"
+                        value={newPayment.notes}
+                        onChange={(e) => setNewPayment({...newPayment, notes: e.target.value})}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4 flex justify-between">
+                    <Button
+                      variant="outline"
+                      onClick={() => setNewPayment({ amount: 0, payment_type: 'نقدي', notes: '' })}
+                    >
+                      مسح
+                    </Button>
+                    <Button
+                      onClick={() => handleAddPayment(selectedOrderForPayment.id)}
+                      disabled={!newPayment.amount || !newPayment.payment_type}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      إضافة الدفعة
+                    </Button>
+                  </div>
+                </div>
+              </>
             )}
             
-            <div className="flex gap-2 justify-end">
+            <div className="flex gap-2 justify-end pt-4 border-t">
               <Button 
                 variant="outline" 
                 onClick={() => setIsPaymentDialogOpen(false)}
@@ -995,12 +1193,12 @@ ${publicFileUrl}
               </Button>
               <Button 
                 onClick={() => {
-                  // فتح صفحة المدفوعات في نافذة جديدة
-                  window.open(`/admin/payments?order_id=${selectedOrderForPayment?.id}`, '_blank');
+                  window.open(`/admin/invoices?order_id=${selectedOrderForPayment?.id}`, '_blank');
                   setIsPaymentDialogOpen(false);
                 }}
+                className="bg-blue-600 hover:bg-blue-700"
               >
-                إدارة المدفوعات
+                إنشاء فاتورة
               </Button>
             </div>
           </div>
