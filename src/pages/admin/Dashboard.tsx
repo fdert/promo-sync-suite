@@ -97,19 +97,23 @@ const Dashboard = () => {
     }
   });
 
-  // جلب الفواتير الأخيرة
-  const { data: recentInvoices } = useQuery({
-    queryKey: ['recent-invoices'],
+  // جلب الدفعات الأخيرة
+  const { data: recentPayments } = useQuery({
+    queryKey: ['recent-payments'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('invoices')
+        .from('payments')
         .select(`
           id,
-          invoice_number,
-          total_amount,
-          status,
+          amount,
+          payment_type,
+          payment_date,
           created_at,
-          customers (name)
+          order_id,
+          orders (
+            order_number,
+            customers (name)
+          )
         `)
         .order('created_at', { ascending: false })
         .limit(3);
@@ -341,50 +345,50 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
-        {/* الفواتير الأخيرة */}
+        {/* الدفعات الأخيرة */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              الفواتير الأخيرة
+              <DollarSign className="h-5 w-5" />
+              الدفعات الأخيرة
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {recentInvoices ? (
-                recentInvoices.length > 0 ? (
-                  recentInvoices.map((invoice) => (
+              {recentPayments ? (
+                recentPayments.length > 0 ? (
+                  recentPayments.map((payment) => (
                     <div
-                      key={invoice.id}
+                      key={payment.id}
                       className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted/70 transition-colors cursor-pointer"
-                      onClick={() => navigate('/admin/invoices')}
+                      onClick={() => navigate('/admin/orders')}
                     >
                       <div>
                         <p className="font-medium">
-                          {invoice.customers?.name || 'عميل غير محدد'}
+                          {payment.orders?.customers?.name || 'عميل غير محدد'}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {invoice.invoice_number}
+                          {payment.orders?.order_number || 'طلب غير محدد'}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {new Date(invoice.created_at).toLocaleDateString('ar-SA')}
+                          {new Date(payment.payment_date).toLocaleDateString('ar-SA')}
                         </p>
                       </div>
                       <div className="flex flex-col items-end gap-1">
                         <p className="font-medium text-accent">
-                          {formatCurrency(invoice.total_amount)}
+                          {formatCurrency(payment.amount)}
                         </p>
                         <Badge
-                          className={getStatusColor(invoice.status)}
+                          className="text-success bg-success/10"
                         >
-                          {invoice.status}
+                          {payment.payment_type}
                         </Badge>
                       </div>
                     </div>
                   ))
                 ) : (
                   <p className="text-center text-muted-foreground py-4">
-                    لا توجد فواتير حالياً
+                    لا توجد دفعات حالياً
                   </p>
                 )
               ) : (
@@ -398,9 +402,9 @@ const Dashboard = () => {
             <Button 
               variant="outline" 
               className="w-full mt-4"
-              onClick={() => navigate('/admin/invoices')}
+              onClick={() => navigate('/admin/orders')}
             >
-              عرض جميع الفواتير
+              عرض جميع الطلبات والدفعات
             </Button>
           </CardContent>
         </Card>
@@ -430,7 +434,7 @@ const Dashboard = () => {
               <CheckCircle className="h-5 w-5 text-success" />
               <div>
                 <p className="text-sm font-medium">
-                  {recentInvoices?.length || 0} فواتير جديدة
+                  {recentPayments?.length || 0} دفعات جديدة
                 </p>
                 <p className="text-xs text-muted-foreground">هذا الأسبوع</p>
               </div>
@@ -475,10 +479,10 @@ const Dashboard = () => {
             <Button 
               variant="outline" 
               className="h-20 flex-col gap-2"
-              onClick={() => navigate('/admin/invoices')}
+              onClick={() => navigate('/admin/orders')}
             >
               <DollarSign className="h-6 w-6" />
-              إنشاء فاتورة
+              إضافة دفعة
             </Button>
             <Button 
               variant="outline" 
