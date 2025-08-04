@@ -992,10 +992,10 @@ ${publicFileUrl}
                              ملفات
                            </Button>
                          </div>
-                       </TableCell>
-                     </TableRow>
-                   </React.Fragment>
-                 ))}
+                        </TableCell>
+                      </TableRow>
+                    </React.Fragment>
+                  ))}
                </TableBody>
             </Table>
           </div>
