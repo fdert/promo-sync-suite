@@ -127,10 +127,11 @@ const Invoices = () => {
           }
           
           .header {
-            background: #2563eb !important;
-            color: white !important;
+            background: white !important;
+            color: #1f2937 !important;
             padding: 20px 25px;
             position: relative;
+            border-bottom: 2px solid #e5e7eb;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
@@ -151,13 +152,13 @@ const Invoices = () => {
             font-size: 18px;
             font-weight: 700;
             margin-bottom: 8px;
-            color: #ffffff;
+            color: #1f2937;
           }
           
           .company-details {
             font-size: 11px;
             line-height: 1.6;
-            color: #dbeafe;
+            color: #6b7280;
           }
           
           .logo-section {
@@ -176,13 +177,13 @@ const Invoices = () => {
           .logo-placeholder {
             width: 60px;
             height: 60px;
-            border: 2px dashed rgba(255,255,255,0.5);
+            border: 2px dashed #d1d5db;
             border-radius: 4px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 10px;
-            color: rgba(255,255,255,0.8);
+            color: #6b7280;
           }
           
           .invoice-info {
@@ -194,13 +195,13 @@ const Invoices = () => {
             font-size: 20px;
             font-weight: 700;
             margin-bottom: 8px;
-            color: #ffffff;
+            color: #1f2937;
           }
           
           .invoice-details {
             font-size: 11px;
             line-height: 1.6;
-            color: #dbeafe;
+            color: #6b7280;
           }
           
           .customer-section {
@@ -390,8 +391,9 @@ const Invoices = () => {
             }
             .header { 
               page-break-inside: avoid;
-              background: #2563eb !important;
-              color: white !important;
+              background: white !important;
+              color: #1f2937 !important;
+              border-bottom: 2px solid #e5e7eb !important;
             }
             .customer-section {
               background: #f3f4f6 !important;
