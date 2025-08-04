@@ -64,21 +64,31 @@ const AccountsReceivableReview = () => {
         setCustomerBalances(balancesData);
       }
 
-      // جلب الفواتير غير المدفوعة مع تفاصيلها
+      // جلب الفواتير غير المدفوعة مع تفاصيلها من الـ view الجديد
       const { data: invoicesData } = await supabase
-        .from('invoices')
+        .from('invoice_payment_summary')
         .select(`
           id,
           invoice_number,
           total_amount,
-          paid_amount,
+          calculated_paid_amount,
+          remaining_amount,
           due_date,
           status,
-          customers(name)
+          customer_id
         `)
-        .gt('total_amount', 'paid_amount');
+        .gt('remaining_amount', 0);
 
-      if (invoicesData) {
+      // جلب أسماء العملاء
+      const customerIds = [...new Set(invoicesData?.map(inv => inv.customer_id).filter(Boolean))];
+      const { data: customersData } = await supabase
+        .from('customers')
+        .select('id, name')
+        .in('id', customerIds);
+
+      if (invoicesData && customersData) {
+        const customerMap = new Map(customersData.map(customer => [customer.id, customer.name]));
+        
         const formattedInvoices = invoicesData.map(invoice => {
           const dueDate = new Date(invoice.due_date);
           const today = new Date();
@@ -87,10 +97,10 @@ const AccountsReceivableReview = () => {
           return {
             invoice_id: invoice.id,
             invoice_number: invoice.invoice_number,
-            customer_name: invoice.customers?.name || 'غير محدد',
+            customer_name: customerMap.get(invoice.customer_id) || 'غير محدد',
             total_amount: invoice.total_amount,
-            paid_amount: invoice.paid_amount || 0,
-            remaining_amount: invoice.total_amount - (invoice.paid_amount || 0),
+            paid_amount: invoice.calculated_paid_amount || 0,
+            remaining_amount: invoice.remaining_amount,
             due_date: invoice.due_date,
             days_overdue: daysOverdue > 0 ? daysOverdue : 0,
             status: invoice.status

@@ -196,12 +196,13 @@ const Accounts = () => {
         return;
       }
 
-      // فلترة الفواتير التي لديها مبالغ متبقية فعلاً (استخدام رقم صغير لتجنب مشاكل الفاصلة العشرية)
-      let debtorInvoicesFiltered = (data || []).filter(invoice => {
-        const remainingAmount = invoice.total_amount - (invoice.paid_amount || 0);
-        console.log(`Invoice ${invoice.invoice_number}: total=${invoice.total_amount}, paid=${invoice.paid_amount || 0}, remaining=${remainingAmount}`);
-        return remainingAmount > 0.01;
-      });
+      // استخدام view لحساب المبالغ المدفوعة تلقائياً
+      const { data: invoicesSummaryData } = await supabase
+        .from('invoice_payment_summary')
+        .select('*')
+        .gt('remaining_amount', 0.01);
+
+      let debtorInvoicesFiltered = invoicesSummaryData || [];
 
       // تطبيق فلتر البحث في اسم العميل
       if (debtorSearch.customerName) {
