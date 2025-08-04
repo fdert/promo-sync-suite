@@ -525,8 +525,9 @@ const Accounts = () => {
   };
 
   // حساب الإحصائيات - استخدام العرض الجديد للحصول على البيانات المحدثة
-  const monthlyIncome = invoices
+  const monthlyIncome = (invoices || [])
     .filter(invoice => {
+      if (!invoice.issue_date) return false;
       const issueDate = new Date(invoice.issue_date);
       const currentMonth = new Date();
       return issueDate.getMonth() === currentMonth.getMonth() && 
@@ -535,8 +536,9 @@ const Accounts = () => {
     })
     .reduce((sum, invoice) => sum + (invoice.total_amount || 0), 0);
 
-  const monthlyExpenses = expenses
+  const monthlyExpenses = (expenses || [])
     .filter(expense => {
+      if (!expense.date) return false;
       const expenseDate = new Date(expense.date);
       const currentMonth = new Date();
       return expenseDate.getMonth() === currentMonth.getMonth() && 
@@ -544,7 +546,7 @@ const Accounts = () => {
     })
     .reduce((sum, expense) => sum + (expense.amount || 0), 0);
 
-  const netProfit = monthlyIncome - monthlyExpenses;
+  const netProfit = (monthlyIncome || 0) - (monthlyExpenses || 0);
 
   // تجميع الحسابات حسب النوع
   const accountsByType = accounts.reduce((acc: Record<string, any[]>, account) => {
@@ -593,7 +595,7 @@ const Accounts = () => {
             <TrendingUp className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-success">{monthlyIncome.toLocaleString()} ر.س</div>
+            <div className="text-2xl font-bold text-success">{(monthlyIncome || 0).toLocaleString()} ر.س</div>
             <p className="text-xs text-muted-foreground">هذا الشهر</p>
           </CardContent>
         </Card>
@@ -604,7 +606,7 @@ const Accounts = () => {
             <TrendingDown className="h-4 w-4 text-destructive" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-destructive">{monthlyExpenses.toLocaleString()} ر.س</div>
+            <div className="text-2xl font-bold text-destructive">{(monthlyExpenses || 0).toLocaleString()} ر.س</div>
             <p className="text-xs text-muted-foreground">هذا الشهر</p>
           </CardContent>
         </Card>
@@ -616,7 +618,7 @@ const Accounts = () => {
           </CardHeader>
           <CardContent>
             <div className={`text-2xl font-bold ${netProfit >= 0 ? 'text-success' : 'text-destructive'}`}>
-              {netProfit.toLocaleString()} ر.س
+              {(netProfit || 0).toLocaleString()} ر.س
             </div>
             <p className="text-xs text-muted-foreground">هذا الشهر</p>
           </CardContent>
@@ -628,7 +630,7 @@ const Accounts = () => {
             <Users className="h-4 w-4 text-warning" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-warning">{totalDebts.toLocaleString()} ر.س</div>
+            <div className="text-2xl font-bold text-warning">{(totalDebts || 0).toLocaleString()} ر.س</div>
             <p className="text-xs text-muted-foreground">{debtorInvoices.length} عميل مدين</p>
           </CardContent>
         </Card>
