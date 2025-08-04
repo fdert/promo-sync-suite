@@ -48,13 +48,31 @@ Deno.serve(async (req) => {
 
     console.log(`Found ${pendingMessages.length} pending messages`);
 
-    // الحصول على إعدادات الويب هوك للإرسال - استخدام الويب هوك الصحيح للطلبات
-    const { data: webhookSettings } = await supabase
-      .from('webhook_settings')
-      .select('webhook_url, webhook_type')
-      .eq('webhook_name', 'طلبات ابداع')
-      .eq('is_active', true)
-      .single();
+    // الحصول على إعدادات الويب هوك للإرسال - تحديد الويب هوك حسب نوع الرسالة
+    let webhookSettings;
+    
+    // للرسائل التي تحتوي على صور (البروفة)، استخدام ويب هوك البروفة
+    const hasImageMessages = pendingMessages.some(msg => msg.message_type === 'image');
+    
+    if (hasImageMessages) {
+      // استخدام ويب هوك البروفة للرسائل التي تحتوي على صور
+      const { data: proofWebhook } = await supabase
+        .from('webhook_settings')
+        .select('webhook_url, webhook_type')
+        .eq('webhook_type', 'proof')
+        .eq('is_active', true)
+        .single();
+      webhookSettings = proofWebhook;
+    } else {
+      // استخدام ويب هوك الطلبات للرسائل النصية
+      const { data: orderWebhook } = await supabase
+        .from('webhook_settings')
+        .select('webhook_url, webhook_type')
+        .eq('webhook_name', 'طلبات ابداع')
+        .eq('is_active', true)
+        .single();
+      webhookSettings = orderWebhook;
+    }
 
     if (!webhookSettings?.webhook_url) {
       console.error('No active outgoing webhook found');
