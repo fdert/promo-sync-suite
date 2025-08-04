@@ -641,11 +641,10 @@ const Orders = () => {
           service_id: newOrder.service_id,
           service_name: newOrder.service_name,
           description: newOrder.description,
-          due_date: newOrder.due_date,
+          due_date: newOrder.due_date || null,
           amount: totalAmount,
           priority: newOrder.priority,
           status: 'جديد',
-          paid_amount: newOrder.paid_amount ? parseFloat(newOrder.paid_amount) : 0,
           payment_type: newOrder.payment_type,
           payment_notes: newOrder.payment_notes
         })
@@ -686,6 +685,28 @@ const Orders = () => {
           variant: "destructive",
         });
         return;
+      }
+
+      // إضافة دفعة إذا كان هناك مبلغ مدفوع
+      if (newOrder.paid_amount && parseFloat(newOrder.paid_amount) > 0) {
+        const { error: paymentError } = await supabase
+          .from('payments')
+          .insert({
+            order_id: orderData.id,
+            amount: parseFloat(newOrder.paid_amount),
+            payment_type: newOrder.payment_type,
+            notes: 'دفعة مقدمة عند إنشاء الطلب'
+          });
+
+        if (paymentError) {
+          console.error('Error adding initial payment:', paymentError);
+          // لا نحذف الطلب، فقط نسجل الخطأ
+          toast({
+            title: "تحذير",
+            description: "تم إنشاء الطلب لكن فشل في تسجيل الدفعة المقدمة",
+            variant: "destructive",
+          });
+        }
       }
 
       // إرسال إشعار واتساب للعميل
