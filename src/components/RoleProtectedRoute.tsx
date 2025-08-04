@@ -41,8 +41,8 @@ const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
         const hasRequiredRole = allowedRoles.some(role => userRolesList.includes(role));
 
         if (!hasRequiredRole) {
-          // إذا كان المستخدم موظف ولكن يحاول الوصول لصفحة إدارية
-          if (userRolesList.includes('employee')) {
+          // إذا كان المستخدم موظف ولكن يحاول الوصول لصفحة إدارية فقط
+          if (userRolesList.includes('employee') && !allowedRoles.includes('employee')) {
             setShouldRedirectToEmployee(true);
           }
           setHasAccess(false);
@@ -75,7 +75,7 @@ const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
     };
 
     checkAccess();
-  }, [user, allowedRoles, requiredPermissions]);
+  }, [user?.id, allowedRoles.join(','), requiredPermissions.join(',')]);
 
   if (loading || isCheckingAccess) {
     return (

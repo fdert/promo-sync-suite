@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import RoleProtectedRoute from "@/components/RoleProtectedRoute";
+import EmployeeProtectedRoute from "@/components/EmployeeProtectedRoute";
 import Home from "./pages/Home";
 import Auth from "./pages/Auth";
 import AdminLayout from "./components/layout/AdminLayout";
@@ -66,9 +67,9 @@ const App = () => (
             } />
             <Route path="/employee" element={
               <ProtectedRoute>
-                <RoleProtectedRoute allowedRoles={['employee']}>
+                <EmployeeProtectedRoute>
                   <EmployeeLayout />
-                </RoleProtectedRoute>
+                </EmployeeProtectedRoute>
               </ProtectedRoute>
             }>
               <Route index element={<EmployeeDashboard />} />
