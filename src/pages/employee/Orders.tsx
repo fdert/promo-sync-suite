@@ -834,9 +834,9 @@ ${publicFileUrl}
                 </TableRow>
               </TableHeader>
                <TableBody>
-                {filteredOrders.map((order) => (
-                  <React.Fragment key={order.id}>
-                    <TableRow>
+                 {filteredOrders.map((order) => (
+                   <React.Fragment key={order.id}>
+                     <TableRow>
                       <TableCell className="font-medium">
                         {order.order_number}
                       </TableCell>
@@ -951,10 +951,10 @@ ${publicFileUrl}
                           </Button>
                         </div>
                       </TableCell>
-                    </TableRow>
-                  </React.Fragment>
+                     </TableRow>
+                   </React.Fragment>
                 ))}
-              </TableBody>
+               </TableBody>
             </Table>
           </div>
         </CardContent>
