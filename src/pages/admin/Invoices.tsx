@@ -706,6 +706,27 @@ const Invoices = () => {
     };
     
     loadData();
+
+    // الاستماع للتحديثات المباشرة للفواتير
+    const channel = supabase
+      .channel('admin-invoices-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'invoices'
+        },
+        () => {
+          console.log('Invoice change detected in admin panel, refreshing...');
+          fetchInvoices();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   if (loading) {

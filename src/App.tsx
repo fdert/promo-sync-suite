@@ -17,6 +17,7 @@ import Orders from "./pages/admin/Orders";
 import Invoices from "./pages/admin/Invoices";
 import Accounts from "./pages/admin/Accounts";
 import Reports from "./pages/admin/Reports";
+import EmployeeInvoices from "./pages/employee/Invoices";
 import EmployeeReports from "./pages/employee/Reports";
 import EmployeeCustomers from "./pages/employee/Customers";
 import EmployeePrintOrders from "./pages/employee/PrintOrders";
@@ -71,7 +72,7 @@ const App = () => (
               <Route index element={<EmployeeDashboard />} />
               <Route path="customers" element={<EmployeeCustomers />} />
               <Route path="orders" element={<EmployeeOrders />} />
-              <Route path="invoices" element={<Invoices />} />
+              <Route path="invoices" element={<EmployeeInvoices />} />
               <Route path="print-orders" element={<EmployeePrintOrders />} />
               <Route path="evaluations" element={<Evaluations />} />
               <Route path="print-archive" element={<PrintArchive />} />

@@ -737,6 +737,9 @@ ${publicFileUrl}
       // فتح الفاتورة في نافذة جديدة للمعاينة
       window.open(`/invoice/${newInvoice.id}`, '_blank');
       
+      // إرسال إشعار للقنوات المباشرة لتحديث قوائم الفواتير
+      console.log('New invoice created, notifying channels...');
+      
       setIsInvoiceDialogOpen(false);
       setSelectedOrderForInvoice(null);
       
