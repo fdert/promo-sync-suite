@@ -52,6 +52,22 @@ Deno.serve(async (req) => {
     let orderItemsText = '';
     let startDate = 'سيتم تحديده';
     let dueDate = 'سيتم تحديده';
+    let companyName = 'وكالة الإبداع للدعاية والإعلان';
+
+    // جلب اسم الشركة من قاعدة البيانات
+    try {
+      const { data: companyData } = await supabase
+        .from('website_settings')
+        .select('setting_value')
+        .eq('setting_key', 'company_info')
+        .maybeSingle();
+
+      if (companyData?.setting_value?.companyName) {
+        companyName = companyData.setting_value.companyName;
+      }
+    } catch (error) {
+      console.log('Could not fetch company name, using default');
+    }
 
     // جلب بيانات الطلب الكاملة مع بنود الطلب لجميع أنواع الإشعارات
     let orderDetails = null;
@@ -292,7 +308,7 @@ ${orderItemsText || 'لا توجد بنود محددة'}
       due_date: dueDate,
       order_items: orderItemsText,
       evaluation_link: `https://e5a7747a-0935-46df-9ea9-1308e76636dc.lovableproject.com/evaluation/token-${order_id}`,
-      company_name: 'وكالة الإبداع للدعاية والإعلان',
+      company_name: companyName,
       estimated_time: data.estimated_days || 'قريباً',
       progress: data.progress?.toString() || '0',
       date: new Date().toLocaleDateString('ar-SA'),

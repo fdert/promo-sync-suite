@@ -2,6 +2,8 @@ import { Bell, Search, User, Menu, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useState, useEffect } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,6 +20,27 @@ interface HeaderProps {
 
 const Header = ({ onMenuClick, title }: HeaderProps) => {
   const { user, signOut } = useAuth();
+  const [companyInfo, setCompanyInfo] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchCompanyInfo = async () => {
+      try {
+        const { data } = await supabase
+          .from('website_settings')
+          .select('setting_value')
+          .eq('setting_key', 'company_info')
+          .maybeSingle();
+
+        if (data?.setting_value) {
+          setCompanyInfo(data.setting_value);
+        }
+      } catch (error) {
+        console.error('Error fetching company info:', error);
+      }
+    };
+
+    fetchCompanyInfo();
+  }, []);
 
   const handleSignOut = async () => {
     await signOut();
@@ -35,7 +58,19 @@ const Header = ({ onMenuClick, title }: HeaderProps) => {
           >
             <Menu className="h-5 w-5" />
           </Button>
-          <h1 className="text-xl font-bold text-foreground">{title}</h1>
+          <div className="flex items-center gap-3">
+            {companyInfo?.logoUrl ? (
+              <img src={companyInfo.logoUrl} alt="شعار الشركة" className="h-8 w-8 object-contain rounded" />
+            ) : (
+              <img src="/logo.png" alt="شعار الوكالة" className="h-8 w-8 object-contain rounded" />
+            )}
+            <div className="flex flex-col">
+              <h1 className="text-xl font-bold text-foreground">{title}</h1>
+              {companyInfo?.companyName && (
+                <span className="text-xs text-muted-foreground">{companyInfo.companyName}</span>
+              )}
+            </div>
+          </div>
         </div>
 
         <div className="flex items-center gap-4 flex-1 max-w-md mx-4">
