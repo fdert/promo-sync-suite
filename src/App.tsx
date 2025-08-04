@@ -17,7 +17,6 @@ import Orders from "./pages/admin/Orders";
 import Invoices from "./pages/admin/Invoices";
 import Accounts from "./pages/admin/Accounts";
 import Reports from "./pages/admin/Reports";
-import EmployeeInvoices from "./pages/employee/Invoices";
 import EmployeeReports from "./pages/employee/Reports";
 import EmployeeCustomers from "./pages/employee/Customers";
 import EmployeePrintOrders from "./pages/employee/PrintOrders";
@@ -50,7 +49,8 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Home />} />
-            <Route path="/auth" element={<Auth />} />
+          <Route path="/invoice/:invoiceId" element={<InvoicePreview />} />
+          <Route path="/auth" element={<Auth />} />
             <Route path="/user" element={
               <ProtectedRoute>
                 <UserDashboard />
@@ -71,7 +71,7 @@ const App = () => (
               <Route index element={<EmployeeDashboard />} />
               <Route path="customers" element={<EmployeeCustomers />} />
               <Route path="orders" element={<EmployeeOrders />} />
-              <Route path="invoices" element={<EmployeeInvoices />} />
+              <Route path="invoices" element={<Invoices />} />
               <Route path="print-orders" element={<EmployeePrintOrders />} />
               <Route path="evaluations" element={<Evaluations />} />
               <Route path="print-archive" element={<PrintArchive />} />
@@ -111,7 +111,6 @@ const App = () => (
               } />
               <Route path="evaluations" element={<Evaluations />} />
             </Route>
-            <Route path="/invoice/:invoiceId" element={<InvoicePreview />} />
             <Route path="/evaluation/:token" element={<Evaluation />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

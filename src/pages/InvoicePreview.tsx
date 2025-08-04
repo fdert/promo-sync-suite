@@ -5,7 +5,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Download, Printer } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import InvoicePrint from '@/components/InvoicePrint';
 
 interface Invoice {
   id: string;
@@ -37,64 +36,20 @@ interface InvoiceItem {
 }
 
 const InvoicePreview = () => {
-  const params = useParams();
   const { invoiceId } = useParams<{ invoiceId: string }>();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [items, setItems] = useState<InvoiceItem[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  console.log('=== InvoicePreview Debug ===');
-  console.log('Full params object:', params);
-  console.log('Extracted invoiceId:', invoiceId);
-  console.log('Current URL:', window.location.href);
-  console.log('Pathname:', window.location.pathname);
-
   useEffect(() => {
-    if (invoiceId && invoiceId !== ':invoiceId') {
-      console.log('Valid invoiceId found, calling fetchInvoiceData with ID:', invoiceId);
+    if (invoiceId) {
       fetchInvoiceData();
-    } else {
-      console.error('Invalid or missing invoiceId. Received:', invoiceId);
-      toast({
-        title: "خطأ",
-        description: "معرف الفاتورة غير صحيح أو مفقود",
-        variant: "destructive",
-      });
-      setLoading(false);
     }
   }, [invoiceId]);
 
   const fetchInvoiceData = async () => {
-    if (!invoiceId) {
-      console.error('Invoice ID is missing');
-      toast({
-        title: "خطأ",
-        description: "معرف الفاتورة غير صحيح",
-        variant: "destructive",
-      });
-      return;
-    }
-
     try {
-      console.log('=== Starting fetchInvoiceData ===');
-      console.log('Invoice ID to fetch:', invoiceId);
-      console.log('Invoice ID type:', typeof invoiceId);
-      console.log('Invoice ID length:', invoiceId.length);
-      
-      // التأكد من أن معرف الفاتورة صالح (UUID format)
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-      if (!uuidRegex.test(invoiceId)) {
-        console.error('Invalid UUID format for invoiceId:', invoiceId);
-        toast({
-          title: "خطأ",
-          description: "معرف الفاتورة غير صالح",
-          variant: "destructive",
-        });
-        setLoading(false);
-        return;
-      }
-      
       // جلب بيانات الفاتورة
       const { data: invoiceData, error: invoiceError } = await supabase
         .from('invoices')
@@ -142,27 +97,7 @@ const InvoicePreview = () => {
   };
 
   const handlePrint = () => {
-    const printContent = document.querySelector('.print-invoice');
-    if (printContent) {
-      // إخفاء المحتوى الرئيسي وإظهار محتوى الطباعة
-      const mainContent = document.querySelector('.min-h-screen');
-      if (mainContent) {
-        (mainContent as HTMLElement).style.display = 'none';
-      }
-      (printContent as HTMLElement).style.display = 'block';
-      
-      // طباعة
-      window.print();
-      
-      // إعادة إظهار المحتوى الرئيسي وإخفاء محتوى الطباعة
-      if (mainContent) {
-        (mainContent as HTMLElement).style.display = 'block';
-      }
-      (printContent as HTMLElement).style.display = 'none';
-    } else {
-      // fallback للطباعة العادية
-      window.print();
-    }
+    window.print();
   };
 
   const handleDownload = () => {
@@ -330,23 +265,6 @@ const InvoicePreview = () => {
             </div>
           </CardContent>
         </Card>
-
-        {/* مكون الطباعة المخفي */}
-        <InvoicePrint 
-          invoice={{
-            invoice_number: invoice.invoice_number,
-            issue_date: invoice.issue_date,
-            due_date: invoice.due_date,
-            amount: invoice.amount,
-            tax_amount: invoice.tax_amount,
-            total_amount: invoice.total_amount,
-            status: invoice.status,
-            notes: invoice.notes,
-            payment_type: 'دفع آجل',
-            customers: invoice.customers
-          }}
-          items={items}
-        />
       </div>
     </div>
   );
