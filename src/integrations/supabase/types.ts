@@ -399,6 +399,13 @@ export type Database = {
             foreignKeyName: "evaluations_order_id_fkey"
             columns: ["order_id"]
             isOneToOne: false
+            referencedRelation: "order_payment_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evaluations_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
             referencedRelation: "orders"
             referencedColumns: ["id"]
           },
@@ -484,6 +491,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "invoice_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_payment_summary"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "invoice_items_invoice_id_fkey"
             columns: ["invoice_id"]
@@ -589,6 +603,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "order_payment_summary"
             referencedColumns: ["id"]
           },
           {
@@ -706,6 +727,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "order_payment_summary"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "order_items_order_id_fkey"
             columns: ["order_id"]
@@ -868,7 +896,21 @@ export type Database = {
             foreignKeyName: "payments_invoice_id_fkey"
             columns: ["invoice_id"]
             isOneToOne: false
+            referencedRelation: "invoice_payment_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
             referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "order_payment_summary"
             referencedColumns: ["id"]
           },
           {
@@ -1078,6 +1120,13 @@ export type Database = {
             columns: ["material_id"]
             isOneToOne: false
             referencedRelation: "print_materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "print_orders_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "order_payment_summary"
             referencedColumns: ["id"]
           },
           {
@@ -1402,6 +1451,135 @@ export type Database = {
           unpaid_invoices_count: number | null
         }
         Relationships: []
+      }
+      invoice_payment_summary: {
+        Row: {
+          amount: number | null
+          calculated_paid_amount: number | null
+          created_at: string | null
+          created_by: string | null
+          customer_id: string | null
+          due_date: string | null
+          id: string | null
+          invoice_number: string | null
+          is_deferred: boolean | null
+          issue_date: string | null
+          last_printed_at: string | null
+          notes: string | null
+          order_id: string | null
+          payment_date: string | null
+          payment_method: string | null
+          payment_type: string | null
+          print_count: number | null
+          remaining_amount: number | null
+          reminder_sent_at: string | null
+          status: string | null
+          tax_amount: number | null
+          total_amount: number | null
+          updated_at: string | null
+          whatsapp_sent_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customer_outstanding_balances"
+            referencedColumns: ["customer_id"]
+          },
+          {
+            foreignKeyName: "invoices_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "order_payment_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_payment_summary: {
+        Row: {
+          amount: number | null
+          assigned_to: string | null
+          attachment_urls: string[] | null
+          calculated_paid_amount: number | null
+          completion_date: string | null
+          created_at: string | null
+          created_by: string | null
+          customer_id: string | null
+          description: string | null
+          due_date: string | null
+          id: string | null
+          notes: string | null
+          order_number: string | null
+          payment_notes: string | null
+          payment_type: string | null
+          priority: string | null
+          progress: number | null
+          remaining_amount: number | null
+          service_id: string | null
+          service_name: string | null
+          start_date: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customer_outstanding_balances"
+            referencedColumns: ["customer_id"]
+          },
+          {
+            foreignKeyName: "orders_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {
