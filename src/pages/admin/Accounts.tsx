@@ -1253,8 +1253,8 @@ const Accounts = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-destructive">
-                  {debtorInvoices.filter(invoice => 
-                    new Date(invoice.due_date) < new Date()
+                  {debtorInvoices.filter(customer => 
+                    customer.latest_due_date && new Date(customer.latest_due_date) < new Date()
                   ).length}
                 </div>
                 <p className="text-xs text-muted-foreground">فاتورة متأخرة الدفع</p>
