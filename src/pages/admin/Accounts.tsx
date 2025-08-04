@@ -555,10 +555,9 @@ const Accounts = () => {
     return acc;
   }, {});
 
-  // حساب إجمالي المبالغ المستحقة من العملاء المدينين
-  const totalDebts = debtorInvoices.reduce((sum, invoice) => {
-    const remainingAmount = invoice.total_amount - (invoice.paid_amount || 0);
-    return sum + remainingAmount;
+  // حساب إجمالي المبالغ المستحقة من العملاء المدينين (من الطلبات)
+  const totalDebts = debtorInvoices.reduce((sum, customer) => {
+    return sum + (customer.remaining_amount || 0);
   }, 0);
 
   if (loading) {
@@ -630,7 +629,7 @@ const Accounts = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-warning">{totalDebts.toLocaleString()} ر.س</div>
-            <p className="text-xs text-muted-foreground">{debtorInvoices.length} فاتورة مستحقة</p>
+            <p className="text-xs text-muted-foreground">{debtorInvoices.length} عميل مدين</p>
           </CardContent>
         </Card>
         
