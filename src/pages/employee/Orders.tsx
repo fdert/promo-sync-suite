@@ -418,8 +418,18 @@ const Orders = () => {
         return;
       }
 
-      // إنشاء رابط عام للملف
-      const publicFileUrl = `https://gcuqfxacnbxdldsbmgvf.supabase.co/storage/v1/object/public/print-files/${proofFile.file_path}`;
+      // إنشاء رابط موقع للملف (يعمل لمدة 24 ساعة)
+      const { data: signedUrlData, error: urlError } = await supabase
+        .storage
+        .from('print-files')
+        .createSignedUrl(proofFile.file_path, 86400); // 24 ساعة
+
+      if (urlError) {
+        console.error('Error creating signed URL:', urlError);
+        throw new Error('فشل في إنشاء رابط الملف');
+      }
+
+      const publicFileUrl = signedUrlData.signedUrl;
       
       // جلب بنود الطلب
       const { data: orderItems, error: itemsError } = await supabase
