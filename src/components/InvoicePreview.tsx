@@ -130,57 +130,57 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({
               <table className="w-full border-collapse border border-gray-300 text-xs">
                 <thead>
                   <tr className="bg-blue-600 text-white">
-                    <th className="border border-gray-300 p-2 text-center w-8">#</th>
-                    <th className="border border-gray-300 p-2 text-center w-40">اسم البند / الخدمة</th>
-                    <th className="border border-gray-300 p-2 text-center w-16">الكمية</th>
-                    <th className="border border-gray-300 p-2 text-center w-20">السعر (ر.س)</th>
                     <th className="border border-gray-300 p-2 text-center w-24">الإجمالي (ر.س)</th>
+                    <th className="border border-gray-300 p-2 text-center w-20">السعر (ر.س)</th>
+                    <th className="border border-gray-300 p-2 text-center w-16">الكمية</th>
+                    <th className="border border-gray-300 p-2 text-center w-40">اسم البند / الخدمة</th>
+                    <th className="border border-gray-300 p-2 text-center w-8">#</th>
                   </tr>
                 </thead>
                 <tbody>
                   {items && items.length > 0 ? (
                     items.map((item, index) => (
                       <tr key={index} className={index % 2 === 0 ? "bg-gray-50" : "bg-white"}>
-                        <td className="border border-gray-300 p-2 text-center font-bold">{index + 1}</td>
+                        <td className="border border-gray-300 p-2 text-center font-bold text-blue-600">
+                          {item.total_amount?.toLocaleString('ar-SA')}
+                        </td>
+                        <td className="border border-gray-300 p-2 text-center font-bold">
+                          {item.unit_price?.toLocaleString('ar-SA')}
+                        </td>
+                        <td className="border border-gray-300 p-2 text-center">{item.quantity}</td>
                         <td className="border border-gray-300 p-2 text-right">
                           <div className="font-bold mb-1">{item.item_name}</div>
                           {item.description && (
                             <div className="text-xs text-gray-600">{item.description}</div>
                           )}
                         </td>
-                        <td className="border border-gray-300 p-2 text-center">{item.quantity}</td>
-                        <td className="border border-gray-300 p-2 text-center font-bold">
-                          {item.unit_price?.toLocaleString('ar-SA')}
-                        </td>
-                        <td className="border border-gray-300 p-2 text-center font-bold text-blue-600">
-                          {item.total_amount?.toLocaleString('ar-SA')}
-                        </td>
+                        <td className="border border-gray-300 p-2 text-center font-bold">{index + 1}</td>
                       </tr>
                     ))
                   ) : (
                     <tr className="bg-gray-50">
-                      <td className="border border-gray-300 p-2 text-center font-bold">1</td>
+                      <td className="border border-gray-300 p-2 text-center font-bold text-blue-600">
+                        {invoice.amount?.toLocaleString('ar-SA')}
+                      </td>
+                      <td className="border border-gray-300 p-2 text-center font-bold">
+                        {invoice.amount?.toLocaleString('ar-SA')}
+                      </td>
+                      <td className="border border-gray-300 p-2 text-center">1</td>
                       <td className="border border-gray-300 p-2 text-right">
                         <div className="font-bold mb-1">خدمات عامة</div>
                         <div className="text-xs text-gray-600">{invoice.notes || 'خدمات متنوعة'}</div>
                       </td>
-                      <td className="border border-gray-300 p-2 text-center">1</td>
-                      <td className="border border-gray-300 p-2 text-center font-bold">
-                        {invoice.amount?.toLocaleString('ar-SA')}
-                      </td>
-                      <td className="border border-gray-300 p-2 text-center font-bold text-blue-600">
-                        {invoice.amount?.toLocaleString('ar-SA')}
-                      </td>
+                      <td className="border border-gray-300 p-2 text-center font-bold">1</td>
                     </tr>
                   )}
                   
                   {/* إجمالي البنود */}
                   <tr className="bg-blue-50 border-t-2 border-blue-600">
-                    <td colSpan={4} className="border border-gray-300 p-2 text-right font-bold">
-                      المجموع الفرعي:
-                    </td>
                     <td className="border border-gray-300 p-2 text-center font-bold text-blue-600">
                       {invoice.amount?.toLocaleString('ar-SA')}
+                    </td>
+                    <td colSpan={4} className="border border-gray-300 p-2 text-right font-bold">
+                      المجموع الفرعي:
                     </td>
                   </tr>
                 </tbody>
