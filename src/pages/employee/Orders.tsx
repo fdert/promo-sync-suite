@@ -954,7 +954,7 @@ ${publicFileUrl}
           status: 'جديد',
           priority: newOrder.priority,
           amount: newOrder.amount,
-          paid_amount: newOrder.paid_amount,
+          
           payment_type: newOrder.payment_type,
           payment_notes: newOrder.payment_notes,
           due_date: newOrder.due_date,
