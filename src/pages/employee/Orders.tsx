@@ -325,7 +325,7 @@ const Orders = () => {
         orderItemsText += `📊 إجمالي البنود: ${totalAmount} ر.س\n`;
       }
 
-      // إنشاء رسالة البروفة النصية أولاً
+      // إنشاء رسالة البروفة مع الصورة المدمجة
       const textMessage = `🎨 *بروفة التصميم جاهزة للمراجعة*
 
 📋 *تفاصيل الطلب:*
@@ -342,41 +342,25 @@ ${orderItemsText}
 شكراً لكم،
 *وكالة الإبداع للدعاية والإعلان*`;
 
-      // إرسال الرسالة النصية أولاً
-      const { error: textError } = await supabase
-        .from('whatsapp_messages')
-        .insert({
-          from_number: 'system',
-          to_number: order.customers?.whatsapp_number || '',
-          message_type: 'text',
-          message_content: textMessage,
-          status: 'pending',
-          customer_id: order.customer_id || (order as any).customer_id
-        });
-
-      if (textError) throw textError;
-
-      // تحديد نوع الملف للرسالة الثانية
+      // تحديد نوع الملف
       const isImageFile = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(
         proofFile.file_name.split('.').pop()?.toLowerCase() || ''
       );
       
-      // إرسال الملف منفصلاً مع رسالة بسيطة
-      const fileMessage = `📎 *ملف البروفة*\n${proofFile.file_name}`;
-      
-      const { error: fileError } = await supabase
+      // إرسال رسالة واحدة تحتوي على النص والصورة
+      const { error: messageError } = await supabase
         .from('whatsapp_messages')
         .insert({
           from_number: 'system',
           to_number: order.customers?.whatsapp_number || '',
           message_type: isImageFile ? 'image' : 'document',
-          message_content: fileMessage,
+          message_content: textMessage,
           media_url: publicFileUrl,
           status: 'pending',
           customer_id: order.customer_id || (order as any).customer_id
         });
 
-      if (fileError) throw fileError;
+      if (messageError) throw messageError;
 
       // تحديث حالة الملف
       const { error: updateError } = await supabase
@@ -391,7 +375,7 @@ ${orderItemsText}
 
       toast({
         title: "تم إرسال البروفة",
-        description: "تم إرسال البروفة النصية والملف للعميل بنجاح",
+        description: "تم إرسال البروفة مع الصورة للعميل بنجاح",
       });
 
       // تحديث قائمة الملفات

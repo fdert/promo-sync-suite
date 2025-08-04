@@ -94,14 +94,14 @@ Deno.serve(async (req) => {
         let messagePayload;
         
         if (message.message_type === 'image' && message.media_url) {
-          // رسالة مع صورة - إرسال الصورة فقط مع عنوان بسيط
+          // رسالة مع صورة - إرسال الصورة مع النص المدمج
           messagePayload = {
             messaging_product: "whatsapp",
             to: message.to_number.replace('+', ''),
             type: "image",
             image: {
               link: message.media_url,
-              caption: "📎 بروفة التصميم"
+              caption: message.message_content
             }
           };
         } else if (message.message_type === 'document' && message.media_url) {
