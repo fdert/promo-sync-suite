@@ -606,6 +606,8 @@ ${publicFileUrl}
         });
         
         // فتح الفاتورة الموجودة
+        console.log('🚀 Opening existing invoice preview:', `/invoice/${existingInvoice.id}`);
+        console.log('Invoice ID for preview:', existingInvoice.id);
         window.open(`/invoice/${existingInvoice.id}`, '_blank');
         setIsInvoiceDialogOpen(false);
         setSelectedOrderForInvoice(null);
@@ -740,6 +742,8 @@ ${publicFileUrl}
       console.log('Opening URL:', `/invoice/${newInvoice.id}`);
 
       // فتح الفاتورة في نافذة جديدة للمعاينة
+      console.log('🚀 Opening new invoice preview:', `/invoice/${newInvoice.id}`);
+      console.log('New Invoice ID for preview:', newInvoice.id);
       window.open(`/invoice/${newInvoice.id}`, '_blank');
       
       // إرسال إشعار للقنوات المباشرة لتحديث قوائم الفواتير
