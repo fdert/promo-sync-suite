@@ -50,8 +50,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Home />} />
-          <Route path="/invoice/:invoiceId" element={<InvoicePreview />} />
-          <Route path="/auth" element={<Auth />} />
+            <Route path="/auth" element={<Auth />} />
             <Route path="/user" element={
               <ProtectedRoute>
                 <UserDashboard />
@@ -112,6 +111,7 @@ const App = () => (
               } />
               <Route path="evaluations" element={<Evaluations />} />
             </Route>
+            <Route path="/invoice/:invoiceId" element={<InvoicePreview />} />
             <Route path="/evaluation/:token" element={<Evaluation />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
