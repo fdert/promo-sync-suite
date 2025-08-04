@@ -655,7 +655,7 @@ ${publicFileUrl}
                             }}
                           >
                             <Edit className="h-3 w-3 mr-1" />
-                            تعديل
+                            حالة الطلب
                           </Button>
                           
                           {/* المدفوعات */}
@@ -762,13 +762,11 @@ ${publicFileUrl}
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="جديد">جديد</SelectItem>
-                  <SelectItem value="مؤكد">مؤكد</SelectItem>
                   <SelectItem value="قيد التنفيذ">قيد التنفيذ</SelectItem>
                   <SelectItem value="قيد المراجعة">قيد المراجعة</SelectItem>
                   <SelectItem value="جاهز للتسليم">جاهز للتسليم</SelectItem>
                   <SelectItem value="مكتمل">مكتمل</SelectItem>
                   <SelectItem value="ملغي">ملغي</SelectItem>
-                  <SelectItem value="قيد الانتظار">قيد الانتظار</SelectItem>
                 </SelectContent>
               </Select>
             </div>
