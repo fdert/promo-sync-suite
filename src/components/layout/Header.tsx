@@ -28,11 +28,12 @@ const Header = ({ onMenuClick, title }: HeaderProps) => {
         const { data } = await supabase
           .from('website_settings')
           .select('setting_value')
-          .eq('setting_key', 'company_info')
+          .eq('setting_key', 'website_content')
           .maybeSingle();
 
-        if (data?.setting_value) {
-          setCompanyInfo(data.setting_value);
+        if (data?.setting_value && typeof data.setting_value === 'object') {
+          const websiteContent = data.setting_value as any;
+          setCompanyInfo(websiteContent.companyInfo);
         }
       } catch (error) {
         console.error('Error fetching company info:', error);
@@ -59,15 +60,15 @@ const Header = ({ onMenuClick, title }: HeaderProps) => {
             <Menu className="h-5 w-5" />
           </Button>
           <div className="flex items-center gap-3">
-            {companyInfo?.logoUrl ? (
-              <img src={companyInfo.logoUrl} alt="شعار الشركة" className="h-8 w-8 object-contain rounded" />
+            {companyInfo?.logo ? (
+              <img src={companyInfo.logo} alt="شعار الشركة" className="h-8 w-8 object-contain rounded" />
             ) : (
               <img src="/logo.png" alt="شعار الوكالة" className="h-8 w-8 object-contain rounded" />
             )}
             <div className="flex flex-col">
               <h1 className="text-xl font-bold text-foreground">{title}</h1>
-              {companyInfo?.companyName && (
-                <span className="text-xs text-muted-foreground">{companyInfo.companyName}</span>
+              {companyInfo?.name && (
+                <span className="text-xs text-muted-foreground">{companyInfo.name}</span>
               )}
             </div>
           </div>
