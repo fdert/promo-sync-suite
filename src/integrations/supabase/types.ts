@@ -385,6 +385,13 @@ export type Database = {
             foreignKeyName: "evaluations_customer_id_fkey"
             columns: ["customer_id"]
             isOneToOne: false
+            referencedRelation: "customer_order_balances"
+            referencedColumns: ["customer_id"]
+          },
+          {
+            foreignKeyName: "evaluations_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
             referencedRelation: "customer_outstanding_balances"
             referencedColumns: ["customer_id"]
           },
@@ -587,6 +594,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customer_order_balances"
+            referencedColumns: ["customer_id"]
           },
           {
             foreignKeyName: "invoices_customer_id_fkey"
@@ -824,6 +838,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customer_order_balances"
+            referencedColumns: ["customer_id"]
           },
           {
             foreignKeyName: "orders_customer_id_fkey"
@@ -1421,6 +1442,13 @@ export type Database = {
             foreignKeyName: "fk_whatsapp_messages_customer"
             columns: ["customer_id"]
             isOneToOne: false
+            referencedRelation: "customer_order_balances"
+            referencedColumns: ["customer_id"]
+          },
+          {
+            foreignKeyName: "fk_whatsapp_messages_customer"
+            columns: ["customer_id"]
+            isOneToOne: false
             referencedRelation: "customer_outstanding_balances"
             referencedColumns: ["customer_id"]
           },
@@ -1435,6 +1463,20 @@ export type Database = {
       }
     }
     Views: {
+      customer_order_balances: {
+        Row: {
+          customer_id: string | null
+          customer_name: string | null
+          earliest_due_date: string | null
+          latest_due_date: string | null
+          outstanding_balance: number | null
+          total_order_amount: number | null
+          total_orders: number | null
+          total_paid_amount: number | null
+          unpaid_orders_count: number | null
+        }
+        Relationships: []
+      }
       customer_outstanding_balances: {
         Row: {
           customer_id: string | null
@@ -1480,6 +1522,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customer_order_balances"
+            referencedColumns: ["customer_id"]
           },
           {
             foreignKeyName: "invoices_customer_id_fkey"
@@ -1556,6 +1605,13 @@ export type Database = {
             foreignKeyName: "orders_customer_id_fkey"
             columns: ["customer_id"]
             isOneToOne: false
+            referencedRelation: "customer_order_balances"
+            referencedColumns: ["customer_id"]
+          },
+          {
+            foreignKeyName: "orders_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
             referencedRelation: "customer_outstanding_balances"
             referencedColumns: ["customer_id"]
           },
@@ -1578,6 +1634,14 @@ export type Database = {
     }
     Functions: {
       calculate_accounts_receivable_balance: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      calculate_customer_order_balance: {
+        Args: { customer_id_param: string }
+        Returns: number
+      }
+      calculate_total_customer_orders_receivable: {
         Args: Record<PropertyKey, never>
         Returns: number
       }

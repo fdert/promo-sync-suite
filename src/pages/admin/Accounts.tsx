@@ -164,41 +164,35 @@ const Accounts = () => {
     }
   };
 
-  // جلب فواتير العملاء المدينين - استخدام العرض الجديد للبيانات المحدثة
+  // دالة جلب العملاء المدينين من الطلبات
   const fetchDebtorInvoices = async () => {
     try {
-      console.log('Fetching debtor invoices with search filters:', debtorSearch);
+      console.log('Fetching debtor customers from orders with search filters:', debtorSearch);
       
-      // استخدام العرض الجديد للحصول على البيانات المحدثة
-      const { data: invoicesData } = await supabase
-        .from('invoice_payment_summary')
-        .select('*')
-        .gt('remaining_amount', 0.01);
+      // استخدام العرض الجديد للعملاء المدينين من الطلبات
+      const { data: debtorData, error } = await supabase
+        .from('customer_order_balances')
+        .select('*');
 
-      let filteredInvoices = invoicesData || [];
+      if (error) {
+        console.error('Error fetching customer order balances:', error);
+        return;
+      }
 
-      // جلب أسماء العملاء
-      const uniqueCustomerIds = [...new Set(filteredInvoices.map(inv => inv.customer_id).filter(Boolean))];
-      const { data: customersData } = await supabase
-        .from('customers')
-        .select('id, name')
-        .in('id', uniqueCustomerIds);
-
-      const customerNameMap = new Map(customersData?.map(c => [c.id, c.name]) || []);
+      let filteredCustomers = debtorData || [];
 
       // تطبيق فلتر البحث في اسم العميل
       if (debtorSearch.customerName) {
-        filteredInvoices = filteredInvoices.filter(invoice => {
-          const customerName = customerNameMap.get(invoice.customer_id) || '';
-          return customerName.toLowerCase().includes(debtorSearch.customerName.toLowerCase());
+        filteredCustomers = filteredCustomers.filter((customer: any) => {
+          return customer.customer_name.toLowerCase().includes(debtorSearch.customerName.toLowerCase());
         });
       }
 
       // تطبيق فلتر الحالة
       if (debtorSearch.status !== 'all') {
-        filteredInvoices = filteredInvoices.filter(invoice => {
-          const remainingAmount = invoice.remaining_amount || 0;
-          const paidAmount = invoice.calculated_paid_amount || 0;
+        filteredCustomers = filteredCustomers.filter((customer: any) => {
+          const remainingAmount = customer.outstanding_balance || 0;
+          const paidAmount = customer.total_paid_amount || 0;
           
           if (debtorSearch.status === 'partial') {
             return paidAmount > 0 && remainingAmount > 0.01;
@@ -209,14 +203,23 @@ const Accounts = () => {
         });
       }
 
-      // إضافة أسماء العملاء للفواتير
-      const processedInvoices = filteredInvoices.map(invoice => ({
-        ...invoice,
-        customer_name: customerNameMap.get(invoice.customer_id) || 'عميل غير محدد'
+      console.log('Filtered debtor customers from orders:', filteredCustomers);
+      
+      // تحويل البيانات لتتوافق مع الواجهة الحالية
+      const processedData = filteredCustomers.map((customer: any) => ({
+        id: customer.customer_id,
+        customer_id: customer.customer_id,
+        customer_name: customer.customer_name,
+        total_amount: customer.total_order_amount,
+        calculated_paid_amount: customer.total_paid_amount,
+        remaining_amount: customer.outstanding_balance,
+        total_orders: customer.total_orders,
+        unpaid_orders_count: customer.unpaid_orders_count,
+        earliest_due_date: customer.earliest_due_date,
+        latest_due_date: customer.latest_due_date
       }));
 
-      console.log('Filtered debtor invoices:', processedInvoices);
-      setDebtorInvoices(processedInvoices);
+      setDebtorInvoices(processedData);
     } catch (error) {
       console.error('Error fetching debtor invoices:', error);
     }
