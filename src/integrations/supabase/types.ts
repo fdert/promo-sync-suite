@@ -521,7 +521,6 @@ export type Database = {
           last_printed_at: string | null
           notes: string | null
           order_id: string | null
-          paid_amount: number | null
           payment_date: string | null
           payment_method: string | null
           payment_type: string | null
@@ -546,7 +545,6 @@ export type Database = {
           last_printed_at?: string | null
           notes?: string | null
           order_id?: string | null
-          paid_amount?: number | null
           payment_date?: string | null
           payment_method?: string | null
           payment_type?: string | null
@@ -571,7 +569,6 @@ export type Database = {
           last_printed_at?: string | null
           notes?: string | null
           order_id?: string | null
-          paid_amount?: number | null
           payment_date?: string | null
           payment_method?: string | null
           payment_type?: string | null
@@ -757,7 +754,6 @@ export type Database = {
           id: string
           notes: string | null
           order_number: string
-          paid_amount: number | null
           payment_notes: string | null
           payment_type: string | null
           priority: string | null
@@ -781,7 +777,6 @@ export type Database = {
           id?: string
           notes?: string | null
           order_number: string
-          paid_amount?: number | null
           payment_notes?: string | null
           payment_type?: string | null
           priority?: string | null
@@ -805,7 +800,6 @@ export type Database = {
           id?: string
           notes?: string | null
           order_number?: string
-          paid_amount?: number | null
           payment_notes?: string | null
           payment_type?: string | null
           priority?: string | null
