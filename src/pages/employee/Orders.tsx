@@ -46,6 +46,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Switch } from "@/components/ui/switch";
 
 interface Order {
@@ -119,6 +120,7 @@ const Orders = () => {
   });
   
   const { toast } = useToast();
+  const { user } = useAuth();
 
   // جلب الطلبات
   const fetchOrders = async () => {
@@ -580,17 +582,115 @@ ${publicFileUrl}
   // تحويل الطلب إلى فاتورة
   const convertToInvoice = async (orderId: string) => {
     try {
-      // فتح صفحة إنشاء فاتورة جديدة مع معرف الطلب
-      window.open(`/admin/invoices?order_id=${orderId}`, '_blank');
+      setLoading(true);
+      
+      // جلب بيانات الطلب مع بنوده
+      const { data: orderData, error: orderError } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          customers (*),
+          order_items (*)
+        `)
+        .eq('id', orderId)
+        .single();
+
+      if (orderError) throw orderError;
+      if (!orderData) throw new Error('لم يتم العثور على الطلب');
+
+      // إنشاء رقم فاتورة جديد
+      const { data: invoiceNumber, error: numberError } = await supabase
+        .rpc('generate_invoice_number');
+
+      if (numberError) throw numberError;
+
+      // إنشاء الفاتورة
+      const { data: newInvoice, error: invoiceError } = await supabase
+        .from('invoices')
+        .insert({
+          invoice_number: invoiceNumber,
+          customer_id: orderData.customer_id,
+          order_id: orderData.id,
+          amount: orderData.amount,
+          tax_amount: 0, // يمكن حسابها حسب النظام
+          total_amount: orderData.amount,
+          issue_date: new Date().toISOString().split('T')[0],
+          due_date: orderData.due_date || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 يوم من اليوم
+          payment_type: orderData.payment_type || 'دفع آجل',
+          status: orderData.paid_amount >= orderData.amount ? 'مدفوعة' : 'قيد الانتظار',
+          paid_amount: orderData.paid_amount || 0,
+          created_by: user?.id
+        })
+        .select()
+        .single();
+
+      if (invoiceError) throw invoiceError;
+
+      // نسخ بنود الطلب إلى بنود الفاتورة
+      if (orderData.order_items && orderData.order_items.length > 0) {
+        const invoiceItems = orderData.order_items.map((item: any) => ({
+          invoice_id: newInvoice.id,
+          item_name: item.item_name,
+          description: item.description,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          total_amount: item.total_amount
+        }));
+
+        const { error: itemsError } = await supabase
+          .from('invoice_items')
+          .insert(invoiceItems);
+
+        if (itemsError) throw itemsError;
+      }
+
+      // إرسال إشعار واتساب للعميل بالفاتورة
+      if (orderData.customers?.whatsapp_number) {
+        try {
+          await supabase.functions.invoke('send-invoice-notifications', {
+            body: {
+              type: 'invoice_created',
+              invoice_id: newInvoice.id,
+              customer_id: orderData.customer_id,
+              invoice_data: {
+                invoice_number: newInvoice.invoice_number,
+                customer_name: orderData.customers.name,
+                amount: newInvoice.total_amount,
+                due_date: newInvoice.due_date,
+                payment_type: newInvoice.payment_type,
+                items: orderData.order_items || []
+              }
+            }
+          });
+        } catch (notificationError) {
+          console.error('Error sending invoice notification:', notificationError);
+          // لا نوقف العملية إذا فشل الإرسال
+        }
+      }
+
+      toast({
+        title: "تم إنشاء الفاتورة",
+        description: `تم إنشاء الفاتورة رقم ${newInvoice.invoice_number} بنجاح${orderData.customers?.whatsapp_number ? ' وإرسالها للعميل' : ''}`,
+      });
+
+      // فتح الفاتورة في نافذة جديدة
+      window.open(`/invoice-preview/${newInvoice.id}`, '_blank');
+      
       setIsInvoiceDialogOpen(false);
       setSelectedOrderForInvoice(null);
+      
+      // إعادة جلب البيانات لتحديث الواجهة
+      fetchOrders();
+
     } catch (error) {
       console.error('Error converting to invoice:', error);
       toast({
-        title: "خطأ",
-        description: "فشل في تحويل الطلب إلى فاتورة",
+        title: "خطأ في إنشاء الفاتورة",
+        description: "حدث خطأ أثناء إنشاء الفاتورة. يرجى المحاولة مرة أخرى.",
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   };
   
@@ -1207,39 +1307,105 @@ ${publicFileUrl}
 
       {/* حوار تحويل إلى فاتورة */}
       <Dialog open={isInvoiceDialogOpen} onOpenChange={setIsInvoiceDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>تحويل الطلب إلى فاتورة</DialogTitle>
             <DialogDescription>
-              سيتم إنشاء فاتورة جديدة بناءً على بيانات هذا الطلب
+              سيتم إنشاء فاتورة جديدة تلقائياً وإرسالها للعميل عبر الواتساب
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4">
+          <div className="space-y-6">
             {selectedOrderForInvoice && (
-              <div className="p-3 bg-muted rounded-lg">
-                <p className="text-sm"><strong>الطلب:</strong> {selectedOrderForInvoice.order_number}</p>
-                <p className="text-sm"><strong>العميل:</strong> {selectedOrderForInvoice.customers?.name}</p>
-                <p className="text-sm"><strong>الخدمة:</strong> {selectedOrderForInvoice.service_name}</p>
-                <p className="text-sm"><strong>المبلغ:</strong> {selectedOrderForInvoice.amount} ر.س</p>
-              </div>
+              <>
+                {/* معلومات الطلب */}
+                <div className="p-4 bg-muted rounded-lg">
+                  <h3 className="font-semibold mb-3">تفاصيل الطلب</h3>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p><strong>رقم الطلب:</strong> {selectedOrderForInvoice.order_number}</p>
+                      <p><strong>العميل:</strong> {selectedOrderForInvoice.customers?.name}</p>
+                      <p><strong>الخدمة:</strong> {selectedOrderForInvoice.service_name}</p>
+                    </div>
+                    <div>
+                      <p><strong>المبلغ الإجمالي:</strong> {selectedOrderForInvoice.amount?.toLocaleString()} ر.س</p>
+                      <p><strong>المبلغ المدفوع:</strong> {(selectedOrderForInvoice.paid_amount || 0).toLocaleString()} ر.س</p>
+                      <p><strong>المبلغ المتبقي:</strong> {(selectedOrderForInvoice.amount - (selectedOrderForInvoice.paid_amount || 0)).toLocaleString()} ر.س</p>
+                    </div>
+                  </div>
+                  
+                  {/* معلومات الاتصال */}
+                  <div className="mt-3 p-3 bg-white rounded border">
+                    <p className="text-xs text-muted-foreground mb-1">معلومات الاتصال</p>
+                    <div className="flex items-center gap-4 text-sm">
+                      <p><strong>الواتساب:</strong> {selectedOrderForInvoice.customers?.whatsapp_number || 'غير متوفر'}</p>
+                      <p><strong>الهاتف:</strong> {selectedOrderForInvoice.customers?.phone || 'غير متوفر'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* معاينة ما سيحدث */}
+                <div className="p-4 border rounded-lg bg-blue-50">
+                  <h3 className="font-semibold mb-3 text-blue-800">ما سيحدث عند التحويل:</h3>
+                  <div className="space-y-2 text-sm text-blue-700">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                      <span>إنشاء فاتورة جديدة برقم تلقائي</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                      <span>نسخ جميع بنود الطلب إلى الفاتورة</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                      <span>ربط الفاتورة بالطلب الحالي</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                      <span>تطبيق المدفوعات السابقة على الفاتورة</span>
+                    </div>
+                    {selectedOrderForInvoice.customers?.whatsapp_number && (
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-green-600 rounded-full"></div>
+                        <span className="text-green-700">إرسال الفاتورة تلقائياً عبر الواتساب</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                      <span>فتح الفاتورة للمراجعة والطباعة</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* تحذير إذا لم يكن هناك رقم واتساب */}
+                {!selectedOrderForInvoice.customers?.whatsapp_number && (
+                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <div className="flex items-center gap-2 text-yellow-800">
+                      <div className="w-2 h-2 bg-yellow-600 rounded-full"></div>
+                      <span className="font-medium">تنبيه:</span>
+                    </div>
+                    <p className="text-yellow-700 text-sm mt-1">
+                      لا يوجد رقم واتساب للعميل. سيتم إنشاء الفاتورة بدون إرسال تلقائي.
+                    </p>
+                  </div>
+                )}
+              </>
             )}
             
-            <div className="text-sm text-muted-foreground bg-blue-50 p-3 rounded-lg">
-              <p>سيتم فتح صفحة إنشاء فاتورة جديدة مع تعبئة البيانات من هذا الطلب تلقائياً.</p>
-            </div>
-            
-            <div className="flex gap-2 justify-end">
+            <div className="flex gap-2 justify-end pt-4 border-t">
               <Button 
                 variant="outline" 
                 onClick={() => setIsInvoiceDialogOpen(false)}
+                disabled={loading}
               >
                 إلغاء
               </Button>
               <Button 
                 onClick={() => selectedOrderForInvoice && convertToInvoice(selectedOrderForInvoice.id)}
+                disabled={loading}
+                className="bg-blue-600 hover:bg-blue-700"
               >
-                تحويل إلى فاتورة
+                {loading ? 'جاري الإنشاء...' : 'إنشاء الفاتورة وإرسالها'}
               </Button>
             </div>
           </div>
