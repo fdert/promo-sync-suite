@@ -95,7 +95,7 @@ const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
           <p className="text-muted-foreground mb-4">
             ليس لديك الصلاحيات اللازمة للوصول لهذه الصفحة
           </p>
-          <Navigate to="/admin" replace />
+          <Navigate to="/employee" replace />
         </div>
       </div>
     );
