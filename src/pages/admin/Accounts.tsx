@@ -204,30 +204,46 @@ const Accounts = () => {
 
       let debtorInvoicesFiltered = invoicesSummaryData || [];
 
+      // جلب أسماء العملاء
+      const customerIds = [...new Set(debtorInvoicesFiltered.map(inv => inv.customer_id).filter(Boolean))];
+      const { data: customers } = await supabase
+        .from('customers')
+        .select('id, name')
+        .in('id', customerIds);
+
+      const customersMap = new Map(customers?.map(c => [c.id, c.name]) || []);
+
       // تطبيق فلتر البحث في اسم العميل
       if (debtorSearch.customerName) {
-        debtorInvoicesFiltered = debtorInvoicesFiltered.filter(invoice => 
-          invoice.customers?.name?.toLowerCase().includes(debtorSearch.customerName.toLowerCase())
-        );
+        debtorInvoicesFiltered = debtorInvoicesFiltered.filter(invoice => {
+          const customerName = customersMap.get(invoice.customer_id) || '';
+          return customerName.toLowerCase().includes(debtorSearch.customerName.toLowerCase());
+        });
       }
 
       // تطبيق فلتر الحالة
       if (debtorSearch.status !== 'all') {
         debtorInvoicesFiltered = debtorInvoicesFiltered.filter(invoice => {
-          const remainingAmount = invoice.total_amount - (invoice.paid_amount || 0);
-          const paidAmount = invoice.paid_amount || 0;
+          const remainingAmount = invoice.remaining_amount || 0;
+          const paidAmount = invoice.calculated_paid_amount || 0;
           
           if (debtorSearch.status === 'partial') {
-            return paidAmount > 0 && remainingAmount > 0.01; // مدفوع جزئياً
+            return paidAmount > 0 && remainingAmount > 0.01;
           } else if (debtorSearch.status === 'unpaid') {
-            return paidAmount <= 0.01; // غير مدفوع نهائياً
+            return paidAmount <= 0.01;
           }
           return remainingAmount > 0.01;
         });
       }
 
-      console.log('Filtered debtor invoices:', debtorInvoicesFiltered);
-      setDebtorInvoices(debtorInvoicesFiltered);
+      // إضافة أسماء العملاء للفواتير
+      const processedInvoices = debtorInvoicesFiltered.map(invoice => ({
+        ...invoice,
+        customer_name: customersMap.get(invoice.customer_id) || 'عميل غير محدد'
+      }));
+
+      console.log('Filtered debtor invoices:', processedInvoices);
+      setDebtorInvoices(processedInvoices);
       
     } catch (error) {
       console.error('Error:', error);

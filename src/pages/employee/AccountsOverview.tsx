@@ -54,7 +54,7 @@ const AccountsOverview = () => {
   const fetchUnpaidInvoices = async () => {
     try {
       const { data, error } = await supabase
-        .from('invoices')
+        .from('invoice_payment_summary')
         .select(`
           *,
           customers(name, phone, whatsapp_number)
@@ -65,7 +65,7 @@ const AccountsOverview = () => {
 
       // فلترة الفواتير غير المدفوعة بالكامل
       const unpaid = (data || []).filter(invoice => {
-        const remainingAmount = invoice.total_amount - (invoice.paid_amount || 0);
+        const remainingAmount = invoice.remaining_amount || 0;
         return remainingAmount > 0.01;
       }).map(invoice => {
         const today = new Date();
@@ -74,10 +74,11 @@ const AccountsOverview = () => {
         
         return {
           ...invoice,
-          remaining_amount: invoice.total_amount - (invoice.paid_amount || 0),
+          remaining_amount: invoice.remaining_amount || 0,
+          paid_amount: invoice.calculated_paid_amount || 0,
           days_overdue: daysDiff > 0 ? daysDiff : 0,
           is_overdue: daysDiff > 0,
-          payment_status: invoice.paid_amount > 0 ? 'partial' : 'unpaid'
+          payment_status: (invoice.calculated_paid_amount || 0) > 0 ? 'partial' : 'unpaid'
         };
       });
 

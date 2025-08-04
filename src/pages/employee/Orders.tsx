@@ -174,15 +174,19 @@ const Orders = () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('orders')
-        .select(`
-          *,
-          customers (name, whatsapp_number, phone)
-        `)
+        .from('order_payment_summary')
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setOrders(data || []);
+      
+      // إضافة paid_amount للطلبات للتوافق مع النوع
+      const ordersWithPaidAmount = (data || []).map(order => ({
+        ...order,
+        paid_amount: order.calculated_paid_amount || 0
+      }));
+      
+      setOrders(ordersWithPaidAmount);
     } catch (error) {
       console.error('Error fetching orders:', error);
       toast({
@@ -638,18 +642,8 @@ ${publicFileUrl}
 
       if (error) throw error;
 
-      // تحديث المبلغ المدفوع في الطلب
-      const currentOrder = orders.find(o => o.id === orderId);
-      if (currentOrder) {
-        const newPaidAmount = (currentOrder.paid_amount || 0) + newPayment.amount;
-        
-        const { error: updateError } = await supabase
-          .from('orders')
-          .update({ paid_amount: newPaidAmount })
-          .eq('id', orderId);
-
-        if (updateError) throw updateError;
-      }
+      // تحديث المبلغ المدفوع في الطلب - لم يعد ضرورياً لأن النظام يستخدم view محسوبة
+      console.log('Payment added successfully for order:', orderId);
 
       toast({
         title: "تم إضافة الدفعة",
@@ -755,8 +749,7 @@ ${publicFileUrl}
           issue_date: new Date().toISOString().split('T')[0],
           due_date: orderData.due_date || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
           payment_type: orderData.payment_type || 'دفع آجل',
-          status: (orderData.paid_amount || 0) >= orderData.amount ? 'مدفوعة' : 'قيد الانتظار',
-          paid_amount: orderData.paid_amount || 0,
+          status: 'قيد الانتظار', // سيتم حساب الحالة تلقائياً في المعاينة
           created_by: user?.id
         })
         .select()

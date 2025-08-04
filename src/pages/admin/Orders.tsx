@@ -189,15 +189,8 @@ const Orders = () => {
         return false;
       }
 
-      // تحديث المبلغ المدفوع في الطلب
-      const order = orders.find(o => o.id === orderId);
-      if (order) {
-        const newPaidAmount = (order.paid_amount || 0) + amount;
-        await supabase
-          .from('orders')
-          .update({ paid_amount: newPaidAmount })
-          .eq('id', orderId);
-      }
+      // تحديث المبلغ المدفوع في الطلب - لم يعد ضرورياً لأن النظام يستخدم view محسوبة
+      console.log('Payment added successfully for order:', orderId);
 
       toast({
         title: "تم إضافة الدفعة",
@@ -983,7 +976,7 @@ const Orders = () => {
                 service_name: orderData.service_name,
                 description: orderData.description || '',
                 payment_type: orderData.payment_type || 'دفع آجل',
-                paid_amount: orderData.paid_amount || 0,
+                calculated_paid_amount: 0,
                 status: newStatus,
                 priority: orderData.priority || 'متوسطة',
                 due_date: orderData.due_date,
@@ -2009,14 +2002,8 @@ const PaymentManagement = ({ order, onPaymentAdded }) => {
 
       if (paymentError) throw paymentError;
 
-      // تحديث المبلغ المدفوع في الطلب
-      const newTotalPaid = totalPaid + amount;
-      const { error: orderError } = await supabase
-        .from('orders')
-        .update({ paid_amount: newTotalPaid })
-        .eq('id', order.id);
-
-      if (orderError) throw orderError;
+      // تحديث المبلغ المدفوع في الطلب - لم يعد ضرورياً لأن النظام يستخدم view محسوبة
+      console.log('Payment updated successfully for order:', order.id);
 
       toast({
         title: "تم إضافة الدفعة",

@@ -112,29 +112,27 @@ const AccountsReceivableReview = () => {
 
       // جلب ملخص الحسابات
       const { data: summaryData } = await supabase
-        .from('account_entries')
-        .select(`
-          debit_amount,
-          credit_amount,
-          accounts!inner(account_name, account_type)
-        `)
-        .eq('accounts.account_name', 'العملاء المدينون');
+        .from('invoice_payment_summary')
+        .select('*')
+        .gt('remaining_amount', 0.01);
 
-      const { data: accountData } = await supabase
-        .from('accounts')
-        .select('balance')
-        .eq('account_name', 'العملاء المدينون')
-        .single();
-
-      if (summaryData && accountData) {
-        const totalInvoiced = summaryData.reduce((sum, entry) => sum + (entry.debit_amount || 0), 0);
-        const totalPaid = summaryData.reduce((sum, entry) => sum + (entry.credit_amount || 0), 0);
+      if (summaryData && summaryData.length > 0) {
+        const totalInvoiced = summaryData.reduce((sum, inv) => sum + inv.total_amount, 0);
+        const totalPaid = summaryData.reduce((sum, inv) => sum + (inv.calculated_paid_amount || 0), 0);
+        const totalOutstanding = summaryData.reduce((sum, inv) => sum + (inv.remaining_amount || 0), 0);
+        
+        // جلب رصيد العملاء المدينين من الحسابات
+        const { data: accountData } = await supabase
+          .from('accounts')
+          .select('balance')
+          .eq('account_name', 'العملاء المدينون')
+          .single();
         
         setAccountingSummary({
           total_invoiced: totalInvoiced,
           total_paid: totalPaid,
-          total_outstanding: totalInvoiced - totalPaid,
-          account_balance: accountData.balance
+          total_outstanding: totalOutstanding,
+          account_balance: accountData?.balance || 0
         });
       }
 
