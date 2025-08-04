@@ -37,20 +37,30 @@ interface InvoiceItem {
 }
 
 const InvoicePreview = () => {
+  const params = useParams();
   const { invoiceId } = useParams<{ invoiceId: string }>();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [items, setItems] = useState<InvoiceItem[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  console.log('InvoicePreview mounted with invoiceId:', invoiceId);
+  console.log('=== InvoicePreview Debug ===');
+  console.log('Full params object:', params);
+  console.log('Extracted invoiceId:', invoiceId);
+  console.log('Current URL:', window.location.href);
+  console.log('Pathname:', window.location.pathname);
 
   useEffect(() => {
-    if (invoiceId) {
-      console.log('Calling fetchInvoiceData with ID:', invoiceId);
+    if (invoiceId && invoiceId !== ':invoiceId') {
+      console.log('Valid invoiceId found, calling fetchInvoiceData with ID:', invoiceId);
       fetchInvoiceData();
     } else {
-      console.error('No invoiceId provided');
+      console.error('Invalid or missing invoiceId. Received:', invoiceId);
+      toast({
+        title: "خطأ",
+        description: "معرف الفاتورة غير صحيح أو مفقود",
+        variant: "destructive",
+      });
       setLoading(false);
     }
   }, [invoiceId]);
@@ -67,7 +77,23 @@ const InvoicePreview = () => {
     }
 
     try {
-      console.log('Fetching invoice with ID:', invoiceId);
+      console.log('=== Starting fetchInvoiceData ===');
+      console.log('Invoice ID to fetch:', invoiceId);
+      console.log('Invoice ID type:', typeof invoiceId);
+      console.log('Invoice ID length:', invoiceId.length);
+      
+      // التأكد من أن معرف الفاتورة صالح (UUID format)
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(invoiceId)) {
+        console.error('Invalid UUID format for invoiceId:', invoiceId);
+        toast({
+          title: "خطأ",
+          description: "معرف الفاتورة غير صالح",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
       
       // جلب بيانات الفاتورة
       const { data: invoiceData, error: invoiceError } = await supabase

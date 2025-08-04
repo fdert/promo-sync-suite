@@ -734,6 +734,11 @@ ${publicFileUrl}
         description: `تم إنشاء الفاتورة رقم ${newInvoice.invoice_number} بنجاح${orderData.customers?.whatsapp_number ? ' وإرسالها للعميل' : ''}`,
       });
 
+      console.log('=== Invoice Creation Success ===');
+      console.log('Created invoice:', newInvoice);
+      console.log('Invoice ID:', newInvoice.id);
+      console.log('Opening URL:', `/invoice/${newInvoice.id}`);
+
       // فتح الفاتورة في نافذة جديدة للمعاينة
       window.open(`/invoice/${newInvoice.id}`, '_blank');
       
