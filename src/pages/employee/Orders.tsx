@@ -584,6 +584,35 @@ ${publicFileUrl}
     try {
       setLoading(true);
       
+      // التحقق من وجود فاتورة للطلب بالفعل
+      const { data: existingInvoice, error: checkError } = await supabase
+        .from('invoices')
+        .select('id, invoice_number')
+        .eq('order_id', orderId)
+        .maybeSingle();
+
+      if (checkError) {
+        console.error('Error checking existing invoice:', checkError);
+        throw new Error('فشل في التحقق من وجود فاتورة مسبقة');
+      }
+
+      // إذا كانت هناك فاتورة موجودة، افتحها بدلاً من إنشاء فاتورة جديدة
+      if (existingInvoice) {
+        console.log('Found existing invoice:', existingInvoice.invoice_number);
+        toast({
+          title: "فاتورة موجودة",
+          description: `الفاتورة ${existingInvoice.invoice_number} موجودة بالفعل لهذا الطلب`,
+          variant: "default",
+        });
+        
+        // فتح الفاتورة الموجودة
+        window.open(`/invoice-preview/${existingInvoice.id}`, '_blank');
+        setIsInvoiceDialogOpen(false);
+        setSelectedOrderForInvoice(null);
+        setLoading(false);
+        return;
+      }
+      
       // جلب بيانات الطلب مع بنوده
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
