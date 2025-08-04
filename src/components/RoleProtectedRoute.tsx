@@ -20,6 +20,7 @@ const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
   const { user, loading } = useAuth();
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
   const [isCheckingAccess, setIsCheckingAccess] = useState(true);
+  const [shouldRedirectToEmployee, setShouldRedirectToEmployee] = useState(false);
 
   useEffect(() => {
     const checkAccess = async () => {
@@ -40,6 +41,10 @@ const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
         const hasRequiredRole = allowedRoles.some(role => userRolesList.includes(role));
 
         if (!hasRequiredRole) {
+          // إذا كان المستخدم موظف ولكن يحاول الوصول لصفحة إدارية
+          if (userRolesList.includes('employee')) {
+            setShouldRedirectToEmployee(true);
+          }
           setHasAccess(false);
           setIsCheckingAccess(false);
           return;
@@ -87,6 +92,11 @@ const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
     return <Navigate to="/auth" replace />;
   }
 
+  // توجيه الموظف إلى لوحة الموظفين
+  if (shouldRedirectToEmployee) {
+    return <Navigate to="/employee" replace />;
+  }
+
   if (hasAccess === false) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -95,7 +105,6 @@ const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
           <p className="text-muted-foreground mb-4">
             ليس لديك الصلاحيات اللازمة للوصول لهذه الصفحة
           </p>
-          <Navigate to="/employee" replace />
         </div>
       </div>
     );
