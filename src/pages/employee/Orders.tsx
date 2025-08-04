@@ -325,7 +325,7 @@ const Orders = () => {
         orderItemsText += `📊 إجمالي البنود: ${totalAmount} ر.س\n`;
       }
 
-      // إنشاء رسالة البروفة مع الصورة المدمجة
+      // إنشاء رسالة البروفة مع رابط للصورة
       const textMessage = `🎨 *بروفة التصميم جاهزة للمراجعة*
 
 📋 *تفاصيل الطلب:*
@@ -334,7 +334,11 @@ const Orders = () => {
 • الخدمة: ${order.service_name}
 ${orderItemsText}
 
-*يرجى مراجعة البروفة المرفقة:*
+📸 *لاستعراض البروفة:*
+👇 اضغط على الرابط التالي لعرض التصميم:
+${publicFileUrl}
+
+*بعد مراجعة البروفة:*
 
 ✅ *للموافقة:* أرسل "موافق"
 📝 *للتعديل:* اكتب التعديلات المطلوبة
@@ -342,20 +346,14 @@ ${orderItemsText}
 شكراً لكم،
 *وكالة الإبداع للدعاية والإعلان*`;
 
-      // تحديد نوع الملف
-      const isImageFile = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(
-        proofFile.file_name.split('.').pop()?.toLowerCase() || ''
-      );
-      
-      // إرسال رسالة واحدة تحتوي على النص والصورة
+      // إرسال رسالة نصية تحتوي على الرابط
       const { error: messageError } = await supabase
         .from('whatsapp_messages')
         .insert({
           from_number: 'system',
           to_number: order.customers?.whatsapp_number || '',
-          message_type: isImageFile ? 'image' : 'document',
+          message_type: 'text',
           message_content: textMessage,
-          media_url: publicFileUrl,
           status: 'pending',
           customer_id: order.customer_id || (order as any).customer_id
         });
