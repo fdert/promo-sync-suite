@@ -67,6 +67,7 @@ const Dashboard = () => {
         new Date(order.created_at) >= thisMonth
       );
       
+      // حساب الإيرادات من جميع الطلبات المُنشأة هذا الشهر (لتطابق النظام المحاسبي)
       const monthlyRevenue = thisMonthOrders.reduce((sum, order) => sum + (order.amount || 0), 0);
       
       return { activeOrders, monthlyRevenue, totalOrders: data.length };

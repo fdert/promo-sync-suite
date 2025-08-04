@@ -143,27 +143,7 @@ const Accounts = () => {
     }
   };
 
-  // حساب الإيرادات الشهرية من الطلبات المكتملة فقط
-  const fetchMonthlyRevenue = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('orders')
-        .select('amount, completion_date, status')
-        .eq('status', 'مكتمل')
-        .gte('completion_date', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0])
-        .lt('completion_date', new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toISOString().split('T')[0]);
-
-      if (error) {
-        console.error('Error fetching monthly revenue:', error);
-        return 0;
-      }
-
-      return (data || []).reduce((sum, order) => sum + (order.amount || 0), 0);
-    } catch (error) {
-      console.error('Error:', error);
-      return 0;
-    }
-  };
+  // تم حذف دالة fetchInvoices واستبدالها بدالة fetchMonthlyRevenue في مكان آخر
 
   // دالة جلب العملاء المدينين من الطلبات
   const fetchDebtorInvoices = async () => {
@@ -234,7 +214,8 @@ const Accounts = () => {
         fetchAccounts(), 
         fetchAccountEntries(), 
         fetchExpenses(), 
-        fetchDebtorInvoices()
+        fetchDebtorInvoices(),
+        fetchMonthlyRevenue()
       ]);
       setLoading(false);
     };
@@ -248,7 +229,8 @@ const Accounts = () => {
       fetchAccounts(), 
       fetchAccountEntries(), 
       fetchExpenses(), 
-      fetchDebtorInvoices()
+      fetchDebtorInvoices(),
+      fetchMonthlyRevenue()
     ]);
     setLoading(false);
     toast({
@@ -514,15 +496,31 @@ const Accounts = () => {
     }
   };
 
-  // حساب الإحصائيات - استخدام الطلبات المكتملة للإيرادات
-  const monthlyIncome = (expenses || [])
-    .filter(() => false) // مؤقتاً لحين حساب الإيرادات من الطلبات
-    .reduce(() => 0, 0);
+  // حساب الإحصائيات - حساب الإيرادات من الطلبات المكتملة لتطابق الداشبورد  
+  const [monthlyIncome, setMonthlyIncome] = useState(0);
 
-  // حساب الإيرادات الفعلية من الطلبات المكتملة
-  const calculateMonthlyIncome = () => {
-    // سيتم تحديثها لاحقاً من API الطلبات
-    return 0;
+  // جلب الإيرادات الشهرية من الطلبات
+  const fetchMonthlyRevenue = async () => {
+    try {
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+      
+      const { data, error } = await supabase
+        .from('orders')
+        .select('amount, created_at')
+        .gte('created_at', startOfMonth.toISOString());
+
+      if (error) {
+        console.error('Error fetching monthly revenue:', error);
+        return;
+      }
+
+      const revenue = (data || []).reduce((sum, order) => sum + (order.amount || 0), 0);
+      setMonthlyIncome(revenue);
+    } catch (error) {
+      console.error('Error:', error);
+    }
   };
 
   const monthlyExpenses = (expenses || [])
