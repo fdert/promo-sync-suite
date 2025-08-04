@@ -43,6 +43,8 @@ import {
   Edit,
   CreditCard,
   Receipt,
+  Plus,
+  Trash2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -67,6 +69,27 @@ interface Order {
     whatsapp_number: string;
     phone: string;
   };
+}
+
+interface Customer {
+  id: string;
+  name: string;
+  phone?: string;
+  whatsapp_number?: string;
+}
+
+interface Service {
+  id: string;
+  name: string;
+  base_price?: number;
+}
+
+interface OrderItem {
+  id?: string;
+  item_name: string;
+  quantity: number;
+  unit_price: number;
+  total_amount: number;
 }
 
 interface PrintFile {
@@ -118,6 +141,30 @@ const Orders = () => {
     payment_type: 'نقدي',
     notes: ''
   });
+
+  // حالات إنشاء طلب جديد
+  const [isNewOrderDialogOpen, setIsNewOrderDialogOpen] = useState(false);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
+  const [newOrder, setNewOrder] = useState({
+    customer_id: '',
+    service_id: '',
+    service_name: '',
+    priority: 'متوسطة',
+    due_date: '',
+    description: '',
+    amount: 0,
+    payment_type: 'دفع آجل',
+    paid_amount: 0,
+    payment_notes: ''
+  });
+  const [orderItems, setOrderItems] = useState<OrderItem[]>([{
+    item_name: '',
+    quantity: 1,
+    unit_price: 0,
+    total_amount: 0
+  }]);
+  const [attachmentFiles, setAttachmentFiles] = useState<File[]>([]);
   
   const { toast } = useToast();
   const { user } = useAuth();
@@ -145,6 +192,48 @@ const Orders = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  // جلب العملاء
+  const fetchCustomers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('customers')
+        .select('id, name, phone, whatsapp_number')
+        .eq('status', 'نشط')
+        .order('name');
+
+      if (error) throw error;
+      setCustomers(data || []);
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+      toast({
+        title: "خطأ",
+        description: "فشل في جلب العملاء",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // جلب الخدمات
+  const fetchServices = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('services')
+        .select('id, name, base_price')
+        .eq('is_active', true)
+        .order('name');
+
+      if (error) throw error;
+      setServices(data || []);
+    } catch (error) {
+      console.error('Error fetching services:', error);
+      toast({
+        title: "خطأ",
+        description: "فشل في جلب الخدمات",
+        variant: "destructive",
+      });
     }
   };
 
@@ -763,6 +852,187 @@ ${publicFileUrl}
       setLoading(false);
     }
   };
+
+  // إضافة بند جديد
+  const addOrderItem = () => {
+    setOrderItems([...orderItems, {
+      item_name: '',
+      quantity: 1,
+      unit_price: 0,
+      total_amount: 0
+    }]);
+  };
+
+  // حذف بند
+  const removeOrderItem = (index: number) => {
+    if (orderItems.length > 1) {
+      const newItems = orderItems.filter((_, i) => i !== index);
+      setOrderItems(newItems);
+      calculateOrderTotal(newItems);
+    }
+  };
+
+  // تحديث بند الطلب
+  const updateOrderItem = (index: number, field: keyof OrderItem, value: string | number) => {
+    const newItems = [...orderItems];
+    newItems[index] = { ...newItems[index], [field]: value };
+    
+    // حساب الإجمالي للبند
+    if (field === 'quantity' || field === 'unit_price') {
+      newItems[index].total_amount = newItems[index].quantity * newItems[index].unit_price;
+    }
+    
+    setOrderItems(newItems);
+    calculateOrderTotal(newItems);
+  };
+
+  // حساب إجمالي الطلب
+  const calculateOrderTotal = (items: OrderItem[]) => {
+    const total = items.reduce((sum, item) => sum + item.total_amount, 0);
+    setNewOrder(prev => ({ ...prev, amount: total }));
+  };
+
+  // تحديث الخدمة المختارة
+  const handleServiceChange = (serviceId: string) => {
+    const selectedService = services.find(s => s.id === serviceId);
+    if (selectedService) {
+      setNewOrder(prev => ({
+        ...prev,
+        service_id: serviceId,
+        service_name: selectedService.name,
+        amount: selectedService.base_price || 0
+      }));
+    }
+  };
+
+  // إنشاء طلب جديد
+  const createNewOrder = async () => {
+    try {
+      if (!newOrder.customer_id || !newOrder.service_name || !newOrder.due_date) {
+        toast({
+          title: "خطأ",
+          description: "يرجى ملء جميع الحقول المطلوبة",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setLoading(true);
+
+      // إنشاء رقم طلب جديد
+      const { data: orderNumber, error: numberError } = await supabase
+        .rpc('generate_order_number');
+
+      if (numberError) throw numberError;
+
+      // إنشاء الطلب
+      const { data: createdOrder, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          order_number: orderNumber,
+          customer_id: newOrder.customer_id,
+          service_name: newOrder.service_name,
+          description: newOrder.description,
+          status: 'جديد',
+          priority: newOrder.priority,
+          amount: newOrder.amount,
+          paid_amount: newOrder.paid_amount,
+          payment_type: newOrder.payment_type,
+          payment_notes: newOrder.payment_notes,
+          due_date: newOrder.due_date,
+          created_by: user?.id
+        })
+        .select()
+        .single();
+
+      if (orderError) throw orderError;
+
+      // إضافة بنود الطلب
+      if (orderItems.length > 0 && orderItems[0].item_name) {
+        const orderItemsToInsert = orderItems
+          .filter(item => item.item_name.trim() !== '')
+          .map(item => ({
+            order_id: createdOrder.id,
+            item_name: item.item_name,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            total_amount: item.total_amount
+          }));
+
+        if (orderItemsToInsert.length > 0) {
+          const { error: itemsError } = await supabase
+            .from('order_items')
+            .insert(orderItemsToInsert);
+
+          if (itemsError) throw itemsError;
+        }
+      }
+
+      // رفع الملفات المرفقة إن وجدت
+      if (attachmentFiles.length > 0) {
+        for (const file of attachmentFiles) {
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${createdOrder.id}_${Date.now()}.${fileExt}`;
+          const filePath = `orders/${createdOrder.id}/${fileName}`;
+
+          const { error: uploadError } = await supabase.storage
+            .from('order-attachments')
+            .upload(filePath, file);
+
+          if (uploadError) {
+            console.error('Error uploading file:', uploadError);
+          }
+        }
+      }
+
+      toast({
+        title: "تم إنشاء الطلب",
+        description: `تم إنشاء الطلب رقم ${orderNumber} بنجاح`,
+      });
+
+      // إعادة تعيين النموذج
+      setNewOrder({
+        customer_id: '',
+        service_id: '',
+        service_name: '',
+        priority: 'متوسطة',
+        due_date: '',
+        description: '',
+        amount: 0,
+        payment_type: 'دفع آجل',
+        paid_amount: 0,
+        payment_notes: ''
+      });
+      setOrderItems([{
+        item_name: '',
+        quantity: 1,
+        unit_price: 0,
+        total_amount: 0
+      }]);
+      setAttachmentFiles([]);
+      setIsNewOrderDialogOpen(false);
+      
+      // إعادة جلب الطلبات
+      fetchOrders();
+
+    } catch (error) {
+      console.error('Error creating order:', error);
+      toast({
+        title: "خطأ في إنشاء الطلب",
+        description: "حدث خطأ أثناء إنشاء الطلب",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // فتح حوار إنشاء طلب جديد
+  const openNewOrderDialog = () => {
+    fetchCustomers();
+    fetchServices();
+    setIsNewOrderDialogOpen(true);
+  };
   
   // فلترة الطلبات
   const filteredOrders = orders.filter(order => {
@@ -811,6 +1081,10 @@ ${publicFileUrl}
             عرض وإدارة جميع الطلبات مع إمكانية رفع الملفات
           </p>
         </div>
+        <Button onClick={openNewOrderDialog} className="flex items-center gap-2">
+          <Plus className="h-4 w-4" />
+          إنشاء طلب جديد
+        </Button>
       </div>
 
       {/* فلاتر البحث */}
@@ -1476,6 +1750,268 @@ ${publicFileUrl}
                 className="bg-blue-600 hover:bg-blue-700"
               >
                 {loading ? 'جاري الإنشاء...' : 'إنشاء الفاتورة وإرسالها'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* حوار إنشاء طلب جديد */}
+      <Dialog open={isNewOrderDialogOpen} onOpenChange={setIsNewOrderDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>إنشاء طلب جديد</DialogTitle>
+            <DialogDescription>
+              إضافة طلب جديد مع تفاصيل كاملة وإمكانية رفع الملفات
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            {/* الصف الأول: العميل ونوع الخدمة والأولوية */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="customer">العميل *</Label>
+                <Select value={newOrder.customer_id} onValueChange={(value) => setNewOrder(prev => ({ ...prev, customer_id: value }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="ابحث واختر العميل..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {customers.map((customer) => (
+                      <SelectItem key={customer.id} value={customer.id}>
+                        {customer.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="service">نوع الخدمة *</Label>
+                <Select value={newOrder.service_id} onValueChange={handleServiceChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="اختر نوع الخدمة" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {services.map((service) => (
+                      <SelectItem key={service.id} value={service.id}>
+                        {service.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="priority">الأولوية</Label>
+                <Select value={newOrder.priority} onValueChange={(value) => setNewOrder(prev => ({ ...prev, priority: value }))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="منخفضة">منخفضة</SelectItem>
+                    <SelectItem value="متوسطة">متوسطة</SelectItem>
+                    <SelectItem value="عالية">عالية</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* الصف الثاني: تاريخ التسليم ووصف الطلب */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="due_date">تاريخ التسليم *</Label>
+                <Input
+                  id="due_date"
+                  type="date"
+                  value={newOrder.due_date}
+                  onChange={(e) => setNewOrder(prev => ({ ...prev, due_date: e.target.value }))}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="description">وصف الطلب</Label>
+                <Textarea
+                  id="description"
+                  placeholder="تفاصيل الطلب..."
+                  value={newOrder.description}
+                  onChange={(e) => setNewOrder(prev => ({ ...prev, description: e.target.value }))}
+                  rows={3}
+                />
+              </div>
+            </div>
+
+            {/* بنود الطلب */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-lg font-semibold">بنود الطلب</Label>
+                <Button type="button" variant="outline" size="sm" onClick={addOrderItem}>
+                  <Plus className="h-4 w-4 mr-1" />
+                  إضافة بند
+                </Button>
+              </div>
+
+              <div className="space-y-3">
+                {orderItems.map((item, index) => (
+                  <div key={index} className="p-4 border rounded-lg space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                      <div className="space-y-2">
+                        <Label htmlFor={`item_name_${index}`}>اسم البند</Label>
+                        <Input
+                          id={`item_name_${index}`}
+                          placeholder="اسم البند..."
+                          value={item.item_name}
+                          onChange={(e) => updateOrderItem(index, 'item_name', e.target.value)}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor={`quantity_${index}`}>الكمية</Label>
+                        <Input
+                          id={`quantity_${index}`}
+                          type="number"
+                          min="1"
+                          value={item.quantity}
+                          onChange={(e) => updateOrderItem(index, 'quantity', parseInt(e.target.value) || 1)}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor={`unit_price_${index}`}>السعر المقرر</Label>
+                        <Input
+                          id={`unit_price_${index}`}
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={item.unit_price}
+                          onChange={(e) => updateOrderItem(index, 'unit_price', parseFloat(e.target.value) || 0)}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor={`total_${index}`}>الإجمالي</Label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            id={`total_${index}`}
+                            type="number"
+                            value={item.total_amount}
+                            disabled
+                            className="bg-muted"
+                          />
+                          {orderItems.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => removeOrderItem(index)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="text-lg font-semibold">إجمالي المبلغ: {newOrder.amount.toFixed(2)} ر.س</p>
+              </div>
+            </div>
+
+            {/* معلومات الدفع */}
+            <div className="space-y-4">
+              <Label className="text-lg font-semibold">معلومات الدفع</Label>
+              
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="paid_amount">المبلغ المدفوع (اختياري)</Label>
+                  <Input
+                    id="paid_amount"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0.00 ر.س"
+                    value={newOrder.paid_amount}
+                    onChange={(e) => setNewOrder(prev => ({ ...prev, paid_amount: parseFloat(e.target.value) || 0 }))}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="remaining_amount">المبلغ المتبقي</Label>
+                  <Input
+                    id="remaining_amount"
+                    type="text"
+                    value={`${(newOrder.amount - newOrder.paid_amount).toFixed(2)} ر.س`}
+                    disabled
+                    className="bg-muted"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="payment_type">نوع الدفع</Label>
+                  <Select value={newOrder.payment_type} onValueChange={(value) => setNewOrder(prev => ({ ...prev, payment_type: value }))}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="دفع آجل">دفع آجل</SelectItem>
+                      <SelectItem value="نقدي">نقدي</SelectItem>
+                      <SelectItem value="تحويل بنكي">تحويل بنكي</SelectItem>
+                      <SelectItem value="الشبكة">الشبكة</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="payment_notes">ملاحظات الدفع</Label>
+                  <Input
+                    id="payment_notes"
+                    placeholder="ملاحظات..."
+                    value={newOrder.payment_notes}
+                    onChange={(e) => setNewOrder(prev => ({ ...prev, payment_notes: e.target.value }))}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* رفع الملفات */}
+            <div className="space-y-2">
+              <Label htmlFor="attachments">رفع الملفات (اختياري)</Label>
+              <Input
+                id="attachments"
+                type="file"
+                multiple
+                onChange={(e) => {
+                  if (e.target.files) {
+                    setAttachmentFiles(Array.from(e.target.files));
+                  }
+                }}
+                accept="image/*,.pdf,.doc,.docx,.ai,.psd"
+              />
+              {attachmentFiles.length > 0 && (
+                <div className="text-sm text-muted-foreground">
+                  تم اختيار {attachmentFiles.length} ملف(ات)
+                </div>
+              )}
+            </div>
+
+            {/* أزرار الحفظ والإلغاء */}
+            <div className="flex justify-end gap-2 pt-4 border-t">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsNewOrderDialogOpen(false)}
+              >
+                إلغاء
+              </Button>
+              <Button
+                type="button"
+                onClick={createNewOrder}
+                disabled={loading}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {loading ? 'جاري الإنشاء...' : 'إنشاء الطلب'}
               </Button>
             </div>
           </div>
