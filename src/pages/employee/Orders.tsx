@@ -598,11 +598,13 @@ ${publicFileUrl}
       if (orderError) throw orderError;
       if (!orderData) throw new Error('لم يتم العثور على الطلب');
 
-      // إنشاء رقم فاتورة جديد
       const { data: invoiceNumber, error: numberError } = await supabase
         .rpc('generate_invoice_number');
 
-      if (numberError) throw numberError;
+      if (numberError) {
+        console.error('Error generating invoice number:', numberError);
+        throw numberError;
+      }
 
       // إنشاء الفاتورة
       const { data: newInvoice, error: invoiceError } = await supabase
@@ -612,19 +614,26 @@ ${publicFileUrl}
           customer_id: orderData.customer_id,
           order_id: orderData.id,
           amount: orderData.amount,
-          tax_amount: 0, // يمكن حسابها حسب النظام
+          tax_amount: 0,
           total_amount: orderData.amount,
           issue_date: new Date().toISOString().split('T')[0],
-          due_date: orderData.due_date || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 يوم من اليوم
+          due_date: orderData.due_date || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
           payment_type: orderData.payment_type || 'دفع آجل',
-          status: orderData.paid_amount >= orderData.amount ? 'مدفوعة' : 'قيد الانتظار',
+          status: (orderData.paid_amount || 0) >= orderData.amount ? 'مدفوعة' : 'قيد الانتظار',
           paid_amount: orderData.paid_amount || 0,
           created_by: user?.id
         })
         .select()
         .single();
 
-      if (invoiceError) throw invoiceError;
+      if (invoiceError) {
+        console.error('Error creating invoice:', invoiceError);
+        throw new Error(`فشل في إنشاء الفاتورة: ${invoiceError.message}`);
+      }
+
+      if (!newInvoice) {
+        throw new Error('لم يتم إنشاء الفاتورة بشكل صحيح');
+      }
 
       // نسخ بنود الطلب إلى بنود الفاتورة
       if (orderData.order_items && orderData.order_items.length > 0) {
@@ -637,17 +646,26 @@ ${publicFileUrl}
           total_amount: item.total_amount
         }));
 
+        console.log('Inserting invoice items:', invoiceItems);
+
         const { error: itemsError } = await supabase
           .from('invoice_items')
           .insert(invoiceItems);
 
-        if (itemsError) throw itemsError;
+        if (itemsError) {
+          console.error('Error creating invoice items:', itemsError);
+          throw new Error(`فشل في إضافة بنود الفاتورة: ${itemsError.message}`);
+        }
+
+        console.log('Invoice items created successfully');
       }
 
       // إرسال إشعار واتساب للعميل بالفاتورة
       if (orderData.customers?.whatsapp_number) {
+        console.log('Sending WhatsApp notification...');
+        
         try {
-          await supabase.functions.invoke('send-invoice-notifications', {
+          const { data: notificationData, error: notificationError } = await supabase.functions.invoke('send-invoice-notifications', {
             body: {
               type: 'invoice_created',
               invoice_id: newInvoice.id,
@@ -662,10 +680,19 @@ ${publicFileUrl}
               }
             }
           });
+
+          if (notificationError) {
+            console.error('Error sending notification:', notificationError);
+            // لا نوقف العملية إذا فشل الإرسال
+          } else {
+            console.log('Notification sent successfully:', notificationData);
+          }
         } catch (notificationError) {
           console.error('Error sending invoice notification:', notificationError);
           // لا نوقف العملية إذا فشل الإرسال
         }
+      } else {
+        console.log('No WhatsApp number available for customer');
       }
 
       toast({
@@ -673,7 +700,7 @@ ${publicFileUrl}
         description: `تم إنشاء الفاتورة رقم ${newInvoice.invoice_number} بنجاح${orderData.customers?.whatsapp_number ? ' وإرسالها للعميل' : ''}`,
       });
 
-      // فتح الفاتورة في نافذة جديدة
+      // فتح الفاتورة في نافذة جديدة للمعاينة
       window.open(`/invoice-preview/${newInvoice.id}`, '_blank');
       
       setIsInvoiceDialogOpen(false);
@@ -682,11 +709,20 @@ ${publicFileUrl}
       // إعادة جلب البيانات لتحديث الواجهة
       fetchOrders();
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error converting to invoice:', error);
+      
+      let errorMessage = "حدث خطأ أثناء إنشاء الفاتورة. يرجى المحاولة مرة أخرى.";
+      
+      if (error.message) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+
       toast({
         title: "خطأ في إنشاء الفاتورة",
-        description: "حدث خطأ أثناء إنشاء الفاتورة. يرجى المحاولة مرة أخرى.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

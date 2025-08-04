@@ -9,6 +9,11 @@ const corsHeaders = {
 // إنشاء عميل Supabase
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+if (!supabaseUrl || !supabaseServiceKey) {
+  console.error('Missing required environment variables');
+}
+
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 Deno.serve(async (req) => {
