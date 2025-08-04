@@ -51,11 +51,14 @@ Deno.serve(async (req) => {
     // الحصول على إعدادات الويب هوك للإرسال - تحديد الويب هوك حسب نوع الرسالة
     let webhookSettings;
     
-    // للرسائل التي تحتوي على صور (البروفة)، استخدام ويب هوك البروفة
-    const hasImageMessages = pendingMessages.some(msg => msg.message_type === 'image');
+    // للرسائل التي تحتوي على بروفة (صور أو روابط للبروفة)، استخدام ويب هوك البروفة
+    const hasProofMessages = pendingMessages.some(msg => 
+      msg.message_type === 'image' || 
+      (msg.message_content && msg.message_content.includes('لاستعراض البروفة'))
+    );
     
-    if (hasImageMessages) {
-      // استخدام ويب هوك البروفة للرسائل التي تحتوي على صور
+    if (hasProofMessages) {
+      // استخدام ويب هوك البروفة للرسائل التي تحتوي على بروفة
       const { data: proofWebhook } = await supabase
         .from('webhook_settings')
         .select('webhook_url, webhook_type')
@@ -64,7 +67,7 @@ Deno.serve(async (req) => {
         .single();
       webhookSettings = proofWebhook;
     } else {
-      // استخدام ويب هوك الطلبات للرسائل النصية
+      // استخدام ويب هوك الطلبات للرسائل النصية العادية
       const { data: orderWebhook } = await supabase
         .from('webhook_settings')
         .select('webhook_url, webhook_type')
