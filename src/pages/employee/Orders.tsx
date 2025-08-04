@@ -638,84 +638,88 @@ ${publicFileUrl}
                       {order.due_date ? new Date(order.due_date).toLocaleDateString('ar-SA') : '-'}
                     </TableCell>
                     <TableCell>
-                      <div className="flex gap-2 flex-wrap">
-                        {/* تعديل حالة الطلب */}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedOrderForEdit(order);
-                            setNewStatus(order.status);
-                            setIsEditStatusDialogOpen(true);
-                          }}
-                        >
-                          <Edit className="h-4 w-4 mr-1" />
-                          تعديل الحالة
-                        </Button>
+                      <div className="space-y-2">
+                        {/* المجموعة الأولى: إدارة الطلب */}
+                        <div className="flex gap-1 flex-wrap">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-purple-600 border-purple-200 hover:bg-purple-50"
+                            onClick={() => {
+                              setSelectedOrderForEdit(order);
+                              setNewStatus(order.status);
+                              setIsEditStatusDialogOpen(true);
+                            }}
+                          >
+                            <Edit className="h-3 w-3 mr-1" />
+                            تعديل الحالة
+                          </Button>
+                          
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-green-600 border-green-200 hover:bg-green-50"
+                            onClick={() => openPaymentDialog(order)}
+                          >
+                            <CreditCard className="h-3 w-3 mr-1" />
+                            المدفوعات
+                          </Button>
+                          
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                            onClick={() => openInvoiceDialog(order)}
+                          >
+                            <Receipt className="h-3 w-3 mr-1" />
+                            تحويل لفاتورة
+                          </Button>
+                        </div>
                         
-                        {/* المدفوعات */}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-green-600 border-green-200 hover:bg-green-50"
-                          onClick={() => openPaymentDialog(order)}
-                        >
-                          <CreditCard className="h-4 w-4 mr-1" />
-                          المدفوعات
-                        </Button>
-                        
-                        {/* تحويل إلى فاتورة */}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-blue-600 border-blue-200 hover:bg-blue-50"
-                          onClick={() => openInvoiceDialog(order)}
-                        >
-                          <Receipt className="h-4 w-4 mr-1" />
-                          تحويل لفاتورة
-                        </Button>
-                        
-                        {/* رفع ملفات التصميم */}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedOrderForUpload(order);
-                            setFileCategory('design');
-                            setIsUploadDialogOpen(true);
-                          }}
-                        >
-                          <Image className="h-4 w-4 mr-1" />
-                          بروفة
-                        </Button>
-                        
-                        {/* رفع ملفات الطباعة */}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedOrderForUpload(order);
-                            setFileCategory('print');
-                            setIsUploadDialogOpen(true);
-                          }}
-                        >
-                          <Printer className="h-4 w-4 mr-1" />
-                          طباعة
-                        </Button>
-                        
-                        {/* عرض الملفات */}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedOrderFiles(order);
-                            setIsFilesDialogOpen(true);
-                            fetchOrderFiles(order.id);
-                          }}
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          الملفات
-                        </Button>
+                        {/* المجموعة الثانية: إدارة الملفات */}
+                        <div className="flex gap-1 flex-wrap">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-orange-600 border-orange-200 hover:bg-orange-50"
+                            onClick={() => {
+                              setSelectedOrderForUpload(order);
+                              setFileCategory('design');
+                              setIsUploadDialogOpen(true);
+                            }}
+                          >
+                            <Image className="h-3 w-3 mr-1" />
+                            رفع بروفة
+                          </Button>
+                          
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-cyan-600 border-cyan-200 hover:bg-cyan-50"
+                            onClick={() => {
+                              setSelectedOrderForUpload(order);
+                              setFileCategory('print');
+                              setIsUploadDialogOpen(true);
+                            }}
+                          >
+                            <Printer className="h-3 w-3 mr-1" />
+                            ملفات طباعة
+                          </Button>
+                          
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-gray-600 border-gray-200 hover:bg-gray-50"
+                            onClick={() => {
+                              setSelectedOrderFiles(order);
+                              setIsFilesDialogOpen(true);
+                              fetchOrderFiles(order.id);
+                            }}
+                          >
+                            <Eye className="h-3 w-3 mr-1" />
+                            عرض الملفات
+                          </Button>
+                        </div>
                       </div>
                     </TableCell>
                   </TableRow>
