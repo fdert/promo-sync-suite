@@ -76,12 +76,14 @@ const InvoicePreview = () => {
         .select('*')
         .eq('invoice_id', invoiceId);
 
-      if (itemsError) {
-        console.error('Error fetching invoice items:', itemsError);
-      }
+       if (itemsError) {
+         console.error('Error fetching invoice items:', itemsError);
+       } else {
+         console.log('Fetched invoice items:', itemsData);
+       }
 
-      setInvoice(invoiceData);
-      setItems(itemsData || []);
+       setInvoice(invoiceData);
+       setItems(itemsData || []);
     } catch (error) {
       console.error('Error fetching invoice data:', error);
       toast({

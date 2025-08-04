@@ -606,7 +606,7 @@ ${publicFileUrl}
         });
         
         // فتح الفاتورة الموجودة
-        window.open(`/invoice-preview/${existingInvoice.id}`, '_blank');
+        window.open(`/invoice/${existingInvoice.id}`, '_blank');
         setIsInvoiceDialogOpen(false);
         setSelectedOrderForInvoice(null);
         setLoading(false);
@@ -664,30 +664,35 @@ ${publicFileUrl}
         throw new Error('لم يتم إنشاء الفاتورة بشكل صحيح');
       }
 
-      // نسخ بنود الطلب إلى بنود الفاتورة
-      if (orderData.order_items && orderData.order_items.length > 0) {
-        const invoiceItems = orderData.order_items.map((item: any) => ({
-          invoice_id: newInvoice.id,
-          item_name: item.item_name,
-          description: item.description,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-          total_amount: item.total_amount
-        }));
+       // نسخ بنود الطلب إلى بنود الفاتورة
+       if (orderData.order_items && orderData.order_items.length > 0) {
+         console.log('Order items to copy:', orderData.order_items);
+         
+         const invoiceItems = orderData.order_items.map((item: any) => ({
+           invoice_id: newInvoice.id,
+           item_name: item.item_name,
+           description: item.description,
+           quantity: item.quantity,
+           unit_price: item.unit_price,
+           total_amount: item.total_amount
+         }));
 
-        console.log('Inserting invoice items:', invoiceItems);
+         console.log('Invoice items to insert:', invoiceItems);
 
-        const { error: itemsError } = await supabase
-          .from('invoice_items')
-          .insert(invoiceItems);
+         const { data: insertedItems, error: itemsError } = await supabase
+           .from('invoice_items')
+           .insert(invoiceItems)
+           .select();
 
-        if (itemsError) {
-          console.error('Error creating invoice items:', itemsError);
-          throw new Error(`فشل في إضافة بنود الفاتورة: ${itemsError.message}`);
-        }
+         if (itemsError) {
+           console.error('Error creating invoice items:', itemsError);
+           throw new Error(`فشل في إضافة بنود الفاتورة: ${itemsError.message}`);
+         }
 
-        console.log('Invoice items created successfully');
-      }
+         console.log('Invoice items created successfully:', insertedItems);
+       } else {
+         console.log('No order items found to copy');
+       }
 
       // إرسال إشعار واتساب للعميل بالفاتورة
       if (orderData.customers?.whatsapp_number) {
@@ -730,7 +735,7 @@ ${publicFileUrl}
       });
 
       // فتح الفاتورة في نافذة جديدة للمعاينة
-      window.open(`/invoice-preview/${newInvoice.id}`, '_blank');
+      window.open(`/invoice/${newInvoice.id}`, '_blank');
       
       setIsInvoiceDialogOpen(false);
       setSelectedOrderForInvoice(null);
