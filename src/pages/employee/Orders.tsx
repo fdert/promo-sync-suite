@@ -486,6 +486,14 @@ ${publicFileUrl}
 
       if (messageError) throw messageError;
 
+      // استدعاء edge function لمعالجة رسائل الواتساب المعلقة
+      try {
+        await supabase.functions.invoke('send-pending-whatsapp');
+      } catch (pendingError) {
+        console.warn('Error processing pending WhatsApp messages:', pendingError);
+        // لا نوقف العملية إذا فشل إرسال الرسائل المعلقة
+      }
+
       // تحديث حالة الملف
       const { error: updateError } = await supabase
         .from('print_files')
