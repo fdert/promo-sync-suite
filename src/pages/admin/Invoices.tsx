@@ -270,14 +270,14 @@ const Invoices = () => {
           }
           
           .summary-section {
-            background: #94a3b8 !important;
-            color: white !important;
+            background: #e5e7eb !important;
+            color: #374151 !important;
             border-radius: 8px;
             padding: 18px;
             margin: 20px 0;
             float: right;
             width: 45%;
-            border: 1px solid #e2e8f0;
+            border: 1px solid #d1d5db;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
@@ -286,9 +286,9 @@ const Invoices = () => {
             display: flex;
             justify-content: space-between;
             padding: 6px 0;
-            border-bottom: 1px solid rgba(255,255,255,0.3);
+            border-bottom: 1px solid #d1d5db;
             font-size: 12px;
-            color: white;
+            color: #374151;
           }
           
           .summary-row:last-child {
@@ -296,18 +296,18 @@ const Invoices = () => {
             font-size: 14px;
             font-weight: 700;
             padding-top: 10px;
-            border-top: 2px solid rgba(255,255,255,0.5);
-            color: white;
+            border-top: 2px solid #2563eb;
+            color: #1e40af;
           }
           
           .payment-info {
             clear: both;
-            background: #3b82f6 !important;
-            color: white !important;
+            background: #dbeafe !important;
+            color: #1e40af !important;
             border-radius: 8px;
             padding: 15px;
             margin-bottom: 15px;
-            border: 1px solid #e2e8f0;
+            border: 1px solid #93c5fd;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
@@ -355,7 +355,7 @@ const Invoices = () => {
           }
           
           .footer {
-            background: #4f46e5 !important;
+            background: #2563eb !important;
             color: white !important;
             text-align: center;
             padding: 15px;
@@ -390,27 +390,28 @@ const Invoices = () => {
             }
             .header { 
               page-break-inside: avoid;
-              background: #4f46e5 !important;
+              background: #2563eb !important;
               color: white !important;
             }
             .customer-section {
-              background: #fb7185 !important;
-              color: white !important;
+              background: #f3f4f6 !important;
+              color: #374151 !important;
+              border-bottom: 2px solid #2563eb !important;
             }
             .items-table th {
-              background: #0ea5e9 !important;
+              background: #2563eb !important;
               color: white !important;
             }
             .summary-section {
-              background: #94a3b8 !important;
-              color: white !important;
+              background: #e5e7eb !important;
+              color: #374151 !important;
             }
             .payment-info {
-              background: #3b82f6 !important;
-              color: white !important;
+              background: #dbeafe !important;
+              color: #1e40af !important;
             }
             .footer {
-              background: #4f46e5 !important;
+              background: #2563eb !important;
               color: white !important;
             }
             .items-table { page-break-inside: avoid; }
