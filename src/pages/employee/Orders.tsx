@@ -638,12 +638,12 @@ ${publicFileUrl}
                       {order.due_date ? new Date(order.due_date).toLocaleDateString('ar-SA') : '-'}
                     </TableCell>
                     <TableCell>
-                      <div className="flex gap-1 flex-wrap justify-start">
+                      <div className="flex flex-col gap-2 min-w-[120px]">
                         {/* تعديل حالة الطلب */}
                         <Button
                           variant="outline"
                           size="sm"
-                          className="text-purple-600 border-purple-200 hover:bg-purple-50 text-xs"
+                          className="text-purple-600 border-purple-200 hover:bg-purple-50 text-xs w-full justify-start"
                           onClick={() => {
                             setSelectedOrderForEdit(order);
                             setNewStatus(order.status);
@@ -651,36 +651,36 @@ ${publicFileUrl}
                           }}
                         >
                           <Edit className="h-3 w-3 mr-1" />
-                          تعديل
+                          تعديل الحالة
                         </Button>
                         
                         {/* المدفوعات */}
                         <Button
                           variant="outline"
                           size="sm"
-                          className="text-green-600 border-green-200 hover:bg-green-50 text-xs"
+                          className="text-green-600 border-green-200 hover:bg-green-50 text-xs w-full justify-start"
                           onClick={() => openPaymentDialog(order)}
                         >
                           <CreditCard className="h-3 w-3 mr-1" />
-                          مدفوعات
+                          المدفوعات
                         </Button>
                         
                         {/* تحويل إلى فاتورة */}
                         <Button
                           variant="outline"
                           size="sm"
-                          className="text-blue-600 border-blue-200 hover:bg-blue-50 text-xs"
+                          className="text-blue-600 border-blue-200 hover:bg-blue-50 text-xs w-full justify-start"
                           onClick={() => openInvoiceDialog(order)}
                         >
                           <Receipt className="h-3 w-3 mr-1" />
-                          فاتورة
+                          تحويل لفاتورة
                         </Button>
                         
                         {/* رفع ملفات التصميم */}
                         <Button
                           variant="outline"
                           size="sm"
-                          className="text-orange-600 border-orange-200 hover:bg-orange-50 text-xs"
+                          className="text-orange-600 border-orange-200 hover:bg-orange-50 text-xs w-full justify-start"
                           onClick={() => {
                             setSelectedOrderForUpload(order);
                             setFileCategory('design');
@@ -688,14 +688,14 @@ ${publicFileUrl}
                           }}
                         >
                           <Image className="h-3 w-3 mr-1" />
-                          بروفة
+                          رفع بروفة
                         </Button>
                         
                         {/* رفع ملفات الطباعة */}
                         <Button
                           variant="outline"
                           size="sm"
-                          className="text-cyan-600 border-cyan-200 hover:bg-cyan-50 text-xs"
+                          className="text-cyan-600 border-cyan-200 hover:bg-cyan-50 text-xs w-full justify-start"
                           onClick={() => {
                             setSelectedOrderForUpload(order);
                             setFileCategory('print');
@@ -703,14 +703,14 @@ ${publicFileUrl}
                           }}
                         >
                           <Printer className="h-3 w-3 mr-1" />
-                          طباعة
+                          ملفات طباعة
                         </Button>
                         
                         {/* عرض الملفات */}
                         <Button
                           variant="outline"
                           size="sm"
-                          className="text-gray-600 border-gray-200 hover:bg-gray-50 text-xs"
+                          className="text-gray-600 border-gray-200 hover:bg-gray-50 text-xs w-full justify-start"
                           onClick={() => {
                             setSelectedOrderFiles(order);
                             setIsFilesDialogOpen(true);
@@ -718,7 +718,7 @@ ${publicFileUrl}
                           }}
                         >
                           <Eye className="h-3 w-3 mr-1" />
-                          ملفات
+                          عرض الملفات
                         </Button>
                       </div>
                     </TableCell>
