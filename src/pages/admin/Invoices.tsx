@@ -283,6 +283,32 @@ const Invoices = () => {
             print-color-adjust: exact !important;
           }
           
+          .total-with-stamp {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 2px solid #1e40af;
+            padding: 20px 0;
+            margin: 20px 0;
+            clear: both;
+          }
+          
+          .total-amount {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1e40af;
+          }
+          
+          .stamp-section {
+            text-align: center;
+          }
+          
+          .company-stamp {
+            max-width: 80px;
+            max-height: 60px;
+            object-fit: contain;
+          }
+          
           .summary-row {
             display: flex;
             justify-content: space-between;
@@ -395,10 +421,25 @@ const Invoices = () => {
               color: #1f2937 !important;
               border-bottom: 2px solid #e5e7eb !important;
             }
-            .customer-section {
-              background: #f3f4f6 !important;
-              color: #374151 !important;
-              border-bottom: 2px solid #2563eb !important;
+            .total-with-stamp {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              border-top: 2px solid #1e40af !important;
+              padding: 20px 0;
+              margin: 20px 0;
+              clear: both;
+              page-break-inside: avoid;
+            }
+            .total-amount {
+              font-size: 18px;
+              font-weight: 700;
+              color: #1e40af !important;
+            }
+            .company-stamp {
+              max-width: 80px;
+              max-height: 60px;
+              object-fit: contain;
             }
             .items-table th {
               background: #2563eb !important;
@@ -530,6 +571,16 @@ const Invoices = () => {
                   'status-overdue'
                 }">${invoice.status}</span>
               </div>
+            </div>
+          </div>
+          
+          <!-- Total with Stamp -->
+          <div class="total-with-stamp">
+            <div class="total-amount">
+              المجموع الكلي: ${invoice.total_amount?.toLocaleString('ar-SA')} ر.س
+            </div>
+            <div class="stamp-section">
+              ${companyInfo.stamp ? `<img src="${companyInfo.stamp}" alt="ختم الوكالة" class="company-stamp" />` : ''}
             </div>
           </div>
           
