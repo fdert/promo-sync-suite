@@ -76,6 +76,7 @@ interface Order {
   updated_at: string;
   paid_amount?: number;
   payment_type?: string;
+  notes?: string;
 }
 
 interface PrintFile {
@@ -546,21 +547,80 @@ const Orders = () => {
                     <TableCell>
                       {order.due_date ? new Date(order.due_date).toLocaleDateString('ar-SA') : '-'}
                     </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedOrderForInvoice(order);
-                            setIsInvoiceDialogOpen(true);
-                          }}
-                        >
-                          <Printer className="h-3 w-3 mr-1" />
-                          فاتورة
-                        </Button>
-                      </div>
-                    </TableCell>
+                     <TableCell>
+                       <div className="flex items-center gap-1 flex-wrap">
+                         <Button
+                           variant="outline"
+                           size="sm"
+                           onClick={() => {
+                             setSelectedOrderForStatus(order);
+                             setNewStatus(order.status);
+                             setIsEditStatusDialogOpen(true);
+                           }}
+                         >
+                           <CheckCircle className="h-3 w-3 mr-1" />
+                           الحالة
+                         </Button>
+                         
+                         <Button
+                           variant="outline"
+                           size="sm"
+                           onClick={() => {
+                             setSelectedOrderForPayment(order);
+                             setIsPaymentDialogOpen(true);
+                           }}
+                         >
+                           <Send className="h-3 w-3 mr-1" />
+                           دفعة
+                         </Button>
+                         
+                         <Button
+                           variant="outline"
+                           size="sm"
+                           onClick={() => {
+                             setSelectedOrderForInvoice(order);
+                             setIsInvoiceDialogOpen(true);
+                           }}
+                         >
+                           <FileText className="h-3 w-3 mr-1" />
+                           فاتورة
+                         </Button>
+                         
+                         <Button
+                           variant="outline"
+                           size="sm"
+                           onClick={() => {
+                             setSelectedOrderForUpload(order);
+                             setIsUploadDialogOpen(true);
+                           }}
+                         >
+                           <Upload className="h-3 w-3 mr-1" />
+                           بروفة
+                         </Button>
+                         
+                         <Button
+                           variant="outline"
+                           size="sm"
+                           onClick={() => window.open(`/employee/print-orders?order=${order.id}`, '_blank')}
+                         >
+                           <Printer className="h-3 w-3 mr-1" />
+                           طباعة
+                         </Button>
+                         
+                         <Button
+                           variant="outline"
+                           size="sm"
+                           onClick={() => {
+                             setSelectedOrderForFiles(order);
+                             fetchOrderFiles(order.id);
+                             setIsFilesDialogOpen(true);
+                           }}
+                         >
+                           <Eye className="h-3 w-3 mr-1" />
+                           ملفات
+                         </Button>
+                       </div>
+                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -749,6 +809,347 @@ const Orders = () => {
                 disabled={loading}
               >
                 {loading ? "جاري الإنشاء..." : "إنشاء الفاتورة"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* حوار تحديث حالة الطلب */}
+      <Dialog open={isEditStatusDialogOpen} onOpenChange={setIsEditStatusDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>تحديث حالة الطلب</DialogTitle>
+            <DialogDescription>
+              تحديث حالة الطلب {selectedOrderForStatus?.order_number}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="status">الحالة الجديدة</Label>
+              <Select value={newStatus} onValueChange={setNewStatus}>
+                <SelectTrigger>
+                  <SelectValue placeholder="اختر الحالة" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="جديد">جديد</SelectItem>
+                  <SelectItem value="مؤكد">مؤكد</SelectItem>
+                  <SelectItem value="قيد التنفيذ">قيد التنفيذ</SelectItem>
+                  <SelectItem value="قيد المراجعة">قيد المراجعة</SelectItem>
+                  <SelectItem value="جاهز للتسليم">جاهز للتسليم</SelectItem>
+                  <SelectItem value="مكتمل">مكتمل</SelectItem>
+                  <SelectItem value="ملغي">ملغي</SelectItem>
+                  <SelectItem value="قيد الانتظار">قيد الانتظار</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="notes">ملاحظات</Label>
+              <Textarea
+                id="notes"
+                placeholder="ملاحظات حول تغيير الحالة..."
+                value={statusNotes}
+                onChange={(e) => setStatusNotes(e.target.value)}
+                rows={3}
+              />
+            </div>
+            <div className="flex gap-2 justify-end pt-4 border-t">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsEditStatusDialogOpen(false)}
+              >
+                إلغاء
+              </Button>
+              <Button 
+                onClick={async () => {
+                  if (!selectedOrderForStatus || !newStatus) return;
+                  try {
+                    const { error } = await supabase
+                      .from('orders')
+                      .update({ 
+                        status: newStatus,
+                        notes: statusNotes || selectedOrderForStatus.notes
+                      })
+                      .eq('id', selectedOrderForStatus.id);
+
+                    if (error) throw error;
+
+                    toast({
+                      title: "تم تحديث الحالة",
+                      description: `تم تحديث حالة الطلب إلى: ${newStatus}`,
+                    });
+
+                    setIsEditStatusDialogOpen(false);
+                    setSelectedOrderForStatus(null);
+                    setNewStatus("");
+                    setStatusNotes("");
+                    fetchOrders();
+                  } catch (error) {
+                    console.error('Error updating status:', error);
+                    toast({
+                      title: "خطأ",
+                      description: "فشل في تحديث الحالة",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+                disabled={!newStatus}
+              >
+                تحديث الحالة
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* حوار إضافة دفعة */}
+      <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>إضافة دفعة للطلب</DialogTitle>
+            <DialogDescription>
+              إضافة دفعة للطلب {selectedOrderForPayment?.order_number}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="paymentAmount">مبلغ الدفعة</Label>
+              <Input
+                id="paymentAmount"
+                type="number"
+                placeholder="0.00"
+                value={paymentAmount}
+                onChange={(e) => setPaymentAmount(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="paymentType">نوع الدفع</Label>
+              <Select value={paymentType} onValueChange={setPaymentType}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="نقدي">نقدي</SelectItem>
+                  <SelectItem value="الشبكة">الشبكة</SelectItem>
+                  <SelectItem value="تحويل بنكي">تحويل بنكي</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="paymentNotes">ملاحظات</Label>
+              <Textarea
+                id="paymentNotes"
+                placeholder="ملاحظات حول الدفعة..."
+                value={paymentNotes}
+                onChange={(e) => setPaymentNotes(e.target.value)}
+                rows={3}
+              />
+            </div>
+            <div className="flex gap-2 justify-end pt-4 border-t">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsPaymentDialogOpen(false)}
+              >
+                إلغاء
+              </Button>
+              <Button 
+                onClick={async () => {
+                  if (!selectedOrderForPayment || !paymentAmount) return;
+                  try {
+                    const { error } = await supabase
+                      .from('payments')
+                      .insert({
+                        order_id: selectedOrderForPayment.id,
+                        amount: parseFloat(paymentAmount),
+                        payment_type: paymentType,
+                        notes: paymentNotes,
+                        created_by: (await supabase.auth.getUser()).data.user?.id,
+                      });
+
+                    if (error) throw error;
+
+                    // تحديث المبلغ المدفوع في الطلب
+                    const newPaidAmount = (selectedOrderForPayment.paid_amount || 0) + parseFloat(paymentAmount);
+                    await supabase
+                      .from('orders')
+                      .update({ paid_amount: newPaidAmount })
+                      .eq('id', selectedOrderForPayment.id);
+
+                    toast({
+                      title: "تم إضافة الدفعة",
+                      description: `تم إضافة دفعة بقيمة ${paymentAmount} ر.س`,
+                    });
+
+                    setIsPaymentDialogOpen(false);
+                    setSelectedOrderForPayment(null);
+                    setPaymentAmount("");
+                    setPaymentNotes("");
+                    fetchOrders();
+                  } catch (error) {
+                    console.error('Error adding payment:', error);
+                    toast({
+                      title: "خطأ",
+                      description: "فشل في إضافة الدفعة",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+                disabled={!paymentAmount}
+              >
+                إضافة الدفعة
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* حوار رفع البروفة */}
+      <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>رفع بروفة للطلب</DialogTitle>
+            <DialogDescription>
+              رفع ملف البروفة للطلب {selectedOrderForUpload?.order_number}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="file">اختر الملف</Label>
+              <Input
+                id="file"
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,.ai,.psd"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file || !selectedOrderForUpload) return;
+
+                  setUploading(true);
+                  try {
+                    // رفع الملف إلى Supabase Storage
+                    const fileExt = file.name.split('.').pop();
+                    const fileName = `${selectedOrderForUpload.order_number}-${Date.now()}.${fileExt}`;
+                    const filePath = `print-files/${fileName}`;
+
+                    const { error: uploadError } = await supabase.storage
+                      .from('print-files')
+                      .upload(filePath, file);
+
+                    if (uploadError) throw uploadError;
+
+                    // إضافة سجل الملف في قاعدة البيانات
+                    const { error: dbError } = await supabase
+                      .from('print_files')
+                      .insert({
+                        print_order_id: selectedOrderForUpload.id,
+                        file_name: file.name,
+                        file_path: filePath,
+                        file_size: file.size,
+                        file_type: file.type,
+                        file_category: 'design',
+                        uploaded_by: (await supabase.auth.getUser()).data.user?.id,
+                      });
+
+                    if (dbError) throw dbError;
+
+                    toast({
+                      title: "تم رفع الملف",
+                      description: `تم رفع ملف ${file.name} بنجاح`,
+                    });
+
+                    setIsUploadDialogOpen(false);
+                    setSelectedOrderForUpload(null);
+                  } catch (error) {
+                    console.error('Error uploading file:', error);
+                    toast({
+                      title: "خطأ",
+                      description: "فشل في رفع الملف",
+                      variant: "destructive",
+                    });
+                  } finally {
+                    setUploading(false);
+                  }
+                }}
+                disabled={uploading}
+              />
+            </div>
+            {uploading && (
+              <div className="text-sm text-muted-foreground">
+                جاري رفع الملف...
+              </div>
+            )}
+            <div className="flex gap-2 justify-end pt-4 border-t">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsUploadDialogOpen(false)}
+              >
+                إغلاق
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* حوار عرض الملفات */}
+      <Dialog open={isFilesDialogOpen} onOpenChange={setIsFilesDialogOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>ملفات الطلب</DialogTitle>
+            <DialogDescription>
+              ملفات الطلب {selectedOrderForFiles?.order_number}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {filesLoading ? (
+              <div className="text-center py-4">جاري تحميل الملفات...</div>
+            ) : orderFiles.length === 0 ? (
+              <div className="text-center py-4 text-muted-foreground">
+                لا توجد ملفات لهذا الطلب
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {orderFiles.map((file) => (
+                  <Card key={file.id}>
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-medium">{file.file_name}</h4>
+                          <p className="text-sm text-muted-foreground">
+                            {new Date(file.upload_date).toLocaleDateString('ar-SA')}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {(file.file_size / 1024 / 1024).toFixed(2)} ميجابايت
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          {file.is_approved && (
+                            <Badge variant="default">معتمد</Badge>
+                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const { data } = supabase.storage
+                                .from('print-files')
+                                .getPublicUrl(file.file_path);
+                              window.open(data.publicUrl, '_blank');
+                            }}
+                          >
+                            <Download className="h-3 w-3 mr-1" />
+                            تحميل
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+            <div className="flex gap-2 justify-end pt-4 border-t">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsFilesDialogOpen(false)}
+              >
+                إغلاق
               </Button>
             </div>
           </div>
