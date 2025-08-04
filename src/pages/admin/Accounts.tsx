@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Plus, TrendingUp, TrendingDown, DollarSign, CreditCard, Receipt, CalendarRange, BookOpen, BarChart3, Trash2, Edit2, Eye, Users, Search, Filter } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, DollarSign, CreditCard, Receipt, CalendarRange, BookOpen, BarChart3, Trash2, Edit2, Eye, Users, Search, Filter, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -164,66 +164,39 @@ const Accounts = () => {
     }
   };
 
-  // جلب فواتير العملاء المدينين - فقط الفواتير غير المدفوعة بالكامل
+  // جلب فواتير العملاء المدينين - استخدام العرض الجديد للبيانات المحدثة
   const fetchDebtorInvoices = async () => {
     try {
       console.log('Fetching debtor invoices with search filters:', debtorSearch);
       
-      let query = supabase
-        .from('invoices')
-        .select(`
-          *,
-          customers(name, phone, whatsapp_number)
-        `)
-        .order('issue_date', { ascending: false });
-
-      // تطبيق فلاتر البحث
-      if (debtorSearch.dateFrom) {
-        query = query.gte('issue_date', debtorSearch.dateFrom);
-      }
-
-      if (debtorSearch.dateTo) {
-        query = query.lte('issue_date', debtorSearch.dateTo);
-      }
-
-      const { data, error } = await query;
-
-      console.log('All invoices data:', data);
-      console.log('Invoices error:', error);
-
-      if (error) {
-        console.error('Error fetching debtor invoices:', error);
-        return;
-      }
-
-      // استخدام view لحساب المبالغ المدفوعة تلقائياً
-      const { data: invoicesSummaryData } = await supabase
+      // استخدام العرض الجديد للحصول على البيانات المحدثة
+      const { data: invoicesData } = await supabase
         .from('invoice_payment_summary')
         .select('*')
         .gt('remaining_amount', 0.01);
 
-      let debtorInvoicesFiltered = invoicesSummaryData || [];
+      let filteredInvoices = invoicesData || [];
 
       // جلب أسماء العملاء
-      const customerIds = [...new Set(debtorInvoicesFiltered.map(inv => inv.customer_id).filter(Boolean))];
-      const { data: customers } = await supabase
+      const uniqueCustomerIds = [...new Set(filteredInvoices.map(inv => inv.customer_id).filter(Boolean))];
+      const { data: customersData } = await supabase
         .from('customers')
         .select('id, name')
-        .in('id', customerIds);
+        .in('id', uniqueCustomerIds);
 
-      const customersMap = new Map(customers?.map(c => [c.id, c.name]) || []);
+      const customerNameMap = new Map(customersData?.map(c => [c.id, c.name]) || []);
 
       // تطبيق فلتر البحث في اسم العميل
       if (debtorSearch.customerName) {
-        debtorInvoicesFiltered = debtorInvoicesFiltered.filter(invoice => {
-          const customerName = customersMap.get(invoice.customer_id) || '';
+        filteredInvoices = filteredInvoices.filter(invoice => {
+          const customerName = customerNameMap.get(invoice.customer_id) || '';
           return customerName.toLowerCase().includes(debtorSearch.customerName.toLowerCase());
         });
       }
 
       // تطبيق فلتر الحالة
       if (debtorSearch.status !== 'all') {
-        debtorInvoicesFiltered = debtorInvoicesFiltered.filter(invoice => {
+        filteredInvoices = filteredInvoices.filter(invoice => {
           const remainingAmount = invoice.remaining_amount || 0;
           const paidAmount = invoice.calculated_paid_amount || 0;
           
@@ -237,16 +210,15 @@ const Accounts = () => {
       }
 
       // إضافة أسماء العملاء للفواتير
-      const processedInvoices = debtorInvoicesFiltered.map(invoice => ({
+      const processedInvoices = filteredInvoices.map(invoice => ({
         ...invoice,
-        customer_name: customersMap.get(invoice.customer_id) || 'عميل غير محدد'
+        customer_name: customerNameMap.get(invoice.customer_id) || 'عميل غير محدد'
       }));
 
       console.log('Filtered debtor invoices:', processedInvoices);
       setDebtorInvoices(processedInvoices);
-      
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error fetching debtor invoices:', error);
     }
   };
 
@@ -265,6 +237,23 @@ const Accounts = () => {
     };
     loadData();
   }, []);
+
+  // دالة لإعادة تحديث جميع البيانات
+  const refreshAllData = async () => {
+    setLoading(true);
+    await Promise.all([
+      fetchAccounts(), 
+      fetchAccountEntries(), 
+      fetchExpenses(), 
+      fetchInvoices(),
+      fetchDebtorInvoices()
+    ]);
+    setLoading(false);
+    toast({
+      title: "تم التحديث",
+      description: "تم تحديث جميع البيانات بنجاح",
+    });
+  };
 
   // تحديث بيانات العملاء المدينين عند تغيير فلاتر البحث
   useEffect(() => {
@@ -532,14 +521,14 @@ const Accounts = () => {
     }
   };
 
-  // حساب الإحصائيات
+  // حساب الإحصائيات - استخدام العرض الجديد للحصول على البيانات المحدثة
   const monthlyIncome = invoices
     .filter(invoice => {
       const issueDate = new Date(invoice.issue_date);
       const currentMonth = new Date();
       return issueDate.getMonth() === currentMonth.getMonth() && 
              issueDate.getFullYear() === currentMonth.getFullYear() &&
-             invoice.status === 'مدفوع';
+             (invoice.status === 'مدفوع' || invoice.status === 'مدفوعة');
     })
     .reduce((sum, invoice) => sum + (invoice.total_amount || 0), 0);
 
