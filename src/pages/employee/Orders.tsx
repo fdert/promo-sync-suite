@@ -41,18 +41,31 @@ import {
   CheckCircle,
   XCircle,
   Printer,
+  Plus,
 } from "lucide-react";
 
 interface Customer {
+  id: string;
   name: string;
   whatsapp_number?: string;
   phone?: string;
 }
 
+interface Service {
+  id: string;
+  name: string;
+  base_price: number;
+}
+
 interface Order {
   id: string;
   order_number: string;
-  customers?: Customer;
+  customers?: {
+    id?: string;
+    name: string;
+    whatsapp_number?: string;
+    phone?: string;
+  };
   service_name: string;
   description?: string;
   status: string;
@@ -82,6 +95,20 @@ const Orders = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  
+  // حالات إنشاء طلب جديد
+  const [isNewOrderDialogOpen, setIsNewOrderDialogOpen] = useState(false);
+  const [newOrderData, setNewOrderData] = useState({
+    customer_id: '',
+    service_name: '',
+    description: '',
+    amount: '',
+    priority: 'متوسطة',
+    payment_type: 'دفع آجل',
+    due_date: '',
+  });
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
   
   // حالات رفع الملفات
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
@@ -130,6 +157,106 @@ const Orders = () => {
       toast({
         title: "خطأ",
         description: "فشل في تحميل الطلبات",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchCustomers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('customers')
+        .select('id, name, phone, whatsapp_number')
+        .eq('status', 'نشط')
+        .order('name');
+
+      if (error) throw error;
+      setCustomers(data || []);
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+    }
+  };
+
+  const fetchServices = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('services')
+        .select('id, name, base_price')
+        .eq('is_active', true)
+        .order('name');
+
+      if (error) throw error;
+      setServices(data || []);
+    } catch (error) {
+      console.error('Error fetching services:', error);
+    }
+  };
+
+  const createNewOrder = async () => {
+    if (!newOrderData.customer_id || !newOrderData.service_name || !newOrderData.amount) {
+      toast({
+        title: "خطأ",
+        description: "يرجى ملء جميع الحقول المطلوبة",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // توليد رقم طلب جديد
+      const { data: orderNumber, error: numberError } = await supabase
+        .rpc('generate_order_number');
+
+      if (numberError) throw numberError;
+
+      // إنشاء الطلب
+      const orderData = {
+        order_number: orderNumber,
+        customer_id: newOrderData.customer_id,
+        service_name: newOrderData.service_name,
+        description: newOrderData.description,
+        amount: parseFloat(newOrderData.amount),
+        priority: newOrderData.priority,
+        payment_type: newOrderData.payment_type,
+        due_date: newOrderData.due_date || null,
+        status: 'جديد',
+        created_by: (await supabase.auth.getUser()).data.user?.id,
+      };
+
+      const { data: newOrder, error: orderError } = await supabase
+        .from('orders')
+        .insert(orderData)
+        .select()
+        .single();
+
+      if (orderError) throw orderError;
+
+      toast({
+        title: "تم إنشاء الطلب",
+        description: `تم إنشاء الطلب رقم ${newOrder.order_number} بنجاح`,
+      });
+
+      // إعادة تعيين البيانات
+      setNewOrderData({
+        customer_id: '',
+        service_name: '',
+        description: '',
+        amount: '',
+        priority: 'متوسطة',
+        payment_type: 'دفع آجل',
+        due_date: '',
+      });
+
+      setIsNewOrderDialogOpen(false);
+      fetchOrders();
+    } catch (error) {
+      console.error('Error creating order:', error);
+      toast({
+        title: "خطأ",
+        description: "فشل في إنشاء الطلب",
         variant: "destructive",
       });
     } finally {
@@ -282,6 +409,8 @@ const Orders = () => {
 
   useEffect(() => {
     fetchOrders();
+    fetchCustomers();
+    fetchServices();
   }, []);
 
   const filteredOrders = orders.filter(order => {
@@ -338,6 +467,10 @@ const Orders = () => {
             عرض وإدارة جميع الطلبات مع إمكانية رفع الملفات
           </p>
         </div>
+        <Button onClick={() => setIsNewOrderDialogOpen(true)} className="bg-primary">
+          <Plus className="h-4 w-4 ml-2" />
+          طلب جديد
+        </Button>
       </div>
 
       {/* فلاتر البحث */}
@@ -435,6 +568,146 @@ const Orders = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* حوار إنشاء طلب جديد */}
+      <Dialog open={isNewOrderDialogOpen} onOpenChange={setIsNewOrderDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>إنشاء طلب جديد</DialogTitle>
+            <DialogDescription>
+              أدخل تفاصيل الطلب الجديد
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="customer">العميل *</Label>
+                <Select value={newOrderData.customer_id} onValueChange={(value) => 
+                  setNewOrderData(prev => ({ ...prev, customer_id: value }))
+                }>
+                  <SelectTrigger>
+                    <SelectValue placeholder="اختر العميل" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {customers.map((customer) => (
+                      <SelectItem key={customer.id} value={customer.id}>
+                        {customer.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label htmlFor="service">نوع الخدمة *</Label>
+                <Select value={newOrderData.service_name} onValueChange={(value) => {
+                  const selectedService = services.find(s => s.name === value);
+                  setNewOrderData(prev => ({ 
+                    ...prev, 
+                    service_name: value,
+                    amount: selectedService?.base_price?.toString() || prev.amount
+                  }));
+                }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="اختر نوع الخدمة" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {services.map((service) => (
+                      <SelectItem key={service.id} value={service.name}>
+                        {service.name} - {service.base_price} ر.س
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="description">الوصف</Label>
+              <Textarea
+                id="description"
+                placeholder="وصف تفصيلي للطلب..."
+                value={newOrderData.description}
+                onChange={(e) => setNewOrderData(prev => ({ ...prev, description: e.target.value }))}
+                rows={3}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="amount">المبلغ *</Label>
+                <Input
+                  id="amount"
+                  type="number"
+                  placeholder="0.00"
+                  value={newOrderData.amount}
+                  onChange={(e) => setNewOrderData(prev => ({ ...prev, amount: e.target.value }))}
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="priority">الأولوية</Label>
+                <Select value={newOrderData.priority} onValueChange={(value) => 
+                  setNewOrderData(prev => ({ ...prev, priority: value }))
+                }>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="عالية">عالية</SelectItem>
+                    <SelectItem value="متوسطة">متوسطة</SelectItem>
+                    <SelectItem value="منخفضة">منخفضة</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="payment_type">نوع الدفع</Label>
+                <Select value={newOrderData.payment_type} onValueChange={(value) => 
+                  setNewOrderData(prev => ({ ...prev, payment_type: value }))
+                }>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="كاش">كاش</SelectItem>
+                    <SelectItem value="الشبكة">الشبكة</SelectItem>
+                    <SelectItem value="تحويل بنكي">تحويل بنكي</SelectItem>
+                    <SelectItem value="دفع آجل">دفع آجل</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label htmlFor="due_date">تاريخ الاستحقاق</Label>
+                <Input
+                  id="due_date"
+                  type="date"
+                  value={newOrderData.due_date}
+                  onChange={(e) => setNewOrderData(prev => ({ ...prev, due_date: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 justify-end pt-4 border-t">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsNewOrderDialogOpen(false)}
+              >
+                إلغاء
+              </Button>
+              <Button 
+                onClick={createNewOrder}
+                disabled={loading}
+              >
+                {loading ? "جاري الإنشاء..." : "إنشاء الطلب"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* حوار إنشاء الفاتورة */}
       <Dialog open={isInvoiceDialogOpen} onOpenChange={setIsInvoiceDialogOpen}>
