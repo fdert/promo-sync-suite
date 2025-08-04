@@ -127,7 +127,7 @@ const Invoices = () => {
           }
           
           .header {
-            background: #4f46e5 !important;
+            background: #2563eb !important;
             color: white !important;
             padding: 20px 25px;
             position: relative;
@@ -148,48 +148,41 @@ const Invoices = () => {
           }
           
           .company-name {
-            font-size: 20px;
+            font-size: 18px;
             font-weight: 700;
             margin-bottom: 8px;
             color: #ffffff;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
           }
           
           .company-details {
             font-size: 11px;
             line-height: 1.6;
-            color: #f7fafc;
+            color: #dbeafe;
           }
           
           .logo-section {
-            flex: 0 0 70px;
+            flex: 0 0 60px;
             margin: 0 20px;
             text-align: center;
           }
           
           .company-logo {
-            max-width: 70px;
-            max-height: 70px;
+            max-width: 60px;
+            max-height: 60px;
             object-fit: contain;
-            border: 2px solid rgba(255,255,255,0.3);
-            border-radius: 8px;
-            padding: 6px;
-            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
           }
           
           .logo-placeholder {
-            width: 70px;
-            height: 70px;
+            width: 60px;
+            height: 60px;
             border: 2px dashed rgba(255,255,255,0.5);
-            border-radius: 8px;
+            border-radius: 4px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 10px;
             color: rgba(255,255,255,0.8);
-            background: rgba(255,255,255,0.1);
           }
           
           .invoice-info {
@@ -198,7 +191,7 @@ const Invoices = () => {
           }
           
           .invoice-title {
-            font-size: 22px;
+            font-size: 20px;
             font-weight: 700;
             margin-bottom: 8px;
             color: #ffffff;
@@ -207,14 +200,15 @@ const Invoices = () => {
           .invoice-details {
             font-size: 11px;
             line-height: 1.6;
-            color: #f7fafc;
+            color: #dbeafe;
           }
           
           .customer-section {
-            background: #fb7185 !important;
-            color: white !important;
+            background: #f3f4f6 !important;
+            color: #374151 !important;
             padding: 15px 25px;
             margin: 0;
+            border-bottom: 2px solid #2563eb;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
@@ -223,6 +217,7 @@ const Invoices = () => {
             font-weight: 700;
             margin-bottom: 5px;
             font-size: 14px;
+            color: #1f2937;
           }
           
           .content-section {
@@ -233,18 +228,16 @@ const Invoices = () => {
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 20px;
-            border-radius: 6px;
-            overflow: hidden;
-            border: 1px solid #e2e8f0;
+            border: 1px solid #d1d5db;
           }
           
           .items-table th {
-            background: #0ea5e9 !important;
+            background: #2563eb !important;
             color: #ffffff !important;
             padding: 12px 10px;
             font-weight: 700;
             text-align: center;
-            border: none;
+            border: 1px solid #d1d5db;
             font-size: 11px;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
@@ -252,14 +245,14 @@ const Invoices = () => {
           
           .items-table td {
             padding: 10px;
-            border: 1px solid #e2e8f0;
+            border: 1px solid #d1d5db;
             background: #ffffff;
             text-align: center;
             font-size: 11px;
           }
           
           .items-table tr:nth-child(even) td {
-            background: #f8fafc;
+            background: #f9fafb;
           }
           
           .item-name {
