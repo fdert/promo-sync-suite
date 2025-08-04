@@ -1468,10 +1468,11 @@ export type Database = {
           customer_id: string | null
           customer_name: string | null
           earliest_due_date: string | null
+          last_order_date: string | null
           latest_due_date: string | null
           outstanding_balance: number | null
-          total_order_amount: number | null
-          total_orders: number | null
+          total_orders_amount: number | null
+          total_orders_count: number | null
           total_paid_amount: number | null
           unpaid_orders_count: number | null
         }
