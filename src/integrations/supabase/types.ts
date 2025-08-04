@@ -1417,6 +1417,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      process_missing_payment_entries: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       process_pending_whatsapp_messages: {
         Args: Record<PropertyKey, never>
         Returns: undefined
