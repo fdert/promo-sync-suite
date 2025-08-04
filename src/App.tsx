@@ -17,6 +17,7 @@ import Orders from "./pages/admin/Orders";
 import Invoices from "./pages/admin/Invoices";
 import Accounts from "./pages/admin/Accounts";
 import AccountsReview from "./pages/admin/AccountsReview";
+import AccountsReceivableReview from "./pages/admin/AccountsReceivableReview";
 import PaymentsByType from "./pages/admin/PaymentsByType";
 import Reports from "./pages/admin/Reports";
 import EmployeeReports from "./pages/employee/Reports";
@@ -91,6 +92,7 @@ const App = () => (
               <Route path="invoices" element={<Invoices />} />
               <Route path="accounts" element={<Accounts />} />
               <Route path="accounts-review" element={<AccountsReview />} />
+              <Route path="accounts-receivable" element={<AccountsReceivableReview />} />
               <Route path="payments-by-type" element={<PaymentsByType />} />
               <Route path="reports" element={<Reports />} />
               <Route path="services" element={<ServiceTypes />} />

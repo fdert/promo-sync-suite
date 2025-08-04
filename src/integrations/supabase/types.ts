@@ -385,6 +385,13 @@ export type Database = {
             foreignKeyName: "evaluations_customer_id_fkey"
             columns: ["customer_id"]
             isOneToOne: false
+            referencedRelation: "customer_outstanding_balances"
+            referencedColumns: ["customer_id"]
+          },
+          {
+            foreignKeyName: "evaluations_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
             referencedRelation: "customers"
             referencedColumns: ["id"]
           },
@@ -569,6 +576,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customer_outstanding_balances"
+            referencedColumns: ["customer_id"]
           },
           {
             foreignKeyName: "invoices_customer_id_fkey"
@@ -788,6 +802,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customer_outstanding_balances"
+            referencedColumns: ["customer_id"]
           },
           {
             foreignKeyName: "orders_customer_id_fkey"
@@ -1357,6 +1378,13 @@ export type Database = {
             foreignKeyName: "fk_whatsapp_messages_customer"
             columns: ["customer_id"]
             isOneToOne: false
+            referencedRelation: "customer_outstanding_balances"
+            referencedColumns: ["customer_id"]
+          },
+          {
+            foreignKeyName: "fk_whatsapp_messages_customer"
+            columns: ["customer_id"]
+            isOneToOne: false
             referencedRelation: "customers"
             referencedColumns: ["id"]
           },
@@ -1364,9 +1392,23 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      customer_outstanding_balances: {
+        Row: {
+          customer_id: string | null
+          customer_name: string | null
+          earliest_due_date: string | null
+          latest_due_date: string | null
+          outstanding_balance: number | null
+          unpaid_invoices_count: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      calculate_accounts_receivable_balance: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       create_invoice_accounting_entry: {
         Args: {
           invoice_id: string

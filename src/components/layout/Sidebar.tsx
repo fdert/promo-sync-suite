@@ -14,6 +14,8 @@ import {
   Building2,
   Cog,
   Printer,
+  Calculator,
+  CreditCard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -63,6 +65,24 @@ const menuItems = [
     title: "الحسابات",
     icon: DollarSign,
     href: "/admin/accounts",
+    allowedRoles: ['admin', 'manager', 'accountant'] as UserRole[],
+  },
+  {
+    title: "مراجعة الحسابات",
+    icon: Calculator,
+    href: "/admin/accounts-review",
+    allowedRoles: ['admin', 'manager', 'accountant'] as UserRole[],
+  },
+  {
+    title: "العملاء المدينون",
+    icon: Users,
+    href: "/admin/accounts-receivable",
+    allowedRoles: ['admin', 'manager', 'accountant'] as UserRole[],
+  },
+  {
+    title: "المدفوعات حسب النوع",
+    icon: CreditCard,
+    href: "/admin/payments-by-type",
     allowedRoles: ['admin', 'manager', 'accountant'] as UserRole[],
   },
   {
