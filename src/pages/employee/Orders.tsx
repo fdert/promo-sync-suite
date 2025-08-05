@@ -588,82 +588,75 @@ ${publicFileUrl}
       console.log('=== تحقق من إرسال إشعار الواتساب ===');
       // إرسال إشعار واتساب عند تغيير الحالة
       if (orderData?.customers?.whatsapp_number) {
-        console.log('Customer data:', {
-          id: orderData.customer_id,
-          name: orderData.customers.name,
-          phone: orderData.customers.phone,
-          whatsapp_number: orderData.customers.whatsapp_number
-        });
-
+        console.log('Customer data:', orderData.customers);
+        
         // تحديد نوع الإشعار بناءً على الحالة الجديدة
-        let notificationType = 'order_updated';
-        if (status === 'مؤكد') {
-          notificationType = 'order_confirmed';
-        } else if (status === 'قيد التنفيذ') {
-          notificationType = 'order_in_progress';
-        } else if (status === 'مكتمل') {
-          notificationType = 'order_completed';
-        } else if (status === 'جاهز للتسليم') {
-          notificationType = 'order_ready_for_delivery';
-        } else if (status === 'ملغي') {
-          notificationType = 'order_cancelled';
+        let notificationType;
+        switch (status) {
+          case 'مؤكد':
+            notificationType = 'order_confirmed';
+            break;
+          case 'قيد التنفيذ':
+            notificationType = 'order_in_progress';
+            break;
+          case 'قيد المراجعة':
+            notificationType = 'order_under_review';
+            break;
+          case 'جاهز للتسليم':
+            notificationType = 'order_ready_for_delivery';
+            break;
+          case 'مكتمل':
+            notificationType = 'order_completed';
+            break;
+          case 'ملغي':
+            notificationType = 'order_cancelled';
+            break;
+          case 'جديد':
+            notificationType = 'order_created';
+            break;
+          default:
+            notificationType = null;
         }
 
         console.log('Notification type:', notificationType);
 
-        const notificationData = {
-          type: notificationType,
-          order_id: orderId,
-          data: {
-            order_number: orderData.order_number,
-            customer_name: orderData.customers.name,
-            customer_phone: orderData.customers.whatsapp_number,
-            amount: orderData.amount,
-            progress: 0, // يمكن تحديد التقدم حسب الحاجة
-            service_name: orderData.service_name,
-            description: orderData.description,
-            payment_type: orderData.payment_type || 'دفع آجل',
-            calculated_paid_amount: orderData.paid_amount || 0,
-            status: status,
-            priority: orderData.priority,
-            due_date: orderData.due_date,
-            start_date: null
-          }
-        };
+        if (notificationType) {
+          const notificationData = {
+            type: notificationType,
+            order_id: orderId,
+            data: {
+              order_number: orderData.order_number,
+              customer_name: orderData.customers.name,
+              customer_phone: orderData.customers.whatsapp_number,
+              amount: orderData.amount,
+              progress: orderData.progress || 0,
+              service_name: orderData.service_name,
+              description: orderData.description || '',
+              payment_type: orderData.payment_type || 'دفع آجل',
+              calculated_paid_amount: 0,
+              status: status,
+              priority: orderData.priority || 'متوسطة',
+              due_date: orderData.due_date,
+              start_date: orderData.start_date
+            }
+          };
 
-        console.log('Sending notification with data:', notificationData);
-
-        try {
-          console.log('=== إرسال إشعار واتساب ===');
-          console.log('Invoking send-order-notifications function...');
-          const { data: notificationResult, error: notificationError } = await supabase.functions.invoke('send-order-notifications', {
+          console.log('Sending notification with data:', notificationData);
+          
+          const result = await supabase.functions.invoke('send-order-notifications', {
             body: notificationData
           });
+          
+          console.log('Notification result:', result);
 
-          console.log('Notification result:', { data: notificationResult, error: notificationError });
-
-          if (notificationError) {
-            console.error('فشل في إرسال إشعار الواتس:', notificationError);
-            toast({
-              title: "تحذير",
-              description: "تم تحديث الطلب لكن فشل في إرسال إشعار الواتساب",
-              variant: "destructive",
-            });
+          if (result.error) {
+            console.error('خطأ في إرسال الإشعار:', result.error);
           } else {
             console.log('تم إرسال إشعار الواتس آب بنجاح');
-            toast({
-              title: "نجح الإرسال",
-              description: "تم تحديث الطلب وإرسال إشعار الواتساب بنجاح",
-            });
           }
-        } catch (notificationError) {
-          console.error('خطأ في إرسال الإشعار:', notificationError);
-          toast({
-            title: "تحذير",
-            description: "تم تحديث الطلب لكن حدث خطأ في إرسال إشعار الواتساب",
-            variant: "destructive",
-          });
         }
+      } else {
+      console.log('لا يوجد رقم واتس آب للعميل');
       }
 
       toast({
@@ -1279,10 +1272,10 @@ ${publicFileUrl}
                   <TableHead>تاريخ الاستحقاق</TableHead>
                   <TableHead>الإجراءات</TableHead>
                 </TableRow>
-              </TableHeader>
+               </TableHeader>
                <TableBody>
                  {filteredOrders.map((order) => (
-                    <TableRow key={order.id}>
+                   <TableRow key={order.id}>
                       <TableCell className="font-medium">
                         {order.order_number}
                       </TableCell>
