@@ -105,8 +105,10 @@ Deno.serve(async (req) => {
     let templateName = type;
     
     // ربط أنواع الإشعارات وحالات الطلب بأسماء القوالب
-    if (orderDetails?.status) {
-      switch (orderDetails.status) {
+    // استخدام الحالة الجديدة من البيانات المرسلة أولاً، ثم الحالة من قاعدة البيانات
+    const currentStatus = data.new_status || orderDetails?.status || data.status;
+    if (currentStatus) {
+      switch (currentStatus) {
         case 'جديد':
           templateName = 'order_created';
           break;
@@ -237,10 +239,10 @@ Deno.serve(async (req) => {
         'order_items': orderItemsText,
         'start_date': startDate,
         'due_date': dueDate,
-        'status': data.status || 'جديد',
+        'status': data.new_status || orderDetails?.status || data.status || 'جديد',
         'priority': data.priority || 'متوسطة',
          'estimated_time': data.estimated_days || 'قريباً',
-         'company_name': 'شركتنا',
+         'company_name': companyName,
          'evaluation_link': `https://e5a7747a-0935-46df-9ea9-1308e76636dc.lovableproject.com/evaluation/token-${order_id}`
       };
 
