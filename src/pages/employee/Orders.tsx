@@ -564,6 +564,7 @@ ${publicFileUrl}
       if (messageError) throw messageError;
 
       // إرسال الرسالة فوراً للويب هوك
+      let messageSent = false;
       try {
         const { data: sendResult, error: sendError } = await supabase.functions.invoke('send-pending-whatsapp', {
           body: { message_id: messageData.id }
@@ -571,11 +572,17 @@ ${publicFileUrl}
 
         if (sendError) {
           console.error('Error sending WhatsApp message:', sendError);
+          throw new Error(`فشل في إرسال الرسالة: ${sendError.message}`);
+        } else if (sendResult?.error) {
+          console.error('WhatsApp service error:', sendResult.error);
+          throw new Error(`خطأ في خدمة الواتس آب: ${sendResult.error}`);
         } else {
           console.log('WhatsApp message sent successfully:', sendResult);
+          messageSent = true;
         }
       } catch (sendError) {
         console.error('Error invoking send-pending-whatsapp function:', sendError);
+        throw new Error(`فشل في الاتصال بخدمة الواتس آب: ${sendError instanceof Error ? sendError.message : String(sendError)}`);
       }
 
       // تحديث حالة الملف
@@ -591,7 +598,9 @@ ${publicFileUrl}
 
       toast({
         title: "تم إرسال البروفة",
-        description: "تم إرسال البروفة مع الصورة للعميل بنجاح",
+        description: messageSent 
+          ? "تم إرسال البروفة للعميل عبر الواتس آب بنجاح" 
+          : "تم حفظ البروفة - سيتم الإرسال قريباً",
       });
 
       // تحديث قائمة الملفات

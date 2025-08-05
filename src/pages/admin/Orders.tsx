@@ -571,6 +571,7 @@ ${companyName}`;
       console.log('WhatsApp message created in database with ID:', messageData.id);
 
       // إرسال الرسالة فوراً للويب هوك
+      let messageSent = false;
       try {
         const { data: sendResult, error: sendError } = await supabase.functions.invoke('send-pending-whatsapp', {
           body: { message_id: messageData.id }
@@ -578,13 +579,17 @@ ${companyName}`;
 
         if (sendError) {
           console.error('Error sending WhatsApp message:', sendError);
-          // لا نوقف العملية، فقط نسجل الخطأ
+          throw new Error(`فشل في إرسال الرسالة: ${sendError.message}`);
+        } else if (sendResult?.error) {
+          console.error('WhatsApp service error:', sendResult.error);
+          throw new Error(`خطأ في خدمة الواتس آب: ${sendResult.error}`);
         } else {
           console.log('WhatsApp message sent successfully:', sendResult);
+          messageSent = true;
         }
       } catch (sendError) {
         console.error('Error invoking send-pending-whatsapp function:', sendError);
-        // لا نوقف العملية، فقط نسجل الخطأ
+        throw new Error(`فشل في الاتصال بخدمة الواتس آب: ${sendError instanceof Error ? sendError.message : String(sendError)}`);
       }
 
       // تحديث حالة الإرسال في قاعدة البيانات
@@ -602,7 +607,9 @@ ${companyName}`;
 
       toast({
         title: "تم إرسال البروفة",
-        description: "تم إرسال البروفة للعميل عبر الواتساب بنجاح",
+        description: messageSent 
+          ? "تم إرسال البروفة للعميل عبر الواتس آب بنجاح" 
+          : "تم حفظ البروفة - سيتم الإرسال قريباً",
       });
 
       // إعادة جلب ملفات الطلب لتحديث الحالة

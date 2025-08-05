@@ -148,7 +148,7 @@ Deno.serve(async (req) => {
     if (!webhookSettings?.webhook_url) {
       console.error('No active webhook found in database');
       
-      // دعنا نتحقق من جميع الويب هوك في قاعدة البيانات
+      // دعنا نتحقق من جميع الويب هوك في قاعدة البيانات للمساعدة في التشخيص
       const { data: allWebhooks, error: debugError } = await supabase
         .from('webhook_settings')
         .select('*');
@@ -156,8 +156,27 @@ Deno.serve(async (req) => {
       console.log('All webhooks in database:', allWebhooks);
       if (debugError) console.error('Debug query error:', debugError);
       
+      // حتى لو لم نجد ويب هوك، يجب أن نحدث حالة الرسائل إلى failed
+      for (const message of pendingMessages) {
+        const { error: updateError } = await supabase
+          .from('whatsapp_messages')
+          .update({ 
+            status: 'failed',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', message.id);
+        
+        if (updateError) {
+          console.error(`Error updating message ${message.id} status to failed:`, updateError);
+        }
+      }
+      
       return new Response(
-        JSON.stringify({ error: 'No active webhook configured for WhatsApp messages' }),
+        JSON.stringify({ 
+          error: 'No active webhook configured for WhatsApp messages',
+          processed: pendingMessages.length,
+          failed: pendingMessages.length
+        }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 400
