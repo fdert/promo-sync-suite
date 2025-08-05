@@ -156,7 +156,11 @@ const WebhookSettings = () => {
       });
 
       if (error) {
-        throw new Error(error.message);
+        throw new Error(`فشل استدعاء دالة الاختبار: ${error.message}`);
+      }
+
+      if (!data) {
+        throw new Error('لم يتم استلام رد من دالة الاختبار');
       }
 
       if (data.success) {
@@ -167,15 +171,27 @@ const WebhookSettings = () => {
       } else {
         toast({
           title: "فشل الاختبار ❌",
-          description: `الحالة: ${data.status} - ${data.statusText || 'خطأ غير معروف'}`,
+          description: `الحالة: ${data.status} - ${data.statusText || data.error || 'خطأ غير معروف'}`,
           variant: "destructive",
         });
       }
     } catch (error) {
       console.error('Webhook test failed:', error);
+      
+      let errorMessage = 'خطأ غير معروف';
+      if (error instanceof Error) {
+        if (error.message.includes('Failed to send a request to the Edge Function')) {
+          errorMessage = 'فشل في الاتصال بخدمة اختبار الويب هوك - تحقق من إعدادات الشبكة';
+        } else if (error.message.includes('FunctionsHttpError')) {
+          errorMessage = 'خطأ في خدمة الويب هوك - تحقق من رابط الويب هوك';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       toast({
         title: "فشل الاختبار ❌",
-        description: `خطأ في الاتصال: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`,
+        description: `خطأ في الاتصال: ${errorMessage}`,
         variant: "destructive",
       });
     }
