@@ -80,7 +80,6 @@ const App = () => (
               <Route path="evaluations" element={<Evaluations />} />
               <Route path="print-archive" element={<PrintArchive />} />
               <Route path="reports" element={<EmployeeReports />} />
-              <Route path="whatsapp" element={<WhatsApp />} />
             </Route>
             <Route path="/admin" element={
               <ProtectedRoute>

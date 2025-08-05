@@ -75,12 +75,6 @@ const employeeMenuItems = [
     href: "/employee/reports",
     allowedRoles: ['employee'] as UserRole[],
   },
-  {
-    title: "رسائل WhatsApp",
-    icon: MessageSquare,
-    href: "/employee/whatsapp",
-    allowedRoles: ['employee'] as UserRole[],
-  },
 ];
 
 const EmployeeSidebar = ({ collapsed, onToggle }: SidebarProps) => {
