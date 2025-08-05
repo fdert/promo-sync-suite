@@ -643,11 +643,14 @@ ${publicFileUrl}
             }
           };
 
-          console.log('Sending notification with data:', notificationData);
-          
-          console.log('=== استدعاء send-order-notifications ===');
-          console.log('Function URL: https://gcuqfxacnbxdldsbmgvf.supabase.co/functions/v1/send-order-notifications');
-          console.log('Data being sent:', JSON.stringify(notificationData, null, 2));
+          console.log('=== بداية إرسال إشعار الواتساب ===');
+          console.log('Order ID:', orderId);
+          console.log('New Status:', status);
+          console.log('Notification Type:', notificationType);
+          console.log('Order Data:', orderData);
+          console.log('Customer Phone:', orderData.customers?.whatsapp_number);
+          console.log('Source: employee_dashboard');
+          console.log('Webhook preference: لوحة الموظف');
           
           const result = await supabase.functions.invoke('send-order-notifications', {
             body: notificationData
@@ -657,6 +660,15 @@ ${publicFileUrl}
           console.log('Full result:', result);
           console.log('Result data:', result.data);
           console.log('Result error:', result.error);
+          
+          // فحص مباشر للويب هوك في قاعدة البيانات
+          const { data: webhookCheck } = await supabase
+            .from('webhook_settings')
+            .select('*')
+            .eq('webhook_name', 'لوحة الموظف')
+            .eq('is_active', true);
+          
+          console.log('Webhook check for لوحة الموظف:', webhookCheck);
 
           if (result.error) {
             console.error('خطأ في إرسال الإشعار:', result.error);
@@ -1285,126 +1297,126 @@ ${publicFileUrl}
                 </TableRow>
                </TableHeader>
                <TableBody>
-                 {filteredOrders.map((order) => (
-                   <React.Fragment key={order.id}>
-                     <TableRow>
-                      <TableCell className="font-medium">
-                        {order.order_number}
-                      </TableCell>
-                      <TableCell>{order.customers?.name}</TableCell>
-                      <TableCell>{order.service_name}</TableCell>
-                      <TableCell>
-                        <Badge variant={
-                          order.status === 'مكتمل' ? 'default' :
-                          order.status === 'ملغي' ? 'destructive' :
-                          order.status === 'قيد التنفيذ' ? 'secondary' : 'outline'
-                        }>
-                          {order.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={
-                          order.priority === 'عالية' ? 'destructive' :
-                          order.priority === 'متوسطة' ? 'secondary' : 'outline'
-                        }>
-                          {order.priority}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{order.amount.toLocaleString()} ر.س</TableCell>
-                      <TableCell>
-                        {order.due_date ? new Date(order.due_date).toLocaleDateString('ar-SA') : '-'}
-                      </TableCell>
-                      <TableCell>-</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell colSpan={8} className="p-2 bg-gray-50">
-                        <div className="flex gap-1 flex-wrap justify-start">
-                          {/* تعديل حالة الطلب */}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-purple-600 border-purple-200 hover:bg-purple-50 text-xs"
-                            onClick={() => {
-                              setSelectedOrderForEdit(order);
-                              setNewStatus(order.status);
-                              setIsEditStatusDialogOpen(true);
-                            }}
-                          >
-                            <Edit className="h-3 w-3 mr-1" />
-                            حالة الطلب
-                          </Button>
-                          
-                          {/* المدفوعات */}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-green-600 border-green-200 hover:bg-green-50 text-xs"
-                            onClick={() => openPaymentDialog(order)}
-                          >
-                            <CreditCard className="h-3 w-3 mr-1" />
-                            مدفوعات
-                          </Button>
-                          
-                          {/* تحويل إلى فاتورة */}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-blue-600 border-blue-200 hover:bg-blue-50 text-xs"
-                            onClick={() => openInvoiceDialog(order)}
-                          >
-                            <Receipt className="h-3 w-3 mr-1" />
-                            فاتورة
-                          </Button>
-                          
-                          {/* رفع ملفات التصميم */}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-orange-600 border-orange-200 hover:bg-orange-50 text-xs"
-                            onClick={() => {
-                              setSelectedOrderForUpload(order);
-                              setFileCategory('design');
-                              setIsUploadDialogOpen(true);
-                            }}
-                          >
-                            <Image className="h-3 w-3 mr-1" />
-                            بروفة
-                          </Button>
-                          
-                          {/* رفع ملفات الطباعة */}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-cyan-600 border-cyan-200 hover:bg-cyan-50 text-xs"
-                            onClick={() => {
-                              setSelectedOrderForUpload(order);
-                              setFileCategory('print');
-                              setIsUploadDialogOpen(true);
-                            }}
-                          >
-                            <Printer className="h-3 w-3 mr-1" />
-                            طباعة
-                          </Button>
-                          
-                          {/* عرض الملفات */}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-gray-600 border-gray-200 hover:bg-gray-50 text-xs"
-                            onClick={() => {
-                              setSelectedOrderFiles(order);
-                              setIsFilesDialogOpen(true);
-                              fetchOrderFiles(order.id);
-                            }}
-                          >
-                            <Eye className="h-3 w-3 mr-1" />
-                            ملفات
-                          </Button>
-                         </div>
+                  {filteredOrders.map((order) => (
+                    <React.Fragment key={order.id}>
+                      <TableRow>
+                       <TableCell className="font-medium">
+                         {order.order_number}
                        </TableCell>
-                       </TableRow>
-                     </React.Fragment>
-                  ))}
+                       <TableCell>{order.customers?.name}</TableCell>
+                       <TableCell>{order.service_name}</TableCell>
+                       <TableCell>
+                         <Badge variant={
+                           order.status === 'مكتمل' ? 'default' :
+                           order.status === 'ملغي' ? 'destructive' :
+                           order.status === 'قيد التنفيذ' ? 'secondary' : 'outline'
+                         }>
+                           {order.status}
+                         </Badge>
+                       </TableCell>
+                       <TableCell>
+                         <Badge variant={
+                           order.priority === 'عالية' ? 'destructive' :
+                           order.priority === 'متوسطة' ? 'secondary' : 'outline'
+                         }>
+                           {order.priority}
+                         </Badge>
+                       </TableCell>
+                       <TableCell>{order.amount.toLocaleString()} ر.س</TableCell>
+                       <TableCell>
+                         {order.due_date ? new Date(order.due_date).toLocaleDateString('ar-SA') : '-'}
+                       </TableCell>
+                       <TableCell>-</TableCell>
+                     </TableRow>
+                     <TableRow>
+                       <TableCell colSpan={8} className="p-2 bg-gray-50">
+                         <div className="flex gap-1 flex-wrap justify-start">
+                           {/* تعديل حالة الطلب */}
+                           <Button
+                             variant="outline"
+                             size="sm"
+                             className="text-purple-600 border-purple-200 hover:bg-purple-50 text-xs"
+                             onClick={() => {
+                               setSelectedOrderForEdit(order);
+                               setNewStatus(order.status);
+                               setIsEditStatusDialogOpen(true);
+                             }}
+                           >
+                             <Edit className="h-3 w-3 mr-1" />
+                             حالة الطلب
+                           </Button>
+                           
+                           {/* المدفوعات */}
+                           <Button
+                             variant="outline"
+                             size="sm"
+                             className="text-green-600 border-green-200 hover:bg-green-50 text-xs"
+                             onClick={() => openPaymentDialog(order)}
+                           >
+                             <CreditCard className="h-3 w-3 mr-1" />
+                             مدفوعات
+                           </Button>
+                           
+                           {/* تحويل إلى فاتورة */}
+                           <Button
+                             variant="outline"
+                             size="sm"
+                             className="text-blue-600 border-blue-200 hover:bg-blue-50 text-xs"
+                             onClick={() => openInvoiceDialog(order)}
+                           >
+                             <Receipt className="h-3 w-3 mr-1" />
+                             فاتورة
+                           </Button>
+                           
+                           {/* رفع ملفات التصميم */}
+                           <Button
+                             variant="outline"
+                             size="sm"
+                             className="text-orange-600 border-orange-200 hover:bg-orange-50 text-xs"
+                             onClick={() => {
+                               setSelectedOrderForUpload(order);
+                               setFileCategory('design');
+                               setIsUploadDialogOpen(true);
+                             }}
+                           >
+                             <Image className="h-3 w-3 mr-1" />
+                             بروفة
+                           </Button>
+                           
+                           {/* رفع ملفات الطباعة */}
+                           <Button
+                             variant="outline"
+                             size="sm"
+                             className="text-cyan-600 border-cyan-200 hover:bg-cyan-50 text-xs"
+                             onClick={() => {
+                               setSelectedOrderForUpload(order);
+                               setFileCategory('print');
+                               setIsUploadDialogOpen(true);
+                             }}
+                           >
+                             <Printer className="h-3 w-3 mr-1" />
+                             طباعة
+                           </Button>
+                           
+                           {/* عرض الملفات */}
+                           <Button
+                             variant="outline"
+                             size="sm"
+                             className="text-gray-600 border-gray-200 hover:bg-gray-50 text-xs"
+                             onClick={() => {
+                               setSelectedOrderFiles(order);
+                               setIsFilesDialogOpen(true);
+                               fetchOrderFiles(order.id);
+                             }}
+                           >
+                             <Eye className="h-3 w-3 mr-1" />
+                             ملفات
+                           </Button>
+                          </div>
+                        </TableCell>
+                        </TableRow>
+                      </React.Fragment>
+                   ))}
                 </TableBody>
             </Table>
           </div>
