@@ -121,6 +121,11 @@ const Orders = () => {
   const [selectedOrderFiles, setSelectedOrderFiles] = useState<Order | null>(null);
   const [orderFiles, setOrderFiles] = useState<PrintFile[]>([]);
   
+  // حالات عرض الملف المنفرد
+  const [isFilePreviewOpen, setIsFilePreviewOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<PrintFile | null>(null);
+  const [filePreviewUrl, setFilePreviewUrl] = useState<string>("");
+  
   // حالات تعديل حالة الطلب
   const [isEditStatusDialogOpen, setIsEditStatusDialogOpen] = useState(false);
   const [selectedOrderForEdit, setSelectedOrderForEdit] = useState<Order | null>(null);
@@ -284,6 +289,32 @@ const Orders = () => {
       toast({
         title: "خطأ",
         description: "فشل في جلب ملفات الطلب",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // عرض الملف في نافذة منبثقة
+  const previewFile = async (file: PrintFile) => {
+    try {
+      // إنشاء رابط مؤقت لعرض الملف
+      const { data: signedUrlData, error: urlError } = await supabase
+        .storage
+        .from('print-files')
+        .createSignedUrl(file.file_path, 3600); // ساعة واحدة
+
+      if (urlError) {
+        throw new Error('فشل في إنشاء رابط الملف');
+      }
+
+      setSelectedFile(file);
+      setFilePreviewUrl(signedUrlData.signedUrl);
+      setIsFilePreviewOpen(true);
+    } catch (error) {
+      console.error('Error previewing file:', error);
+      toast({
+        title: "خطأ",
+        description: "فشل في عرض الملف",
         variant: "destructive",
       });
     }
@@ -1630,6 +1661,16 @@ ${publicFileUrl}
                     </div>
                     
                     <div className="flex items-center gap-2">
+                      {/* عرض الملف */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => previewFile(file)}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        عرض
+                      </Button>
+                      
                       {/* إرسال للعميل (للبروفة فقط) */}
                       {file.file_category === 'design' && !file.sent_to_customer && (
                         <Button
@@ -1665,6 +1706,92 @@ ${publicFileUrl}
                 ))}
               </div>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* نافذة عرض الملف */}
+      <Dialog open={isFilePreviewOpen} onOpenChange={setIsFilePreviewOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              عرض الملف: {selectedFile?.file_name}
+            </DialogTitle>
+            <DialogDescription>
+              معاينة الملف المحدد
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex-1 overflow-hidden">
+            {selectedFile && filePreviewUrl && (
+              <div className="w-full h-[70vh] bg-gray-50 rounded-lg overflow-hidden">
+                {/* عرض الصورة */}
+                {selectedFile.file_name.match(/\.(jpg|jpeg|png|gif|bmp|webp)$/i) ? (
+                  <img
+                    src={filePreviewUrl}
+                    alt={selectedFile.file_name}
+                    className="w-full h-full object-contain"
+                    onError={(e) => {
+                      console.error('Error loading image');
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                ) : selectedFile.file_name.match(/\.pdf$/i) ? (
+                  /* عرض PDF */
+                  <iframe
+                    src={filePreviewUrl}
+                    title={selectedFile.file_name}
+                    className="w-full h-full border-0"
+                  />
+                ) : (
+                  /* ملفات أخرى */
+                  <div className="flex flex-col items-center justify-center h-full text-center">
+                    <FileText className="h-16 w-16 text-gray-400 mb-4" />
+                    <p className="text-lg font-medium text-gray-700 mb-2">
+                      لا يمكن عرض هذا النوع من الملفات
+                    </p>
+                    <p className="text-sm text-gray-500 mb-4">
+                      {selectedFile.file_name}
+                    </p>
+                    <Button
+                      onClick={() => downloadFile(selectedFile.file_path, selectedFile.file_name)}
+                      className="flex items-center gap-2"
+                    >
+                      <Download className="h-4 w-4" />
+                      تحميل الملف
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          
+          <div className="flex justify-between items-center pt-4 border-t">
+            <div className="text-sm text-muted-foreground">
+              {selectedFile && (
+                <>
+                  <span>حجم الملف: {formatFileSize(selectedFile.file_size)}</span>
+                  <span className="mx-2">•</span>
+                  <span>تاريخ الرفع: {formatFileDate(selectedFile.upload_date)}</span>
+                </>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => selectedFile && downloadFile(selectedFile.file_path, selectedFile.file_name)}
+              >
+                <Download className="h-4 w-4 mr-1" />
+                تحميل
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setIsFilePreviewOpen(false)}
+              >
+                إغلاق
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
