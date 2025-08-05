@@ -518,7 +518,7 @@ const Orders = () => {
         orderItemsText += `📊 إجمالي البنود: ${totalAmount} ر.س\n`;
       }
 
-      // إنشاء رسالة البروفة مع رابط للصورة
+      // إنشاء رسالة البروفة مع رابط للصورة (مثل لوحة الموظف)
       const textMessage = `🎨 *بروفة التصميم جاهزة للمراجعة*
 
 📋 *تفاصيل الطلب:*
@@ -539,29 +539,26 @@ ${publicFileUrl}
 شكراً لكم،
 فريق *${companyName}*`;
 
-      // إرسال الرسالة عبر edge function
-      const { data: notificationResult, error: notificationError } = await supabase.functions.invoke('send-order-notifications', {
-        body: {
-          type: 'design_proof',
-          order_id: orderId,
-          source: 'admin_dashboard',
-          webhook_preference: 'لوحة الإدارة',
-          data: {
-            order_number: order.order_number,
-            customer_name: order.customers?.name || 'عزيزنا العميل',
-            customer_phone: order.customers?.whatsapp_number,
-            service_name: order.service_name,
-            amount: order.amount,
-            file_url: publicFileUrl,
-            order_items_text: orderItemsText,
-            company_name: companyName
-          }
-        }
-      });
+      // إرسال رسالة نصية تحتوي على الرابط (مثل لوحة الموظف)
+      const { error: messageError } = await supabase
+        .from('whatsapp_messages')
+        .insert({
+          from_number: 'system',
+          to_number: order.customers?.whatsapp_number || '',
+          message_type: 'text',
+          message_content: textMessage,
+          status: 'pending',
+          customer_id: order.customer_id || (order as any).customer_id
+        });
 
-      if (notificationError) {
-        console.error('Error sending design proof notification:', notificationError);
-        throw new Error('فشل في إرسال رسالة الواتساب');
+      if (messageError) throw messageError;
+
+      // استدعاء edge function لمعالجة رسائل الواتساب المعلقة
+      try {
+        await supabase.functions.invoke('send-pending-whatsapp');
+      } catch (pendingError) {
+        console.warn('Error processing pending WhatsApp messages:', pendingError);
+        // لا نوقف العملية إذا فشل إرسال الرسائل المعلقة
       }
 
       // تحديث حالة الإرسال في قاعدة البيانات
