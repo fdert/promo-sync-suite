@@ -54,7 +54,8 @@ Deno.serve(async (req) => {
     // للرسائل التي تحتوي على بروفة (صور أو روابط للبروفة)، استخدام ويب هوك البروفة
     const hasProofMessages = pendingMessages.some(msg => 
       msg.message_type === 'image' || 
-      (msg.message_content && msg.message_content.includes('لاستعراض البروفة'))
+      (msg.message_content && msg.message_content.includes('بروفة التصميم')) ||
+      (msg.message_content && msg.message_content.includes('رابط البروفة'))
     );
     
     if (hasProofMessages) {
