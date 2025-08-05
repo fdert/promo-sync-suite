@@ -629,6 +629,7 @@ ${publicFileUrl}
         console.log('Sending notification with data:', notificationData);
 
         try {
+          console.log('Invoking send-order-notifications function...');
           const { data: notificationResult, error: notificationError } = await supabase.functions.invoke('send-order-notifications', {
             body: notificationData
           });
@@ -637,11 +638,25 @@ ${publicFileUrl}
 
           if (notificationError) {
             console.error('فشل في إرسال إشعار الواتس:', notificationError);
+            toast({
+              title: "تحذير",
+              description: "تم تحديث الطلب لكن فشل في إرسال إشعار الواتساب",
+              variant: "destructive",
+            });
           } else {
             console.log('تم إرسال إشعار الواتس آب بنجاح');
+            toast({
+              title: "نجح الإرسال",
+              description: "تم تحديث الطلب وإرسال إشعار الواتساب بنجاح",
+            });
           }
         } catch (notificationError) {
           console.error('خطأ في إرسال الإشعار:', notificationError);
+          toast({
+            title: "تحذير",
+            description: "تم تحديث الطلب لكن حدث خطأ في إرسال إشعار الواتساب",
+            variant: "destructive",
+          });
         }
       }
 
@@ -1261,8 +1276,7 @@ ${publicFileUrl}
               </TableHeader>
                <TableBody>
                  {filteredOrders.map((order) => (
-                   <React.Fragment key={order.id}>
-                     <TableRow>
+                    <TableRow key={order.id}>
                       <TableCell className="font-medium">
                         {order.order_number}
                       </TableCell>
@@ -1375,11 +1389,10 @@ ${publicFileUrl}
                             <Eye className="h-3 w-3 mr-1" />
                             ملفات
                           </Button>
-                        </div>
-                      </TableCell>
-                     </TableRow>
-                   </React.Fragment>
-                ))}
+                         </div>
+                       </TableCell>
+                      </TableRow>
+                 ))}
                </TableBody>
             </Table>
           </div>
