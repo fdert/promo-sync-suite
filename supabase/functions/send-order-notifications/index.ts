@@ -469,7 +469,7 @@ ${data.file_url}
       paid_amount: data.paid_amount?.toString() || '0',
       remaining_amount: remainingAmount,
       payment_type: data.payment_type || 'غير محدد',
-      status: data.status || '',
+      status: data.new_status || orderDetails.status || '',
       priority: data.priority || 'متوسطة',
       start_date: startDate,
       due_date: dueDate,
