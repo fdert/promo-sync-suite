@@ -34,8 +34,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { type, order_id, data } = requestBody;
-    console.log('Notification request:', { type, order_id, data });
+    const { type, order_id, data, source, webhook_preference } = requestBody;
+    console.log('Notification request:', { type, order_id, data, source, webhook_preference });
 
     if (!type || !order_id) {
       console.error('Missing required fields:', { type, order_id });
@@ -254,6 +254,8 @@ ${orderItemsText || 'لا توجد بنود محددة'}
     
     if (webhookSettings && webhookSettings.length > 0) {
       console.log('Looking for webhook with type:', type);
+      console.log('Webhook preference:', webhook_preference);
+      console.log('Source:', source);
       console.log('Available webhooks:', webhookSettings.map(w => ({
         name: w.webhook_name,
         type: w.webhook_type,
@@ -261,8 +263,31 @@ ${orderItemsText || 'لا توجد بنود محددة'}
         statuses: w.order_statuses
       })));
       
-      // البحث عن webhook نشط يحتوي على هذا النوع من الإشعارات
-      for (const webhook of webhookSettings) {
+      // إذا كان هناك webhook مفضل محدد، ابحث عنه أولاً
+      if (webhook_preference) {
+        const preferredWebhook = webhookSettings.find(w => 
+          w.is_active && 
+          w.webhook_type === 'outgoing' && 
+          w.webhook_name === webhook_preference
+        );
+        
+        if (preferredWebhook) {
+          // تحقق من دعم نوع الإشعار
+          if (!preferredWebhook.order_statuses || 
+              preferredWebhook.order_statuses.length === 0 || 
+              preferredWebhook.order_statuses.includes(type)) {
+            selectedWebhook = preferredWebhook;
+            console.log('Using preferred webhook:', webhook_preference);
+          }
+        }
+      }
+      
+      // إذا لم نجد الويب هوك المفضل، ابحث عن أي webhook مناسب
+      if (!selectedWebhook) {
+        console.log('Preferred webhook not found or not suitable, searching for alternative');
+        
+        // البحث عن webhook نشط يحتوي على هذا النوع من الإشعارات
+        for (const webhook of webhookSettings) {
         console.log('Checking webhook:', {
           name: webhook.webhook_name,
           type: webhook.webhook_type,

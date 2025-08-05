@@ -624,6 +624,8 @@ ${publicFileUrl}
           const notificationData = {
             type: notificationType,
             order_id: orderId,
+            source: 'employee_dashboard', // تحديد المصدر
+            webhook_preference: 'لوحة الموظف', // الويب هوك المفضل
             data: {
               order_number: orderData.order_number,
               customer_name: orderData.customers.name,
@@ -633,7 +635,7 @@ ${publicFileUrl}
               service_name: orderData.service_name,
               description: orderData.description || '',
               payment_type: orderData.payment_type || 'دفع آجل',
-              calculated_paid_amount: 0,
+              paid_amount: orderData.paid_amount || 0,
               status: status,
               priority: orderData.priority || 'متوسطة',
               due_date: orderData.due_date,
@@ -1093,6 +1095,8 @@ ${publicFileUrl}
         const notificationData = {
           type: 'order_created',
           order_id: createdOrder.id,
+          source: 'employee_dashboard', // تحديد المصدر
+          webhook_preference: 'لوحة الموظف', // الويب هوك المفضل
           data: {
             order_number: orderNumber,
             customer_name: selectedCustomer.name,
@@ -1101,7 +1105,7 @@ ${publicFileUrl}
             service_name: newOrder.service_name,
             description: newOrder.description,
             payment_type: newOrder.payment_type,
-            calculated_paid_amount: 0,
+            paid_amount: 0,
             status: 'جديد',
             priority: newOrder.priority,
             due_date: newOrder.due_date,
