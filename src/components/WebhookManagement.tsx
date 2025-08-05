@@ -58,6 +58,7 @@ const WebhookManagement = ({
   });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingField, setEditingField] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState<string>('');
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
@@ -246,82 +247,80 @@ const WebhookManagement = ({
               <TableBody>
                 {webhookSettings.map((webhook) => (
                    <TableRow key={webhook.id}>
-                     <TableCell>
-                       {editingId === webhook.id && editingField === 'name' ? (
-                         <Input
-                           value={webhook.webhook_name}
-                           onChange={(e) => {
-                             // Real-time update handled in onBlur
-                           }}
-                           onBlur={(e) => {
-                             const target = e.target as HTMLInputElement;
-                             handleUpdate(webhook.id!, {webhook_name: target.value});
-                             setEditingId(null);
-                             setEditingField(null);
-                           }}
-                           onKeyDown={(e) => {
-                             if (e.key === 'Enter') {
-                               const target = e.target as HTMLInputElement;
-                               handleUpdate(webhook.id!, {webhook_name: target.value});
-                               setEditingId(null);
-                               setEditingField(null);
-                             }
-                           }}
-                           autoFocus
-                         />
-                       ) : (
-                         <span 
-                           className="font-medium cursor-pointer hover:text-primary"
-                           onClick={() => {
-                             setEditingId(webhook.id!);
-                             setEditingField('name');
-                           }}
-                           title="اضغط للتعديل"
-                         >
-                           {webhook.webhook_name}
-                         </span>
-                       )}
-                     </TableCell>
-                     <TableCell>
-                       {editingId === webhook.id && editingField === 'url' ? (
-                         <Input
-                           value={webhook.webhook_url}
-                           onChange={(e) => {
-                             // Real-time update handled in onBlur
-                           }}
-                           onBlur={(e) => {
-                             const target = e.target as HTMLInputElement;
-                             handleUpdate(webhook.id!, {webhook_url: target.value});
-                             setEditingId(null);
-                             setEditingField(null);
-                           }}
-                           onKeyDown={(e) => {
-                             if (e.key === 'Enter') {
-                               const target = e.target as HTMLInputElement;
-                               handleUpdate(webhook.id!, {webhook_url: target.value});
-                               setEditingId(null);
-                               setEditingField(null);
-                             }
-                           }}
-                           autoFocus
-                           className="min-w-[300px]"
-                         />
-                       ) : (
-                         <code 
-                           className="text-xs bg-muted px-2 py-1 rounded cursor-pointer hover:bg-muted/80"
-                           onClick={() => {
-                             setEditingId(webhook.id!);
-                             setEditingField('url');
-                           }}
-                           title="اضغط للتعديل"
-                         >
-                           {webhook.webhook_url.length > 50 
-                             ? `${webhook.webhook_url.substring(0, 50)}...` 
-                             : webhook.webhook_url
-                           }
-                         </code>
-                       )}
-                     </TableCell>
+                      <TableCell>
+                        {editingId === webhook.id && editingField === 'name' ? (
+                          <Input
+                            value={editValue}
+                            onChange={(e) => setEditValue(e.target.value)}
+                            onBlur={() => {
+                              handleUpdate(webhook.id!, {webhook_name: editValue});
+                              setEditingId(null);
+                              setEditingField(null);
+                              setEditValue('');
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                handleUpdate(webhook.id!, {webhook_name: editValue});
+                                setEditingId(null);
+                                setEditingField(null);
+                                setEditValue('');
+                              }
+                            }}
+                            autoFocus
+                          />
+                        ) : (
+                          <span 
+                            className="font-medium cursor-pointer hover:text-primary"
+                            onClick={() => {
+                              setEditingId(webhook.id!);
+                              setEditingField('name');
+                              setEditValue(webhook.webhook_name);
+                            }}
+                            title="اضغط للتعديل"
+                          >
+                            {webhook.webhook_name}
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {editingId === webhook.id && editingField === 'url' ? (
+                          <Input
+                            value={editValue}
+                            onChange={(e) => setEditValue(e.target.value)}
+                            onBlur={() => {
+                              handleUpdate(webhook.id!, {webhook_url: editValue});
+                              setEditingId(null);
+                              setEditingField(null);
+                              setEditValue('');
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                handleUpdate(webhook.id!, {webhook_url: editValue});
+                                setEditingId(null);
+                                setEditingField(null);
+                                setEditValue('');
+                              }
+                            }}
+                            autoFocus
+                            className="min-w-[300px]"
+                          />
+                        ) : (
+                          <code 
+                            className="text-xs bg-muted px-2 py-1 rounded cursor-pointer hover:bg-muted/80"
+                            onClick={() => {
+                              setEditingId(webhook.id!);
+                              setEditingField('url');
+                              setEditValue(webhook.webhook_url);
+                            }}
+                            title="اضغط للتعديل"
+                          >
+                            {webhook.webhook_url.length > 50 
+                              ? `${webhook.webhook_url.substring(0, 50)}...` 
+                              : webhook.webhook_url
+                            }
+                          </code>
+                        )}
+                      </TableCell>
                     <TableCell>
                       <Badge variant="secondary">
                         {webhook.webhook_type}
