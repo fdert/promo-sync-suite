@@ -11,6 +11,7 @@ import {
   Printer,
   TrendingUp,
   Archive,
+  Settings,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -72,6 +73,18 @@ const employeeMenuItems = [
     title: "التقارير المالية",
     icon: TrendingUp,
     href: "/employee/reports",
+    allowedRoles: ['employee'] as UserRole[],
+  },
+  {
+    title: "رسائل WhatsApp",
+    icon: MessageSquare,
+    href: "/employee/whatsapp",
+    allowedRoles: ['employee'] as UserRole[],
+  },
+  {
+    title: "ويب هوك",
+    icon: Settings,
+    href: "/employee/webhooks",
     allowedRoles: ['employee'] as UserRole[],
   },
 ];
