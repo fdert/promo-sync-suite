@@ -259,23 +259,28 @@ ${orderItemsText || 'لا توجد بنود محددة'}
         // تأكد من أن الـ webhook نشط أولاً
         if (!webhook.is_active) continue;
         
+        // تحقق من webhook_type أولاً - نريد 'outgoing' للإشعارات
+        if (webhook.webhook_type !== 'outgoing') continue;
+        
         if (!webhook.order_statuses || webhook.order_statuses.length === 0) {
           // webhook لجميع الحالات
           selectedWebhook = webhook;
+          console.log('Using webhook for all statuses');
           break;
         } else if (webhook.order_statuses.includes(type)) {
           // webhook مخصص لهذا النوع
           selectedWebhook = webhook;
+          console.log('Found matching webhook for type:', type);
           break;
         }
       }
       
-      // إذا لم نجد webhook مخصص، نستخدم أول webhook نشط
+      // إذا لم نجد webhook مخصص، نستخدم أول webhook نشط من نوع outgoing
       if (!selectedWebhook) {
-        const activeWebhook = webhookSettings.find(w => w.is_active);
+        const activeWebhook = webhookSettings.find(w => w.is_active && w.webhook_type === 'outgoing');
         if (activeWebhook) {
           selectedWebhook = activeWebhook;
-          console.log('Using first active webhook as fallback');
+          console.log('Using first active outgoing webhook as fallback');
         }
       }
     }
