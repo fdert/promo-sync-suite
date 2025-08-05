@@ -569,6 +569,10 @@ ${publicFileUrl}
 
   // تحديث حالة الطلب
   const updateOrderStatus = async (orderId: string, status: string) => {
+    console.log('=== بداية تحديث حالة الطلب ===');
+    console.log('Order ID:', orderId);
+    console.log('New Status:', status);
+    
     try {
       // جلب بيانات الطلب أولاً لإرسال الإشعار
       const orderData = orders.find(order => order.id === orderId);
@@ -581,6 +585,7 @@ ${publicFileUrl}
 
       if (error) throw error;
 
+      console.log('=== تحقق من إرسال إشعار الواتساب ===');
       // إرسال إشعار واتساب عند تغيير الحالة
       if (orderData?.customers?.whatsapp_number) {
         console.log('Customer data:', {
@@ -629,6 +634,7 @@ ${publicFileUrl}
         console.log('Sending notification with data:', notificationData);
 
         try {
+          console.log('=== إرسال إشعار واتساب ===');
           console.log('Invoking send-order-notifications function...');
           const { data: notificationResult, error: notificationError } = await supabase.functions.invoke('send-order-notifications', {
             body: notificationData
