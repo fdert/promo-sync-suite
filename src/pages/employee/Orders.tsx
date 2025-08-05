@@ -174,19 +174,33 @@ const Orders = () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('order_payment_summary')
-        .select('*')
+        .from('orders')
+        .select(`
+          *,
+          customers(id, name, phone, whatsapp_number)
+        `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       
-      // إضافة paid_amount للطلبات للتوافق مع النوع
-      const ordersWithPaidAmount = (data || []).map(order => ({
-        ...order,
-        paid_amount: order.calculated_paid_amount || 0
+      // حساب المبلغ المدفوع لكل طلب
+      const ordersWithPayments = await Promise.all((data || []).map(async (order: any) => {
+        const { data: payments } = await supabase
+          .from('payments')
+          .select('amount')
+          .eq('order_id', order.id);
+        
+        const totalPaid = payments?.reduce((sum, payment) => sum + payment.amount, 0) || 0;
+        
+        return {
+          ...order,
+          paid_amount: totalPaid,
+          calculated_paid_amount: totalPaid,
+          remaining_amount: order.amount - totalPaid
+        };
       }));
       
-      setOrders(ordersWithPaidAmount);
+      setOrders(ordersWithPayments);
     } catch (error) {
       console.error('Error fetching orders:', error);
       toast({
@@ -1313,9 +1327,9 @@ ${publicFileUrl}
                 </TableRow>
                </TableHeader>
                <TableBody>
-                  {filteredOrders.map((order) => (
+                  {filteredOrders.map((order, index) => (
                     <React.Fragment key={order.id}>
-                      <TableRow>
+                      <TableRow className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}>
                        <TableCell className="font-medium">
                          {order.order_number}
                        </TableCell>
@@ -1345,13 +1359,13 @@ ${publicFileUrl}
                        <TableCell>-</TableCell>
                      </TableRow>
                      <TableRow>
-                       <TableCell colSpan={8} className="p-2 bg-gray-50">
+                       <TableCell colSpan={8} className={`p-3 border-t ${index % 2 === 0 ? "bg-slate-50/50" : "bg-white"}`}>
                          <div className="flex gap-1 flex-wrap justify-start">
                            {/* تعديل حالة الطلب */}
                            <Button
                              variant="outline"
                              size="sm"
-                             className="text-purple-600 border-purple-200 hover:bg-purple-50 text-xs"
+                             className="text-gray-600 border-gray-200 hover:bg-gray-50 text-xs"
                              onClick={() => {
                                setSelectedOrderForEdit(order);
                                setNewStatus(order.status);
@@ -1366,7 +1380,7 @@ ${publicFileUrl}
                            <Button
                              variant="outline"
                              size="sm"
-                             className="text-green-600 border-green-200 hover:bg-green-50 text-xs"
+                             className="text-gray-700 border-gray-200 hover:bg-gray-50 text-xs"
                              onClick={() => openPaymentDialog(order)}
                            >
                              <CreditCard className="h-3 w-3 mr-1" />
@@ -1377,7 +1391,7 @@ ${publicFileUrl}
                            <Button
                              variant="outline"
                              size="sm"
-                             className="text-blue-600 border-blue-200 hover:bg-blue-50 text-xs"
+                             className="text-gray-700 border-gray-200 hover:bg-gray-50 text-xs"
                              onClick={() => openInvoiceDialog(order)}
                            >
                              <Receipt className="h-3 w-3 mr-1" />
@@ -1388,7 +1402,7 @@ ${publicFileUrl}
                            <Button
                              variant="outline"
                              size="sm"
-                             className="text-orange-600 border-orange-200 hover:bg-orange-50 text-xs"
+                             className="text-gray-600 border-gray-200 hover:bg-gray-50 text-xs"
                              onClick={() => {
                                setSelectedOrderForUpload(order);
                                setFileCategory('design');
@@ -1403,7 +1417,7 @@ ${publicFileUrl}
                            <Button
                              variant="outline"
                              size="sm"
-                             className="text-cyan-600 border-cyan-200 hover:bg-cyan-50 text-xs"
+                             className="text-gray-600 border-gray-200 hover:bg-gray-50 text-xs"
                              onClick={() => {
                                setSelectedOrderForUpload(order);
                                setFileCategory('print');
