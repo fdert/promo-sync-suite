@@ -574,8 +574,21 @@ ${publicFileUrl}
     console.log('New Status:', status);
     
     try {
-      // جلب بيانات الطلب أولاً لإرسال الإشعار
-      const orderData = orders.find(order => order.id === orderId);
+      // جلب بيانات الطلب مع العميل من قاعدة البيانات
+      const { data: orderData, error: fetchError } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          customers(name, whatsapp_number)
+        `)
+        .eq('id', orderId)
+        .single();
+
+      if (fetchError || !orderData) {
+        console.error('خطأ في جلب بيانات الطلب:', fetchError);
+        throw fetchError || new Error('لم يتم العثور على الطلب');
+      }
+      
       console.log('Order data loaded:', orderData);
 
       const { error } = await supabase
@@ -586,6 +599,9 @@ ${publicFileUrl}
       if (error) throw error;
 
       console.log('=== تحقق من إرسال إشعار الواتساب ===');
+      console.log('Order data:', orderData);
+      console.log('Customer WhatsApp:', orderData?.customers?.whatsapp_number);
+      
       // إرسال إشعار واتساب عند تغيير الحالة
       if (orderData?.customers?.whatsapp_number) {
         console.log('Customer data:', orderData.customers);
@@ -635,7 +651,7 @@ ${publicFileUrl}
               service_name: orderData.service_name,
               description: orderData.description || '',
               payment_type: orderData.payment_type || 'دفع آجل',
-              paid_amount: orderData.paid_amount || 0,
+              paid_amount: 0, // سيتم حسابها من المدفوعات
               status: status,
               priority: orderData.priority || 'متوسطة',
               due_date: orderData.due_date,
