@@ -239,7 +239,7 @@ Deno.serve(async (req) => {
         'order_items': orderItemsText,
         'start_date': startDate,
         'due_date': dueDate,
-        'status': data.new_status || orderDetails?.status || 'جديد',
+        'status': orderDetails?.status || data.new_status || data.status || 'جديد',
         'priority': data.priority || 'متوسطة',
          'estimated_time': data.estimated_days || 'قريباً',
          'company_name': companyName,
