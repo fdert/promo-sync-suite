@@ -81,12 +81,6 @@ const employeeMenuItems = [
     href: "/employee/whatsapp",
     allowedRoles: ['employee'] as UserRole[],
   },
-  {
-    title: "ويب هوك",
-    icon: Settings,
-    href: "/employee/webhooks",
-    allowedRoles: ['employee'] as UserRole[],
-  },
 ];
 
 const EmployeeSidebar = ({ collapsed, onToggle }: SidebarProps) => {
