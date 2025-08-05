@@ -539,27 +539,48 @@ ${publicFileUrl}
 شكراً لكم،
 فريق *${companyName}*`;
 
-      // إرسال رسالة نصية تحتوي على الرابط (مثل لوحة الموظف)
-      const { error: messageError } = await supabase
-        .from('whatsapp_messages')
-        .insert({
-          from_number: 'system',
-          to_number: order.customers?.whatsapp_number || '',
-          message_type: 'text',
-          message_content: textMessage,
-          status: 'pending',
-          customer_id: order.customer_id || (order as any).customer_id
-        });
+      // إرسال البروفة مباشرة عبر ويب هوك "بروفة نهائي"
+      const { data: proofWebhook } = await supabase
+        .from('webhook_settings')
+        .select('webhook_url')
+        .eq('webhook_name', 'بروفة نهائي')
+        .eq('is_active', true)
+        .single();
 
-      if (messageError) throw messageError;
-
-      // استدعاء edge function لمعالجة رسائل الواتساب المعلقة
-      try {
-        await supabase.functions.invoke('send-pending-whatsapp');
-      } catch (pendingError) {
-        console.warn('Error processing pending WhatsApp messages:', pendingError);
-        // لا نوقف العملية إذا فشل إرسال الرسائل المعلقة
+      if (!proofWebhook || !proofWebhook.webhook_url) {
+        throw new Error('لم يتم العثور على ويب هوك "بروفة نهائي" أو أنه غير مفعل');
       }
+
+      // إعداد رسالة البروفة
+      const messagePayload = {
+        messaging_product: "whatsapp",
+        to: order.customers?.whatsapp_number || '',
+        type: "text",
+        text: {
+          body: textMessage
+        }
+      };
+
+      console.log('Sending proof message to webhook:', proofWebhook.webhook_url);
+      console.log('Message payload:', messagePayload);
+
+      // إرسال الرسالة للويب هوك
+      const webhookResponse = await fetch(proofWebhook.webhook_url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(messagePayload)
+      });
+
+      if (!webhookResponse.ok) {
+        const errorText = await webhookResponse.text();
+        console.error('Webhook error response:', errorText);
+        throw new Error(`فشل في إرسال البروفة عبر الويب هوك: ${webhookResponse.status} ${errorText}`);
+      }
+
+      const webhookResult = await webhookResponse.json();
+      console.log('Webhook success response:', webhookResult);
 
       // تحديث حالة الإرسال في قاعدة البيانات
       const { error: updateError } = await supabase
