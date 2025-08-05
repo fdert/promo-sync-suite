@@ -101,11 +101,86 @@ Deno.serve(async (req) => {
       }
     }
 
+    // تحديد اسم القالب المناسب حسب نوع الإشعار وحالة الطلب
+    let templateName = type;
+    
+    // ربط أنواع الإشعارات وحالات الطلب بأسماء القوالب
+    if (orderDetails?.status) {
+      switch (orderDetails.status) {
+        case 'جديد':
+          templateName = 'order_created';
+          break;
+        case 'مؤكد':
+          templateName = 'order_confirmed';
+          break;
+        case 'قيد التنفيذ':
+          templateName = 'order_in_progress';
+          break;
+        case 'قيد المراجعة':
+          templateName = 'order_under_review';
+          break;
+        case 'جاهز للتسليم':
+          templateName = 'order_ready_for_delivery';
+          break;
+        case 'مكتمل':
+          templateName = 'order_completed';
+          break;
+        case 'ملغي':
+          templateName = 'order_cancelled';
+          break;
+        case 'قيد الانتظار':
+          templateName = 'order_on_hold';
+          break;
+        default:
+          // استخدام نوع الإشعار إذا لم تطابق أي حالة
+          switch (type) {
+            case 'order_created':
+            case 'order_confirmed':
+            case 'order_in_progress':
+            case 'order_under_review':
+            case 'order_ready_for_delivery':
+            case 'order_completed':
+            case 'order_cancelled':
+            case 'order_on_hold':
+              templateName = type;
+              break;
+            case 'design_proof_sent':
+              templateName = 'design_proof_ready';
+              break;
+            default:
+              templateName = 'order_status_updated';
+              break;
+          }
+      }
+    } else {
+      // إذا لم توجد بيانات الطلب، استخدم نوع الإشعار مباشرة
+      switch (type) {
+        case 'design_proof_sent':
+          templateName = 'design_proof_ready';
+          break;
+        case 'order_created':
+        case 'order_confirmed':
+        case 'order_in_progress':
+        case 'order_under_review':
+        case 'order_ready_for_delivery':
+        case 'order_completed':
+        case 'order_cancelled':
+        case 'order_on_hold':
+          templateName = type;
+          break;
+        default:
+          templateName = 'order_status_updated';
+          break;
+      }
+    }
+    
+    console.log('Using template name:', templateName);
+
     // محاولة الحصول على قالب الرسالة من قاعدة البيانات
     const { data: templateData, error: templateError } = await supabase
       .from('message_templates')
       .select('template_content')
-      .eq('template_name', type)
+      .eq('template_name', templateName)
       .eq('is_active', true)
       .maybeSingle();
 
