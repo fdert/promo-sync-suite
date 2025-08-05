@@ -116,7 +116,7 @@ Deno.serve(async (req) => {
       message = templateData.template_content;
       
       // إذا كانت هناك تفاصيل طلب، استخدمها
-      let description = data.description || 'غير محدد';
+      let description = 'غير محدد';
       if (orderDetails) {
         
         // حساب المبلغ المتبقي
