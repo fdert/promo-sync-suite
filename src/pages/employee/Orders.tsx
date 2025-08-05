@@ -69,6 +69,14 @@ interface Order {
     whatsapp_number: string;
     phone: string;
   };
+  order_items?: {
+    id: string;
+    item_name: string;
+    quantity: number;
+    unit_price: number;
+    total_amount: number;
+    description?: string;
+  }[];
 }
 
 interface Customer {
@@ -182,7 +190,15 @@ const Orders = () => {
         .from('orders')
         .select(`
           *,
-          customers(id, name, phone, whatsapp_number)
+          customers(id, name, phone, whatsapp_number),
+          order_items(
+            id,
+            item_name,
+            quantity,
+            unit_price,
+            total_amount,
+            description
+          )
         `)
         .order('created_at', { ascending: false });
 
@@ -1377,6 +1393,41 @@ ${publicFileUrl}
                     <p><strong>المبلغ المتبقي:</strong> {(order.amount - (order.paid_amount || 0)).toLocaleString()} ر.س</p>
                   </div>
                 </div>
+                
+                {/* بنود الطلب */}
+                {order.order_items && order.order_items.length > 0 && (
+                  <div className="mt-4 p-4 bg-gray-50 rounded-lg border">
+                    <h4 className="font-medium text-sm mb-3 flex items-center gap-2">
+                      <ClipboardList className="h-4 w-4" />
+                      بنود الطلب ({order.order_items.length})
+                    </h4>
+                    <div className="space-y-2">
+                      {order.order_items.map((item, index) => (
+                        <div key={item.id} className="flex justify-between items-start p-2 bg-white rounded border text-xs">
+                          <div className="flex-1">
+                            <p className="font-medium text-gray-800">{index + 1}. {item.item_name}</p>
+                            {item.description && (
+                              <p className="text-gray-600 mt-1">{item.description}</p>
+                            )}
+                          </div>
+                          <div className="text-left space-y-1 min-w-0 ml-2">
+                            <p className="text-gray-600">الكمية: {item.quantity}</p>
+                            <p className="text-gray-600">السعر: {item.unit_price.toLocaleString()} ر.س</p>
+                            <p className="font-medium text-blue-600">الإجمالي: {item.total_amount.toLocaleString()} ر.س</p>
+                          </div>
+                        </div>
+                      ))}
+                      <div className="pt-2 border-t">
+                        <div className="flex justify-between items-center text-sm font-medium">
+                          <span>إجمالي البنود:</span>
+                          <span className="text-blue-600">
+                            {order.order_items.reduce((sum, item) => sum + item.total_amount, 0).toLocaleString()} ر.س
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
               
               {/* الأزرار */}
