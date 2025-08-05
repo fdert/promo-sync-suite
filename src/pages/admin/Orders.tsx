@@ -570,6 +570,23 @@ ${companyName}`;
 
       console.log('WhatsApp message created in database with ID:', messageData.id);
 
+      // إرسال الرسالة فوراً للويب هوك
+      try {
+        const { data: sendResult, error: sendError } = await supabase.functions.invoke('send-pending-whatsapp', {
+          body: { message_id: messageData.id }
+        });
+
+        if (sendError) {
+          console.error('Error sending WhatsApp message:', sendError);
+          // لا نوقف العملية، فقط نسجل الخطأ
+        } else {
+          console.log('WhatsApp message sent successfully:', sendResult);
+        }
+      } catch (sendError) {
+        console.error('Error invoking send-pending-whatsapp function:', sendError);
+        // لا نوقف العملية، فقط نسجل الخطأ
+      }
+
       // تحديث حالة الإرسال في قاعدة البيانات
       const { error: updateError } = await supabase
         .from('print_files')

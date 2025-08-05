@@ -23,16 +23,51 @@ Deno.serve(async (req) => {
   try {
     console.log('Processing pending WhatsApp messages...');
 
-    // الحصول على الرسائل المعلقة (pending)
-    const { data: pendingMessages, error: fetchError } = await supabase
-      .from('whatsapp_messages')
-      .select('*')
-      .eq('status', 'pending')
-      .limit(10); // معالجة 10 رسائل في المرة الواحدة
+    let pendingMessages;
+    
+    // التحقق إذا كان الطلب يحتوي على معرف رسالة محددة
+    const requestBody = await req.text();
+    let specificMessageId = null;
+    
+    if (requestBody) {
+      try {
+        const body = JSON.parse(requestBody);
+        specificMessageId = body.message_id;
+      } catch (parseError) {
+        console.log('No JSON body or invalid JSON, processing all pending messages');
+      }
+    }
 
-    if (fetchError) {
-      console.error('Error fetching pending messages:', fetchError);
-      throw fetchError;
+    if (specificMessageId) {
+      // إرسال رسالة محددة
+      console.log(`Processing specific message: ${specificMessageId}`);
+      const { data: specificMessage, error: fetchError } = await supabase
+        .from('whatsapp_messages')
+        .select('*')
+        .eq('id', specificMessageId)
+        .eq('status', 'pending')
+        .single();
+
+      if (fetchError) {
+        console.error('Error fetching specific message:', fetchError);
+        throw fetchError;
+      }
+
+      pendingMessages = specificMessage ? [specificMessage] : [];
+    } else {
+      // الحصول على الرسائل المعلقة (pending)
+      const { data: allPending, error: fetchError } = await supabase
+        .from('whatsapp_messages')
+        .select('*')
+        .eq('status', 'pending')
+        .limit(10); // معالجة 10 رسائل في المرة الواحدة
+
+      if (fetchError) {
+        console.error('Error fetching pending messages:', fetchError);
+        throw fetchError;
+      }
+
+      pendingMessages = allPending || [];
     }
 
     if (!pendingMessages || pendingMessages.length === 0) {
@@ -132,24 +167,28 @@ Deno.serve(async (req) => {
         }
 
         console.log(`Sending message to ${message.to_number}:`, JSON.stringify(messagePayload, null, 2));
+        console.log(`Using webhook: ${webhookSettings.webhook_url} (type: ${webhookSettings.webhook_type})`);
 
         // إرسال الرسالة عبر webhook إلى n8n
         const response = await fetch(webhookSettings.webhook_url, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'User-Agent': 'PrintShop-WhatsApp/1.0'
           },
           body: JSON.stringify(messagePayload)
         });
 
         const responseData = await response.text();
-        console.log(`Webhook response for message ${message.id}:`, responseData);
+        console.log(`Webhook response for message ${message.id}: Status ${response.status}, Body: ${responseData}`);
 
         let newStatus = 'sent';
         
         if (!response.ok) {
-          console.error(`Webhook failed for message ${message.id}:`, response.status, responseData);
+          console.error(`Webhook failed for message ${message.id}: Status ${response.status}, Response: ${responseData}`);
           newStatus = 'failed';
+        } else {
+          console.log(`✅ Message ${message.id} sent successfully to webhook`);
         }
 
         // إذا كانت رسالة نصية منفصلة للبروفة، لا تُرسل رسالة إضافية

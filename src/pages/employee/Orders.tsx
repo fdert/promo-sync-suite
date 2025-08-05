@@ -548,7 +548,7 @@ ${publicFileUrl}
 *${companyName}*`;
 
       // إرسال رسالة نصية تحتوي على الرابط
-      const { error: messageError } = await supabase
+      const { data: messageData, error: messageError } = await supabase
         .from('whatsapp_messages')
         .insert({
           from_number: 'system',
@@ -557,16 +557,25 @@ ${publicFileUrl}
           message_content: textMessage,
           status: 'pending',
           customer_id: order.customer_id || (order as any).customer_id
-        });
+        })
+        .select()
+        .single();
 
       if (messageError) throw messageError;
 
-      // استدعاء edge function لمعالجة رسائل الواتساب المعلقة
+      // إرسال الرسالة فوراً للويب هوك
       try {
-        await supabase.functions.invoke('send-pending-whatsapp');
-      } catch (pendingError) {
-        console.warn('Error processing pending WhatsApp messages:', pendingError);
-        // لا نوقف العملية إذا فشل إرسال الرسائل المعلقة
+        const { data: sendResult, error: sendError } = await supabase.functions.invoke('send-pending-whatsapp', {
+          body: { message_id: messageData.id }
+        });
+
+        if (sendError) {
+          console.error('Error sending WhatsApp message:', sendError);
+        } else {
+          console.log('WhatsApp message sent successfully:', sendResult);
+        }
+      } catch (sendError) {
+        console.error('Error invoking send-pending-whatsapp function:', sendError);
       }
 
       // تحديث حالة الملف
