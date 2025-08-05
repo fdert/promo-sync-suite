@@ -181,7 +181,7 @@ const WebhookSettings = () => {
       let errorMessage = 'خطأ غير معروف';
       if (error instanceof Error) {
         if (error.message.includes('Failed to send a request to the Edge Function')) {
-          errorMessage = 'فشل في الاتصال بخدمة اختبار الويب هوك - تحقق من إعدادات الشبكة';
+          errorMessage = 'فشل في الاتصال بخدمة اختبار الويب هوك. تحقق من الاتصال بالإنترنت أو جرب مرة أخرى لاحقاً.';
         } else if (error.message.includes('FunctionsHttpError')) {
           errorMessage = 'خطأ في خدمة الويب هوك - تحقق من رابط الويب هوك';
         } else {

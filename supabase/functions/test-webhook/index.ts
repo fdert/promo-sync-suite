@@ -110,17 +110,48 @@ serve(async (req) => {
     console.log('Testing webhook:', url, 'Type:', webhook_type)
     console.log('Test data:', testData)
 
-    // إرسال الطلب للويب هوك
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'User-Agent': 'PrintShop-Webhook-Test/1.0'
-      },
-      body: JSON.stringify(testData)
-    })
+    // إرسال الطلب للويب هوك مع معالجة أفضل للأخطاء
+    let response;
+    let responseText = '';
+    
+    try {
+      response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'PrintShop-Webhook-Test/1.0'
+        },
+        body: JSON.stringify(testData)
+      });
 
-    const responseText = await response.text()
+      try {
+        responseText = await response.text();
+      } catch (textError) {
+        responseText = 'فشل في قراءة الاستجابة';
+      }
+
+    } catch (fetchError) {
+      console.error('Fetch error:', fetchError);
+      
+      const result = {
+        success: false,
+        status: 0,
+        statusText: 'فشل في الاتصال',
+        response: `خطأ في الاتصال: ${fetchError.message}`,
+        url: url,
+        webhook_type: webhook_type,
+        timestamp: new Date().toISOString(),
+        error: fetchError.message
+      };
+
+      return new Response(
+        JSON.stringify(result),
+        { 
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
     
     const result = {
       success: response.ok,
@@ -130,7 +161,7 @@ serve(async (req) => {
       url: url,
       webhook_type: webhook_type,
       timestamp: new Date().toISOString()
-    }
+    };
 
     console.log('Webhook test result:', result)
 
