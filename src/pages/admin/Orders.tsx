@@ -572,6 +572,7 @@ ${companyName}`;
 
       // إرسال الرسالة فوراً للويب هوك
       let messageSent = false;
+      let errorMessage = '';
       try {
         const { data: sendResult, error: sendError } = await supabase.functions.invoke('send-pending-whatsapp', {
           body: { message_id: messageData.id }
@@ -579,17 +580,30 @@ ${companyName}`;
 
         if (sendError) {
           console.error('Error sending WhatsApp message:', sendError);
-          throw new Error(`فشل في إرسال الرسالة: ${sendError.message}`);
+          errorMessage = 'فشل في الاتصال بخدمة الواتس آب';
+          throw new Error(errorMessage);
         } else if (sendResult?.error) {
           console.error('WhatsApp service error:', sendResult.error);
-          throw new Error(`خطأ في خدمة الواتس آب: ${sendResult.error}`);
+          if (sendResult.error.includes('No active webhook')) {
+            errorMessage = 'لا يوجد webhook نشط - يرجى إعداد webhook في إعدادات الواتس آب';
+          } else {
+            errorMessage = `خطأ في خدمة الواتس آب: ${sendResult.error}`;
+          }
+          throw new Error(errorMessage);
         } else {
           console.log('WhatsApp message sent successfully:', sendResult);
           messageSent = true;
         }
       } catch (sendError) {
         console.error('Error invoking send-pending-whatsapp function:', sendError);
-        throw new Error(`فشل في الاتصال بخدمة الواتس آب: ${sendError instanceof Error ? sendError.message : String(sendError)}`);
+        if (!errorMessage) {
+          if (sendError instanceof Error && sendError.message.includes('non-2xx status code')) {
+            errorMessage = 'خطأ في إعدادات الويب هوك - تحقق من إعدادات الواتس آب';
+          } else {
+            errorMessage = `فشل في الاتصال بخدمة الواتس آب: ${sendError instanceof Error ? sendError.message : String(sendError)}`;
+          }
+        }
+        throw new Error(errorMessage);
       }
 
       // تحديث حالة الإرسال في قاعدة البيانات
