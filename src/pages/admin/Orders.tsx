@@ -539,16 +539,16 @@ ${publicFileUrl}
 شكراً لكم،
 فريق *${companyName}*`;
 
-      // إرسال البروفة مباشرة عبر ويب هوك "بروفة نهائي"
+      // إرسال البروفة مباشرة عبر ويب هوك "بروفه نهائي"
       const { data: proofWebhook } = await supabase
         .from('webhook_settings')
         .select('webhook_url')
-        .eq('webhook_name', 'بروفة نهائي')
+        .eq('webhook_name', 'بروفه نهائي')
         .eq('is_active', true)
         .single();
 
       if (!proofWebhook || !proofWebhook.webhook_url) {
-        throw new Error('لم يتم العثور على ويب هوك "بروفة نهائي" أو أنه غير مفعل');
+        throw new Error('لم يتم العثور على ويب هوك "بروفه نهائي" أو أنه غير مفعل');
       }
 
       // إعداد رسالة البروفة
