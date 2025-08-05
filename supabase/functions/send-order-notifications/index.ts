@@ -229,6 +229,41 @@ ${orderItemsText || 'لا توجد بنود محددة'}
           message = `${data.customer_name}، طلبك رقم ${data.order_number} جاهز للتسليم! لتقييم الخدمة يرجى الضغط هنا: ${data.evaluation_link}`;
           customerPhone = data.customer_phone;
           customerName = data.customer_name;
+          break;
+
+        case 'status_update':
+          message = `${data.customer_name}، تم تحديث حالة طلبك رقم ${data.order_number} من "${data.old_status}" إلى "${data.new_status}". سنبقيك على اطلاع بأي تطورات جديدة.`;
+          customerPhone = data.customer_phone;
+          customerName = data.customer_name;
+          break;
+
+        case 'order_under_review':
+          message = `${data.customer_name}، طلبك رقم ${data.order_number} قيد المراجعة حالياً. سيتم التواصل معك قريباً لتأكيد التفاصيل.`;
+          customerPhone = data.customer_phone;
+          customerName = data.customer_name;
+          break;
+
+        case 'design_proof':
+          message = `🎨 *بروفة التصميم جاهزة للمراجعة*
+
+📋 *تفاصيل الطلب:*
+• رقم الطلب: ${data.order_number}
+• العميل: ${data.customer_name}
+• الخدمة: ${data.service_name}
+${data.order_items_text || ''}
+
+📸 *لاستعراض البروفة:*
+👇 اضغط على الرابط التالي لعرض التصميم:
+${data.file_url}
+
+*بعد مراجعة البروفة:*
+
+✅ *للموافقة:* أرسل "موافق"
+📝 *للتعديل:* اكتب التعديلات المطلوبة
+
+شكراً لكم،
+فريق *${data.company_name || 'وكالة الإبداع للدعاية والإعلان'}*`;
+          customerPhone = data.customer_phone;
           customerName = data.customer_name;
           break;
 

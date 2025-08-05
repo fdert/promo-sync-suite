@@ -539,18 +539,28 @@ ${publicFileUrl}
 شكراً لكم،
 فريق *${companyName}*`;
 
-      // إرسال الرسالة عبر WhatsApp
-      const whatsappResponse = await fetch('/api/whatsapp/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          to: order.customers?.whatsapp_number,
-          type: 'text',
-          text: { body: textMessage }
-        })
+      // إرسال الرسالة عبر edge function
+      const { data: notificationResult, error: notificationError } = await supabase.functions.invoke('send-order-notifications', {
+        body: {
+          type: 'design_proof',
+          order_id: orderId,
+          source: 'admin_dashboard',
+          webhook_preference: 'لوحة الإدارة',
+          data: {
+            order_number: order.order_number,
+            customer_name: order.customers?.name || 'عزيزنا العميل',
+            customer_phone: order.customers?.whatsapp_number,
+            service_name: order.service_name,
+            amount: order.amount,
+            file_url: publicFileUrl,
+            order_items_text: orderItemsText,
+            company_name: companyName
+          }
+        }
       });
 
-      if (!whatsappResponse.ok) {
+      if (notificationError) {
+        console.error('Error sending design proof notification:', notificationError);
         throw new Error('فشل في إرسال رسالة الواتساب');
       }
 
@@ -650,12 +660,40 @@ ${publicFileUrl}
 
       if (error) throw error;
 
-      // إرسال إشعار واتساب للعميل
+        // إرسال إشعار واتساب للعميل
       if (orderData.customers?.whatsapp_number) {
         console.log('Sending WhatsApp notification for status update...');
         
+        // تحديد نوع الإشعار بناءً على الحالة الجديدة (مثل لوحة الموظف)
+        let notificationType;
+        switch (newStatus) {
+          case 'مؤكد':
+            notificationType = 'order_confirmed';
+            break;
+          case 'قيد التنفيذ':
+            notificationType = 'order_in_progress';
+            break;
+          case 'قيد المراجعة':
+            notificationType = 'order_under_review';
+            break;
+          case 'جاهز للتسليم':
+            notificationType = 'order_ready_for_delivery';
+            break;
+          case 'مكتمل':
+            notificationType = 'order_completed';
+            break;
+          case 'ملغي':
+            notificationType = 'order_cancelled';
+            break;
+          case 'جديد':
+            notificationType = 'order_created';
+            break;
+          default:
+            notificationType = 'status_update'; // للحالات الأخرى
+        }
+
         const notificationData = {
-          type: 'status_update',
+          type: notificationType,
           order_id: orderId,
           source: 'admin_dashboard', // تحديد المصدر
           webhook_preference: 'لوحة الإدارة', // الويب هوك المفضل
@@ -667,7 +705,12 @@ ${publicFileUrl}
             new_status: newStatus,
             amount: orderData.amount,
             service_name: orderData.service_name,
-            due_date: orderData.due_date
+            due_date: orderData.due_date,
+            progress: orderData.progress || 0,
+            description: orderData.description || '',
+            payment_type: orderData.payment_type || 'دفع آجل',
+            priority: orderData.priority || 'متوسطة',
+            start_date: orderData.start_date || null
           }
         };
 
