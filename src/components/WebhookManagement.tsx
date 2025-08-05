@@ -57,8 +57,6 @@ const WebhookManagement = ({
     order_statuses: []
   });
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingField, setEditingField] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState<string>('');
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
@@ -101,6 +99,7 @@ const WebhookManagement = ({
   const handleUpdate = async (id: string, updates: Partial<WebhookSetting>) => {
     try {
       await onUpdate(id, updates);
+      setEditingId(null);
     } catch (error) {
       // Error handled in parent component
     }
@@ -246,81 +245,30 @@ const WebhookManagement = ({
               </TableHeader>
               <TableBody>
                 {webhookSettings.map((webhook) => (
-                   <TableRow key={webhook.id}>
-                      <TableCell>
-                        {editingId === webhook.id && editingField === 'name' ? (
-                          <Input
-                            value={editValue}
-                            onChange={(e) => setEditValue(e.target.value)}
-                            onBlur={() => {
-                              handleUpdate(webhook.id!, {webhook_name: editValue});
-                              setEditingId(null);
-                              setEditingField(null);
-                              setEditValue('');
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                handleUpdate(webhook.id!, {webhook_name: editValue});
-                                setEditingId(null);
-                                setEditingField(null);
-                                setEditValue('');
-                              }
-                            }}
-                            autoFocus
-                          />
-                        ) : (
-                          <span 
-                            className="font-medium cursor-pointer hover:text-primary"
-                            onClick={() => {
-                              setEditingId(webhook.id!);
-                              setEditingField('name');
-                              setEditValue(webhook.webhook_name);
-                            }}
-                            title="اضغط للتعديل"
-                          >
-                            {webhook.webhook_name}
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {editingId === webhook.id && editingField === 'url' ? (
-                          <Input
-                            value={editValue}
-                            onChange={(e) => setEditValue(e.target.value)}
-                            onBlur={() => {
-                              handleUpdate(webhook.id!, {webhook_url: editValue});
-                              setEditingId(null);
-                              setEditingField(null);
-                              setEditValue('');
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                handleUpdate(webhook.id!, {webhook_url: editValue});
-                                setEditingId(null);
-                                setEditingField(null);
-                                setEditValue('');
-                              }
-                            }}
-                            autoFocus
-                            className="min-w-[300px]"
-                          />
-                        ) : (
-                          <code 
-                            className="text-xs bg-muted px-2 py-1 rounded cursor-pointer hover:bg-muted/80"
-                            onClick={() => {
-                              setEditingId(webhook.id!);
-                              setEditingField('url');
-                              setEditValue(webhook.webhook_url);
-                            }}
-                            title="اضغط للتعديل"
-                          >
-                            {webhook.webhook_url.length > 50 
-                              ? `${webhook.webhook_url.substring(0, 50)}...` 
-                              : webhook.webhook_url
-                            }
-                          </code>
-                        )}
-                      </TableCell>
+                  <TableRow key={webhook.id}>
+                    <TableCell>
+                      {editingId === webhook.id ? (
+                        <Input
+                          value={webhook.webhook_name}
+                          onChange={(e) => {
+                            const updated = {...webhook, webhook_name: e.target.value};
+                            handleUpdate(webhook.id!, {webhook_name: e.target.value});
+                          }}
+                          onBlur={() => setEditingId(null)}
+                          autoFocus
+                        />
+                      ) : (
+                        <span className="font-medium">{webhook.webhook_name}</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <code className="text-xs bg-muted px-2 py-1 rounded">
+                        {webhook.webhook_url.length > 50 
+                          ? `${webhook.webhook_url.substring(0, 50)}...` 
+                          : webhook.webhook_url
+                        }
+                      </code>
+                    </TableCell>
                     <TableCell>
                       <Badge variant="secondary">
                         {webhook.webhook_type}
@@ -370,13 +318,22 @@ const WebhookManagement = ({
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleTest(webhook)}
-                      >
-                        <TestTube className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setEditingId(webhook.id!)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleTest(webhook)}
+                        >
+                          <TestTube className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

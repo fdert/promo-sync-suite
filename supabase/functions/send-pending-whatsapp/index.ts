@@ -23,51 +23,16 @@ Deno.serve(async (req) => {
   try {
     console.log('Processing pending WhatsApp messages...');
 
-    let pendingMessages;
-    
-    // التحقق إذا كان الطلب يحتوي على معرف رسالة محددة
-    const requestBody = await req.text();
-    let specificMessageId = null;
-    
-    if (requestBody) {
-      try {
-        const body = JSON.parse(requestBody);
-        specificMessageId = body.message_id;
-      } catch (parseError) {
-        console.log('No JSON body or invalid JSON, processing all pending messages');
-      }
-    }
+    // الحصول على الرسائل المعلقة (pending)
+    const { data: pendingMessages, error: fetchError } = await supabase
+      .from('whatsapp_messages')
+      .select('*')
+      .eq('status', 'pending')
+      .limit(10); // معالجة 10 رسائل في المرة الواحدة
 
-    if (specificMessageId) {
-      // إرسال رسالة محددة
-      console.log(`Processing specific message: ${specificMessageId}`);
-      const { data: specificMessage, error: fetchError } = await supabase
-        .from('whatsapp_messages')
-        .select('*')
-        .eq('id', specificMessageId)
-        .eq('status', 'pending')
-        .single();
-
-      if (fetchError) {
-        console.error('Error fetching specific message:', fetchError);
-        throw fetchError;
-      }
-
-      pendingMessages = specificMessage ? [specificMessage] : [];
-    } else {
-      // الحصول على الرسائل المعلقة (pending)
-      const { data: allPending, error: fetchError } = await supabase
-        .from('whatsapp_messages')
-        .select('*')
-        .eq('status', 'pending')
-        .limit(10); // معالجة 10 رسائل في المرة الواحدة
-
-      if (fetchError) {
-        console.error('Error fetching pending messages:', fetchError);
-        throw fetchError;
-      }
-
-      pendingMessages = allPending || [];
+    if (fetchError) {
+      console.error('Error fetching pending messages:', fetchError);
+      throw fetchError;
     }
 
     if (!pendingMessages || pendingMessages.length === 0) {
@@ -83,100 +48,39 @@ Deno.serve(async (req) => {
 
     console.log(`Found ${pendingMessages.length} pending messages`);
 
-    // الحصول على إعدادات الويب هوك للإرسال
+    // الحصول على إعدادات الويب هوك للإرسال - تحديد الويب هوك حسب نوع الرسالة
     let webhookSettings;
     
-    // أولاً نحاول العثور على ويب هوك البروفة للرسائل التي تحتوي على بروفة
+    // للرسائل التي تحتوي على بروفة (صور أو روابط للبروفة)، استخدام ويب هوك البروفة
     const hasProofMessages = pendingMessages.some(msg => 
       msg.message_type === 'image' || 
       (msg.message_content && msg.message_content.includes('لاستعراض البروفة'))
     );
     
     if (hasProofMessages) {
-      console.log('Looking for proof webhook...');
-      const { data: proofWebhook, error: proofError } = await supabase
+      // استخدام ويب هوك البروفة للرسائل التي تحتوي على بروفة
+      const { data: proofWebhook } = await supabase
         .from('webhook_settings')
-        .select('webhook_url, webhook_type, webhook_name')
+        .select('webhook_url, webhook_type')
         .eq('webhook_type', 'proof')
         .eq('is_active', true)
-        .maybeSingle();
-      
-      if (proofError) {
-        console.error('Error fetching proof webhook:', proofError);
-      }
-      
+        .single();
       webhookSettings = proofWebhook;
-      console.log('Proof webhook found:', webhookSettings);
-    }
-    
-    // إذا لم نجد ويب هوك البروفة، نبحث عن ويب هوك الطلبات
-    if (!webhookSettings?.webhook_url) {
-      console.log('Looking for orders webhook...');
-      const { data: orderWebhook, error: orderError } = await supabase
+    } else {
+      // استخدام ويب هوك الطلبات للرسائل النصية العادية
+      const { data: orderWebhook } = await supabase
         .from('webhook_settings')
-        .select('webhook_url, webhook_type, webhook_name')
-        .eq('webhook_type', 'outgoing')
+        .select('webhook_url, webhook_type')
+        .eq('webhook_name', 'طلبات ابداع')
         .eq('is_active', true)
-        .maybeSingle();
-      
-      if (orderError) {
-        console.error('Error fetching order webhook:', orderError);
-      }
-      
+        .single();
       webhookSettings = orderWebhook;
-      console.log('Order webhook found:', webhookSettings);
-    }
-    
-    // إذا لم نجد أي ويب هوك، نبحث عن أي ويب هوك نشط
-    if (!webhookSettings?.webhook_url) {
-      console.log('Looking for any active webhook...');
-      const { data: anyWebhook, error: anyError } = await supabase
-        .from('webhook_settings')
-        .select('webhook_url, webhook_type, webhook_name')
-        .eq('is_active', true)
-        .limit(1)
-        .maybeSingle();
-      
-      if (anyError) {
-        console.error('Error fetching any webhook:', anyError);
-      }
-      
-      webhookSettings = anyWebhook;
-      console.log('Any webhook found:', webhookSettings);
     }
 
     if (!webhookSettings?.webhook_url) {
-      console.error('No active webhook found in database');
-      
-      // دعنا نتحقق من جميع الويب هوك في قاعدة البيانات للمساعدة في التشخيص
-      const { data: allWebhooks, error: debugError } = await supabase
-        .from('webhook_settings')
-        .select('*');
-      
-      console.log('All webhooks in database:', allWebhooks);
-      if (debugError) console.error('Debug query error:', debugError);
-      
-      // حتى لو لم نجد ويب هوك، يجب أن نحدث حالة الرسائل إلى failed
-      for (const message of pendingMessages) {
-        const { error: updateError } = await supabase
-          .from('whatsapp_messages')
-          .update({ 
-            status: 'failed',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', message.id);
-        
-        if (updateError) {
-          console.error(`Error updating message ${message.id} status to failed:`, updateError);
-        }
-      }
-      
+      console.error('No active outgoing webhook found');
       return new Response(
-        JSON.stringify({ 
-          error: 'No active webhook configured for WhatsApp messages',
-          processed: pendingMessages.length,
-          failed: pendingMessages.length
-        }),
+        JSON.stringify({ error: 'No outgoing webhook configured' }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 400
@@ -228,28 +132,24 @@ Deno.serve(async (req) => {
         }
 
         console.log(`Sending message to ${message.to_number}:`, JSON.stringify(messagePayload, null, 2));
-        console.log(`Using webhook: ${webhookSettings.webhook_url} (type: ${webhookSettings.webhook_type})`);
 
         // إرسال الرسالة عبر webhook إلى n8n
         const response = await fetch(webhookSettings.webhook_url, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'User-Agent': 'PrintShop-WhatsApp/1.0'
           },
           body: JSON.stringify(messagePayload)
         });
 
         const responseData = await response.text();
-        console.log(`Webhook response for message ${message.id}: Status ${response.status}, Body: ${responseData}`);
+        console.log(`Webhook response for message ${message.id}:`, responseData);
 
         let newStatus = 'sent';
         
         if (!response.ok) {
-          console.error(`Webhook failed for message ${message.id}: Status ${response.status}, Response: ${responseData}`);
+          console.error(`Webhook failed for message ${message.id}:`, response.status, responseData);
           newStatus = 'failed';
-        } else {
-          console.log(`✅ Message ${message.id} sent successfully to webhook`);
         }
 
         // إذا كانت رسالة نصية منفصلة للبروفة، لا تُرسل رسالة إضافية

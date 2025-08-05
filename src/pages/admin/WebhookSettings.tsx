@@ -132,7 +132,7 @@ const WebhookSettings = () => {
     }
   };
 
-  const testWebhook = async (url: string, webhookType: string) => {
+  const testWebhook = async (url: string, event: string) => {
     if (!url) {
       toast({
         title: "خطأ",
@@ -148,129 +148,36 @@ const WebhookSettings = () => {
     });
 
     try {
-      // إنشاء بيانات اختبار مناسبة حسب نوع الويب هوك
-      let testData = {};
-      
-      switch (webhookType) {
-        case 'outgoing':
-          testData = {
-            event: 'order_test',
-            timestamp: new Date().toISOString(),
-            data: {
-              test: true,
-              order_id: 'test-order-123',
-              customer_name: 'عميل تجريبي',
-              customer_phone: '+966500000000',
-              status: 'pending',
-              service_type: 'طباعة عادية',
-              total_amount: 100,
-              notes: 'هذا طلب تجريبي لاختبار الويب هوك',
-              created_at: new Date().toISOString()
-            }
-          };
-          break;
-        
-        case 'whatsapp':
-          testData = {
-            event: 'whatsapp_test',
-            timestamp: new Date().toISOString(),
-            data: {
-              test: true,
-              message_id: 'test-msg-123',
-              from: '+966500000000',
-              to: '+966500000001',
-              message: 'رسالة تجريبية لاختبار الويب هوك',
-              type: 'text',
-              status: 'sent'
-            }
-          };
-          break;
-        
-        case 'invoice':
-          testData = {
-            event: 'invoice_test',
-            timestamp: new Date().toISOString(),
-            data: {
-              test: true,
-              invoice_id: 'test-invoice-123',
-              order_id: 'test-order-123',
-              customer_name: 'عميل تجريبي',
-              amount: 100,
-              status: 'generated',
-              created_at: new Date().toISOString()
-            }
-          };
-          break;
-        
-        case 'proof':
-          testData = {
-            event: 'proof_test',
-            timestamp: new Date().toISOString(),
-            data: {
-              test: true,
-              file_id: 'test-file-123',
-              order_id: 'test-order-123',
-              customer_name: 'عميل تجريبي',
-              file_name: 'design_proof_test.jpg',
-              file_url: 'https://example.com/proof.jpg',
-              file_type: 'design',
-              sent_to_customer: true,
-              message: 'تم إرسال بروفة التصميم للعميل - هذا اختبار'
-            }
-          };
-          break;
-        
-        default:
-          testData = {
-            event: 'test',
-            timestamp: new Date().toISOString(),
-            data: {
-              test: true,
-              message: 'هذا اختبار عام للويب هوك'
-            }
-          };
-      }
+      const testData = {
+        event: event + "_test",
+        data: {
+          test: true,
+          timestamp: new Date().toISOString(),
+          message: "هذا اختبار للويب هوك"
+        }
+      };
 
-      // إرسال طلب اختبار مباشر للويب هوك
       const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'User-Agent': 'PrintShop-Webhook-Test/1.0'
         },
         body: JSON.stringify(testData)
       });
 
-      let responseText = '';
-      try {
-        responseText = await response.text();
-      } catch (textError) {
-        responseText = 'فشل في قراءة الاستجابة';
-      }
-
       if (response.ok) {
         toast({
-          title: "نجح الاختبار ✅",
-          description: `تم إرسال الويب هوك بنجاح - الحالة: ${response.status}`,
+          title: "نجح الاختبار",
+          description: "تم إرسال الويب هوك بنجاح",
         });
       } else {
-        toast({
-          title: "فشل الاختبار ❌",
-          description: `الحالة: ${response.status} - ${response.statusText}`,
-          variant: "destructive",
-        });
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
     } catch (error) {
       console.error('Webhook test failed:', error);
-      
-      let errorMessage = 'خطأ غير معروف';
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      }
-      
       toast({
-        title: "فشل الاختبار ❌",
-        description: `خطأ في الاتصال: ${errorMessage}`,
+        title: "فشل الاختبار",
+        description: `فشل في إرسال الويب هوك: ${error}`,
         variant: "destructive",
       });
     }

@@ -1,8 +1,5 @@
 project_id = "gcuqfxacnbxdldsbmgvf"
 
-[functions.test-webhook]
-verify_jwt = false
-
 [functions.send-order-notifications]
 verify_jwt = false
 
