@@ -132,7 +132,7 @@ const WebhookSettings = () => {
     }
   };
 
-  const testWebhook = async (url: string, event: string) => {
+  const testWebhook = async (url: string, webhookType: string) => {
     if (!url) {
       toast({
         title: "خطأ",
@@ -148,36 +148,34 @@ const WebhookSettings = () => {
     });
 
     try {
-      const testData = {
-        event: event + "_test",
-        data: {
-          test: true,
-          timestamp: new Date().toISOString(),
-          message: "هذا اختبار للويب هوك"
+      const { data, error } = await supabase.functions.invoke('test-webhook', {
+        body: {
+          url: url,
+          webhook_type: webhookType
         }
-      };
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(testData)
       });
 
-      if (response.ok) {
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (data.success) {
         toast({
-          title: "نجح الاختبار",
-          description: "تم إرسال الويب هوك بنجاح",
+          title: "نجح الاختبار ✅",
+          description: `تم إرسال الويب هوك بنجاح - الحالة: ${data.status}`,
         });
       } else {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        toast({
+          title: "فشل الاختبار ❌",
+          description: `الحالة: ${data.status} - ${data.statusText || 'خطأ غير معروف'}`,
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error('Webhook test failed:', error);
       toast({
-        title: "فشل الاختبار",
-        description: `فشل في إرسال الويب هوك: ${error}`,
+        title: "فشل الاختبار ❌",
+        description: `خطأ في الاتصال: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`,
         variant: "destructive",
       });
     }
