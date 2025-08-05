@@ -518,7 +518,7 @@ const Orders = () => {
         orderItemsText += `📊 إجمالي البنود: ${totalAmount} ر.س\n`;
       }
 
-      // إنشاء رسالة البروفة مع رابط للصورة (مطابقة للنموذج المطلوب)
+      // إنشاء رسالة البروفة مع رابط واضح للتحميل والعرض
       const textMessage = `🎨 بروفة التصميم جاهزة للمراجعة
 
 📋 تفاصيل الطلب:
@@ -527,8 +527,11 @@ const Orders = () => {
 * الخدمة: ${order.service_name}
 ${orderItemsText}
 
-📸 لاستعراض البروفة:
-👇 اضغط على الرابط التالي لعرض التصميم:
+📸 *رابط البروفة للعرض والتحميل:*
+🔗 اضغط هنا لفتح البروفة:
+${publicFileUrl}
+
+📱 *أو انسخ الرابط في المتصفح:*
 ${publicFileUrl}
 
 بعد مراجعة البروفة:
@@ -539,48 +542,33 @@ ${publicFileUrl}
 شكراً لكم،
 ${companyName}`;
 
-      // إرسال البروفة مباشرة عبر ويب هوك "بروفه نهائي "
-      const { data: proofWebhook, error: webhookError } = await supabase
-        .from('webhook_settings')
-        .select('webhook_url, webhook_name, is_active')
-        .eq('webhook_name', 'بروفه نهائي ')
-        .eq('is_active', true)
+      // التحقق من رقم الهاتف
+      const phoneNumber = order.customers?.whatsapp_number || order.customers?.phone || '';
+      if (!phoneNumber) {
+        throw new Error('رقم هاتف العميل غير متوفر');
+      }
+
+      console.log('Customer phone number:', phoneNumber);
+
+      // إنشاء رسالة WhatsApp في قاعدة البيانات
+      const { data: messageData, error: messageError } = await supabase
+        .from('whatsapp_messages')
+        .insert({
+          from_number: phoneNumber,
+          to_number: phoneNumber,
+          message_content: textMessage,
+          message_type: 'text',
+          status: 'pending'
+        })
+        .select()
         .single();
 
-      if (!proofWebhook || !proofWebhook.webhook_url) {
-        throw new Error('لم يتم العثور على ويب هوك "بروفه نهائي " أو أنه غير مفعل');
+      if (messageError) {
+        console.error('Error creating WhatsApp message:', messageError);
+        throw new Error('فشل في إنشاء رسالة الواتساب');
       }
 
-      // إعداد رسالة البروفة
-      const messagePayload = {
-        messaging_product: "whatsapp",
-        to: order.customers?.whatsapp_number || order.customers?.phone || '',
-        type: "text",
-        text: {
-          body: textMessage
-        }
-      };
-
-      console.log('Sending proof message to webhook:', proofWebhook.webhook_url);
-      console.log('Message payload:', messagePayload);
-
-      // إرسال الرسالة للويب هوك
-      const webhookResponse = await fetch(proofWebhook.webhook_url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(messagePayload)
-      });
-
-      if (!webhookResponse.ok) {
-        const errorText = await webhookResponse.text();
-        console.error('Webhook error response:', errorText);
-        throw new Error(`فشل في إرسال البروفة عبر الويب هوك: ${webhookResponse.status} ${errorText}`);
-      }
-
-      const webhookResult = await webhookResponse.json();
-      console.log('Webhook success response:', webhookResult);
+      console.log('WhatsApp message created in database with ID:', messageData.id);
 
       // تحديث حالة الإرسال في قاعدة البيانات
       const { error: updateError } = await supabase
