@@ -570,38 +570,68 @@ ${companyName}`;
 
       console.log('WhatsApp message created in database with ID:', messageData.id);
 
-      // إرسال الرسالة فوراً للويب هوك
+      // إرسال البروفة عبر الويب هوك المخصص للبروفة
       let messageSent = false;
       let errorMessage = '';
+      
       try {
-        const { data: sendResult, error: sendError } = await supabase.functions.invoke('send-pending-whatsapp', {
-          body: { message_id: messageData.id }
+        // البحث عن ويب هوك نشط للبروفة
+        const { data: webhooks, error: webhookError } = await supabase
+          .from('webhook_settings')
+          .select('*')
+          .eq('webhook_type', 'proof')
+          .eq('is_active', true);
+
+        if (webhookError) {
+          console.error('Error fetching webhooks:', webhookError);
+          throw new Error('فشل في جلب إعدادات الويب هوك');
+        }
+
+        if (!webhooks || webhooks.length === 0) {
+          errorMessage = 'لا يوجد webhook نشط للبروفة - يرجى إعداد webhook في إعدادات الويب هوك';
+          throw new Error(errorMessage);
+        }
+
+        // إعداد بيانات البروفة للإرسال
+        const proofData = {
+          event: 'proof_sent',
+          timestamp: new Date().toISOString(),
+          data: {
+            file_id: fileId,
+            order_id: orderId,
+            order_number: order.order_number,
+            customer_name: order.customers?.name || 'عزيزنا العميل',
+            customer_phone: phoneNumber,
+            file_name: proofFile.file_name,
+            file_url: publicFileUrl,
+            file_type: proofFile.file_category,
+            message: textMessage,
+            sent_to_customer: true
+          }
+        };
+
+        // إرسال للويب هوك الأول النشط
+        const webhook = webhooks[0];
+        const response = await fetch(webhook.webhook_url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'User-Agent': 'PrintShop-Proof-Notification/1.0'
+          },
+          body: JSON.stringify(proofData)
         });
 
-        if (sendError) {
-          console.error('Error sending WhatsApp message:', sendError);
-          errorMessage = 'فشل في الاتصال بخدمة الواتس آب';
-          throw new Error(errorMessage);
-        } else if (sendResult?.error) {
-          console.error('WhatsApp service error:', sendResult.error);
-          if (sendResult.error.includes('No active webhook')) {
-            errorMessage = 'لا يوجد webhook نشط - يرجى إعداد webhook في إعدادات الواتس آب';
-          } else {
-            errorMessage = `خطأ في خدمة الواتس آب: ${sendResult.error}`;
-          }
-          throw new Error(errorMessage);
-        } else {
-          console.log('WhatsApp message sent successfully:', sendResult);
+        if (response.ok) {
+          console.log('Proof sent successfully via webhook:', webhook.webhook_name);
           messageSent = true;
+        } else {
+          errorMessage = `فشل في إرسال البروفة عبر الويب هوك - حالة الاستجابة: ${response.status}`;
+          throw new Error(errorMessage);
         }
       } catch (sendError) {
-        console.error('Error invoking send-pending-whatsapp function:', sendError);
+        console.error('Error sending proof via webhook:', sendError);
         if (!errorMessage) {
-          if (sendError instanceof Error && sendError.message.includes('non-2xx status code')) {
-            errorMessage = 'خطأ في إعدادات الويب هوك - تحقق من إعدادات الواتس آب';
-          } else {
-            errorMessage = `فشل في الاتصال بخدمة الواتس آب: ${sendError instanceof Error ? sendError.message : String(sendError)}`;
-          }
+          errorMessage = `فشل في إرسال البروفة: ${sendError instanceof Error ? sendError.message : String(sendError)}`;
         }
         throw new Error(errorMessage);
       }
@@ -622,8 +652,8 @@ ${companyName}`;
       toast({
         title: "تم إرسال البروفة",
         description: messageSent 
-          ? "تم إرسال البروفة للعميل عبر الواتس آب بنجاح" 
-          : "تم حفظ البروفة - سيتم الإرسال قريباً",
+          ? "تم إرسال البروفة للعميل عبر الويب هوك بنجاح" 
+          : "تم حفظ البروفة - تحقق من إعدادات الويب هوك",
       });
 
       // إعادة جلب ملفات الطلب لتحديث الحالة
