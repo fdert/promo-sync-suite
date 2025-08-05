@@ -83,39 +83,81 @@ Deno.serve(async (req) => {
 
     console.log(`Found ${pendingMessages.length} pending messages`);
 
-    // الحصول على إعدادات الويب هوك للإرسال - تحديد الويب هوك حسب نوع الرسالة
+    // الحصول على إعدادات الويب هوك للإرسال
     let webhookSettings;
     
-    // للرسائل التي تحتوي على بروفة (صور أو روابط للبروفة)، استخدام ويب هوك البروفة
+    // أولاً نحاول العثور على ويب هوك البروفة للرسائل التي تحتوي على بروفة
     const hasProofMessages = pendingMessages.some(msg => 
       msg.message_type === 'image' || 
       (msg.message_content && msg.message_content.includes('لاستعراض البروفة'))
     );
     
     if (hasProofMessages) {
-      // استخدام ويب هوك البروفة للرسائل التي تحتوي على بروفة
-      const { data: proofWebhook } = await supabase
+      console.log('Looking for proof webhook...');
+      const { data: proofWebhook, error: proofError } = await supabase
         .from('webhook_settings')
-        .select('webhook_url, webhook_type')
+        .select('webhook_url, webhook_type, webhook_name')
         .eq('webhook_type', 'proof')
         .eq('is_active', true)
-        .single();
+        .maybeSingle();
+      
+      if (proofError) {
+        console.error('Error fetching proof webhook:', proofError);
+      }
+      
       webhookSettings = proofWebhook;
-    } else {
-      // استخدام ويب هوك الطلبات للرسائل النصية العادية
-      const { data: orderWebhook } = await supabase
+      console.log('Proof webhook found:', webhookSettings);
+    }
+    
+    // إذا لم نجد ويب هوك البروفة، نبحث عن ويب هوك الطلبات
+    if (!webhookSettings?.webhook_url) {
+      console.log('Looking for orders webhook...');
+      const { data: orderWebhook, error: orderError } = await supabase
         .from('webhook_settings')
-        .select('webhook_url, webhook_type')
-        .eq('webhook_name', 'طلبات ابداع')
+        .select('webhook_url, webhook_type, webhook_name')
+        .eq('webhook_type', 'outgoing')
         .eq('is_active', true)
-        .single();
+        .maybeSingle();
+      
+      if (orderError) {
+        console.error('Error fetching order webhook:', orderError);
+      }
+      
       webhookSettings = orderWebhook;
+      console.log('Order webhook found:', webhookSettings);
+    }
+    
+    // إذا لم نجد أي ويب هوك، نبحث عن أي ويب هوك نشط
+    if (!webhookSettings?.webhook_url) {
+      console.log('Looking for any active webhook...');
+      const { data: anyWebhook, error: anyError } = await supabase
+        .from('webhook_settings')
+        .select('webhook_url, webhook_type, webhook_name')
+        .eq('is_active', true)
+        .limit(1)
+        .maybeSingle();
+      
+      if (anyError) {
+        console.error('Error fetching any webhook:', anyError);
+      }
+      
+      webhookSettings = anyWebhook;
+      console.log('Any webhook found:', webhookSettings);
     }
 
     if (!webhookSettings?.webhook_url) {
-      console.error('No active outgoing webhook found');
+      console.error('No active webhook found in database');
+      
+      // دعنا نتحقق من جميع الويب هوك في قاعدة البيانات
+      const { data: allWebhooks, error: debugError } = await supabase
+        .from('webhook_settings')
+        .select('*');
+      
+      console.log('All webhooks in database:', allWebhooks);
+      if (debugError) console.error('Debug query error:', debugError);
+      
       return new Response(
-        JSON.stringify({ error: 'No outgoing webhook configured' }),
+        JSON.stringify({ error: 'No active webhook configured for WhatsApp messages' }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 400
