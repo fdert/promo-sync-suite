@@ -629,7 +629,7 @@ ${publicFileUrl}
               customer_name: orderData.customers.name,
               customer_phone: orderData.customers.whatsapp_number,
               amount: orderData.amount,
-              progress: orderData.progress || 0,
+              progress: (orderData as any).progress || 0,
               service_name: orderData.service_name,
               description: orderData.description || '',
               payment_type: orderData.payment_type || 'دفع آجل',
@@ -637,17 +637,24 @@ ${publicFileUrl}
               status: status,
               priority: orderData.priority || 'متوسطة',
               due_date: orderData.due_date,
-              start_date: orderData.start_date
+              start_date: (orderData as any).start_date || null
             }
           };
 
           console.log('Sending notification with data:', notificationData);
           
+          console.log('=== استدعاء send-order-notifications ===');
+          console.log('Function URL: https://gcuqfxacnbxdldsbmgvf.supabase.co/functions/v1/send-order-notifications');
+          console.log('Data being sent:', JSON.stringify(notificationData, null, 2));
+          
           const result = await supabase.functions.invoke('send-order-notifications', {
             body: notificationData
           });
           
-          console.log('Notification result:', result);
+          console.log('=== نتيجة استدعاء الدالة ===');
+          console.log('Full result:', result);
+          console.log('Result data:', result.data);
+          console.log('Result error:', result.error);
 
           if (result.error) {
             console.error('خطأ في إرسال الإشعار:', result.error);
@@ -1275,7 +1282,8 @@ ${publicFileUrl}
                </TableHeader>
                <TableBody>
                  {filteredOrders.map((order) => (
-                   <TableRow key={order.id}>
+                   <React.Fragment key={order.id}>
+                     <TableRow>
                       <TableCell className="font-medium">
                         {order.order_number}
                       </TableCell>
@@ -1390,9 +1398,10 @@ ${publicFileUrl}
                           </Button>
                          </div>
                        </TableCell>
-                      </TableRow>
-                 ))}
-               </TableBody>
+                       </TableRow>
+                     </React.Fragment>
+                  ))}
+                </TableBody>
             </Table>
           </div>
         </CardContent>
