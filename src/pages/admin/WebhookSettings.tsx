@@ -148,30 +148,115 @@ const WebhookSettings = () => {
     });
 
     try {
-      const { data, error } = await supabase.functions.invoke('test-webhook', {
-        body: {
-          url: url,
-          webhook_type: webhookType
-        }
+      // إنشاء بيانات اختبار مناسبة حسب نوع الويب هوك
+      let testData = {};
+      
+      switch (webhookType) {
+        case 'outgoing':
+          testData = {
+            event: 'order_test',
+            timestamp: new Date().toISOString(),
+            data: {
+              test: true,
+              order_id: 'test-order-123',
+              customer_name: 'عميل تجريبي',
+              customer_phone: '+966500000000',
+              status: 'pending',
+              service_type: 'طباعة عادية',
+              total_amount: 100,
+              notes: 'هذا طلب تجريبي لاختبار الويب هوك',
+              created_at: new Date().toISOString()
+            }
+          };
+          break;
+        
+        case 'whatsapp':
+          testData = {
+            event: 'whatsapp_test',
+            timestamp: new Date().toISOString(),
+            data: {
+              test: true,
+              message_id: 'test-msg-123',
+              from: '+966500000000',
+              to: '+966500000001',
+              message: 'رسالة تجريبية لاختبار الويب هوك',
+              type: 'text',
+              status: 'sent'
+            }
+          };
+          break;
+        
+        case 'invoice':
+          testData = {
+            event: 'invoice_test',
+            timestamp: new Date().toISOString(),
+            data: {
+              test: true,
+              invoice_id: 'test-invoice-123',
+              order_id: 'test-order-123',
+              customer_name: 'عميل تجريبي',
+              amount: 100,
+              status: 'generated',
+              created_at: new Date().toISOString()
+            }
+          };
+          break;
+        
+        case 'proof':
+          testData = {
+            event: 'proof_test',
+            timestamp: new Date().toISOString(),
+            data: {
+              test: true,
+              file_id: 'test-file-123',
+              order_id: 'test-order-123',
+              customer_name: 'عميل تجريبي',
+              file_name: 'design_proof_test.jpg',
+              file_url: 'https://example.com/proof.jpg',
+              file_type: 'design',
+              sent_to_customer: true,
+              message: 'تم إرسال بروفة التصميم للعميل - هذا اختبار'
+            }
+          };
+          break;
+        
+        default:
+          testData = {
+            event: 'test',
+            timestamp: new Date().toISOString(),
+            data: {
+              test: true,
+              message: 'هذا اختبار عام للويب هوك'
+            }
+          };
+      }
+
+      // إرسال طلب اختبار مباشر للويب هوك
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'PrintShop-Webhook-Test/1.0'
+        },
+        body: JSON.stringify(testData)
       });
 
-      if (error) {
-        throw new Error(`فشل استدعاء دالة الاختبار: ${error.message}`);
+      let responseText = '';
+      try {
+        responseText = await response.text();
+      } catch (textError) {
+        responseText = 'فشل في قراءة الاستجابة';
       }
 
-      if (!data) {
-        throw new Error('لم يتم استلام رد من دالة الاختبار');
-      }
-
-      if (data.success) {
+      if (response.ok) {
         toast({
           title: "نجح الاختبار ✅",
-          description: `تم إرسال الويب هوك بنجاح - الحالة: ${data.status}`,
+          description: `تم إرسال الويب هوك بنجاح - الحالة: ${response.status}`,
         });
       } else {
         toast({
           title: "فشل الاختبار ❌",
-          description: `الحالة: ${data.status} - ${data.statusText || data.error || 'خطأ غير معروف'}`,
+          description: `الحالة: ${response.status} - ${response.statusText}`,
           variant: "destructive",
         });
       }
@@ -180,13 +265,7 @@ const WebhookSettings = () => {
       
       let errorMessage = 'خطأ غير معروف';
       if (error instanceof Error) {
-        if (error.message.includes('Failed to send a request to the Edge Function')) {
-          errorMessage = 'فشل في الاتصال بخدمة اختبار الويب هوك. تحقق من الاتصال بالإنترنت أو جرب مرة أخرى لاحقاً.';
-        } else if (error.message.includes('FunctionsHttpError')) {
-          errorMessage = 'خطأ في خدمة الويب هوك - تحقق من رابط الويب هوك';
-        } else {
-          errorMessage = error.message;
-        }
+        errorMessage = error.message;
       }
       
       toast({
