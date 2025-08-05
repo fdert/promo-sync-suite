@@ -1306,152 +1306,138 @@ ${publicFileUrl}
         </CardContent>
       </Card>
 
-      {/* جدول الطلبات */}
-      <Card>
-        <CardHeader>
-          <CardTitle>قائمة الطلبات ({filteredOrders.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>رقم الطلب</TableHead>
-                  <TableHead>العميل</TableHead>
-                  <TableHead>الخدمة</TableHead>
-                  <TableHead>الحالة</TableHead>
-                  <TableHead>الأولوية</TableHead>
-                  <TableHead>المبلغ</TableHead>
-                  <TableHead>تاريخ الاستحقاق</TableHead>
-                  <TableHead>الإجراءات</TableHead>
-                </TableRow>
-               </TableHeader>
-               <TableBody>
-                  {filteredOrders.map((order, index) => (
-                    <React.Fragment key={order.id}>
-                      <TableRow className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-                       <TableCell className="font-medium">
-                         {order.order_number}
-                       </TableCell>
-                       <TableCell>{order.customers?.name}</TableCell>
-                       <TableCell>{order.service_name}</TableCell>
-                       <TableCell>
-                         <Badge variant={
-                           order.status === 'مكتمل' ? 'default' :
-                           order.status === 'ملغي' ? 'destructive' :
-                           order.status === 'قيد التنفيذ' ? 'secondary' : 'outline'
-                         }>
-                           {order.status}
-                         </Badge>
-                       </TableCell>
-                       <TableCell>
-                         <Badge variant={
-                           order.priority === 'عالية' ? 'destructive' :
-                           order.priority === 'متوسطة' ? 'secondary' : 'outline'
-                         }>
-                           {order.priority}
-                         </Badge>
-                       </TableCell>
-                       <TableCell>{order.amount.toLocaleString()} ر.س</TableCell>
-                       <TableCell>
-                         {order.due_date ? new Date(order.due_date).toLocaleDateString('ar-SA') : '-'}
-                       </TableCell>
-                       <TableCell>-</TableCell>
-                     </TableRow>
-                     <TableRow>
-                       <TableCell colSpan={8} className={`p-3 border-t ${index % 2 === 0 ? "bg-slate-50/50" : "bg-white"}`}>
-                         <div className="flex gap-1 flex-wrap justify-start">
-                           {/* تعديل حالة الطلب */}
-                           <Button
-                             variant="outline"
-                             size="sm"
-                             className="text-gray-600 border-gray-200 hover:bg-gray-50 text-xs"
-                             onClick={() => {
-                               setSelectedOrderForEdit(order);
-                               setNewStatus(order.status);
-                               setIsEditStatusDialogOpen(true);
-                             }}
-                           >
-                             <Edit className="h-3 w-3 mr-1" />
-                             حالة الطلب
-                           </Button>
-                           
-                           {/* المدفوعات */}
-                           <Button
-                             variant="outline"
-                             size="sm"
-                             className="text-gray-700 border-gray-200 hover:bg-gray-50 text-xs"
-                             onClick={() => openPaymentDialog(order)}
-                           >
-                             <CreditCard className="h-3 w-3 mr-1" />
-                             مدفوعات
-                           </Button>
-                           
-                           {/* تحويل إلى فاتورة */}
-                           <Button
-                             variant="outline"
-                             size="sm"
-                             className="text-gray-700 border-gray-200 hover:bg-gray-50 text-xs"
-                             onClick={() => openInvoiceDialog(order)}
-                           >
-                             <Receipt className="h-3 w-3 mr-1" />
-                             فاتورة
-                           </Button>
-                           
-                           {/* رفع ملفات التصميم */}
-                           <Button
-                             variant="outline"
-                             size="sm"
-                             className="text-gray-600 border-gray-200 hover:bg-gray-50 text-xs"
-                             onClick={() => {
-                               setSelectedOrderForUpload(order);
-                               setFileCategory('design');
-                               setIsUploadDialogOpen(true);
-                             }}
-                           >
-                             <Image className="h-3 w-3 mr-1" />
-                             بروفة
-                           </Button>
-                           
-                           {/* رفع ملفات الطباعة */}
-                           <Button
-                             variant="outline"
-                             size="sm"
-                             className="text-gray-600 border-gray-200 hover:bg-gray-50 text-xs"
-                             onClick={() => {
-                               setSelectedOrderForUpload(order);
-                               setFileCategory('print');
-                               setIsUploadDialogOpen(true);
-                             }}
-                           >
-                             <Printer className="h-3 w-3 mr-1" />
-                             طباعة
-                           </Button>
-                           
-                           {/* عرض الملفات */}
-                           <Button
-                             variant="outline"
-                             size="sm"
-                             className="text-gray-600 border-gray-200 hover:bg-gray-50 text-xs"
-                             onClick={() => {
-                               setSelectedOrderFiles(order);
-                               setIsFilesDialogOpen(true);
-                               fetchOrderFiles(order.id);
-                             }}
-                           >
-                             <Eye className="h-3 w-3 mr-1" />
-                             ملفات
-                           </Button>
-                          </div>
-                        </TableCell>
-                        </TableRow>
-                      </React.Fragment>
-                   ))}
-                </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+      {/* قائمة الطلبات */}
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold">قائمة الطلبات ({filteredOrders.length})</h2>
+        
+        {filteredOrders.map((order) => (
+          <Card key={order.id} className="p-6 border border-border">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* معلومات الطلب */}
+              <div className="lg:col-span-2 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-semibold">{order.order_number}</h3>
+                  <div className="flex gap-2">
+                    <Badge variant={
+                      order.status === 'مكتمل' ? 'default' :
+                      order.status === 'ملغي' ? 'destructive' :
+                      order.status === 'قيد التنفيذ' ? 'secondary' : 'outline'
+                    }>
+                      {order.status}
+                    </Badge>
+                    <Badge variant={
+                      order.priority === 'عالية' ? 'destructive' :
+                      order.priority === 'متوسطة' ? 'secondary' : 'outline'
+                    }>
+                      {order.priority}
+                    </Badge>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div className="space-y-2">
+                    <p><strong>العميل:</strong> {order.customers?.name || 'غير محدد'}</p>
+                    <p><strong>الخدمة:</strong> {order.service_name}</p>
+                    <p><strong>تاريخ الاستحقاق:</strong> {order.due_date ? new Date(order.due_date).toLocaleDateString('ar-SA') : '-'}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <p><strong>المبلغ الإجمالي:</strong> {order.amount.toLocaleString()} ر.س</p>
+                    <p><strong>المبلغ المدفوع:</strong> {(order.paid_amount || 0).toLocaleString()} ر.س</p>
+                    <p><strong>المبلغ المتبقي:</strong> {(order.amount - (order.paid_amount || 0)).toLocaleString()} ر.س</p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* الأزرار */}
+              <div className="flex flex-col gap-2">
+                <div className="grid grid-cols-2 gap-2">
+                  {/* تعديل حالة الطلب */}
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="text-xs"
+                    onClick={() => {
+                      setSelectedOrderForEdit(order);
+                      setNewStatus(order.status);
+                      setIsEditStatusDialogOpen(true);
+                    }}
+                  >
+                    <Edit className="h-3 w-3 mr-1" />
+                    تعديل الحالة
+                  </Button>
+                  
+                  {/* المدفوعات */}
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="text-xs"
+                    onClick={() => openPaymentDialog(order)}
+                  >
+                    <CreditCard className="h-3 w-3 mr-1" />
+                    مدفوعات
+                  </Button>
+                  
+                  {/* تحويل إلى فاتورة */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs"
+                    onClick={() => openInvoiceDialog(order)}
+                  >
+                    <Receipt className="h-3 w-3 mr-1" />
+                    فاتورة
+                  </Button>
+                  
+                  {/* رفع ملفات التصميم */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs"
+                    onClick={() => {
+                      setSelectedOrderForUpload(order);
+                      setFileCategory('design');
+                      setIsUploadDialogOpen(true);
+                    }}
+                  >
+                    <Image className="h-3 w-3 mr-1" />
+                    بروفة
+                  </Button>
+                  
+                  {/* رفع ملفات الطباعة */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs"
+                    onClick={() => {
+                      setSelectedOrderForUpload(order);
+                      setFileCategory('print');
+                      setIsUploadDialogOpen(true);
+                    }}
+                  >
+                    <Printer className="h-3 w-3 mr-1" />
+                    طباعة
+                  </Button>
+                  
+                  {/* عرض الملفات */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs"
+                    onClick={() => {
+                      setSelectedOrderFiles(order);
+                      setIsFilesDialogOpen(true);
+                      fetchOrderFiles(order.id);
+                    }}
+                  >
+                    <Eye className="h-3 w-3 mr-1" />
+                    ملفات
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
 
       {/* حوار تعديل حالة الطلب */}
       <Dialog open={isEditStatusDialogOpen} onOpenChange={setIsEditStatusDialogOpen}>
