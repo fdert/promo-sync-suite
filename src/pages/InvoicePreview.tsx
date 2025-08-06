@@ -18,7 +18,10 @@ interface Invoice {
   due_date: string;
   payment_date?: string;
   payment_method?: string;
+  payment_type?: string;
   notes?: string;
+  total_paid?: number;
+  remaining_amount?: number;
   customers?: {
     name: string;
     phone?: string;
@@ -50,7 +53,7 @@ const InvoicePreview = () => {
 
   const fetchInvoiceData = async () => {
     try {
-      // جلب بيانات الفاتورة
+      // جلب بيانات الفاتورة مع حساب المدفوعات الفعلية
       const { data: invoiceData, error: invoiceError } = await supabase
         .from('invoices')
         .select(`
@@ -70,6 +73,40 @@ const InvoicePreview = () => {
         return;
       }
 
+      // جلب المدفوعات المرتبطة بالفاتورة
+      const { data: paymentsData, error: paymentsError } = await supabase
+        .from('payments')
+        .select('*')
+        .eq('invoice_id', invoiceId);
+
+      if (paymentsError) {
+        console.error('Error fetching payments:', paymentsError);
+      }
+
+      // حساب إجمالي المدفوعات والحالة الفعلية
+      const totalPaid = paymentsData?.reduce((sum, payment) => sum + payment.amount, 0) || 0;
+      const hasPayments = paymentsData && paymentsData.length > 0;
+      
+      // تحديد الحالة الفعلية والطريقة
+      let actualStatus = 'قيد الانتظار';
+      let actualPaymentType = 'دفع آجل';
+      
+      if (hasPayments) {
+        if (totalPaid >= invoiceData.total_amount) {
+          actualStatus = 'مدفوعة';
+        } else if (totalPaid > 0) {
+          actualStatus = 'مدفوعة جزئياً';
+        }
+        
+        // استخدام نوع الدفع من آخر دفعة
+        if (paymentsData.length > 0) {
+          const latestPayment = paymentsData.sort((a, b) => 
+            new Date(b.payment_date).getTime() - new Date(a.payment_date).getTime()
+          )[0];
+          actualPaymentType = latestPayment.payment_type;
+        }
+      }
+
       // جلب بنود الفاتورة
       const { data: itemsData, error: itemsError } = await supabase
         .from('invoice_items')
@@ -78,11 +115,18 @@ const InvoicePreview = () => {
 
        if (itemsError) {
          console.error('Error fetching invoice items:', itemsError);
-       } else {
-         console.log('Fetched invoice items:', itemsData);
        }
 
-       setInvoice(invoiceData);
+       // تحديث البيانات مع الحالة الفعلية
+       const updatedInvoice = {
+         ...invoiceData,
+         status: actualStatus,
+         payment_type: actualPaymentType,
+         total_paid: totalPaid,
+         remaining_amount: invoiceData.total_amount - totalPaid
+       };
+
+       setInvoice(updatedInvoice);
        setItems(itemsData || []);
     } catch (error) {
       console.error('Error fetching invoice data:', error);
@@ -174,15 +218,33 @@ const InvoicePreview = () => {
                 <div className="space-y-2">
                   <p><span className="font-medium">تاريخ الإصدار:</span> {new Date(invoice.issue_date).toLocaleDateString('ar-SA')}</p>
                   <p><span className="font-medium">تاريخ الاستحقاق:</span> {new Date(invoice.due_date).toLocaleDateString('ar-SA')}</p>
+                  <p><span className="font-medium">نوع الدفع:</span> 
+                    <span className="mr-2 px-2 py-1 rounded text-sm bg-blue-100 text-blue-800">
+                      {invoice.payment_type || 'دفع آجل'}
+                    </span>
+                  </p>
                   <p><span className="font-medium">الحالة:</span> 
                     <span className={`mr-2 px-2 py-1 rounded text-sm ${
-                      invoice.status === 'مدفوع' ? 'bg-green-100 text-green-800' :
+                      invoice.status === 'مدفوعة' ? 'bg-green-100 text-green-800' :
+                      invoice.status === 'مدفوعة جزئياً' ? 'bg-blue-100 text-blue-800' :
                       invoice.status === 'قيد الانتظار' ? 'bg-yellow-100 text-yellow-800' :
                       'bg-red-100 text-red-800'
                     }`}>
                       {invoice.status}
                     </span>
                   </p>
+                  {invoice.total_paid !== undefined && invoice.total_paid > 0 && (
+                    <>
+                      <p><span className="font-medium">المبلغ المدفوع:</span> 
+                        <span className="text-green-600 font-semibold">{invoice.total_paid.toFixed(2)} ر.س</span>
+                      </p>
+                      <p><span className="font-medium">المبلغ المتبقي:</span> 
+                        <span className={`font-semibold ${invoice.remaining_amount! > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                          {invoice.remaining_amount!.toFixed(2)} ر.س
+                        </span>
+                      </p>
+                    </>
+                  )}
                   {invoice.payment_date && (
                     <p><span className="font-medium">تاريخ الدفع:</span> {new Date(invoice.payment_date).toLocaleDateString('ar-SA')}</p>
                   )}

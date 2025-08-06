@@ -22,8 +22,12 @@ interface InvoicePreviewProps {
     tax_amount: number;
     total_amount: number;
     status: string;
-    notes?: string;
     payment_type: string;
+    actual_status?: string;
+    actual_payment_type?: string;
+    total_paid?: number;
+    remaining_amount?: number;
+    notes?: string;
     customers?: {
       name: string;
       phone?: string;
@@ -31,9 +35,9 @@ interface InvoicePreviewProps {
     };
   };
   items: InvoiceItem[];
-  onPrint: () => void;
+  onPrint?: () => void;
   companyInfo?: {
-    name: string;
+    name?: string;
     address?: string;
     phone?: string;
     email?: string;
@@ -212,19 +216,36 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <span className="text-gray-600">نوع الدفع:</span>
-                    <span className="font-bold mr-1">{invoice.payment_type}</span>
+                    <span className="font-bold mr-1">{invoice.actual_payment_type || invoice.payment_type}</span>
                   </div>
                   <div>
                     <span className="text-gray-600">حالة الفاتورة:</span>
                     <span className={`font-bold mr-1 px-1 rounded text-xs ${
-                      invoice.status === 'مدفوع' ? 'bg-green-100 text-green-700' : 
-                      invoice.status === 'قيد الانتظار' ? 'bg-yellow-100 text-yellow-700' : 
+                      (invoice.actual_status || invoice.status) === 'مدفوعة' ? 'bg-green-100 text-green-700' : 
+                      (invoice.actual_status || invoice.status) === 'مدفوعة جزئياً' ? 'bg-blue-100 text-blue-700' :
+                      (invoice.actual_status || invoice.status) === 'قيد الانتظار' ? 'bg-yellow-100 text-yellow-700' :
                       'bg-red-100 text-red-700'
                     }`}>
-                      {invoice.status}
+                      {invoice.actual_status || invoice.status}
                     </span>
                   </div>
                 </div>
+                {(invoice.total_paid !== undefined && invoice.total_paid > 0) && (
+                  <div className="mt-2 pt-2 border-t border-blue-200">
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div>
+                        <span className="text-gray-600">المبلغ المدفوع:</span>
+                        <span className="font-bold mr-1 text-green-600">{invoice.total_paid.toFixed(2)} ر.س</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">المبلغ المتبقي:</span>
+                        <span className={`font-bold mr-1 ${invoice.remaining_amount! > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                          {invoice.remaining_amount!.toFixed(2)} ر.س
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

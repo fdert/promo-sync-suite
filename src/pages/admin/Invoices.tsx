@@ -81,7 +81,51 @@ const Invoices = () => {
       console.error('Error fetching invoice items:', error);
     }
 
-    setViewingInvoice({ ...invoice, items: invoiceItems || [] });
+    // جلب المدفوعات المرتبطة بالفاتورة
+    const { data: paymentsData, error: paymentsError } = await supabase
+      .from('payments')
+      .select('*')
+      .eq('invoice_id', invoice.id);
+
+    if (paymentsError) {
+      console.error('Error fetching payments:', paymentsError);
+    }
+
+    // حساب إجمالي المدفوعات والحالة الفعلية
+    const totalPaid = paymentsData?.reduce((sum, payment) => sum + payment.amount, 0) || 0;
+    const hasPayments = paymentsData && paymentsData.length > 0;
+    
+    // تحديد الحالة الفعلية والطريقة
+    let actualStatus = 'قيد الانتظار';
+    let actualPaymentType = 'دفع آجل';
+    
+    if (hasPayments) {
+      if (totalPaid >= invoice.total_amount) {
+        actualStatus = 'مدفوعة';
+      } else if (totalPaid > 0) {
+        actualStatus = 'مدفوعة جزئياً';
+      }
+      
+      // استخدام نوع الدفع من آخر دفعة
+      if (paymentsData.length > 0) {
+        const latestPayment = paymentsData.sort((a, b) => 
+          new Date(b.payment_date).getTime() - new Date(a.payment_date).getTime()
+        )[0];
+        actualPaymentType = latestPayment.payment_type;
+      }
+    }
+
+    // تحديث الفاتورة مع البيانات الصحيحة
+    const updatedInvoice = {
+      ...invoice,
+      items: invoiceItems || [],
+      actual_status: actualStatus,
+      actual_payment_type: actualPaymentType,
+      total_paid: totalPaid,
+      remaining_amount: invoice.total_amount - totalPaid
+    };
+
+    setViewingInvoice(updatedInvoice);
   };
 
   const handlePrintInvoice = async (invoice) => {
@@ -93,6 +137,40 @@ const Invoices = () => {
 
     if (error) {
       console.error('Error fetching invoice items:', error);
+    }
+
+    // جلب المدفوعات المرتبطة بالفاتورة
+    const { data: paymentsData, error: paymentsError } = await supabase
+      .from('payments')
+      .select('*')
+      .eq('invoice_id', invoice.id);
+
+    if (paymentsError) {
+      console.error('Error fetching payments:', paymentsError);
+    }
+
+    // حساب إجمالي المدفوعات والحالة الفعلية
+    const totalPaid = paymentsData?.reduce((sum, payment) => sum + payment.amount, 0) || 0;
+    const hasPayments = paymentsData && paymentsData.length > 0;
+    
+    // تحديد الحالة الفعلية والطريقة
+    let actualStatus = 'قيد الانتظار';
+    let actualPaymentType = 'دفع آجل';
+    
+    if (hasPayments) {
+      if (totalPaid >= invoice.total_amount) {
+        actualStatus = 'مدفوعة';
+      } else if (totalPaid > 0) {
+        actualStatus = 'مدفوعة جزئياً';
+      }
+      
+      // استخدام نوع الدفع من آخر دفعة
+      if (paymentsData.length > 0) {
+        const latestPayment = paymentsData.sort((a, b) => 
+          new Date(b.payment_date).getTime() - new Date(a.payment_date).getTime()
+        )[0];
+        actualPaymentType = latestPayment.payment_type;
+      }
     }
 
     const items = invoiceItems || [];
@@ -563,14 +641,19 @@ const Invoices = () => {
           <!-- Payment Info -->
           <div class="payment-info">
             <div class="payment-grid">
-              <div><strong>نوع الدفع:</strong> ${invoice.payment_type}</div>
+              <div><strong>نوع الدفع:</strong> ${actualPaymentType}</div>
               <div><strong>الحالة:</strong> 
                 <span class="status-badge ${
-                  invoice.status === 'مدفوع' ? 'status-paid' : 
-                  invoice.status === 'قيد الانتظار' ? 'status-pending' : 
+                  actualStatus === 'مدفوعة' ? 'status-paid' : 
+                  actualStatus === 'مدفوعة جزئياً' ? 'status-partial' :
+                  actualStatus === 'قيد الانتظار' ? 'status-pending' : 
                   'status-overdue'
-                }">${invoice.status}</span>
+                }">${actualStatus}</span>
               </div>
+              ${totalPaid > 0 ? `
+                <div><strong>المبلغ المدفوع:</strong> ${totalPaid.toFixed(2)} ر.س</div>
+                <div><strong>المبلغ المتبقي:</strong> ${(invoice.total_amount - totalPaid).toFixed(2)} ر.س</div>
+              ` : ''}
             </div>
           </div>
           
