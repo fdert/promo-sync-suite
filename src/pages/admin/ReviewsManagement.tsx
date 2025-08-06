@@ -63,7 +63,27 @@ const ReviewsManagement = () => {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setEvaluations(data || []);
+      
+      // الموافقة التلقائية على التقييمات الجديدة
+      const newEvaluations = (data || []).filter(
+        evaluation => evaluation.google_review_status === 'pending' && evaluation.rating >= 4
+      );
+      
+      for (const evaluation of newEvaluations) {
+        await autoApproveEvaluation(evaluation.id);
+      }
+      
+      // إعادة تحميل البيانات بعد الموافقة التلقائية
+      const { data: updatedData } = await supabase
+        .from("evaluations")
+        .select(`
+          *,
+          customers (name, phone, whatsapp_number),
+          orders (order_number, service_name)
+        `)
+        .order("created_at", { ascending: false });
+      
+      setEvaluations(updatedData || []);
     } catch (error) {
       console.error("Error fetching evaluations:", error);
       toast({
@@ -76,46 +96,83 @@ const ReviewsManagement = () => {
     }
   };
 
-  const updateEvaluationStatus = async (
-    evaluationId: string,
-    status: string,
-    notes?: string
-  ) => {
-    setActionLoading(evaluationId);
+  const autoApproveEvaluation = async (evaluationId: string) => {
     try {
-      const updateData: any = {
-        google_review_status: status,
-        admin_notes: notes,
-        updated_at: new Date().toISOString(),
-      };
-
-      if (status === "approved") {
-        updateData.approved_by = (await supabase.auth.getUser()).data.user?.id;
-        updateData.approved_at = new Date().toISOString();
-      }
-
       const { error } = await supabase
         .from("evaluations")
-        .update(updateData)
+        .update({
+          google_review_status: "approved",
+          approved_by: (await supabase.auth.getUser()).data.user?.id,
+          approved_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", evaluationId);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error("Error auto-approving evaluation:", error);
+    }
+  };
+
+  const sendGoogleReviewToCustomer = async (evaluationId: string, notes?: string) => {
+    setActionLoading(evaluationId);
+    try {
+      // تحديث الحالة إلى "sent_to_customer"
+      const { error } = await supabase
+        .from("evaluations")
+        .update({
+          google_review_status: "sent_to_customer",
+          admin_notes: notes,
+          google_review_sent_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
         .eq("id", evaluationId);
 
       if (error) throw error;
 
-      // إذا تم الموافقة، إرسال رسالة واتساب للعميل
-      if (status === "approved") {
-        await sendGoogleReviewRequest(evaluationId);
-      }
+      // إرسال رسالة واتساب للعميل
+      await sendGoogleReviewRequest(evaluationId);
 
       await fetchEvaluations();
       toast({
-        title: "تم التحديث",
-        description: `تم ${status === "approved" ? "الموافقة على" : "رفض"} التقييم`,
+        title: "تم الإرسال",
+        description: "تم إرسال رابط التقييم للعميل عبر واتساب",
       });
     } catch (error) {
-      console.error("Error updating evaluation:", error);
+      console.error("Error sending Google review:", error);
       toast({
         title: "خطأ",
-        description: "فشل في تحديث حالة التقييم",
+        description: "فشل في إرسال رابط التقييم",
+        variant: "destructive",
+      });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const declineEvaluation = async (evaluationId: string) => {
+    setActionLoading(evaluationId);
+    try {
+      const { error } = await supabase
+        .from("evaluations")
+        .update({
+          google_review_status: "declined",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", evaluationId);
+
+      if (error) throw error;
+
+      await fetchEvaluations();
+      toast({
+        title: "تم الرفض",
+        description: "تم رفض إرسال التقييم لخرائط جوجل",
+      });
+    } catch (error) {
+      console.error("Error declining evaluation:", error);
+      toast({
+        title: "خطأ",
+        description: "فشل في رفض التقييم",
         variant: "destructive",
       });
     } finally {
@@ -139,7 +196,7 @@ const ReviewsManagement = () => {
   const getStatusBadge = (status: string) => {
     const statusConfig = {
       pending: { label: "قيد المراجعة", variant: "secondary" as const, icon: Clock },
-      approved: { label: "تم الموافقة", variant: "default" as const, icon: CheckCircle },
+      approved: { label: "جاهز للإرسال", variant: "default" as const, icon: CheckCircle },
       sent_to_customer: { label: "تم الإرسال للعميل", variant: "default" as const, icon: Send },
       published_by_customer: { label: "نشره العميل", variant: "default" as const, icon: ExternalLink },
       declined: { label: "مرفوض", variant: "destructive" as const, icon: XCircle },
@@ -234,7 +291,7 @@ const ReviewsManagement = () => {
                 )}
               </div>
 
-              {evaluation.google_review_status === "pending" && evaluation.rating >= 4 && (
+              {evaluation.google_review_status === "approved" && evaluation.rating >= 4 && (
                 <div className="flex gap-2">
                   <Dialog>
                     <DialogTrigger asChild>
@@ -245,13 +302,13 @@ const ReviewsManagement = () => {
                           setAdminNotes(evaluation.admin_notes || "");
                         }}
                       >
-                        <CheckCircle className="mr-2 h-4 w-4" />
-                        موافقة وإرسال
+                        <Send className="mr-2 h-4 w-4" />
+                        إرسال لخرائط جوجل
                       </Button>
                     </DialogTrigger>
                     <DialogContent>
                       <DialogHeader>
-                        <DialogTitle>الموافقة على التقييم وإرساله</DialogTitle>
+                        <DialogTitle>إرسال التقييم لخرائط جوجل</DialogTitle>
                         <DialogDescription>
                           سيتم إرسال رابط خرائط جوجل للعميل عبر واتساب
                         </DialogDescription>
@@ -271,7 +328,7 @@ const ReviewsManagement = () => {
                         <Button
                           onClick={() => {
                             if (selectedEvaluation) {
-                              updateEvaluationStatus(selectedEvaluation.id, "approved", adminNotes);
+                              sendGoogleReviewToCustomer(selectedEvaluation.id, adminNotes);
                             }
                           }}
                           disabled={actionLoading === selectedEvaluation?.id}
@@ -279,7 +336,7 @@ const ReviewsManagement = () => {
                           {actionLoading === selectedEvaluation?.id && (
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           )}
-                          موافقة وإرسال
+                          إرسال للعميل
                         </Button>
                       </DialogFooter>
                     </DialogContent>
@@ -288,7 +345,7 @@ const ReviewsManagement = () => {
                   <Button
                     size="sm"
                     variant="destructive"
-                    onClick={() => updateEvaluationStatus(evaluation.id, "declined")}
+                    onClick={() => declineEvaluation(evaluation.id)}
                     disabled={actionLoading === evaluation.id}
                   >
                     {actionLoading === evaluation.id ? (
@@ -296,7 +353,7 @@ const ReviewsManagement = () => {
                     ) : (
                       <XCircle className="mr-2 h-4 w-4" />
                     )}
-                    رفض
+                    رفض الإرسال
                   </Button>
                 </div>
               )}
