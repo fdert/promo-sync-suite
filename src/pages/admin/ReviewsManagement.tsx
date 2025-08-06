@@ -64,9 +64,11 @@ const ReviewsManagement = () => {
 
       if (error) throw error;
       
-      // الموافقة التلقائية على التقييمات الجديدة
+      // الموافقة التلقائية على التقييمات الجديدة (فقط إذا كان لديها تقييم وتقييم 4 أو أكثر)
       const newEvaluations = (data || []).filter(
-        evaluation => evaluation.google_review_status === 'pending' && evaluation.rating >= 4
+        evaluation => evaluation.google_review_status === 'pending' && 
+                     evaluation.rating && 
+                     evaluation.rating >= 4
       );
       
       for (const evaluation of newEvaluations) {
