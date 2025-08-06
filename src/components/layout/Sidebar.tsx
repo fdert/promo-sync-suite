@@ -110,12 +110,6 @@ const menuItems = [
     allowedRoles: ['admin', 'manager'] as UserRole[],
   },
   {
-    title: "رسائل WhatsApp",
-    icon: MessageSquare,
-    href: "/admin/whatsapp",
-    allowedRoles: ['admin', 'manager', 'employee'] as UserRole[],
-  },
-  {
     title: "إدارة الطباعة",
     icon: Printer,
     href: "/admin/print-management",
@@ -138,6 +132,18 @@ const menuItems = [
     icon: Building2,
     href: "/admin/website",
     allowedRoles: ['admin'] as UserRole[],
+  },
+  {
+    title: "إدارة الواتساب",
+    icon: MessageSquare,
+    href: "/admin/whatsapp",
+    allowedRoles: ['admin', 'manager'] as UserRole[],
+  },
+  {
+    title: "مراقب الواتساب",
+    icon: MessageSquare,
+    href: "/admin/whatsapp-monitor",
+    allowedRoles: ['admin', 'manager'] as UserRole[],
   },
   {
     title: "الإعدادات",

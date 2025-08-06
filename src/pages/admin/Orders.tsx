@@ -570,6 +570,43 @@ ${companyName}`;
 
       console.log('WhatsApp message created in database with ID:', messageData.id);
 
+      // استدعاء دالة إرسال الرسائل المعلقة مباشرة
+      try {
+        const { data: sendResult, error: sendError } = await supabase.functions.invoke('send-pending-whatsapp');
+        
+        if (sendError) {
+          console.error('Error calling send-pending-whatsapp function:', sendError);
+          toast({
+            title: "تحذير",
+            description: "تم إنشاء الرسالة لكن قد يكون هناك تأخير في الإرسال. تحقق من إعدادات الواتساب.",
+            variant: "destructive",
+          });
+        } else {
+          console.log('Send pending WhatsApp function called successfully:', sendResult);
+          
+          // التحقق من نتيجة الإرسال
+          if (sendResult?.processed_count > 0) {
+            const successCount = sendResult.results?.filter((r: any) => r.status === 'sent')?.length || 0;
+            const failedCount = sendResult.results?.filter((r: any) => r.status === 'failed')?.length || 0;
+            
+            if (failedCount > 0) {
+              toast({
+                title: "تم إرسال البروفة مع تحذير",
+                description: `تم إرسال البروفة لكن بعض الرسائل فشلت. تحقق من إعدادات الواتساب.`,
+                variant: "destructive",
+              });
+            }
+          }
+        }
+      } catch (functionError) {
+        console.error('Failed to call send-pending-whatsapp function:', functionError);
+        toast({
+          title: "تحذير",
+          description: "تم إنشاء الرسالة لكن قد يكون هناك مشكلة في الإرسال. تحقق من إعدادات الواتساب.",
+          variant: "destructive",
+        });
+      }
+
       // تحديث حالة الإرسال في قاعدة البيانات
       const { error: updateError } = await supabase
         .from('print_files')

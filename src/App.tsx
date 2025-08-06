@@ -27,6 +27,7 @@ import EmployeePrintOrders from "./pages/employee/PrintOrders";
 import EmployeeOrders from "./pages/employee/Orders";
 import PrintArchive from "./pages/employee/PrintArchive";
 import WhatsApp from "./pages/admin/WhatsApp";
+import WhatsAppMonitor from "./pages/admin/WhatsAppMonitor";
 import WebhookSettings from "./pages/admin/WebhookSettings";
 import WebsiteContent from "./pages/admin/WebsiteContent";
 import Settings from "./pages/admin/Settings";
@@ -111,6 +112,7 @@ const App = () => (
                 </RoleProtectedRoute>
               } />
             <Route path="whatsapp" element={<WhatsApp />} />
+            <Route path="whatsapp-monitor" element={<WhatsAppMonitor />} />
               <Route path="print-management" element={<PrintManagement />} />
               <Route path="customer-print-orders" element={<CustomerPrintOrders />} />
               <Route path="webhooks" element={<WebhookSettings />} />
