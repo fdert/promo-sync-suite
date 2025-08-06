@@ -1,11 +1,16 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { CalendarIcon, CreditCard, DollarSign, TrendingUp } from 'lucide-react';
+import { CalendarIcon, CreditCard, DollarSign, TrendingUp, Download, FileSpreadsheet, FileText, Search, Filter } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
+import { useToast } from '@/hooks/use-toast';
 
 interface PaymentSummary {
   payment_type: string;
@@ -27,36 +32,85 @@ interface RecentPayment {
 const PaymentsByType = () => {
   const [paymentSummary, setPaymentSummary] = useState<PaymentSummary[]>([]);
   const [recentPayments, setRecentPayments] = useState<RecentPayment[]>([]);
+  const [filteredPayments, setFilteredPayments] = useState<RecentPayment[]>([]);
   const [totalPayments, setTotalPayments] = useState(0);
   const [loading, setLoading] = useState(true);
+  
+  // فلاتر زمنية
+  const [dateFilter, setDateFilter] = useState({
+    period: 'all', // all, today, this_month, this_year, custom
+    startDate: '',
+    endDate: ''
+  });
+  
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchPaymentData();
   }, []);
 
+  useEffect(() => {
+    applyFilters();
+  }, [dateFilter, recentPayments]);
+
+  // دالة تطبيق الفلاتر
+  const applyFilters = () => {
+    let filtered = [...recentPayments];
+    const now = new Date();
+
+    if (dateFilter.period === 'today') {
+      const today = now.toISOString().split('T')[0];
+      filtered = filtered.filter(payment => 
+        payment.payment_date.startsWith(today)
+      );
+    } else if (dateFilter.period === 'this_month') {
+      const thisMonth = format(now, 'yyyy-MM');
+      filtered = filtered.filter(payment => 
+        payment.payment_date.startsWith(thisMonth)
+      );
+    } else if (dateFilter.period === 'this_year') {
+      const thisYear = format(now, 'yyyy');
+      filtered = filtered.filter(payment => 
+        payment.payment_date.startsWith(thisYear)
+      );
+    } else if (dateFilter.period === 'custom' && dateFilter.startDate && dateFilter.endDate) {
+      filtered = filtered.filter(payment => {
+        const paymentDate = new Date(payment.payment_date);
+        const start = new Date(dateFilter.startDate);
+        const end = new Date(dateFilter.endDate + 'T23:59:59');
+        return paymentDate >= start && paymentDate <= end;
+      });
+    }
+
+    setFilteredPayments(filtered);
+  };
+
   const fetchPaymentData = async () => {
     try {
       setLoading(true);
 
-      // جلب ملخص المدفوعات حسب النوع
-      const { data: summaryData } = await supabase
+      // جلب جميع المدفوعات لإجراء التقارير
+      const { data: allPaymentsData } = await supabase
         .from('payments')
         .select(`
-          payment_type,
+          id,
           amount,
-          invoices!inner(
-            customer_id,
+          payment_type,
+          payment_date,
+          invoices(
+            invoice_number,
             customers(name)
           )
-        `);
+        `)
+        .order('payment_date', { ascending: false });
 
-      if (summaryData) {
+      if (allPaymentsData) {
         // حساب المجموع الكلي
-        const total = summaryData.reduce((sum, payment) => sum + payment.amount, 0);
+        const total = allPaymentsData.reduce((sum, payment) => sum + payment.amount, 0);
         setTotalPayments(total);
 
         // تجميع المدفوعات حسب النوع
-        const grouped = summaryData.reduce((acc, payment) => {
+        const grouped = allPaymentsData.reduce((acc, payment) => {
           const type = payment.payment_type;
           if (!acc[type]) {
             acc[type] = {
@@ -79,26 +133,9 @@ const PaymentsByType = () => {
         }));
 
         setPaymentSummary(summaryArray);
-      }
 
-      // جلب آخر المدفوعات
-      const { data: recentData } = await supabase
-        .from('payments')
-        .select(`
-          id,
-          amount,
-          payment_type,
-          payment_date,
-          invoices(
-            invoice_number,
-            customers(name)
-          )
-        `)
-        .order('payment_date', { ascending: false })
-        .limit(10);
-
-      if (recentData) {
-        const formattedRecent = recentData.map(payment => ({
+        // تحضير بيانات المدفوعات الأخيرة
+        const formattedRecent = allPaymentsData.map(payment => ({
           id: payment.id,
           amount: payment.amount,
           payment_type: payment.payment_type,
@@ -106,6 +143,7 @@ const PaymentsByType = () => {
           customer_name: payment.invoices?.customers?.name,
           invoice_number: payment.invoices?.invoice_number
         }));
+        
         setRecentPayments(formattedRecent);
       }
 
@@ -155,6 +193,143 @@ const PaymentsByType = () => {
     }
   };
 
+  // حساب إحصائيات المدفوعات المفلترة
+  const getFilteredStats = () => {
+    const totalFiltered = filteredPayments.reduce((sum, payment) => sum + payment.amount, 0);
+    
+    const groupedFiltered = filteredPayments.reduce((acc, payment) => {
+      const type = payment.payment_type;
+      if (!acc[type]) {
+        acc[type] = { total: 0, count: 0 };
+      }
+      acc[type].total += payment.amount;
+      acc[type].count += 1;
+      return acc;
+    }, {} as Record<string, { total: number; count: number }>);
+
+    return { totalFiltered, groupedFiltered };
+  };
+
+  // تصدير إلى Excel
+  const exportToExcel = () => {
+    const { totalFiltered, groupedFiltered } = getFilteredStats();
+    
+    // إنشاء محتوى CSV
+    let csvContent = "نوع الدفع,المبلغ الإجمالي,عدد المدفوعات,النسبة المئوية\n";
+    
+    Object.entries(groupedFiltered).forEach(([type, data]) => {
+      const percentage = totalFiltered > 0 ? ((data.total / totalFiltered) * 100).toFixed(2) : '0.00';
+      csvContent += `${type},${data.total},${data.count},${percentage}%\n`;
+    });
+    
+    csvContent += `\nإجمالي المدفوعات,${totalFiltered},${filteredPayments.length},100%\n`;
+    
+    // تحميل الملف
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `تقرير_المدفوعات_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast({
+      title: "تم التصدير",
+      description: "تم تصدير التقرير بصيغة Excel بنجاح",
+    });
+  };
+
+  // تصدير إلى PDF (محاكاة)
+  const exportToPDF = () => {
+    const { totalFiltered, groupedFiltered } = getFilteredStats();
+    
+    // إنشاء نافذة طباعة بتنسيق جميل
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(`
+        <html dir="rtl">
+          <head>
+            <title>تقرير المدفوعات حسب النوع</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 20px; direction: rtl; }
+              .header { text-align: center; margin-bottom: 30px; }
+              .company-name { font-size: 24px; font-weight: bold; color: #1f2937; }
+              .report-title { font-size: 18px; color: #6b7280; margin-top: 10px; }
+              .date-info { font-size: 14px; color: #9ca3af; margin-top: 5px; }
+              table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+              th, td { border: 1px solid #e5e7eb; padding: 12px; text-align: center; }
+              th { background-color: #f3f4f6; font-weight: bold; }
+              .total-row { background-color: #fef3c7; font-weight: bold; }
+              .summary { background-color: #f0f9ff; padding: 15px; border-radius: 8px; margin-top: 20px; }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <div class="company-name">وكالة الإبداع للدعاية والإعلان</div>
+              <div class="report-title">تقرير المدفوعات حسب النوع</div>
+              <div class="date-info">
+                تاريخ التقرير: ${format(new Date(), 'dd/MM/yyyy')} - 
+                الفترة: ${dateFilter.period === 'today' ? 'اليوم' : 
+                         dateFilter.period === 'this_month' ? 'هذا الشهر' :
+                         dateFilter.period === 'this_year' ? 'هذا العام' :
+                         dateFilter.period === 'custom' ? `من ${dateFilter.startDate} إلى ${dateFilter.endDate}` :
+                         'جميع الفترات'}
+              </div>
+            </div>
+            
+            <table>
+              <thead>
+                <tr>
+                  <th>نوع الدفع</th>
+                  <th>المبلغ الإجمالي (ر.س)</th>
+                  <th>عدد المدفوعات</th>
+                  <th>النسبة المئوية</th>
+                  <th>الحساب المحاسبي</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${Object.entries(groupedFiltered).map(([type, data]) => {
+                  const percentage = totalFiltered > 0 ? ((data.total / totalFiltered) * 100).toFixed(2) : '0.00';
+                  return `
+                    <tr>
+                      <td>${type}</td>
+                      <td>${data.total.toLocaleString()}</td>
+                      <td>${data.count}</td>
+                      <td>${percentage}%</td>
+                      <td>${getAccountName(type)}</td>
+                    </tr>
+                  `;
+                }).join('')}
+                <tr class="total-row">
+                  <td><strong>الإجمالي</strong></td>
+                  <td><strong>${totalFiltered.toLocaleString()}</strong></td>
+                  <td><strong>${filteredPayments.length}</strong></td>
+                  <td><strong>100%</strong></td>
+                  <td>-</td>
+                </tr>
+              </tbody>
+            </table>
+            
+            <div class="summary">
+              <h3>ملخص التقرير:</h3>
+              <p>• إجمالي المدفوعات في الفترة المحددة: <strong>${totalFiltered.toLocaleString()} ر.س</strong></p>
+              <p>• عدد المعاملات: <strong>${filteredPayments.length} معاملة</strong></p>
+              <p>• أعلى نوع دفع: <strong>${Object.entries(groupedFiltered).sort((a, b) => b[1].total - a[1].total)[0]?.[0] || 'لا يوجد'}</strong></p>
+            </div>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.print();
+    }
+    
+    toast({
+      title: "تم التصدير",
+      description: "تم فتح نافذة الطباعة لحفظ التقرير كـ PDF",
+    });
+  };
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -179,10 +354,116 @@ const PaymentsByType = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-foreground">المدفوعات حسب النوع</h1>
-        <Badge variant="outline" className="text-lg px-4 py-2">
-          إجمالي المدفوعات: {totalPayments.toLocaleString()} ر.س
-        </Badge>
+        <div className="flex items-center gap-4">
+          <Button onClick={exportToExcel} variant="outline" className="gap-2">
+            <FileSpreadsheet className="h-4 w-4" />
+            تصدير Excel
+          </Button>
+          <Button onClick={exportToPDF} variant="outline" className="gap-2">
+            <FileText className="h-4 w-4" />
+            تصدير PDF
+          </Button>
+          <Badge variant="outline" className="text-lg px-4 py-2">
+            إجمالي المدفوعات: {totalPayments.toLocaleString()} ر.س
+          </Badge>
+        </div>
       </div>
+
+      {/* فلاتر زمنية */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Filter className="h-5 w-5" />
+            فلاتر التقارير
+          </CardTitle>
+          <CardDescription>اختر الفترة الزمنية لعرض تقرير مفصل</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-4">
+            <div>
+              <Label htmlFor="period">الفترة الزمنية</Label>
+              <Select value={dateFilter.period} onValueChange={(value) => setDateFilter({...dateFilter, period: value})}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="اختر الفترة" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">جميع الفترات</SelectItem>
+                  <SelectItem value="today">اليوم</SelectItem>
+                  <SelectItem value="this_month">هذا الشهر</SelectItem>
+                  <SelectItem value="this_year">هذا العام</SelectItem>
+                  <SelectItem value="custom">فترة مخصصة</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {dateFilter.period === 'custom' && (
+              <>
+                <div>
+                  <Label htmlFor="startDate">من تاريخ</Label>
+                  <Input
+                    id="startDate"
+                    type="date"
+                    value={dateFilter.startDate}
+                    onChange={(e) => setDateFilter({...dateFilter, startDate: e.target.value})}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="endDate">إلى تاريخ</Label>
+                  <Input
+                    id="endDate"
+                    type="date"
+                    value={dateFilter.endDate}
+                    onChange={(e) => setDateFilter({...dateFilter, endDate: e.target.value})}
+                    className="mt-1"
+                  />
+                </div>
+              </>
+            )}
+            
+            <div className="flex items-end">
+              <Button 
+                variant="outline" 
+                onClick={applyFilters}
+                className="gap-2 mt-1"
+              >
+                <Search className="h-4 w-4" />
+                تطبيق الفلتر
+              </Button>
+            </div>
+          </div>
+
+          {/* إحصائيات الفترة المفلترة */}
+          {filteredPayments.length !== recentPayments.length && (
+            <div className="grid gap-4 md:grid-cols-3 mt-6">
+              <Card>
+                <CardContent className="p-4">
+                  <div className="text-2xl font-bold text-primary">
+                    {getFilteredStats().totalFiltered.toLocaleString()} ر.س
+                  </div>
+                  <p className="text-sm text-muted-foreground">إجمالي المدفوعات المفلترة</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="text-2xl font-bold text-success">
+                    {filteredPayments.length}
+                  </div>
+                  <p className="text-sm text-muted-foreground">عدد المعاملات</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="text-2xl font-bold text-info">
+                    {Object.keys(getFilteredStats().groupedFiltered).length}
+                  </div>
+                  <p className="text-sm text-muted-foreground">أنواع الدفع المستخدمة</p>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* ملخص المدفوعات حسب النوع */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -222,15 +503,18 @@ const PaymentsByType = () => {
         ))}
       </div>
 
-      {/* آخر المدفوعات */}
+      {/* آخر المدفوعات أو المدفوعات المفلترة */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CalendarIcon className="h-5 w-5" />
-            آخر المدفوعات
+            {dateFilter.period === 'all' ? 'آخر المدفوعات' : 'المدفوعات المفلترة'}
           </CardTitle>
           <CardDescription>
-            آخر 10 مدفوعات تم استلامها
+            {dateFilter.period === 'all' 
+              ? `آخر ${recentPayments.slice(0, 20).length} مدفوعة تم استلامها`
+              : `${filteredPayments.length} مدفوعة في الفترة المحددة`
+            }
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -245,7 +529,7 @@ const PaymentsByType = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {recentPayments.map((payment) => (
+              {(dateFilter.period === 'all' ? recentPayments.slice(0, 20) : filteredPayments).map((payment) => (
                 <TableRow key={payment.id}>
                   <TableCell>
                     {format(new Date(payment.payment_date), 'dd/MM/yyyy', { locale: ar })}

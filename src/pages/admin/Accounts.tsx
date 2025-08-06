@@ -22,6 +22,8 @@ const Accounts = () => {
   const [isAddAccountOpen, setIsAddAccountOpen] = useState(false);
   const [isAddEntryOpen, setIsAddEntryOpen] = useState(false);
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
+  const [isEditExpenseOpen, setIsEditExpenseOpen] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<any>(null);
   const [userRole, setUserRole] = useState('');
   
   // فلاتر زمنية للتقارير
@@ -424,6 +426,82 @@ const Accounts = () => {
         payment_method: "",
         notes: ""
       });
+      fetchExpenses();
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
+  // تعديل مصروف
+  const handleEditExpense = async () => {
+    if (!editingExpense || !editingExpense.description || !editingExpense.amount || !editingExpense.category) {
+      toast({
+        title: "خطأ",
+        description: "يرجى ملء الحقول المطلوبة",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('expenses')
+        .update({
+          description: editingExpense.description,
+          amount: parseFloat(editingExpense.amount),
+          category: editingExpense.category,
+          date: editingExpense.date,
+          payment_method: editingExpense.payment_method,
+          notes: editingExpense.notes,
+        })
+        .eq('id', editingExpense.id);
+
+      if (error) {
+        console.error('Error updating expense:', error);
+        toast({
+          title: "خطأ",
+          description: "حدث خطأ في تحديث المصروف",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "تم التحديث",
+        description: "تم تحديث المصروف بنجاح",
+      });
+
+      setIsEditExpenseOpen(false);
+      setEditingExpense(null);
+      fetchExpenses();
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
+  // حذف مصروف
+  const handleDeleteExpense = async (expenseId: string) => {
+    try {
+      const { error } = await supabase
+        .from('expenses')
+        .delete()
+        .eq('id', expenseId);
+
+      if (error) {
+        console.error('Error deleting expense:', error);
+        toast({
+          title: "خطأ",
+          description: "حدث خطأ في حذف المصروف",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "تم الحذف",
+        description: "تم حذف المصروف بنجاح",
+      });
+
       fetchExpenses();
     } catch (error) {
       console.error('Error:', error);
@@ -1498,9 +1576,49 @@ const Accounts = () => {
                         <p className="text-sm text-muted-foreground">{expense.category} • {expense.date}</p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-bold text-lg text-destructive">-{expense.amount?.toLocaleString()} ر.س</p>
-                      <p className="text-sm text-muted-foreground">{expense.expense_number}</p>
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <p className="font-bold text-lg text-destructive">-{expense.amount?.toLocaleString()} ر.س</p>
+                        <p className="text-sm text-muted-foreground">{expense.expense_number}</p>
+                      </div>
+                      {userRole === 'admin' && (
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => {
+                              setEditingExpense(expense);
+                              setIsEditExpenseOpen(true);
+                            }}
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  هل أنت متأكد من حذف المصروف "{expense.description}"؟
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                                <AlertDialogAction 
+                                  onClick={() => handleDeleteExpense(expense.id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  حذف
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -1848,6 +1966,105 @@ const Accounts = () => {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* حوار تعديل المصروف */}
+      <Dialog open={isEditExpenseOpen} onOpenChange={setIsEditExpenseOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>تعديل المصروف</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div>
+              <Label htmlFor="edit_description">الوصف</Label>
+              <Input
+                id="edit_description"
+                value={editingExpense?.description || ''}
+                onChange={(e) => setEditingExpense({...editingExpense, description: e.target.value})}
+                placeholder="وصف المصروف..."
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit_amount">المبلغ</Label>
+                <Input
+                  id="edit_amount"
+                  type="number"
+                  value={editingExpense?.amount || ''}
+                  onChange={(e) => setEditingExpense({...editingExpense, amount: e.target.value})}
+                  placeholder="0.00"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit_category">الفئة</Label>
+                <Select value={editingExpense?.category || ''} onValueChange={(value) => setEditingExpense({...editingExpense, category: value})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="اختر الفئة" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="مصروفات إدارية">مصروفات إدارية</SelectItem>
+                    <SelectItem value="مصروفات تشغيلية">مصروفات تشغيلية</SelectItem>
+                    <SelectItem value="مصروفات تسويقية">مصروفات تسويقية</SelectItem>
+                    <SelectItem value="إيجارات">إيجارات</SelectItem>
+                    <SelectItem value="رواتب">رواتب</SelectItem>
+                    <SelectItem value="كهرباء وماء">كهرباء وماء</SelectItem>
+                    <SelectItem value="صيانة">صيانة</SelectItem>
+                    <SelectItem value="أخرى">أخرى</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit_date">التاريخ</Label>
+                <Input
+                  id="edit_date"
+                  type="date"
+                  value={editingExpense?.date || ''}
+                  onChange={(e) => setEditingExpense({...editingExpense, date: e.target.value})}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit_payment_method">طريقة الدفع</Label>
+                <Select value={editingExpense?.payment_method || ''} onValueChange={(value) => setEditingExpense({...editingExpense, payment_method: value})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="اختر طريقة الدفع" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="نقدي">نقدي</SelectItem>
+                    <SelectItem value="تحويل بنكي">تحويل بنكي</SelectItem>
+                    <SelectItem value="الشبكة">الشبكة</SelectItem>
+                    <SelectItem value="شيك">شيك</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="edit_notes">ملاحظات</Label>
+              <Textarea
+                id="edit_notes"
+                value={editingExpense?.notes || ''}
+                onChange={(e) => setEditingExpense({...editingExpense, notes: e.target.value})}
+                placeholder="ملاحظات إضافية..."
+              />
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => {
+                setIsEditExpenseOpen(false);
+                setEditingExpense(null);
+              }}>
+                إلغاء
+              </Button>
+              <Button onClick={handleEditExpense}>
+                حفظ التعديلات
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
