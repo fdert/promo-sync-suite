@@ -24,6 +24,13 @@ const Accounts = () => {
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
   const [userRole, setUserRole] = useState('');
   
+  // فلاتر زمنية للتقارير
+  const [dateFilter, setDateFilter] = useState({
+    period: 'current_month', // current_month, last_month, current_year, custom
+    startDate: '',
+    endDate: ''
+  });
+  
   // حقول البحث للعملاء المدينين
   const [debtorSearch, setDebtorSearch] = useState({
     customerName: '',
@@ -243,6 +250,13 @@ const Accounts = () => {
   useEffect(() => {
     fetchDebtorInvoices();
   }, [debtorSearch]);
+
+  // تحديث البيانات المفلترة عند تغيير فلتر التاريخ
+  useEffect(() => {
+    if (monthlyIncome !== undefined) {
+      fetchFilteredData();
+    }
+  }, [dateFilter]);
 
   // إضافة حساب جديد
   const handleAddAccount = async () => {
@@ -661,28 +675,135 @@ const Accounts = () => {
 
   // حساب الإحصائيات - حساب الإيرادات من الطلبات المكتملة لتطابق الداشبورد  
   const [monthlyIncome, setMonthlyIncome] = useState(0);
+  const [lastMonthIncome, setLastMonthIncome] = useState(0);
+  const [yearlyIncome, setYearlyIncome] = useState(0);
+  const [filteredIncome, setFilteredIncome] = useState(0);
+  const [filteredExpenses, setFilteredExpenses] = useState(0);
+
+  // دالة للحصول على تواريخ بداية ونهاية الفترة
+  const getDateRange = (period: string, startDate?: string, endDate?: string) => {
+    const now = new Date();
+    let start: Date, end: Date;
+
+    switch (period) {
+      case 'current_month':
+        start = new Date(now.getFullYear(), now.getMonth(), 1);
+        end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+        break;
+      case 'last_month':
+        start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        end = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+        break;
+      case 'current_year':
+        start = new Date(now.getFullYear(), 0, 1);
+        end = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
+        break;
+      case 'custom':
+        if (startDate && endDate) {
+          start = new Date(startDate);
+          end = new Date(endDate + 'T23:59:59');
+        } else {
+          start = new Date(now.getFullYear(), now.getMonth(), 1);
+          end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+        }
+        break;
+      default:
+        start = new Date(now.getFullYear(), now.getMonth(), 1);
+        end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+    }
+
+    return { start, end };
+  };
 
   // جلب الإيرادات الشهرية من الطلبات
   const fetchMonthlyRevenue = async () => {
     try {
-      const startOfMonth = new Date();
-      startOfMonth.setDate(1);
-      startOfMonth.setHours(0, 0, 0, 0);
-      
-      const { data, error } = await supabase
+      // الشهر الحالي
+      const currentMonthRange = getDateRange('current_month');
+      const { data: currentData, error: currentError } = await supabase
         .from('orders')
         .select('amount, created_at')
-        .gte('created_at', startOfMonth.toISOString());
+        .gte('created_at', currentMonthRange.start.toISOString())
+        .lte('created_at', currentMonthRange.end.toISOString());
 
-      if (error) {
-        console.error('Error fetching monthly revenue:', error);
-        return;
+      if (currentError) {
+        console.error('Error fetching current month revenue:', currentError);
+      } else {
+        const revenue = (currentData || []).reduce((sum, order) => sum + (order.amount || 0), 0);
+        setMonthlyIncome(revenue);
       }
 
-      const revenue = (data || []).reduce((sum, order) => sum + (order.amount || 0), 0);
-      setMonthlyIncome(revenue);
+      // الشهر الماضي
+      const lastMonthRange = getDateRange('last_month');
+      const { data: lastData, error: lastError } = await supabase
+        .from('orders')
+        .select('amount, created_at')
+        .gte('created_at', lastMonthRange.start.toISOString())
+        .lte('created_at', lastMonthRange.end.toISOString());
+
+      if (lastError) {
+        console.error('Error fetching last month revenue:', lastError);
+      } else {
+        const revenue = (lastData || []).reduce((sum, order) => sum + (order.amount || 0), 0);
+        setLastMonthIncome(revenue);
+      }
+
+      // السنة الحالية
+      const yearlyRange = getDateRange('current_year');
+      const { data: yearlyData, error: yearlyError } = await supabase
+        .from('orders')
+        .select('amount, created_at')
+        .gte('created_at', yearlyRange.start.toISOString())
+        .lte('created_at', yearlyRange.end.toISOString());
+
+      if (yearlyError) {
+        console.error('Error fetching yearly revenue:', yearlyError);
+      } else {
+        const revenue = (yearlyData || []).reduce((sum, order) => sum + (order.amount || 0), 0);
+        setYearlyIncome(revenue);
+      }
+
+      // الفترة المحددة
+      fetchFilteredData();
     } catch (error) {
       console.error('Error:', error);
+    }
+  };
+
+  // جلب البيانات المفلترة حسب الفترة المحددة
+  const fetchFilteredData = async () => {
+    try {
+      const { start, end } = getDateRange(dateFilter.period, dateFilter.startDate, dateFilter.endDate);
+
+      // جلب الإيرادات للفترة المحددة
+      const { data: ordersData, error: ordersError } = await supabase
+        .from('orders')
+        .select('amount, created_at')
+        .gte('created_at', start.toISOString())
+        .lte('created_at', end.toISOString());
+
+      if (ordersError) {
+        console.error('Error fetching filtered orders:', ordersError);
+      } else {
+        const revenue = (ordersData || []).reduce((sum, order) => sum + (order.amount || 0), 0);
+        setFilteredIncome(revenue);
+      }
+
+      // جلب المصروفات للفترة المحددة
+      const { data: expensesData, error: expensesError } = await supabase
+        .from('expenses')
+        .select('amount, date')
+        .gte('date', start.toISOString().split('T')[0])
+        .lte('date', end.toISOString().split('T')[0]);
+
+      if (expensesError) {
+        console.error('Error fetching filtered expenses:', expensesError);
+      } else {
+        const totalExpenses = (expensesData || []).reduce((sum, expense) => sum + (expense.amount || 0), 0);
+        setFilteredExpenses(totalExpenses);
+      }
+    } catch (error) {
+      console.error('Error fetching filtered data:', error);
     }
   };
 
@@ -697,6 +818,7 @@ const Accounts = () => {
     .reduce((sum, expense) => sum + (expense.amount || 0), 0);
 
   const netProfit = (monthlyIncome || 0) - (monthlyExpenses || 0);
+  const filteredNetProfit = (filteredIncome || 0) - (filteredExpenses || 0);
 
   // تجميع الحسابات حسب النوع
   const accountsByType = accounts.reduce((acc: Record<string, any[]>, account) => {
@@ -771,7 +893,7 @@ const Accounts = () => {
       </div>
 
       {/* Financial Overview */}
-      <div className="grid gap-4 md:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">الإيرادات الشهرية</CardTitle>
@@ -780,6 +902,17 @@ const Accounts = () => {
           <CardContent>
             <div className="text-2xl font-bold text-success">{(monthlyIncome || 0).toLocaleString()} ر.س</div>
             <p className="text-xs text-muted-foreground">هذا الشهر</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">الشهر الماضي</CardTitle>
+            <TrendingUp className="h-4 w-4 text-info" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-info">{(lastMonthIncome || 0).toLocaleString()} ر.س</div>
+            <p className="text-xs text-muted-foreground">إيرادات الشهر الماضي</p>
           </CardContent>
         </Card>
         
@@ -829,6 +962,128 @@ const Accounts = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* فلاتر زمنية للتقارير */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CalendarRange className="h-5 w-5" />
+            فلتر التقارير الزمنية
+          </CardTitle>
+          <CardDescription>اعرض التقارير المالية حسب فترة زمنية محددة</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-4">
+            <div>
+              <Label htmlFor="period">الفترة الزمنية</Label>
+              <Select value={dateFilter.period} onValueChange={(value) => setDateFilter({...dateFilter, period: value})}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="اختر الفترة" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="current_month">الشهر الحالي</SelectItem>
+                  <SelectItem value="last_month">الشهر الماضي</SelectItem>
+                  <SelectItem value="current_year">السنة الحالية</SelectItem>
+                  <SelectItem value="custom">فترة مخصصة</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {dateFilter.period === 'custom' && (
+              <>
+                <div>
+                  <Label htmlFor="startDate">من تاريخ</Label>
+                  <Input
+                    id="startDate"
+                    type="date"
+                    value={dateFilter.startDate}
+                    onChange={(e) => setDateFilter({...dateFilter, startDate: e.target.value})}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="endDate">إلى تاريخ</Label>
+                  <Input
+                    id="endDate"
+                    type="date"
+                    value={dateFilter.endDate}
+                    onChange={(e) => setDateFilter({...dateFilter, endDate: e.target.value})}
+                    className="mt-1"
+                  />
+                </div>
+              </>
+            )}
+            
+            <div className="flex items-end">
+              <Button 
+                variant="outline" 
+                onClick={fetchFilteredData}
+                className="gap-2 mt-1"
+              >
+                <Search className="h-4 w-4" />
+                تطبيق الفلتر
+              </Button>
+            </div>
+          </div>
+
+          {/* عرض نتائج الفلتر */}
+          <div className="grid gap-4 md:grid-cols-3 mt-6">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">
+                  إيرادات الفترة المحددة
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-success">
+                  {(filteredIncome || 0).toLocaleString()} ر.س
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {dateFilter.period === 'current_month' && 'الشهر الحالي'}
+                  {dateFilter.period === 'last_month' && 'الشهر الماضي'}
+                  {dateFilter.period === 'current_year' && 'السنة الحالية'}
+                  {dateFilter.period === 'custom' && 'الفترة المخصصة'}
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">
+                  مصروفات الفترة المحددة
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-destructive">
+                  {(filteredExpenses || 0).toLocaleString()} ر.س
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {dateFilter.period === 'current_month' && 'الشهر الحالي'}
+                  {dateFilter.period === 'last_month' && 'الشهر الماضي'}
+                  {dateFilter.period === 'current_year' && 'السنة الحالية'}
+                  {dateFilter.period === 'custom' && 'الفترة المخصصة'}
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">
+                  صافي ربح الفترة
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className={`text-2xl font-bold ${filteredNetProfit >= 0 ? 'text-success' : 'text-destructive'}`}>
+                  {(filteredNetProfit || 0).toLocaleString()} ر.س
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {filteredNetProfit >= 0 ? 'ربح' : 'خسارة'}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </CardContent>
+      </Card>
 
       <Tabs defaultValue="accounts" className="space-y-4">
         <TabsList className="grid w-full grid-cols-5">
@@ -1547,23 +1802,45 @@ const Accounts = () => {
             <Card>
               <CardHeader>
                 <CardTitle>قائمة الدخل</CardTitle>
-                <CardDescription>الشهر الحالي</CardDescription>
+                <CardDescription>
+                  {dateFilter.period === 'current_month' && 'الشهر الحالي'}
+                  {dateFilter.period === 'last_month' && 'الشهر الماضي'}
+                  {dateFilter.period === 'current_year' && 'السنة الحالية'}
+                  {dateFilter.period === 'custom' && 'الفترة المخصصة'}
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
                   <div className="flex justify-between items-center py-2 border-b">
                     <span className="font-medium text-success">الإيرادات</span>
-                    <span className="font-bold text-success">{(monthlyIncome || 0).toLocaleString()} ر.س</span>
+                    <span className="font-bold text-success">{(filteredIncome || 0).toLocaleString()} ر.س</span>
                   </div>
                   <div className="flex justify-between items-center py-2 border-b">
                     <span className="font-medium text-destructive">المصروفات</span>
-                    <span className="font-bold text-destructive">{(monthlyExpenses || 0).toLocaleString()} ر.س</span>
+                    <span className="font-bold text-destructive">{(filteredExpenses || 0).toLocaleString()} ر.س</span>
                   </div>
                   <div className="flex justify-between items-center py-2 border-t border-gray-300">
                     <span className="font-bold">صافي الربح</span>
-                    <span className={`font-bold text-lg ${netProfit >= 0 ? 'text-success' : 'text-destructive'}`}>
-                      {(netProfit || 0).toLocaleString()} ر.س
+                    <span className={`font-bold text-lg ${filteredNetProfit >= 0 ? 'text-success' : 'text-destructive'}`}>
+                      {(filteredNetProfit || 0).toLocaleString()} ر.س
                     </span>
+                  </div>
+                  <div className="mt-4 p-3 bg-muted rounded-lg">
+                    <h5 className="font-medium mb-2">مقارنة مع الفترات الأخرى:</h5>
+                    <div className="space-y-1 text-sm">
+                      <div className="flex justify-between">
+                        <span>إيرادات هذا الشهر:</span>
+                        <span className="text-success font-medium">{monthlyIncome.toLocaleString()} ر.س</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>إيرادات الشهر الماضي:</span>
+                        <span className="text-info font-medium">{lastMonthIncome.toLocaleString()} ر.س</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>إيرادات السنة الحالية:</span>
+                        <span className="text-primary font-medium">{yearlyIncome.toLocaleString()} ر.س</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </CardContent>

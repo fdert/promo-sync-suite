@@ -78,7 +78,13 @@ const employeeMenuItems = [
   {
     title: "التقارير المالية",
     icon: TrendingUp,
-    href: "/employee/reports",
+    href: "/employee/financial-reports",
+    allowedRoles: ['employee'] as UserRole[],
+  },
+  {
+    title: "نظرة عامة على الحسابات",
+    icon: TrendingUp,
+    href: "/employee/accounts-overview",
     allowedRoles: ['employee'] as UserRole[],
   },
 ];

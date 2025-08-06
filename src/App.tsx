@@ -42,6 +42,8 @@ import NotFound from "./pages/NotFound";
 import Evaluations from "./pages/admin/Evaluations";
 import CustomerPrintOrders from "./pages/admin/CustomerPrintOrders";
 import Evaluation from "./pages/Evaluation";
+import AccountsOverview from "./pages/employee/AccountsOverview";
+import FinancialReports from "./pages/employee/FinancialReports";
 
 const queryClient = new QueryClient();
 
@@ -81,6 +83,8 @@ const App = () => (
               <Route path="print-orders" element={<EmployeePrintOrders />} />
               <Route path="evaluations" element={<Evaluations />} />
               <Route path="print-archive" element={<PrintArchive />} />
+              <Route path="accounts-overview" element={<AccountsOverview />} />
+              <Route path="financial-reports" element={<FinancialReports />} />
               <Route path="reports" element={<EmployeeReports />} />
             </Route>
             <Route path="/admin" element={
