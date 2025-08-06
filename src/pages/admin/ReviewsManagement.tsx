@@ -109,6 +109,9 @@ const ReviewsManagement = () => {
         .eq("id", evaluationId);
 
       if (error) throw error;
+
+      // إرسال رسالة جوجل ماب تلقائياً للتقييمات المعتمدة
+      await sendGoogleReviewToCustomer(evaluationId);
     } catch (error) {
       console.error("Error auto-approving evaluation:", error);
     }
