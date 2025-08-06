@@ -352,7 +352,7 @@ export type Database = {
           is_public: boolean | null
           order_id: string | null
           price_value_rating: number | null
-          rating: number
+          rating: number | null
           service_quality_rating: number | null
           submitted_at: string | null
           suggestions: string | null
@@ -376,7 +376,7 @@ export type Database = {
           is_public?: boolean | null
           order_id?: string | null
           price_value_rating?: number | null
-          rating: number
+          rating?: number | null
           service_quality_rating?: number | null
           submitted_at?: string | null
           suggestions?: string | null
@@ -400,7 +400,7 @@ export type Database = {
           is_public?: boolean | null
           order_id?: string | null
           price_value_rating?: number | null
-          rating?: number
+          rating?: number | null
           service_quality_rating?: number | null
           submitted_at?: string | null
           suggestions?: string | null
