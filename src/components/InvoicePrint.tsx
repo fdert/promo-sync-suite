@@ -290,10 +290,10 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
         </div>
       </div>
 
-      {/* Payment Info */}
+      {/* Status Info */}
       <div style={{ 
         display: 'flex', 
-        justifyContent: 'space-between',
+        justifyContent: 'center',
         fontSize: '10px',
         marginBottom: '4px',
         padding: '2px',
@@ -301,7 +301,6 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
         border: '1px solid #ddd',
         pageBreakInside: 'avoid'
       }}>
-        <span><strong>نوع الدفع:</strong> {invoice.payment_type}</span>
         <span><strong>الحالة:</strong> {invoice.status}</span>
       </div>
 
@@ -330,8 +329,8 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
             src={companyInfo.stamp} 
             alt="ختم الوكالة" 
             style={{ 
-              width: '60px', 
-              height: '60px', 
+              width: '80px', 
+              height: '80px', 
               objectFit: 'contain' 
             }}
           />

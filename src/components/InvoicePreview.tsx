@@ -213,23 +213,19 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({
             <div className="mb-4">
               <div className="bg-blue-50 p-2 rounded text-xs">
                 <strong className="text-blue-600 block mb-1">معلومات الدفع:</strong>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <span className="text-gray-600">نوع الدفع:</span>
-                    <span className="font-bold mr-1">{invoice.actual_payment_type || invoice.payment_type}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">حالة الفاتورة:</span>
-                    <span className={`font-bold mr-1 px-1 rounded text-xs ${
-                      (invoice.actual_status || invoice.status) === 'مدفوعة' ? 'bg-green-100 text-green-700' : 
-                      (invoice.actual_status || invoice.status) === 'مدفوعة جزئياً' ? 'bg-blue-100 text-blue-700' :
-                      (invoice.actual_status || invoice.status) === 'قيد الانتظار' ? 'bg-yellow-100 text-yellow-700' :
-                      'bg-red-100 text-red-700'
-                    }`}>
-                      {invoice.actual_status || invoice.status}
-                    </span>
-                  </div>
-                </div>
+                 <div className="grid grid-cols-1 gap-2">
+                   <div>
+                     <span className="text-gray-600">حالة الفاتورة:</span>
+                     <span className={`font-bold mr-1 px-1 rounded text-xs ${
+                       (invoice.actual_status || invoice.status) === 'مدفوعة' ? 'bg-green-100 text-green-700' : 
+                       (invoice.actual_status || invoice.status) === 'مدفوعة جزئياً' ? 'bg-blue-100 text-blue-700' :
+                       (invoice.actual_status || invoice.status) === 'قيد الانتظار' ? 'bg-yellow-100 text-yellow-700' :
+                       'bg-red-100 text-red-700'
+                     }`}>
+                       {invoice.actual_status || invoice.status}
+                     </span>
+                   </div>
+                 </div>
                 {(invoice.total_paid !== undefined && invoice.total_paid > 0) && (
                   <div className="mt-2 pt-2 border-t border-blue-200">
                     <div className="grid grid-cols-2 gap-2 text-xs">
@@ -255,13 +251,13 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({
                 المجموع الكلي: {invoice.total_amount?.toLocaleString('ar-SA')} ر.س
               </div>
               <div className="text-center">
-                {companyInfo.stamp && (
-                  <img 
-                    src={companyInfo.stamp} 
-                    alt="ختم الوكالة" 
-                    className="w-16 h-12 object-contain"
-                  />
-                )}
+                 {companyInfo.stamp && (
+                   <img 
+                     src={companyInfo.stamp} 
+                     alt="ختم الوكالة" 
+                     className="w-20 h-16 object-contain"
+                   />
+                 )}
               </div>
             </div>
 

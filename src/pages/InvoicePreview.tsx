@@ -206,21 +206,16 @@ const InvoicePreview = () => {
                 <div className="space-y-2">
                   <p><span className="font-medium">تاريخ الإصدار:</span> {new Date(invoice.issue_date).toLocaleDateString('ar-SA')}</p>
                   <p><span className="font-medium">تاريخ الاستحقاق:</span> {new Date(invoice.due_date).toLocaleDateString('ar-SA')}</p>
-                  <p><span className="font-medium">نوع الدفع:</span> 
-                    <span className="mr-2 px-2 py-1 rounded text-sm bg-blue-100 text-blue-800">
-                      {invoice.payment_type || 'دفع آجل'}
-                    </span>
-                  </p>
-                  <p><span className="font-medium">الحالة:</span> 
-                    <span className={`mr-2 px-2 py-1 rounded text-sm ${
-                      invoice.status === 'مدفوعة' ? 'bg-green-100 text-green-800' :
-                      invoice.status === 'مدفوعة جزئياً' ? 'bg-blue-100 text-blue-800' :
-                      invoice.status === 'قيد الانتظار' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>
-                      {invoice.status}
-                    </span>
-                  </p>
+                   <p><span className="font-medium">الحالة:</span> 
+                     <span className={`mr-2 px-2 py-1 rounded text-sm ${
+                       invoice.status === 'مدفوعة' ? 'bg-green-100 text-green-800' :
+                       invoice.status === 'مدفوعة جزئياً' ? 'bg-blue-100 text-blue-800' :
+                       invoice.status === 'قيد الانتظار' ? 'bg-yellow-100 text-yellow-800' :
+                       'bg-red-100 text-red-800'
+                     }`}>
+                       {invoice.status}
+                     </span>
+                   </p>
                   {invoice.total_paid !== undefined && invoice.total_paid > 0 && (
                     <>
                       <p><span className="font-medium">المبلغ المدفوع:</span> 
