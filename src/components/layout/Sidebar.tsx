@@ -16,6 +16,8 @@ import {
   Printer,
   Calculator,
   CreditCard,
+  Star,
+  MapPin,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -107,6 +109,18 @@ const menuItems = [
     title: "قوالب الرسائل",
     icon: MessageSquare,
     href: "/admin/message-templates",
+    allowedRoles: ['admin', 'manager'] as UserRole[],
+  },
+  {
+    title: "إدارة التقييمات",
+    icon: Star,
+    href: "/admin/reviews-management",
+    allowedRoles: ['admin', 'manager'] as UserRole[],
+  },
+  {
+    title: "ربط خرائط جوجل",
+    icon: MapPin,
+    href: "/admin/google-maps-integration",
     allowedRoles: ['admin', 'manager'] as UserRole[],
   },
   {

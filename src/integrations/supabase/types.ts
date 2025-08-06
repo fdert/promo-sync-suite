@@ -279,6 +279,9 @@ export type Database = {
           delivery_time_avg: number | null
           five_star_count: number | null
           four_star_count: number | null
+          google_review_conversion_rate: number | null
+          google_reviews_completed: number | null
+          google_reviews_sent: number | null
           id: string
           last_updated: string | null
           one_star_count: number | null
@@ -296,6 +299,9 @@ export type Database = {
           delivery_time_avg?: number | null
           five_star_count?: number | null
           four_star_count?: number | null
+          google_review_conversion_rate?: number | null
+          google_reviews_completed?: number | null
+          google_reviews_sent?: number | null
           id?: string
           last_updated?: string | null
           one_star_count?: number | null
@@ -313,6 +319,9 @@ export type Database = {
           delivery_time_avg?: number | null
           five_star_count?: number | null
           four_star_count?: number | null
+          google_review_conversion_rate?: number | null
+          google_reviews_completed?: number | null
+          google_reviews_sent?: number | null
           id?: string
           last_updated?: string | null
           one_star_count?: number | null
@@ -327,12 +336,18 @@ export type Database = {
       }
       evaluations: {
         Row: {
+          admin_notes: string | null
+          approved_at: string | null
+          approved_by: string | null
           communication_rating: number | null
           created_at: string | null
           customer_id: string | null
           delivery_time_rating: number | null
           evaluation_token: string
           feedback_text: string | null
+          google_review_link: string | null
+          google_review_sent_at: string | null
+          google_review_status: string | null
           id: string
           is_public: boolean | null
           order_id: string | null
@@ -345,12 +360,18 @@ export type Database = {
           would_recommend: boolean | null
         }
         Insert: {
+          admin_notes?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           communication_rating?: number | null
           created_at?: string | null
           customer_id?: string | null
           delivery_time_rating?: number | null
           evaluation_token: string
           feedback_text?: string | null
+          google_review_link?: string | null
+          google_review_sent_at?: string | null
+          google_review_status?: string | null
           id?: string
           is_public?: boolean | null
           order_id?: string | null
@@ -363,12 +384,18 @@ export type Database = {
           would_recommend?: boolean | null
         }
         Update: {
+          admin_notes?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           communication_rating?: number | null
           created_at?: string | null
           customer_id?: string | null
           delivery_time_rating?: number | null
           evaluation_token?: string
           feedback_text?: string | null
+          google_review_link?: string | null
+          google_review_sent_at?: string | null
+          google_review_status?: string | null
           id?: string
           is_public?: boolean | null
           order_id?: string | null
@@ -462,6 +489,113 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      google_maps_settings: {
+        Row: {
+          auto_send_enabled: boolean | null
+          business_name: string
+          created_at: string | null
+          created_by: string | null
+          google_maps_url: string
+          id: string
+          minimum_rating: number | null
+          place_id: string
+          review_template: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          auto_send_enabled?: boolean | null
+          business_name: string
+          created_at?: string | null
+          created_by?: string | null
+          google_maps_url: string
+          id?: string
+          minimum_rating?: number | null
+          place_id: string
+          review_template?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          auto_send_enabled?: boolean | null
+          business_name?: string
+          created_at?: string | null
+          created_by?: string | null
+          google_maps_url?: string
+          id?: string
+          minimum_rating?: number | null
+          place_id?: string
+          review_template?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      google_review_requests: {
+        Row: {
+          clicked_at: string | null
+          created_at: string | null
+          created_by: string | null
+          customer_id: string | null
+          evaluation_id: string | null
+          expires_at: string | null
+          id: string
+          review_link: string
+          sent_at: string | null
+          status: string | null
+        }
+        Insert: {
+          clicked_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          customer_id?: string | null
+          evaluation_id?: string | null
+          expires_at?: string | null
+          id?: string
+          review_link: string
+          sent_at?: string | null
+          status?: string | null
+        }
+        Update: {
+          clicked_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          customer_id?: string | null
+          evaluation_id?: string | null
+          expires_at?: string | null
+          id?: string
+          review_link?: string
+          sent_at?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "google_review_requests_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customer_order_balances"
+            referencedColumns: ["customer_id"]
+          },
+          {
+            foreignKeyName: "google_review_requests_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customer_outstanding_balances"
+            referencedColumns: ["customer_id"]
+          },
+          {
+            foreignKeyName: "google_review_requests_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "google_review_requests_evaluation_id_fkey"
+            columns: ["evaluation_id"]
+            isOneToOne: false
+            referencedRelation: "evaluations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       invoice_items: {
         Row: {
@@ -1665,6 +1799,10 @@ export type Database = {
       }
       generate_expense_number: {
         Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      generate_google_review_link: {
+        Args: { place_id: string }
         Returns: string
       }
       generate_invoice_number: {

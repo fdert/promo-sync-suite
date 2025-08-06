@@ -45,6 +45,8 @@ import CustomerPrintOrders from "./pages/admin/CustomerPrintOrders";
 import Evaluation from "./pages/Evaluation";
 import AccountsOverview from "./pages/employee/AccountsOverview";
 import FinancialReports from "./pages/employee/FinancialReports";
+import ReviewsManagement from "./pages/admin/ReviewsManagement";
+import GoogleMapsIntegration from "./pages/admin/GoogleMapsIntegration";
 
 const queryClient = new QueryClient();
 
@@ -125,8 +127,18 @@ const App = () => (
                 <RoleProtectedRoute allowedRoles={['admin']}>
                   <Settings />
                 </RoleProtectedRoute>
-              } />
-              <Route path="evaluations" element={<Evaluations />} />
+               } />
+               <Route path="evaluations" element={<Evaluations />} />
+               <Route path="reviews-management" element={
+                 <RoleProtectedRoute allowedRoles={['admin', 'manager']}>
+                   <ReviewsManagement />
+                 </RoleProtectedRoute>
+               } />
+               <Route path="google-maps-integration" element={
+                 <RoleProtectedRoute allowedRoles={['admin', 'manager']}>
+                   <GoogleMapsIntegration />
+                 </RoleProtectedRoute>
+               } />
             </Route>
             <Route path="/evaluation/:token" element={<Evaluation />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
