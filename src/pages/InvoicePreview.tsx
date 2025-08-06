@@ -83,28 +83,17 @@ const InvoicePreview = () => {
         console.error('Error fetching payments:', paymentsError);
       }
 
-      // حساب إجمالي المدفوعات والحالة الفعلية
+      // حساب إجمالي المدفوعات الفعلية من قاعدة البيانات
       const totalPaid = paymentsData?.reduce((sum, payment) => sum + payment.amount, 0) || 0;
-      const hasPayments = paymentsData && paymentsData.length > 0;
       
-      // تحديد الحالة الفعلية والطريقة
-      let actualStatus = 'قيد الانتظار';
-      let actualPaymentType = 'دفع آجل';
-      
-      if (hasPayments) {
-        if (totalPaid >= invoiceData.total_amount) {
-          actualStatus = 'مدفوعة';
-        } else if (totalPaid > 0) {
-          actualStatus = 'مدفوعة جزئياً';
-        }
-        
-        // استخدام نوع الدفع من آخر دفعة
-        if (paymentsData.length > 0) {
-          const latestPayment = paymentsData.sort((a, b) => 
-            new Date(b.payment_date).getTime() - new Date(a.payment_date).getTime()
-          )[0];
-          actualPaymentType = latestPayment.payment_type;
-        }
+      // تحديد الحالة الفعلية بناءً على المدفوعات الفعلية فقط
+      let actualStatus;
+      if (totalPaid >= invoiceData.total_amount) {
+        actualStatus = 'مدفوعة';
+      } else if (totalPaid > 0) {
+        actualStatus = 'مدفوعة جزئياً';
+      } else {
+        actualStatus = 'قيد الانتظار';
       }
 
       // جلب بنود الفاتورة
@@ -121,7 +110,6 @@ const InvoicePreview = () => {
        const updatedInvoice = {
          ...invoiceData,
          status: actualStatus,
-         payment_type: actualPaymentType,
          total_paid: totalPaid,
          remaining_amount: invoiceData.total_amount - totalPaid
        };
