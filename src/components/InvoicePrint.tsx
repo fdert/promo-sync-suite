@@ -324,14 +324,14 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
         <div style={{ 
           display: 'flex', 
           justifyContent: 'center', 
-          margin: '6px 0 4px 0' 
+          margin: '10px 0 8px 0' 
         }}>
           <img 
             src={companyInfo.stamp} 
             alt="ختم الوكالة" 
             style={{ 
-              width: '80px', 
-              height: '80px', 
+              width: '120px', 
+              height: '120px', 
               objectFit: 'contain' 
             }}
           />
