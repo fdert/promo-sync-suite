@@ -641,7 +641,6 @@ const Invoices = () => {
           <!-- Payment Info -->
           <div class="payment-info">
             <div class="payment-grid">
-              <div><strong>نوع الدفع:</strong> ${actualPaymentType}</div>
               <div><strong>الحالة:</strong> 
                 <span class="status-badge ${
                   actualStatus === 'مدفوعة' ? 'status-paid' : 
@@ -1221,14 +1220,10 @@ const Invoices = () => {
                   </div>
                 </div>
 
-                {/* معلومات الدفع */}
+                {/* معلومات الحالة */}
                 <div className="mt-4 p-3 bg-blue-50 rounded">
-                  <h4 className="font-medium text-sm text-blue-800 mb-2">معلومات الدفع:</h4>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-600">نوع الدفع:</span>
-                      <span className="font-medium mr-2">{viewingInvoice.payment_type}</span>
-                    </div>
+                  <h4 className="font-medium text-sm text-blue-800 mb-2">معلومات الحالة:</h4>
+                  <div className="grid grid-cols-1 gap-4 text-sm">
                     <div>
                       <span className="text-gray-600">حالة الفاتورة:</span>
                       <Badge 
