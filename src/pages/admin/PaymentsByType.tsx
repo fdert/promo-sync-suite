@@ -89,7 +89,7 @@ const PaymentsByType = () => {
     try {
       setLoading(true);
 
-      // جلب جميع المدفوعات لإجراء التقارير
+      // جلب جميع المدفوعات مع بيانات الطلبات والعملاء
       const { data: allPaymentsData } = await supabase
         .from('payments')
         .select(`
@@ -97,6 +97,11 @@ const PaymentsByType = () => {
           amount,
           payment_type,
           payment_date,
+          order_id,
+          orders(
+            order_number,
+            customers(name)
+          ),
           invoices(
             invoice_number,
             customers(name)
@@ -140,8 +145,9 @@ const PaymentsByType = () => {
           amount: payment.amount,
           payment_type: payment.payment_type,
           payment_date: payment.payment_date,
-          customer_name: payment.invoices?.customers?.name,
-          invoice_number: payment.invoices?.invoice_number
+          customer_name: payment.orders?.customers?.name || payment.invoices?.customers?.name,
+          invoice_number: payment.invoices?.invoice_number,
+          order_number: payment.orders?.order_number
         }));
         
         setRecentPayments(formattedRecent);

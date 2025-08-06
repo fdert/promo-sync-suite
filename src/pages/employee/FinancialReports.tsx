@@ -88,18 +88,18 @@ const FinancialReports = () => {
     try {
       const { start, end } = getDateRange(dateFilter.period, dateFilter.startDate, dateFilter.endDate);
 
-      // جلب الإيرادات
-      const { data: ordersData, error: ordersError } = await supabase
-        .from('orders')
-        .select('amount, created_at')
-        .gte('created_at', start.toISOString())
-        .lte('created_at', end.toISOString());
+      // جلب الإيرادات من المدفوعات (لتطابق حسابات الإدارة)
+      const { data: paymentsData, error: paymentsError } = await supabase
+        .from('payments')
+        .select('amount, payment_date, payment_type')
+        .gte('payment_date', start.toISOString().split('T')[0])
+        .lte('payment_date', end.toISOString().split('T')[0]);
 
-      if (ordersError) {
-        console.error('Error fetching orders:', ordersError);
+      if (paymentsError) {
+        console.error('Error fetching payments:', paymentsError);
       }
 
-      const income = (ordersData || []).reduce((sum, order) => sum + (order.amount || 0), 0);
+      const income = (paymentsData || []).reduce((sum, payment) => sum + (payment.amount || 0), 0);
 
       // جلب المصروفات
       const { data: expensesData, error: expensesError } = await supabase

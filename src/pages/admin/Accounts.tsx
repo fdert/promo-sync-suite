@@ -793,51 +793,51 @@ const Accounts = () => {
     return { start, end };
   };
 
-  // جلب الإيرادات الشهرية من الطلبات
+  // جلب الإيرادات الشهرية من المدفوعات (لتطابق التقارير)
   const fetchMonthlyRevenue = async () => {
     try {
-      // الشهر الحالي
+      // الشهر الحالي - حساب من المدفوعات
       const currentMonthRange = getDateRange('current_month');
-      const { data: currentData, error: currentError } = await supabase
-        .from('orders')
-        .select('amount, created_at')
-        .gte('created_at', currentMonthRange.start.toISOString())
-        .lte('created_at', currentMonthRange.end.toISOString());
+      const { data: currentPayments, error: currentError } = await supabase
+        .from('payments')
+        .select('amount, payment_date, payment_type')
+        .gte('payment_date', currentMonthRange.start.toISOString().split('T')[0])
+        .lte('payment_date', currentMonthRange.end.toISOString().split('T')[0]);
 
       if (currentError) {
-        console.error('Error fetching current month revenue:', currentError);
+        console.error('Error fetching current month payments:', currentError);
       } else {
-        const revenue = (currentData || []).reduce((sum, order) => sum + (order.amount || 0), 0);
+        const revenue = (currentPayments || []).reduce((sum, payment) => sum + (payment.amount || 0), 0);
         setMonthlyIncome(revenue);
       }
 
-      // الشهر الماضي
+      // الشهر الماضي - حساب من المدفوعات
       const lastMonthRange = getDateRange('last_month');
-      const { data: lastData, error: lastError } = await supabase
-        .from('orders')
-        .select('amount, created_at')
-        .gte('created_at', lastMonthRange.start.toISOString())
-        .lte('created_at', lastMonthRange.end.toISOString());
+      const { data: lastPayments, error: lastError } = await supabase
+        .from('payments')
+        .select('amount, payment_date, payment_type')
+        .gte('payment_date', lastMonthRange.start.toISOString().split('T')[0])
+        .lte('payment_date', lastMonthRange.end.toISOString().split('T')[0]);
 
       if (lastError) {
-        console.error('Error fetching last month revenue:', lastError);
+        console.error('Error fetching last month payments:', lastError);
       } else {
-        const revenue = (lastData || []).reduce((sum, order) => sum + (order.amount || 0), 0);
+        const revenue = (lastPayments || []).reduce((sum, payment) => sum + (payment.amount || 0), 0);
         setLastMonthIncome(revenue);
       }
 
-      // السنة الحالية
+      // السنة الحالية - حساب من المدفوعات  
       const yearlyRange = getDateRange('current_year');
-      const { data: yearlyData, error: yearlyError } = await supabase
-        .from('orders')
-        .select('amount, created_at')
-        .gte('created_at', yearlyRange.start.toISOString())
-        .lte('created_at', yearlyRange.end.toISOString());
+      const { data: yearlyPayments, error: yearlyError } = await supabase
+        .from('payments')
+        .select('amount, payment_date, payment_type')
+        .gte('payment_date', yearlyRange.start.toISOString().split('T')[0])
+        .lte('payment_date', yearlyRange.end.toISOString().split('T')[0]);
 
       if (yearlyError) {
-        console.error('Error fetching yearly revenue:', yearlyError);
+        console.error('Error fetching yearly payments:', yearlyError);
       } else {
-        const revenue = (yearlyData || []).reduce((sum, order) => sum + (order.amount || 0), 0);
+        const revenue = (yearlyPayments || []).reduce((sum, payment) => sum + (payment.amount || 0), 0);
         setYearlyIncome(revenue);
       }
 
@@ -848,22 +848,22 @@ const Accounts = () => {
     }
   };
 
-  // جلب البيانات المفلترة حسب الفترة المحددة
+  // جلب البيانات المفلترة حسب الفترة المحددة (من المدفوعات لتطابق التقارير)
   const fetchFilteredData = async () => {
     try {
       const { start, end } = getDateRange(dateFilter.period, dateFilter.startDate, dateFilter.endDate);
 
-      // جلب الإيرادات للفترة المحددة
-      const { data: ordersData, error: ordersError } = await supabase
-        .from('orders')
-        .select('amount, created_at')
-        .gte('created_at', start.toISOString())
-        .lte('created_at', end.toISOString());
+      // جلب الإيرادات للفترة المحددة من المدفوعات
+      const { data: paymentsData, error: paymentsError } = await supabase
+        .from('payments')
+        .select('amount, payment_date, payment_type')
+        .gte('payment_date', start.toISOString().split('T')[0])
+        .lte('payment_date', end.toISOString().split('T')[0]);
 
-      if (ordersError) {
-        console.error('Error fetching filtered orders:', ordersError);
+      if (paymentsError) {
+        console.error('Error fetching filtered payments:', paymentsError);
       } else {
-        const revenue = (ordersData || []).reduce((sum, order) => sum + (order.amount || 0), 0);
+        const revenue = (paymentsData || []).reduce((sum, payment) => sum + (payment.amount || 0), 0);
         setFilteredIncome(revenue);
       }
 
