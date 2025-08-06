@@ -31,6 +31,7 @@ import WebhookSettings from "./pages/admin/WebhookSettings";
 import WebsiteContent from "./pages/admin/WebsiteContent";
 import Settings from "./pages/admin/Settings";
 import ServiceTypes from "./pages/admin/ServiceTypes";
+import EmployeeServiceTypes from "./pages/employee/ServiceTypes";
 import MessageTemplates from "./pages/admin/MessageTemplates";
 import UserDashboard from "./pages/user/UserDashboard";
 import EmployeeDashboard from "./pages/employee/EmployeeDashboard";
@@ -75,6 +76,7 @@ const App = () => (
               <Route index element={<EmployeeDashboard />} />
               <Route path="customers" element={<EmployeeCustomers />} />
               <Route path="orders" element={<EmployeeOrders />} />
+              <Route path="service-types" element={<EmployeeServiceTypes />} />
               <Route path="invoices" element={<Invoices />} />
               <Route path="print-orders" element={<EmployeePrintOrders />} />
               <Route path="evaluations" element={<Evaluations />} />
