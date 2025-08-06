@@ -64,28 +64,10 @@ const ReviewsManagement = () => {
 
       if (error) throw error;
       
-      // الموافقة التلقائية على التقييمات الجديدة (فقط إذا كان لديها تقييم وتقييم 4 أو أكثر)
-      const newEvaluations = (data || []).filter(
-        evaluation => evaluation.google_review_status === 'pending' && 
-                     evaluation.rating && 
-                     evaluation.rating >= 4
-      );
+      // عرض جميع التقييمات للمراجعة اليدوية
+      // سيتم إرسال رسائل جوجل ماب يدوياً من واجهة الإدارة
       
-      for (const evaluation of newEvaluations) {
-        await autoApproveEvaluation(evaluation.id);
-      }
-      
-      // إعادة تحميل البيانات بعد الموافقة التلقائية
-      const { data: updatedData } = await supabase
-        .from("evaluations")
-        .select(`
-          *,
-          customers (name, phone, whatsapp_number),
-          orders (order_number, service_name)
-        `)
-        .order("created_at", { ascending: false });
-      
-      setEvaluations(updatedData || []);
+      setEvaluations(data || []);
     } catch (error) {
       console.error("Error fetching evaluations:", error);
       toast({
@@ -122,6 +104,9 @@ const ReviewsManagement = () => {
   const sendGoogleReviewToCustomer = async (evaluationId: string, notes?: string) => {
     setActionLoading(evaluationId);
     try {
+      // إرسال رسالة واتساب للعميل
+      await sendGoogleReviewRequest(evaluationId);
+
       // تحديث الحالة إلى "sent_to_customer"
       const { error } = await supabase
         .from("evaluations")
@@ -129,14 +114,13 @@ const ReviewsManagement = () => {
           google_review_status: "sent_to_customer",
           admin_notes: notes,
           google_review_sent_at: new Date().toISOString(),
+          approved_by: (await supabase.auth.getUser()).data.user?.id,
+          approved_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
         .eq("id", evaluationId);
 
       if (error) throw error;
-
-      // إرسال رسالة واتساب للعميل
-      await sendGoogleReviewRequest(evaluationId);
 
       await fetchEvaluations();
       toast({
@@ -263,10 +247,18 @@ const ReviewsManagement = () => {
             <CardContent className="space-y-4">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium">التقييم:</span>
-                <div className="flex">{renderStars(evaluation.rating)}</div>
-                <span className="text-sm text-muted-foreground">
-                  ({evaluation.rating}/5)
-                </span>
+                {evaluation.rating ? (
+                  <>
+                    <div className="flex">{renderStars(evaluation.rating)}</div>
+                    <span className="text-sm text-muted-foreground">
+                      ({evaluation.rating}/5)
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-sm text-muted-foreground">
+                    لم يتم التقييم بعد
+                  </span>
+                )}
               </div>
 
               {evaluation.feedback_text && (
@@ -296,7 +288,7 @@ const ReviewsManagement = () => {
                 )}
               </div>
 
-              {evaluation.google_review_status === "approved" && evaluation.rating >= 4 && (
+              {evaluation.google_review_status === "pending" && (
                 <div className="flex gap-2">
                   <Dialog>
                     <DialogTrigger asChild>
