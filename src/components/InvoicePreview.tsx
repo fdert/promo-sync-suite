@@ -209,10 +209,10 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({
               </div>
             </div>
 
-            {/* Payment Info */}
-            <div className="mb-4">
-              <div className="bg-blue-50 p-2 rounded text-xs">
-                <strong className="text-blue-600 block mb-1">معلومات الدفع:</strong>
+             {/* Payment Info */}
+             <div className="mb-4">
+               <div className="bg-blue-50 p-2 rounded text-xs">
+                 <strong className="text-blue-600 block mb-1">معلومات الحالة:</strong>
                  <div className="grid grid-cols-1 gap-2">
                    <div>
                      <span className="text-gray-600">حالة الفاتورة:</span>
