@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -11,10 +12,36 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
   Settings,
   Search,
   Eye,
   EyeOff,
+  Plus,
+  Edit,
+  Trash2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,6 +50,15 @@ const ServiceTypes = () => {
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingService, setEditingService] = useState(null);
+  const [formData, setFormData] = useState({
+    name: "",
+    category: "",
+    description: "",
+    base_price: "",
+    is_active: true,
+  });
 
   const { toast } = useToast();
 
@@ -57,6 +93,110 @@ const ServiceTypes = () => {
   useEffect(() => {
     fetchServices();
   }, []);
+
+  // فتح dialog الإضافة
+  const handleAddNew = () => {
+    setEditingService(null);
+    setFormData({
+      name: "",
+      category: "",
+      description: "",
+      base_price: "",
+      is_active: true,
+    });
+    setDialogOpen(true);
+  };
+
+  // فتح dialog التعديل
+  const handleEdit = (service) => {
+    setEditingService(service);
+    setFormData({
+      name: service.name || "",
+      category: service.category || "",
+      description: service.description || "",
+      base_price: service.base_price?.toString() || "",
+      is_active: service.is_active,
+    });
+    setDialogOpen(true);
+  };
+
+  // حفظ الخدمة (إضافة أو تعديل)
+  const handleSave = async () => {
+    try {
+      const serviceData = {
+        name: formData.name,
+        category: formData.category || null,
+        description: formData.description || null,
+        base_price: formData.base_price ? parseFloat(formData.base_price) : null,
+        is_active: formData.is_active,
+      };
+
+      let error;
+      if (editingService) {
+        // تعديل خدمة موجودة
+        const { error: updateError } = await supabase
+          .from('services')
+          .update(serviceData)
+          .eq('id', editingService.id);
+        error = updateError;
+      } else {
+        // إضافة خدمة جديدة
+        const { error: insertError } = await supabase
+          .from('services')
+          .insert([serviceData]);
+        error = insertError;
+      }
+
+      if (error) {
+        console.error('Error saving service:', error);
+        toast({
+          title: "خطأ",
+          description: "حدث خطأ في حفظ الخدمة",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "نجح الحفظ",
+        description: editingService ? "تم تحديث الخدمة بنجاح" : "تم إضافة الخدمة بنجاح",
+      });
+
+      setDialogOpen(false);
+      fetchServices();
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
+  // حذف خدمة
+  const handleDelete = async (serviceId) => {
+    try {
+      const { error } = await supabase
+        .from('services')
+        .delete()
+        .eq('id', serviceId);
+
+      if (error) {
+        console.error('Error deleting service:', error);
+        toast({
+          title: "خطأ",
+          description: "حدث خطأ في حذف الخدمة",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "تم الحذف",
+        description: "تم حذف الخدمة بنجاح",
+      });
+
+      fetchServices();
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
 
   const filteredServices = services.filter(service =>
     service.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -99,6 +239,10 @@ const ServiceTypes = () => {
               className="pl-10 w-64"
             />
           </div>
+          <Button onClick={handleAddNew} className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            إضافة خدمة جديدة
+          </Button>
         </div>
       </div>
 
@@ -161,6 +305,7 @@ const ServiceTypes = () => {
                 <TableHead>السعر الأساسي</TableHead>
                 <TableHead>الحالة</TableHead>
                 <TableHead>الوصف</TableHead>
+                <TableHead>الإجراءات</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -205,6 +350,46 @@ const ServiceTypes = () => {
                         {service.description || 'لا يوجد وصف'}
                       </p>
                     </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(service)}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                هل أنت متأكد من حذف الخدمة "{service.name}"؟ لا يمكن التراجع عن هذا الإجراء.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleDelete(service.id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                حذف
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))
               )}
@@ -212,6 +397,93 @@ const ServiceTypes = () => {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Dialog للإضافة والتعديل */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>
+              {editingService ? 'تعديل الخدمة' : 'إضافة خدمة جديدة'}
+            </DialogTitle>
+            <DialogDescription>
+              {editingService 
+                ? 'قم بتعديل بيانات الخدمة وانقر حفظ عند الانتهاء.'
+                : 'أدخل بيانات الخدمة الجديدة وانقر حفظ عند الانتهاء.'
+              }
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name">اسم الخدمة *</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="أدخل اسم الخدمة"
+              />
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="category">الفئة</Label>
+              <Input
+                id="category"
+                value={formData.category}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                placeholder="أدخل فئة الخدمة"
+              />
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="base_price">السعر الأساسي (ر.س)</Label>
+              <Input
+                id="base_price"
+                type="number"
+                value={formData.base_price}
+                onChange={(e) => setFormData({ ...formData, base_price: e.target.value })}
+                placeholder="أدخل السعر الأساسي"
+              />
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="description">الوصف</Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="أدخل وصف الخدمة"
+                rows={3}
+              />
+            </div>
+            
+            <div className="flex items-center space-x-2 space-x-reverse">
+              <Switch
+                id="is_active"
+                checked={formData.is_active}
+                onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+              />
+              <Label htmlFor="is_active">الخدمة نشطة</Label>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDialogOpen(false)}
+            >
+              إلغاء
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSave}
+              disabled={!formData.name.trim()}
+            >
+              {editingService ? 'حفظ التعديل' : 'إضافة الخدمة'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
