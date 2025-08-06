@@ -129,6 +129,9 @@ const Invoices = () => {
   };
 
   const handlePrintInvoice = async (invoice) => {
+    console.log('🖨️ بدء طباعة الفاتورة:', invoice.invoice_number);
+    console.log('📊 حالة الفاتورة الأولية:', invoice.status);
+    
     // جلب بنود الفاتورة
     const { data: invoiceItems, error } = await supabase
       .from('invoice_items')
@@ -149,9 +152,14 @@ const Invoices = () => {
       console.error('Error fetching payments:', paymentsError);
     }
 
+    console.log('💰 المدفوعات المجلبة:', paymentsData);
+
     // حساب إجمالي المدفوعات والحالة الفعلية
     const totalPaid = paymentsData?.reduce((sum, payment) => sum + payment.amount, 0) || 0;
     const hasPayments = paymentsData && paymentsData.length > 0;
+    
+    console.log('💵 إجمالي المدفوعات:', totalPaid);
+    console.log('💸 إجمالي الفاتورة:', invoice.total_amount);
     
     // تحديد الحالة الفعلية والطريقة
     let actualStatus = 'قيد الانتظار';
@@ -173,7 +181,12 @@ const Invoices = () => {
       }
     }
 
+    console.log('✅ الحالة المحسوبة:', actualStatus);
+    console.log('🔄 نوع الدفع الفعلي:', actualPaymentType);
+
     const items = invoiceItems || [];
+    
+    console.log('🎯 الحالة التي ستُستخدم في الطباعة:', actualStatus);
     
     // إنشاء محتوى HTML للطباعة
     const printContent = `
@@ -718,6 +731,17 @@ const Invoices = () => {
     const printWindow = window.open('', '_blank', 'width=800,height=600');
     printWindow.document.write(printContent);
     printWindow.document.close();
+    
+    console.log('🖼️ تم إنشاء محتوى الطباعة بالحالة:', actualStatus);
+    console.log('📋 HTML content includes status:', printContent.includes(actualStatus));
+    
+    // إغلاق نافذة الطباعة
+    setPrintingInvoice(null);
+    
+    toast({
+      title: "تم إعداد الطباعة",
+      description: `تم إعداد طباعة الفاتورة ${invoice.invoice_number} بالحالة: ${actualStatus}`,
+    });
   };
 
   const handleEditInvoice = (invoice) => {
@@ -1076,7 +1100,7 @@ const Invoices = () => {
                             variant="outline" 
                             size="sm" 
                             className="gap-2"
-                            onClick={() => handlePrintInvoice(invoice)}
+                            onClick={() => setPrintingInvoice(invoice)}
                           >
                             <Printer className="h-4 w-4" />
                             طباعة
