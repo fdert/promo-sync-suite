@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Plus, TrendingUp, TrendingDown, DollarSign, CreditCard, Receipt, CalendarRange, BookOpen, BarChart3, Trash2, Edit2, Eye, Users, Search, Filter, RefreshCw } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, DollarSign, CreditCard, Receipt, CalendarRange, BookOpen, BarChart3, Trash2, Edit2, Eye, Users, Search, Filter, RefreshCw, Eraser, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -496,6 +496,169 @@ const Accounts = () => {
     }
   };
 
+  // تصفير جميع الحسابات
+  const handleResetAllAccounts = async () => {
+    try {
+      // حذف جميع القيود المحاسبية
+      const { error: entriesError } = await supabase
+        .from('account_entries')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000'); // حذف جميع السجلات
+
+      if (entriesError) {
+        console.error('Error deleting account entries:', entriesError);
+        toast({
+          title: "خطأ",
+          description: "حدث خطأ في حذف القيود المحاسبية",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // تصفير أرصدة جميع الحسابات
+      const { error: accountsError } = await supabase
+        .from('accounts')
+        .update({ balance: 0 })
+        .neq('id', '00000000-0000-0000-0000-000000000000');
+
+      if (accountsError) {
+        console.error('Error resetting account balances:', accountsError);
+        toast({
+          title: "خطأ",
+          description: "حدث خطأ في تصفير أرصدة الحسابات",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "تم التصفير",
+        description: "تم تصفير جميع الحسابات والقيود المحاسبية بنجاح",
+        variant: "default",
+      });
+
+      // تحديث البيانات
+      refreshAllData();
+    } catch (error) {
+      console.error('Error resetting accounts:', error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ في تصفير الحسابات",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // تصفير العملاء المدينون
+  const handleResetDebtors = async () => {
+    try {
+      // حذف جميع المدفوعات
+      const { error: paymentsError } = await supabase
+        .from('payments')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000');
+
+      if (paymentsError) {
+        console.error('Error deleting payments:', paymentsError);
+        toast({
+          title: "خطأ", 
+          description: "حدث خطأ في حذف المدفوعات",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // حذف جميع الفواتير
+      const { error: invoicesError } = await supabase
+        .from('invoices')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000');
+
+      if (invoicesError) {
+        console.error('Error deleting invoices:', invoicesError);
+        toast({
+          title: "خطأ",
+          description: "حدث خطأ في حذف الفواتير",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "تم التصفير",
+        description: "تم تصفير جميع بيانات العملاء المدينون بنجاح",
+        variant: "default",
+      });
+
+      // تحديث البيانات
+      refreshAllData();
+    } catch (error) {
+      console.error('Error resetting debtors:', error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ في تصفير العملاء المدينون",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // حذف عميل مدين محدد
+  const handleDeleteDebtor = async (customerId: string, customerName: string) => {
+    try {
+      // حذف جميع المدفوعات المرتبطة بطلبات العميل
+      const { data: customerOrders } = await supabase
+        .from('orders')
+        .select('id')
+        .eq('customer_id', customerId);
+
+      if (customerOrders && customerOrders.length > 0) {
+        const orderIds = customerOrders.map(order => order.id);
+        
+        const { error: paymentsError } = await supabase
+          .from('payments')
+          .delete()
+          .in('order_id', orderIds);
+
+        if (paymentsError) {
+          console.error('Error deleting customer payments:', paymentsError);
+        }
+      }
+
+      // حذف جميع الفواتير للعميل
+      const { error: invoicesError } = await supabase
+        .from('invoices')
+        .delete()
+        .eq('customer_id', customerId);
+
+      if (invoicesError) {
+        console.error('Error deleting customer invoices:', invoicesError);
+        toast({
+          title: "خطأ",
+          description: "حدث خطأ في حذف فواتير العميل",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "تم الحذف",
+        description: `تم حذف جميع ديون العميل ${customerName} بنجاح`,
+        variant: "default",
+      });
+
+      // تحديث البيانات
+      fetchDebtorInvoices();
+      fetchAccounts();
+    } catch (error) {
+      console.error('Error deleting debtor:', error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ في حذف بيانات العميل",
+        variant: "destructive",
+      });
+    }
+  };
+
   // حساب الإحصائيات - حساب الإيرادات من الطلبات المكتملة لتطابق الداشبورد  
   const [monthlyIncome, setMonthlyIncome] = useState(0);
 
@@ -562,14 +725,47 @@ const Accounts = () => {
         </div>
         <div className="flex gap-2">
           {userRole === 'admin' && (
-            <Button 
-              variant="outline" 
-              onClick={handleFixAccountingEntries}
-              className="gap-2"
-            >
-              <BookOpen className="h-4 w-4" />
-              إصلاح قيود الطلبات
-            </Button>
+            <>
+              <Button 
+                variant="outline" 
+                onClick={handleFixAccountingEntries}
+                className="gap-2"
+              >
+                <BookOpen className="h-4 w-4" />
+                إصلاح قيود الطلبات
+              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    className="gap-2 text-destructive hover:text-destructive"
+                  >
+                    <Eraser className="h-4 w-4" />
+                    تصفير الحسابات
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="flex items-center gap-2">
+                      <AlertTriangle className="h-5 w-5 text-destructive" />
+                      تأكيد تصفير الحسابات
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      تحذير: هذا الإجراء سيقوم بحذف جميع القيود المحاسبية وتصفير أرصدة جميع الحسابات. لا يمكن التراجع عن هذا الإجراء.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                    <AlertDialogAction 
+                      onClick={handleResetAllAccounts}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      تصفير الحسابات
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </>
           )}
         </div>
       </div>
@@ -1061,8 +1257,44 @@ const Accounts = () => {
         <TabsContent value="debtors" className="space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold">العملاء المدينون</h2>
-            <div className="text-sm text-muted-foreground">
-              إجمالي المبالغ المستحقة: <span className="font-bold text-warning">{(totalDebts || 0).toLocaleString()} ر.س</span>
+            <div className="flex items-center gap-4">
+              {userRole === 'admin' && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      className="gap-2 text-destructive hover:text-destructive"
+                      size="sm"
+                    >
+                      <Eraser className="h-4 w-4" />
+                      تصفير العملاء المدينون
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle className="flex items-center gap-2">
+                        <AlertTriangle className="h-5 w-5 text-destructive" />
+                        تأكيد تصفير العملاء المدينون
+                      </AlertDialogTitle>
+                      <AlertDialogDescription>
+                        تحذير: هذا الإجراء سيقوم بحذف جميع الفواتير والمدفوعات المرتبطة بالعملاء المدينون. لا يمكن التراجع عن هذا الإجراء.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                      <AlertDialogAction 
+                        onClick={handleResetDebtors}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        تصفير العملاء المدينون
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+              <div className="text-sm text-muted-foreground">
+                إجمالي المبالغ المستحقة: <span className="font-bold text-warning">{(totalDebts || 0).toLocaleString()} ر.س</span>
+              </div>
             </div>
           </div>
 
@@ -1201,6 +1433,40 @@ const Accounts = () => {
                           }}>
                             <Eye className="h-4 w-4" />
                           </Button>
+                          {userRole === 'admin' && (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  className="text-destructive hover:text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle className="flex items-center gap-2">
+                                    <AlertTriangle className="h-5 w-5 text-destructive" />
+                                    تأكيد حذف بيانات العميل
+                                  </AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    هل أنت متأكد من حذف جميع الفواتير والديون المرتبطة بالعميل "{customer.customer_name}"؟ 
+                                    لا يمكن التراجع عن هذا الإجراء.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                                  <AlertDialogAction 
+                                    onClick={() => handleDeleteDebtor(customer.customer_id, customer.customer_name)}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  >
+                                    حذف بيانات العميل
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          )}
                         </div>
                       </div>
                     );
