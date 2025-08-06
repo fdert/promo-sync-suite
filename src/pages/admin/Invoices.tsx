@@ -419,9 +419,18 @@ const Invoices = () => {
           
           .payment-grid {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
+            flex-direction: column;
+            gap: 8px;
             font-size: 12px;
+          }
+          
+          .payment-details {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px dashed #93c5fd;
           }
           
           .status-badge {
@@ -442,6 +451,11 @@ const Invoices = () => {
             background: #fff3cd;
             color: #856404;
             border: 1px solid #ffeaa7;
+          }
+          .status-partial { 
+            background: #cce7ff;
+            color: #0066cc;
+            border: 1px solid #99d6ff;
           }
           .status-overdue { 
             background: #f8d7da;
@@ -650,8 +664,10 @@ const Invoices = () => {
                 }">${actualStatus}</span>
               </div>
               ${totalPaid > 0 ? `
-                <div><strong>المبلغ المدفوع:</strong> ${totalPaid.toFixed(2)} ر.س</div>
-                <div><strong>المبلغ المتبقي:</strong> ${(invoice.total_amount - totalPaid).toFixed(2)} ر.س</div>
+                <div class="payment-details">
+                  <div><strong>المبلغ المدفوع:</strong> ${totalPaid.toFixed(2)} ر.س</div>
+                  <div><strong>المبلغ المتبقي:</strong> ${(invoice.total_amount - totalPaid).toFixed(2)} ر.س</div>
+                </div>
               ` : ''}
             </div>
           </div>

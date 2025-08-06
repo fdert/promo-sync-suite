@@ -17,6 +17,7 @@ interface InvoicePrintProps {
     tax_amount: number;
     total_amount: number;
     status: string;
+    actual_status?: string;
     notes?: string;
     payment_type: string;
     customers?: {
@@ -301,7 +302,7 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
         border: '1px solid #ddd',
         pageBreakInside: 'avoid'
       }}>
-        <span><strong>الحالة:</strong> {invoice.status}</span>
+        <span><strong>الحالة:</strong> {invoice.actual_status || invoice.status}</span>
       </div>
 
       {/* Notes */}
