@@ -95,24 +95,35 @@ const Invoices = () => {
     const totalPaid = paymentsData?.reduce((sum, payment) => sum + payment.amount, 0) || 0;
     const hasPayments = paymentsData && paymentsData.length > 0;
     
-    // تحديد الحالة الفعلية والطريقة
-    let actualStatus = 'قيد الانتظار';
+    // تحديد الحالة الفعلية
+    let actualStatus;
+    
+    // إذا كانت الفاتورة محددة كـ "مدفوع" أو "مدفوعة" في قاعدة البيانات ولا توجد مدفوعات، استخدم الحالة الأصلية
+    if ((invoice.status === 'مدفوع' || invoice.status === 'مدفوعة') && !hasPayments) {
+      actualStatus = 'مدفوعة';
+    } else {
+      // حساب الحالة من المدفوعات الفعلية
+      if (hasPayments) {
+        if (totalPaid >= invoice.total_amount) {
+          actualStatus = 'مدفوعة';
+        } else if (totalPaid > 0) {
+          actualStatus = 'مدفوعة جزئياً';
+        } else {
+          actualStatus = 'قيد الانتظار';
+        }
+      } else {
+        actualStatus = 'قيد الانتظار';
+      }
+    }
+    
     let actualPaymentType = 'دفع آجل';
     
-    if (hasPayments) {
-      if (totalPaid >= invoice.total_amount) {
-        actualStatus = 'مدفوعة';
-      } else if (totalPaid > 0) {
-        actualStatus = 'مدفوعة جزئياً';
-      }
-      
-      // استخدام نوع الدفع من آخر دفعة
-      if (paymentsData.length > 0) {
-        const latestPayment = paymentsData.sort((a, b) => 
-          new Date(b.payment_date).getTime() - new Date(a.payment_date).getTime()
-        )[0];
-        actualPaymentType = latestPayment.payment_type;
-      }
+    // استخدام نوع الدفع من آخر دفعة إذا وجدت
+    if (hasPayments && paymentsData.length > 0) {
+      const latestPayment = paymentsData.sort((a, b) => 
+        new Date(b.payment_date).getTime() - new Date(a.payment_date).getTime()
+      )[0];
+      actualPaymentType = latestPayment.payment_type;
     }
 
     // تحديث الفاتورة مع البيانات الصحيحة
@@ -160,25 +171,42 @@ const Invoices = () => {
     
     console.log('💵 إجمالي المدفوعات:', totalPaid);
     console.log('💸 إجمالي الفاتورة:', invoice.total_amount);
+    console.log('📋 حالة الفاتورة الأصلية:', invoice.status);
     
-    // تحديد الحالة الفعلية والطريقة
-    let actualStatus = 'قيد الانتظار';
+    // تحديد الحالة الفعلية
+    let actualStatus;
+    
+    // إذا كانت الفاتورة محددة كـ "مدفوع" في قاعدة البيانات ولا توجد مدفوعات، استخدم الحالة الأصلية
+    if (invoice.status === 'مدفوع' && !hasPayments) {
+      actualStatus = 'مدفوعة';
+      console.log('🔄 استخدام الحالة الأصلية لأنه لا توجد مدفوعات مسجلة');
+    } else if (invoice.status === 'مدفوعة' && !hasPayments) {
+      actualStatus = 'مدفوعة';
+      console.log('🔄 استخدام الحالة الأصلية لأنه لا توجد مدفوعات مسجلة');
+    } else {
+      // حساب الحالة من المدفوعات الفعلية
+      if (hasPayments) {
+        if (totalPaid >= invoice.total_amount) {
+          actualStatus = 'مدفوعة';
+        } else if (totalPaid > 0) {
+          actualStatus = 'مدفوعة جزئياً';
+        } else {
+          actualStatus = 'قيد الانتظار';
+        }
+      } else {
+        actualStatus = 'قيد الانتظار';
+      }
+      console.log('🧮 حساب الحالة من المدفوعات');
+    }
+    
     let actualPaymentType = 'دفع آجل';
     
-    if (hasPayments) {
-      if (totalPaid >= invoice.total_amount) {
-        actualStatus = 'مدفوعة';
-      } else if (totalPaid > 0) {
-        actualStatus = 'مدفوعة جزئياً';
-      }
-      
-      // استخدام نوع الدفع من آخر دفعة
-      if (paymentsData.length > 0) {
-        const latestPayment = paymentsData.sort((a, b) => 
-          new Date(b.payment_date).getTime() - new Date(a.payment_date).getTime()
-        )[0];
-        actualPaymentType = latestPayment.payment_type;
-      }
+    // استخدام نوع الدفع من آخر دفعة إذا وجدت
+    if (hasPayments && paymentsData.length > 0) {
+      const latestPayment = paymentsData.sort((a, b) => 
+        new Date(b.payment_date).getTime() - new Date(a.payment_date).getTime()
+      )[0];
+      actualPaymentType = latestPayment.payment_type;
     }
 
     console.log('✅ الحالة المحسوبة:', actualStatus);
