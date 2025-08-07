@@ -113,27 +113,43 @@ const BarcodeSettings = () => {
         .eq('setting_key', 'website_content')
         .single();
 
+      if (error) {
+        console.error('Error fetching website settings:', error);
+        return;
+      }
+
       if (data?.setting_value && typeof data.setting_value === 'object') {
         const websiteContent = data.setting_value as any;
         const companyInfo = websiteContent.companyInfo;
         const contactInfo = websiteContent.contactInfo;
         
         if (companyInfo || contactInfo) {
+          // تحديث الإعدادات بالبيانات الحقيقية من الموقع
           setSettings(prev => ({
             ...prev,
-            company_name: companyInfo?.name || prev.company_name,
-            company_phone: contactInfo?.phone || prev.company_phone,
-            company_address: contactInfo?.address || prev.company_address,
+            company_name: companyInfo?.name || 'وكالة الإبداع للدعاية والإعلان',
+            company_phone: contactInfo?.phone || '',
+            company_address: contactInfo?.address || '',
             company_logo_url: companyInfo?.logo || prev.company_logo_url,
           }));
           
           if (companyInfo?.logo) {
             setLogoPreview(companyInfo.logo);
           }
+
+          toast({
+            title: "تم ربط البيانات",
+            description: "تم ربط معلومات الشركة من موقع الوكالة بنجاح",
+          });
         }
       }
     } catch (error) {
-      console.log('Could not fetch website settings, using current values');
+      console.error('Error fetching website settings:', error);
+      toast({
+        title: "تعذر ربط البيانات",
+        description: "لم نتمكن من ربط معلومات الشركة من الموقع",
+        variant: "destructive",
+      });
     }
   };
 
