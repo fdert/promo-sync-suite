@@ -45,7 +45,7 @@ interface PaymentDetails {
   amount: number;
   payment_type: string;
   payment_date: string;
-  invoice_id: string;
+  order_id: string;
 }
 
 interface AccountingSummary {
@@ -91,13 +91,13 @@ const AccountsReceivableReview = () => {
         await fetchCustomerPayments(customerIds);
       }
 
-      // جلب الفواتير غير المدفوعة مع تفاصيلها من الـ view الجديد
-      const { data: invoicesData } = await supabase
-        .from('invoice_payment_summary')
+      // جلب الطلبات غير المدفوعة مع تفاصيلها من الـ view الجديد
+      const { data: ordersData } = await supabase
+        .from('order_payment_summary')
         .select(`
           id,
-          invoice_number,
-          total_amount,
+          order_number,
+          amount,
           calculated_paid_amount,
           remaining_amount,
           due_date,
@@ -106,57 +106,26 @@ const AccountsReceivableReview = () => {
         `)
         .gt('remaining_amount', 0);
 
-      // جلب أسماء العملاء
-      const customerIds = [...new Set(invoicesData?.map(inv => inv.customer_id).filter(Boolean))];
-      const { data: customersData } = await supabase
-        .from('customers')
-        .select('id, name')
-        .in('id', customerIds);
-
-      if (invoicesData && customersData) {
-        const customerMap = new Map(customersData.map(customer => [customer.id, customer.name]));
-        
-        const formattedInvoices = invoicesData.map(invoice => {
-          const dueDate = new Date(invoice.due_date);
-          const today = new Date();
-          const daysOverdue = differenceInDays(today, dueDate);
-          
-          return {
-            invoice_id: invoice.id,
-            invoice_number: invoice.invoice_number,
-            customer_name: customerMap.get(invoice.customer_id) || 'غير محدد',
-            total_amount: invoice.total_amount,
-            paid_amount: invoice.calculated_paid_amount || 0,
-            remaining_amount: invoice.remaining_amount,
-            due_date: invoice.due_date,
-            days_overdue: daysOverdue > 0 ? daysOverdue : 0,
-            status: invoice.status
-          };
-        });
-        
-        setUnpaidInvoices(formattedInvoices.sort((a, b) => b.days_overdue - a.days_overdue));
-      }
-
-      // جلب ملخص الحسابات
+      // جلب ملخص الحسابات من الطلبات
       const { data: summaryData } = await supabase
-        .from('invoice_payment_summary')
+        .from('order_payment_summary')
         .select('*')
         .gt('remaining_amount', 0.01);
 
       if (summaryData && summaryData.length > 0) {
-        const totalInvoiced = summaryData.reduce((sum, inv) => sum + inv.total_amount, 0);
-        const totalPaid = summaryData.reduce((sum, inv) => sum + (inv.calculated_paid_amount || 0), 0);
-        const totalOutstanding = summaryData.reduce((sum, inv) => sum + (inv.remaining_amount || 0), 0);
+        const totalOrdered = summaryData.reduce((sum, order) => sum + order.amount, 0);
+        const totalPaid = summaryData.reduce((sum, order) => sum + (order.calculated_paid_amount || 0), 0);
+        const totalOutstanding = summaryData.reduce((sum, order) => sum + (order.remaining_amount || 0), 0);
         
         // جلب رصيد العملاء المدينين من الحسابات
         const { data: accountData } = await supabase
           .from('accounts')
           .select('balance')
           .eq('account_name', 'العملاء المدينون')
-          .single();
+          .maybeSingle();
         
         setAccountingSummary({
-          total_invoiced: totalInvoiced,
+          total_invoiced: totalOrdered,
           total_paid: totalPaid,
           total_outstanding: totalOutstanding,
           account_balance: accountData?.balance || 0
@@ -203,15 +172,15 @@ const AccountsReceivableReview = () => {
           amount, 
           payment_type, 
           payment_date, 
-          invoice_id,
-          invoices!inner(customer_id)
+          order_id,
+          orders!inner(customer_id)
         `)
-        .in('invoices.customer_id', customerIds)
+        .in('orders.customer_id', customerIds)
         .order('payment_date', { ascending: false });
 
       if (paymentsData) {
         const paymentsGrouped = paymentsData.reduce((acc, payment) => {
-          const customerId = (payment.invoices as any).customer_id;
+          const customerId = (payment.orders as any).customer_id;
           if (!acc[customerId]) {
             acc[customerId] = [];
           }
@@ -220,7 +189,7 @@ const AccountsReceivableReview = () => {
             amount: payment.amount,
             payment_type: payment.payment_type,
             payment_date: payment.payment_date,
-            invoice_id: payment.invoice_id
+            order_id: payment.order_id
           });
           return acc;
         }, {} as Record<string, PaymentDetails[]>);
@@ -285,7 +254,7 @@ const AccountsReceivableReview = () => {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">إجمالي الفواتير</CardTitle>
+            <CardTitle className="text-sm font-medium">إجمالي الطلبات</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -349,7 +318,7 @@ const AccountsReceivableReview = () => {
               <TableRow>
                 <TableHead>اسم العميل</TableHead>
                 <TableHead>المبلغ المستحق</TableHead>
-                <TableHead>عدد الفواتير</TableHead>
+                <TableHead>عدد الطلبات</TableHead>
                 <TableHead>أقرب استحقاق</TableHead>
                 <TableHead>آخر استحقاق</TableHead>
                 <TableHead>الإجراءات</TableHead>
@@ -365,7 +334,7 @@ const AccountsReceivableReview = () => {
                     </span>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="secondary">{customer.unpaid_invoices_count} فاتورة</Badge>
+                    <Badge variant="secondary">{customer.unpaid_invoices_count} طلب</Badge>
                   </TableCell>
                   <TableCell>
                     {format(new Date(customer.earliest_due_date), 'dd/MM/yyyy', { locale: ar })}
