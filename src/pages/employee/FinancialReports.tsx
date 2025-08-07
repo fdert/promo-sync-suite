@@ -116,7 +116,7 @@ const FinancialReports = () => {
 
       // حساب العملاء المدينون
       const { data: debtorsData, error: debtorsError } = await supabase
-        .from('customer_order_balances')
+        .from('customer_outstanding_balances')
         .select('outstanding_balance');
 
       if (debtorsError) {

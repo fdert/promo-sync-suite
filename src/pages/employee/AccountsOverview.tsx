@@ -18,9 +18,9 @@ interface CustomerBalance {
   latest_due_date: string;
 }
 
-interface UnpaidInvoice {
-  invoice_id: string;
-  invoice_number: string;
+interface UnpaidOrder {
+  order_id: string;
+  order_number: string;
   customer_name: string;
   total_amount: number;
   paid_amount: number;
@@ -45,12 +45,12 @@ interface PaymentDetails {
   amount: number;
   payment_type: string;
   payment_date: string;
-  invoice_id: string;
+  order_id: string;
 }
 
 const AccountsOverview = () => {
   const [customerBalances, setCustomerBalances] = useState<CustomerBalance[]>([]);
-  const [unpaidInvoices, setUnpaidInvoices] = useState<UnpaidInvoice[]>([]);
+  const [unpaidOrders, setUnpaidOrders] = useState<UnpaidOrder[]>([]);
   const [customerOrders, setCustomerOrders] = useState<Record<string, OrderDetails[]>>({});
   const [customerPayments, setCustomerPayments] = useState<Record<string, PaymentDetails[]>>({});
   const [loading, setLoading] = useState(true);
@@ -78,13 +78,13 @@ const AccountsOverview = () => {
         await fetchCustomerPayments(customerIds);
       }
 
-      // جلب الفواتير غير المدفوعة مع تفاصيلها من الـ view الجديد
-      const { data: invoicesData } = await supabase
-        .from('invoice_payment_summary')
+      // جلب الطلبات غير المدفوعة مع تفاصيلها من الـ view الجديد
+      const { data: ordersData } = await supabase
+        .from('order_payment_summary')
         .select(`
           id,
-          invoice_number,
-          total_amount,
+          order_number,
+          amount,
           calculated_paid_amount,
           remaining_amount,
           due_date,
@@ -94,34 +94,34 @@ const AccountsOverview = () => {
         .gt('remaining_amount', 0);
 
       // جلب أسماء العملاء
-      const customerIds = [...new Set(invoicesData?.map(inv => inv.customer_id).filter(Boolean))];
+      const customerIds = [...new Set(ordersData?.map(order => order.customer_id).filter(Boolean))];
       const { data: customersData } = await supabase
         .from('customers')
         .select('id, name')
         .in('id', customerIds);
 
-      if (invoicesData && customersData) {
+      if (ordersData && customersData) {
         const customerMap = new Map(customersData.map(customer => [customer.id, customer.name]));
         
-        const formattedInvoices = invoicesData.map(invoice => {
-          const dueDate = new Date(invoice.due_date);
+        const formattedOrders = ordersData.map(order => {
+          const dueDate = new Date(order.due_date);
           const today = new Date();
           const daysOverdue = differenceInDays(today, dueDate);
           
           return {
-            invoice_id: invoice.id,
-            invoice_number: invoice.invoice_number,
-            customer_name: customerMap.get(invoice.customer_id) || 'غير محدد',
-            total_amount: invoice.total_amount,
-            paid_amount: invoice.calculated_paid_amount || 0,
-            remaining_amount: invoice.remaining_amount,
-            due_date: invoice.due_date,
+            order_id: order.id,
+            order_number: order.order_number,
+            customer_name: customerMap.get(order.customer_id) || 'غير محدد',
+            total_amount: order.amount,
+            paid_amount: order.calculated_paid_amount || 0,
+            remaining_amount: order.remaining_amount,
+            due_date: order.due_date,
             days_overdue: daysOverdue > 0 ? daysOverdue : 0,
-            status: invoice.status
+            status: order.status
           };
         });
         
-        setUnpaidInvoices(formattedInvoices.sort((a, b) => b.days_overdue - a.days_overdue));
+        setUnpaidOrders(formattedOrders.sort((a, b) => b.days_overdue - a.days_overdue));
       }
 
     } catch (error) {
@@ -164,15 +164,15 @@ const AccountsOverview = () => {
           amount, 
           payment_type, 
           payment_date, 
-          invoice_id,
-          invoices!inner(customer_id)
+          order_id,
+          orders!inner(customer_id)
         `)
-        .in('invoices.customer_id', customerIds)
+        .in('orders.customer_id', customerIds)
         .order('payment_date', { ascending: false });
 
       if (paymentsData) {
         const paymentsGrouped = paymentsData.reduce((acc, payment) => {
-          const customerId = (payment.invoices as any).customer_id;
+          const customerId = (payment.orders as any).customer_id;
           if (!acc[customerId]) {
             acc[customerId] = [];
           }
@@ -181,7 +181,7 @@ const AccountsOverview = () => {
             amount: payment.amount,
             payment_type: payment.payment_type,
             payment_date: payment.payment_date,
-            invoice_id: payment.invoice_id
+            order_id: payment.order_id
           });
           return acc;
         }, {} as Record<string, PaymentDetails[]>);
@@ -242,12 +242,12 @@ const AccountsOverview = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">إجمالي الفواتير المعلقة</CardTitle>
+            <CardTitle className="text-sm font-medium">إجمالي الطلبات المعلقة</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">
-              {unpaidInvoices.length}
+              {unpaidOrders.length}
             </div>
           </CardContent>
         </Card>
@@ -259,7 +259,7 @@ const AccountsOverview = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
-              {unpaidInvoices.filter(inv => inv.days_overdue > 30).length}
+              {unpaidOrders.filter(order => order.days_overdue > 30).length}
             </div>
           </CardContent>
         </Card>
@@ -282,7 +282,7 @@ const AccountsOverview = () => {
               <TableRow>
                 <TableHead>اسم العميل</TableHead>
                 <TableHead>المبلغ المستحق</TableHead>
-                <TableHead>عدد الفواتير</TableHead>
+                <TableHead>عدد الطلبات</TableHead>
                 <TableHead>أقرب استحقاق</TableHead>
                 <TableHead>آخر استحقاق</TableHead>
                 <TableHead>الإجراءات</TableHead>
@@ -298,7 +298,7 @@ const AccountsOverview = () => {
                     </span>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="secondary">{customer.unpaid_invoices_count} فاتورة</Badge>
+                    <Badge variant="secondary">{customer.unpaid_invoices_count} طلب</Badge>
                   </TableCell>
                   <TableCell>
                     {format(new Date(customer.earliest_due_date), 'dd/MM/yyyy', { locale: ar })}
@@ -416,12 +416,12 @@ const AccountsOverview = () => {
         </CardContent>
       </Card>
 
-      {/* الفواتير غير المدفوعة */}
+      {/* الطلبات غير المدفوعة */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CalendarIcon className="h-5 w-5" />
-            الفواتير غير المدفوعة
+            الطلبات غير المدفوعة
           </CardTitle>
           <CardDescription>
             مرتبة حسب الأولوية (المتأخرة أولاً)
@@ -431,7 +431,7 @@ const AccountsOverview = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>رقم الفاتورة</TableHead>
+                <TableHead>رقم الطلب</TableHead>
                 <TableHead>العميل</TableHead>
                 <TableHead>المبلغ الإجمالي</TableHead>
                 <TableHead>المبلغ المدفوع</TableHead>
@@ -441,23 +441,23 @@ const AccountsOverview = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {unpaidInvoices.map((invoice) => {
-                const status = getOverdueStatus(invoice.days_overdue);
+              {unpaidOrders.map((order) => {
+                const status = getOverdueStatus(order.days_overdue);
                 return (
-                  <TableRow key={invoice.invoice_id}>
-                    <TableCell className="font-medium">{invoice.invoice_number}</TableCell>
-                    <TableCell>{invoice.customer_name}</TableCell>
-                    <TableCell>{invoice.total_amount.toLocaleString()} ر.س</TableCell>
+                  <TableRow key={order.order_id}>
+                    <TableCell className="font-medium">{order.order_number}</TableCell>
+                    <TableCell>{order.customer_name}</TableCell>
+                    <TableCell>{order.total_amount.toLocaleString()} ر.س</TableCell>
                     <TableCell className="text-green-600">
-                      {invoice.paid_amount.toLocaleString()} ر.س
+                      {order.paid_amount.toLocaleString()} ر.س
                     </TableCell>
                     <TableCell>
                       <span className="font-bold text-orange-600">
-                        {invoice.remaining_amount.toLocaleString()} ر.س
+                        {order.remaining_amount.toLocaleString()} ر.س
                       </span>
                     </TableCell>
                     <TableCell>
-                      {format(new Date(invoice.due_date), 'dd/MM/yyyy', { locale: ar })}
+                      {format(new Date(order.due_date), 'dd/MM/yyyy', { locale: ar })}
                     </TableCell>
                     <TableCell>
                       <Badge className={status.color} variant="secondary">

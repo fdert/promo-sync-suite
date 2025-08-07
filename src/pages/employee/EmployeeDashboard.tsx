@@ -15,7 +15,7 @@ import {
 interface DashboardStats {
   totalCustomers: number;
   totalOrders: number;
-  totalInvoices: number;
+  totalOrdersValue: number;
   totalEvaluations: number;
   pendingOrders: number;
   completedOrders: number;
@@ -26,7 +26,7 @@ const EmployeeDashboard = () => {
   const [stats, setStats] = useState<DashboardStats>({
     totalCustomers: 0,
     totalOrders: 0,
-    totalInvoices: 0,
+    totalOrdersValue: 0,
     totalEvaluations: 0,
     pendingOrders: 0,
     completedOrders: 0,
@@ -46,10 +46,12 @@ const EmployeeDashboard = () => {
           .from('orders')
           .select('*', { count: 'exact', head: true });
 
-        // جلب إحصائيات الفواتير
-        const { count: invoicesCount } = await supabase
-          .from('invoices')
-          .select('*', { count: 'exact', head: true });
+        // جلب إجمالي قيمة الطلبات
+        const { data: ordersValue } = await supabase
+          .from('orders')
+          .select('amount');
+        
+        const totalOrdersValue = ordersValue?.reduce((sum, order) => sum + (order.amount || 0), 0) || 0;
 
         // جلب إحصائيات التقييمات
         const { count: evaluationsCount } = await supabase
@@ -72,7 +74,7 @@ const EmployeeDashboard = () => {
         setStats({
           totalCustomers: customersCount || 0,
           totalOrders: ordersCount || 0,
-          totalInvoices: invoicesCount || 0,
+          totalOrdersValue: totalOrdersValue,
           totalEvaluations: evaluationsCount || 0,
           pendingOrders: pendingOrdersCount || 0,
           completedOrders: completedOrdersCount || 0,
@@ -131,12 +133,12 @@ const EmployeeDashboard = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">الفواتير</CardTitle>
+            <CardTitle className="text-sm font-medium">قيمة الطلبات</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalInvoices}</div>
-            <p className="text-xs text-muted-foreground">إجمالي الفواتير</p>
+            <div className="text-2xl font-bold">{stats.totalOrdersValue.toLocaleString()} ر.س</div>
+            <p className="text-xs text-muted-foreground">إجمالي قيمة الطلبات</p>
           </CardContent>
         </Card>
 
