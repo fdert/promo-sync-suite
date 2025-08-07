@@ -1593,6 +1593,28 @@ ${companyName}`;
                     تعديل الحالة
                   </Button>
                   
+                  {/* تعديل الطلب */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs"
+                    onClick={() => openEditOrderDialog(order)}
+                  >
+                    <Edit className="h-3 w-3 mr-1" />
+                    تعديل الطلب
+                  </Button>
+                  
+                  {/* حذف الطلب */}
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="text-xs"
+                    onClick={() => openDeleteOrderDialog(order)}
+                  >
+                    <Trash2 className="h-3 w-3 mr-1" />
+                    حذف
+                  </Button>
+                  
                   {/* المدفوعات */}
                   <Button
                     variant="secondary"

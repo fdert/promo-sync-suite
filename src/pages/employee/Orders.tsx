@@ -150,6 +150,10 @@ const Orders = () => {
   const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
   const [selectedOrderForInvoice, setSelectedOrderForInvoice] = useState<Order | null>(null);
 
+  // حالات تعديل الطلب
+  const [isEditOrderDialogOpen, setIsEditOrderDialogOpen] = useState(false);
+  const [selectedOrderForEditing, setSelectedOrderForEditing] = useState<Order | null>(null);
+
   // حالات المدفوعات
   const [payments, setPayments] = useState<any[]>([]);
   const [newPayment, setNewPayment] = useState({
@@ -1309,6 +1313,35 @@ ${publicFileUrl}
     fetchServices();
     setIsNewOrderDialogOpen(true);
   };
+
+  // فتح حوار تعديل الطلب
+  const openEditOrderDialog = (order: Order) => {
+    setSelectedOrderForEditing(order);
+    setNewOrder({
+      customer_id: order.customer_id || '',
+      service_id: '',
+      service_name: order.service_name,
+      priority: order.priority,
+      due_date: order.due_date || '',
+      description: order.description || '',
+      amount: order.amount,
+      payment_type: order.payment_type || 'دفع آجل',
+      paid_amount: order.paid_amount || 0,
+      payment_notes: ''
+    });
+    if (order.order_items && order.order_items.length > 0) {
+      setOrderItems(order.order_items.map(item => ({
+        id: item.id,
+        item_name: item.item_name,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        total_amount: item.total_amount
+      })));
+    }
+    fetchCustomers();
+    fetchServices();
+    setIsEditOrderDialogOpen(true);
+  };
   
   // فلترة الطلبات
   const filteredOrders = orders.filter(order => {
@@ -1490,6 +1523,17 @@ ${publicFileUrl}
                   >
                     <Edit className="h-3 w-3 mr-1" />
                     تعديل الحالة
+                  </Button>
+                  
+                  {/* تعديل الطلب */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs"
+                    onClick={() => openEditOrderDialog(order)}
+                  >
+                    <Edit className="h-3 w-3 mr-1" />
+                    تعديل الطلب
                   </Button>
                   
                   {/* المدفوعات */}
