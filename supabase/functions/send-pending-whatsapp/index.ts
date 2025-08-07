@@ -21,14 +21,30 @@ Deno.serve(async (req) => {
   }
 
   try {
-    console.log('Processing pending WhatsApp messages...');
+    // قراءة بيانات الطلب
+    let requestBody = {};
+    try {
+      requestBody = await req.json();
+    } catch (e) {
+      // إذا لم تكن هناك بيانات JSON، استخدم كائن فارغ
+    }
+    
+    console.log('Processing pending WhatsApp messages...', requestBody);
 
     // الحصول على الرسائل المعلقة (pending)
-    const { data: pendingMessages, error: fetchError } = await supabase
+    let query = supabase
       .from('whatsapp_messages')
       .select('*')
-      .eq('status', 'pending')
-      .limit(10); // معالجة 10 رسائل في المرة الواحدة
+      .eq('status', 'pending');
+    
+    // إذا كان هناك معطى review_messages_only، اجلب رسائل التقييم فقط
+    if (requestBody?.review_messages_only) {
+      console.log('Filtering for Google review messages only...');
+      query = query.not('customer_id', 'is', null)
+                   .like('message_content', '%search.google.com%');
+    }
+    
+    const { data: pendingMessages, error: fetchError } = await query.limit(10); // معالجة 10 رسائل في المرة الواحدة
 
     if (fetchError) {
       console.error('Error fetching pending messages:', fetchError);
