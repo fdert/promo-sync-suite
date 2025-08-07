@@ -154,17 +154,30 @@ const Customers = () => {
       const text = await importFile.text();
       const rows = text.split('\n').slice(1); // تجاهل السطر الأول (العناوين)
       
+      console.log('إجمالي السطور بعد تجاهل العناوين:', rows.length);
+      
       const customers = rows
         .filter(row => row.trim())
-        .map(row => {
-          const [name, phone] = row.split(',');
+        .map((row, index) => {
+          const [name, phone] = row.split(',').map(field => field?.trim());
+          
+          console.log(`السطر ${index + 2}: الاسم="${name}", الهاتف="${phone}"`);
+          
+          // التحقق من وجود البيانات المطلوبة (يجب أن تكون غير فارغة)
+          if (!name || name === '' || !phone || phone === '') {
+            console.log(`السطر ${index + 2}: بيانات ناقصة أو فارغة`);
+            return null;
+          }
+          
           return {
-            name: name?.trim(),
-            phone: phone?.trim(),
+            name,
+            phone,
             import_source: 'CSV Import'
           };
         })
-        .filter(customer => customer.name && customer.phone);
+        .filter(customer => customer !== null);
+        
+      console.log('عدد العملاء الصالحين:', customers.length);
 
       if (customers.length === 0) {
         toast({
