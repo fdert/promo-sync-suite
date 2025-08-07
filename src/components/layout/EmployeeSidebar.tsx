@@ -87,6 +87,12 @@ const employeeMenuItems = [
     href: "/employee/accounts-overview",
     allowedRoles: ['employee'] as UserRole[],
   },
+  {
+    title: "الحركة المالية للطلبات",
+    icon: TrendingUp,
+    href: "/employee/financial-movements",
+    allowedRoles: ['employee'] as UserRole[],
+  },
 ];
 
 const EmployeeSidebar = ({ collapsed, onToggle }: SidebarProps) => {

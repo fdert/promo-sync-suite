@@ -77,6 +77,12 @@ const menuItems = [
     allowedRoles: ['admin', 'manager', 'accountant'] as UserRole[],
   },
   {
+    title: "الحركة المالية للطلبات",
+    icon: CreditCard,
+    href: "/admin/financial-movements",
+    allowedRoles: ['admin', 'manager', 'accountant'] as UserRole[],
+  },
+  {
     title: "العملاء المدينون",
     icon: Users,
     href: "/admin/accounts-receivable",

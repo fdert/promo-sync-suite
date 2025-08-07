@@ -48,6 +48,8 @@ import FinancialReports from "./pages/employee/FinancialReports";
 import ReviewsManagement from "./pages/admin/ReviewsManagement";
 import GoogleMapsIntegration from "./pages/admin/GoogleMapsIntegration";
 import BarcodeSettings from "./pages/admin/BarcodeSettings";
+import FinancialMovements from "./pages/admin/FinancialMovements";
+import EmployeeFinancialMovements from "./pages/employee/FinancialMovements";
 
 const queryClient = new QueryClient();
 
@@ -89,6 +91,7 @@ const App = () => (
               <Route path="print-archive" element={<PrintArchive />} />
               <Route path="accounts-overview" element={<AccountsOverview />} />
               <Route path="financial-reports" element={<FinancialReports />} />
+              <Route path="financial-movements" element={<EmployeeFinancialMovements />} />
               <Route path="reports" element={<EmployeeReports />} />
             </Route>
             <Route path="/admin" element={
@@ -107,6 +110,7 @@ const App = () => (
               <Route path="accounts-review" element={<AccountsReview />} />
               <Route path="accounts-receivable" element={<AccountsReceivableReview />} />
               <Route path="payments-by-type" element={<PaymentsByType />} />
+              <Route path="financial-movements" element={<FinancialMovements />} />
               <Route path="reports" element={<Reports />} />
               <Route path="services" element={<ServiceTypes />} />
             <Route path="message-templates" element={
