@@ -135,38 +135,70 @@ Deno.serve(async (req) => {
   }
 });
 
-// دالة مساعدة لإرسال الرسائل إلى خدمة الواتس آب
+// دالة مساعدة لإرسال الرسائل إلى خدمة الواتس آب عبر n8n
 async function sendToWhatsAppService(message: any): Promise<boolean> {
   try {
-    // PLACEHOLDER: هنا يجب استبدال هذا بخدمة واتس آب حقيقية
-    
     console.log(`📱 إرسال رسالة واتس آب:`);
     console.log(`إلى: ${message.to_number}`);
     console.log(`النص: ${message.message_content}`);
     
-    // محاكاة نجاح الإرسال
-    // في التطبيق الحقيقي، يجب استخدام API خدمة الواتس آب المطلوبة
+    // جلب الـ webhook المناسب من قاعدة البيانات
+    const { data: webhooks, error: webhookError } = await supabase
+      .from('webhook_settings')
+      .select('*')
+      .eq('is_active', true)
+      .eq('webhook_type', 'outgoing');
+
+    if (webhookError) {
+      console.error('خطأ في جلب الـ webhooks:', webhookError);
+      return false;
+    }
+
+    if (!webhooks || webhooks.length === 0) {
+      console.error('لا يوجد webhook نشط للإرسال');
+      return false;
+    }
+
+    // استخدام أول webhook نشط
+    const webhook = webhooks[0];
     
-    // مثال لاستخدام خدمة واتس آب:
-    /*
-    const whatsappApiKey = Deno.env.get('WHATSAPP_API_KEY');
-    const response = await fetch('https://api.whatsapp-service.com/send', {
+    // إعداد payload للإرسال لـ n8n
+    const payload = {
+      to: message.to_number,
+      phone: message.to_number,
+      phoneNumber: message.to_number,
+      message: message.message_content,
+      messageText: message.message_content,
+      text: message.message_content,
+      type: 'text',
+      message_type: 'text',
+      timestamp: Math.floor(Date.now() / 1000),
+      customer_id: message.customer_id
+    };
+
+    console.log('إرسال للـ webhook:', webhook.webhook_url);
+    console.log('البيانات المرسلة:', JSON.stringify(payload, null, 2));
+
+    // إرسال للـ webhook
+    const response = await fetch(webhook.webhook_url, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${whatsappApiKey}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        to: message.to_number,
-        text: message.message_content
-      })
+      body: JSON.stringify(payload)
     });
+
+    const success = response.ok;
+    console.log(`حالة الاستجابة: ${response.status}`);
     
-    return response.ok;
-    */
-    
-    // حالياً نعيد true لمحاكاة النجاح
-    return true;
+    if (success) {
+      const responseText = await response.text();
+      console.log('استجابة الـ webhook:', responseText);
+    } else {
+      console.error('فشل إرسال للـ webhook:', response.status, response.statusText);
+    }
+
+    return success;
     
   } catch (error) {
     console.error('خطأ في إرسال الرسالة للواتس آب:', error);
