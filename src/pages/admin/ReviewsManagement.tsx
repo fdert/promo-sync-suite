@@ -57,12 +57,15 @@ const ReviewsManagement = () => {
         .from("evaluations")
         .select(`
           *,
-          customers (name, phone, whatsapp_number),
-          orders (order_number, service_name)
+          customers!customer_id (name, phone, whatsapp_number),
+          orders!order_id (order_number, service_name)
         `)
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Evaluations error:", error);
+        throw error;
+      }
       
       // عرض جميع التقييمات للمراجعة اليدوية
       // سيتم إرسال رسائل جوجل ماب يدوياً من واجهة الإدارة
