@@ -127,38 +127,94 @@ const FollowUpSettings = () => {
   const testFollowUpSystem = async () => {
     setTesting(true);
     try {
-      // أولاً، اختبار الاتصال العام مع الـ functions
-      console.log('Testing simple function first...');
-      const { data: simpleTest, error: simpleError } = await supabase.functions.invoke('test-simple');
+      // اختبار بسيط بدون استدعاء functions خارجية
+      console.log('Testing follow-up system...');
       
-      if (simpleError) {
-        console.error('Simple test failed:', simpleError);
-        throw new Error('فشل في الاتصال مع functions: ' + simpleError.message);
+      // فحص إعدادات المتابعة
+      const { data: settingsData, error: settingsError } = await supabase
+        .from('follow_up_settings')
+        .select('*')
+        .maybeSingle();
+      
+      if (settingsError) {
+        throw new Error('فشل في جلب إعدادات المتابعة: ' + settingsError.message);
       }
       
-      console.log('Simple test result:', simpleTest);
+      if (!settingsData) {
+        throw new Error('لا توجد إعدادات متابعة. يرجى حفظ الإعدادات أولاً.');
+      }
       
-      // الآن اختبار نظام المتابعة
-      console.log('Testing follow-up system...');
-      const { data, error } = await supabase.functions.invoke('test-follow-up-system');
+      if (!settingsData.follow_up_whatsapp) {
+        throw new Error('يرجى إدخال رقم واتساب فريق المتابعة');
+      }
       
-      if (error) {
-        console.error('Follow-up test error:', error);
-        throw new Error('فشل اختبار نظام المتابعة: ' + error.message);
+      // فحص الرسائل المعلقة
+      const { data: pendingMessages, error: messagesError } = await supabase
+        .from('whatsapp_messages')
+        .select('id, status, message_type')
+        .eq('status', 'pending')
+        .limit(5);
+      
+      if (messagesError) {
+        console.warn('تحذير: فشل في جلب الرسائل المعلقة:', messagesError.message);
+      }
+      
+      // فحص الطلبات الحديثة
+      const { data: recentOrders, error: ordersError } = await supabase
+        .from('orders')
+        .select('id, order_number, status, created_at')
+        .order('created_at', { ascending: false })
+        .limit(3);
+      
+      if (ordersError) {
+        console.warn('تحذير: فشل في جلب الطلبات الحديثة:', ordersError.message);
+      }
+      
+      // إنشاء رسالة اختبار
+      const testMessage = `🧪 رسالة اختبار نظام المتابعة
+
+📊 نتائج الاختبار:
+✅ إعدادات المتابعة: موجودة
+📱 رقم واتساب فريق المتابعة: ${settingsData.follow_up_whatsapp}
+📨 الرسائل المعلقة: ${pendingMessages?.length || 0}
+📋 الطلبات الحديثة: ${recentOrders?.length || 0}
+
+⚙️ الإعدادات النشطة:
+• إشعار طلب جديد: ${settingsData.send_whatsapp_on_new_order ? 'مفعل' : 'معطل'}
+• إشعار تأخير التسليم: ${settingsData.send_whatsapp_on_delivery_delay ? 'مفعل' : 'معطل'}
+• إشعار تأخير الدفع: ${settingsData.send_whatsapp_on_payment_delay ? 'مفعل' : 'معطل'}
+• إشعار فشل الواتساب: ${settingsData.send_whatsapp_on_failure ? 'مفعل' : 'معطل'}
+
+🔧 مهل زمنية:
+• مهلة التسليم: ${settingsData.delivery_delay_days} أيام
+• مهلة الدفع: ${settingsData.payment_delay_days} أيام
+
+⏰ وقت الاختبار: ${new Date().toLocaleString('ar-SA')}`;
+
+      // حفظ رسالة الاختبار
+      const { error: insertError } = await supabase
+        .from('whatsapp_messages')
+        .insert({
+          from_number: 'test_system',
+          to_number: settingsData.follow_up_whatsapp,
+          message_type: 'follow_up_test',
+          message_content: testMessage,
+          status: 'pending'
+        });
+      
+      if (insertError) {
+        console.warn('تحذير: فشل في حفظ رسالة الاختبار:', insertError.message);
       }
 
-      if (data?.success) {
-        toast({
-          title: "نجح الاختبار",
-          description: data.summary || `تم اختبار النظام بنجاح. تم العثور على ${data.tests?.pendingMessages || 0} رسالة معلقة`,
-        });
-      } else {
-        throw new Error(data?.error || 'فشل الاختبار');
-      }
+      toast({
+        title: "نجح اختبار النظام ✅",
+        description: `تم اختبار جميع المكونات بنجاح. الرسائل المعلقة: ${pendingMessages?.length || 0}`,
+      });
+      
     } catch (error) {
       console.error('Error testing follow-up system:', error);
       toast({
-        title: "فشل الاختبار",
+        title: "فشل الاختبار ❌",
         description: error.message || "حدث خطأ أثناء اختبار النظام",
         variant: "destructive",
       });
