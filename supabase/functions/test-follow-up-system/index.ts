@@ -17,16 +17,16 @@ Deno.serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
     
-    console.log('🧪 Testing follow-up system...')
+    console.log('🧪 بدء اختبار نظام المتابعة...')
     
-    // 1. Check follow-up settings
+    // 1. فحص إعدادات المتابعة
     const { data: settings, error: settingsError } = await supabase
       .from('follow_up_settings')
       .select('*')
       .maybeSingle()
     
     if (settingsError) {
-      console.error('❌ Error fetching follow-up settings:', settingsError)
+      console.error('❌ خطأ في جلب إعدادات المتابعة:', settingsError)
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
     }
     
     if (!settings) {
-      console.warn('⚠️ No follow-up settings found')
+      console.warn('⚠️ لم يتم العثور على إعدادات المتابعة')
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -54,81 +54,103 @@ Deno.serve(async (req) => {
       )
     }
     
-    console.log('✅ Follow-up settings found:', settings)
+    console.log('✅ تم العثور على إعدادات المتابعة:', settings)
     
-    // 2. Test delivery delay check
-    console.log('🔍 Testing delivery delay check...')
+    // 2. اختبار فحص تأخير التسليم
+    console.log('🔍 اختبار فحص تأخير التسليم...')
+    let deliveryTestResult = 'نجح'
     try {
       const { error: deliveryError } = await supabase.rpc('check_delivery_delays')
       if (deliveryError) {
-        console.error('❌ Delivery delay check failed:', deliveryError)
+        console.error('❌ فشل فحص تأخير التسليم:', deliveryError)
+        deliveryTestResult = 'فشل: ' + deliveryError.message
       } else {
-        console.log('✅ Delivery delay check completed')
+        console.log('✅ نجح فحص تأخير التسليم')
       }
     } catch (error) {
-      console.error('❌ Delivery delay function error:', error)
+      console.error('❌ خطأ في دالة فحص تأخير التسليم:', error)
+      deliveryTestResult = 'خطأ: ' + error.message
     }
     
-    // 3. Test payment delay check
-    console.log('🔍 Testing payment delay check...')
+    // 3. اختبار فحص تأخير الدفع
+    console.log('🔍 اختبار فحص تأخير الدفع...')
+    let paymentTestResult = 'نجح'
     try {
       const { error: paymentError } = await supabase.rpc('check_payment_delays')
       if (paymentError) {
-        console.error('❌ Payment delay check failed:', paymentError)
+        console.error('❌ فشل فحص تأخير الدفع:', paymentError)
+        paymentTestResult = 'فشل: ' + paymentError.message
       } else {
-        console.log('✅ Payment delay check completed')
+        console.log('✅ نجح فحص تأخير الدفع')
       }
     } catch (error) {
-      console.error('❌ Payment delay function error:', error)
+      console.error('❌ خطأ في دالة فحص تأخير الدفع:', error)
+      paymentTestResult = 'خطأ: ' + error.message
     }
     
-    // 4. Check pending WhatsApp messages
+    // 4. فحص الرسائل المعلقة
     const { data: pendingMessages, error: messagesError } = await supabase
       .from('whatsapp_messages')
       .select('*')
       .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+      .limit(5)
     
     if (messagesError) {
-      console.error('❌ Error fetching pending messages:', messagesError)
+      console.error('❌ خطأ في جلب الرسائل المعلقة:', messagesError)
     } else {
-      console.log(`📱 Found ${pendingMessages?.length || 0} pending WhatsApp messages`)
+      console.log(`📱 تم العثور على ${pendingMessages?.length || 0} رسالة معلقة`)
     }
     
-    // 5. Check recent orders for follow-up opportunities
+    // 5. فحص الطلبات الحديثة
     const { data: recentOrders, error: ordersError } = await supabase
       .from('orders')
-      .select('id, order_number, status, due_date, amount, paid_amount, created_at')
+      .select('id, order_number, status, due_date, amount, created_at')
       .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
       .order('created_at', { ascending: false })
       .limit(10)
     
     if (ordersError) {
-      console.error('❌ Error fetching recent orders:', ordersError)
+      console.error('❌ خطأ في جلب الطلبات الحديثة:', ordersError)
     } else {
-      console.log(`📋 Found ${recentOrders?.length || 0} recent orders`)
+      console.log(`📋 تم العثور على ${recentOrders?.length || 0} طلب حديث`)
     }
     
-    // 6. Test creating a sample follow-up message
+    // 6. إنشاء رسالة اختبار
     const testResult = await createTestFollowUpMessage(supabase, settings)
+    
+    // 7. فحص إعدادات الواتساب API
+    const whatsappToken = Deno.env.get('WHATSAPP_TOKEN')
+    const whatsappPhoneId = Deno.env.get('WHATSAPP_PHONE_NUMBER_ID')
+    const whatsappConfigured = !!(whatsappToken && whatsappPhoneId)
     
     const response = {
       success: true,
       timestamp: new Date().toISOString(),
       tests: {
-        settings: !!settings,
+        settingsFound: !!settings,
+        whatsappNumber: settings?.follow_up_whatsapp,
+        deliveryDelayFunction: deliveryTestResult,
+        paymentDelayFunction: paymentTestResult,
         pendingMessages: pendingMessages?.length || 0,
         recentOrders: recentOrders?.length || 0,
-        testMessage: testResult.success
+        testMessageCreated: testResult.success,
+        whatsappApiConfigured: whatsappConfigured
       },
-      data: {
-        settings,
-        pendingMessages: pendingMessages?.slice(0, 3), // Show first 3 only
-        recentOrders: recentOrders?.slice(0, 3), // Show first 3 only
-        testMessage: testResult.message
-      }
+      summary: `تم اختبار النظام بنجاح!
+      
+📊 النتائج:
+✅ إعدادات المتابعة: موجودة
+📱 رقم الواتساب: ${settings?.follow_up_whatsapp || 'غير محدد'}
+🔍 دالة فحص التسليم: ${deliveryTestResult}
+💰 دالة فحص الدفع: ${paymentTestResult}
+📝 الرسائل المعلقة: ${pendingMessages?.length || 0}
+📋 الطلبات الحديثة: ${recentOrders?.length || 0}
+🧪 رسالة الاختبار: ${testResult.success ? 'تم إنشاؤها' : 'فشلت'}
+🔑 إعدادات واتساب API: ${whatsappConfigured ? 'مُعرّفة' : 'غير مُعرّفة'}`
     }
     
-    console.log('✅ Follow-up system test completed:', response)
+    console.log('✅ اكتمل اختبار نظام المتابعة:', response)
     
     return new Response(
       JSON.stringify(response),
@@ -139,7 +161,7 @@ Deno.serve(async (req) => {
     )
     
   } catch (error) {
-    console.error('❌ Test failed:', error)
+    console.error('❌ فشل الاختبار:', error)
     return new Response(
       JSON.stringify({ 
         success: false, 
@@ -156,7 +178,7 @@ Deno.serve(async (req) => {
 
 async function createTestFollowUpMessage(supabase: any, settings: any) {
   if (!settings.follow_up_whatsapp) {
-    return { success: false, message: 'No follow-up WhatsApp number configured' }
+    return { success: false, message: 'رقم واتساب المتابعة غير مُعرّف' }
   }
   
   try {
@@ -170,7 +192,9 @@ async function createTestFollowUpMessage(supabase: any, settings: any) {
 ${settings.send_whatsapp_on_new_order ? '✅' : '❌'} إشعار الطلبات الجديدة
 ${settings.send_whatsapp_on_delivery_delay ? '✅' : '❌'} إشعار تأخير التسليم
 ${settings.send_whatsapp_on_payment_delay ? '✅' : '❌'} إشعار تأخير المدفوعات
-${settings.send_whatsapp_on_failure ? '✅' : '❌'} إشعار الأخطاء`
+${settings.send_whatsapp_on_failure ? '✅' : '❌'} إشعار الأخطاء
+
+🔄 ستتم معالجة هذه الرسالة تلقائياً بواسطة نظام الواتساب`
     
     const { error } = await supabase
       .from('whatsapp_messages')
@@ -183,15 +207,15 @@ ${settings.send_whatsapp_on_failure ? '✅' : '❌'} إشعار الأخطاء`
       })
     
     if (error) {
-      console.error('❌ Failed to create test message:', error)
+      console.error('❌ فشل في إنشاء رسالة الاختبار:', error)
       return { success: false, message: error.message }
     }
     
-    console.log('✅ Test follow-up message created successfully')
-    return { success: true, message: 'Test message created and queued for sending' }
+    console.log('✅ تم إنشاء رسالة اختبار المتابعة بنجاح')
+    return { success: true, message: 'تم إنشاء رسالة الاختبار وإضافتها لقائمة الإرسال' }
     
   } catch (error) {
-    console.error('❌ Error creating test message:', error)
+    console.error('❌ خطأ في إنشاء رسالة الاختبار:', error)
     return { success: false, message: error.message }
   }
 }
