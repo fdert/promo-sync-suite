@@ -72,13 +72,21 @@ const ReviewsManagement = () => {
         throw error;
       }
       
-      // عرض جميع التقييمات للمراجعة اليدوية
+      // عرض جميع التقييمات للمراجعة اليدوية (تشمل التقييمات الخالية من rating أيضاً)
       console.log('Total evaluations found:', data?.length || 0);
       
-      // فلترة التقييمات: عرض كل التقييمات لكن التركيز على المناسبة للمراجعة
-      const allEvaluations = data || [];
+      // عرض جميع التقييمات بدون فلترة - سواء كان لديها rating أم لا
+      const allEvaluations = (data || []).map(evaluation => ({
+        ...evaluation,
+        // تعامل مع البيانات المفقودة
+        customers: evaluation.customers || { name: 'عميل غير محدد', phone: '', whatsapp_number: '' },
+        orders: evaluation.orders || { order_number: 'غير محدد', service_name: 'غير محدد' }
+      }));
       
       console.log('All evaluations for review:', allEvaluations.length);
+      console.log('Evaluations with ratings:', allEvaluations.filter(e => e.rating).length);
+      console.log('Evaluations pending:', allEvaluations.filter(e => e.google_review_status === 'pending').length);
+      
       setEvaluations(allEvaluations);
     } catch (error) {
       console.error("Error fetching evaluations:", error);
@@ -243,15 +251,16 @@ const ReviewsManagement = () => {
         </Badge>
       </div>
 
-      {/* إضافة معلومات حول التقييمات */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h3 className="font-medium text-blue-800 mb-2">معلومات هامة:</h3>
-        <ul className="text-sm text-blue-700 space-y-1">
-          <li>• التقييمات المعروضة هنا هي التي تم إرسالها من العملاء</li>
-          <li>• يمكنك مراجعة التقييمات قبل إرسالها لخرائط جوجل</li>
-          <li>• التقييمات العالية (4-5 نجوم) مناسبة للنشر على جوجل</li>
-        </ul>
-      </div>
+        {/* إضافة معلومات حول التقييمات */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h3 className="font-medium text-blue-800 mb-2">معلومات هامة:</h3>
+          <ul className="text-sm text-blue-700 space-y-1">
+            <li>• هنا يتم عرض جميع الطلبات المكتملة التي يمكن إرسال رابط تقييم جوجل لها</li>
+            <li>• يمكنك إرسال رابط التقييم مباشرة للعميل عبر واتساب</li>
+            <li>• العميل سيتمكن من تقييم الخدمة مباشرة على خرائط جوجل</li>
+            <li>• يمكنك التحكم في أي الطلبات ترسل لها رابط التقييم</li>
+          </ul>
+        </div>
 
       <div className="grid gap-4">
         {evaluations.map((evaluation) => (
@@ -313,29 +322,28 @@ const ReviewsManagement = () => {
                 )}
               </div>
 
-              {/* إظهار أزرار الإجراءات للتقييمات المناسبة */}
-              {(evaluation.google_review_status === "pending" || 
-                (evaluation.rating && evaluation.rating >= 4)) && (
+              {/* إظهار أزرار الإجراءات لجميع التقييمات المناسبة */}
+              {(evaluation.google_review_status === "pending") && (
                 <div className="flex gap-2">
                   <Dialog>
                     <DialogTrigger asChild>
                       <Button
                         size="sm"
-                        disabled={!evaluation.rating}
                         onClick={() => {
                           setSelectedEvaluation(evaluation);
                           setAdminNotes(evaluation.admin_notes || "");
                         }}
+                        className="bg-blue-600 hover:bg-blue-700"
                       >
                         <Send className="mr-2 h-4 w-4" />
-                        {evaluation.rating ? "إرسال لخرائط جوجل" : "في انتظار التقييم"}
+                        إرسال رابط جوجل للعميل
                       </Button>
                     </DialogTrigger>
                     <DialogContent>
                       <DialogHeader>
-                        <DialogTitle>إرسال التقييم لخرائط جوجل</DialogTitle>
+                        <DialogTitle>إرسال رابط جوجل للعميل</DialogTitle>
                         <DialogDescription>
-                          سيتم إرسال رابط خرائط جوجل للعميل عبر واتساب
+                          سيتم إرسال رابط خرائط جوجل للعميل عبر واتساب لتقييم الخدمة مباشرة على جوجل
                         </DialogDescription>
                       </DialogHeader>
                       <div className="space-y-4">
@@ -371,14 +379,14 @@ const ReviewsManagement = () => {
                     size="sm"
                     variant="destructive"
                     onClick={() => declineEvaluation(evaluation.id)}
-                    disabled={actionLoading === evaluation.id || !evaluation.rating}
+                    disabled={actionLoading === evaluation.id}
                   >
                     {actionLoading === evaluation.id ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
                       <XCircle className="mr-2 h-4 w-4" />
                     )}
-                    {evaluation.rating ? "رفض الإرسال" : "غير متاح"}
+                    رفض الإرسال
                   </Button>
                 </div>
               )}
