@@ -56,7 +56,7 @@ const BarcodeSettings = () => {
     show_company_name: true,
     show_date: true,
     show_qr_code: false,
-    company_name: 'وكالة الإبداع للدعاية والإعلان',
+    company_name: 'وكالة الابداع والاحتراف للدعاية والاعلان',
     company_phone: '',
     company_address: ''
   });
@@ -127,7 +127,7 @@ const BarcodeSettings = () => {
           // تحديث الإعدادات بالبيانات الحقيقية من الموقع
           setSettings(prev => ({
             ...prev,
-            company_name: companyInfo?.name || 'وكالة الإبداع للدعاية والإعلان',
+            company_name: companyInfo?.name || 'وكالة الابداع والاحتراف للدعاية والاعلان',
             company_phone: contactInfo?.phone || '',
             company_address: contactInfo?.address || '',
             company_logo_url: companyInfo?.logo || prev.company_logo_url,
@@ -284,7 +284,7 @@ const BarcodeSettings = () => {
 
   const testPrint = async () => {
     // استخدام البيانات الحقيقية من الإعدادات
-    const companyName = settings.company_name || 'وكالة الإبداع للدعاية والإعلان';
+    const companyName = settings.company_name || 'وكالة الابداع والاحتراف للدعاية والاعلان';
     const companyPhone = settings.company_phone || '966501234567';
     
     printBarcodeLabel(
