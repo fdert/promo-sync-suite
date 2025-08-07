@@ -5,9 +5,28 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { Phone, Mail, MessageSquare, Clock, DollarSign, AlertCircle, Zap } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Phone, Mail, MessageSquare, Clock, DollarSign, AlertCircle, Zap, Activity, Search, Filter, User, CalendarDays } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
+import { ar } from "date-fns/locale";
 
 interface FollowUpSettings {
   id?: string;
@@ -21,8 +40,29 @@ interface FollowUpSettings {
   payment_delay_days: number;
 }
 
+interface ActivityLog {
+  id: string;
+  user_id: string;
+  action: string;
+  resource_type: string;
+  resource_id: string;
+  details: any;
+  ip_address: string;
+  user_agent: string;
+  created_at: string;
+  profiles?: {
+    full_name?: string;
+  } | null;
+}
+
+interface User {
+  id: string;
+  full_name: string;
+}
+
 const FollowUpSettings = () => {
   const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState("settings");
   const [settings, setSettings] = useState<FollowUpSettings>({
     send_whatsapp_on_new_order: true,
     send_whatsapp_on_delivery_delay: true,
@@ -34,9 +74,22 @@ const FollowUpSettings = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+  
+  // Activity logs states
+  const [logs, setLogs] = useState<ActivityLog[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState("all");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [actionFilter, setActionFilter] = useState("all");
+  const [resourceFilter, setResourceFilter] = useState("all");
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     fetchSettings();
+    fetchUsers();
+    fetchActivityLogs();
   }, []);
 
   const fetchSettings = async () => {
@@ -223,6 +276,154 @@ const FollowUpSettings = () => {
     }
   };
 
+  // Activity logs functions
+  const fetchUsers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .order('full_name');
+
+      if (error) throw error;
+      setUsers(data || []);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    }
+  };
+
+  const fetchActivityLogs = async () => {
+    try {
+      setLogsLoading(true);
+      let query = supabase
+        .from('activity_logs')
+        .select(`
+          *
+        `)
+        .order('created_at', { ascending: false });
+
+      if (selectedUserId && selectedUserId !== "all") {
+        query = query.eq('user_id', selectedUserId);
+      }
+
+      if (startDate) {
+        query = query.gte('created_at', startDate + 'T00:00:00');
+      }
+
+      if (endDate) {
+        query = query.lte('created_at', endDate + 'T23:59:59');
+      }
+
+      if (actionFilter && actionFilter !== "all") {
+        query = query.eq('action', actionFilter);
+      }
+
+      if (resourceFilter && resourceFilter !== "all") {
+        query = query.eq('resource_type', resourceFilter);
+      }
+
+      const { data, error } = await query.limit(500);
+
+      if (error) throw error;
+      setLogs(data || []);
+    } catch (error) {
+      console.error('Error fetching activity logs:', error);
+      toast({
+        title: "خطأ",
+        description: "فشل في جلب سجلات النشاط",
+        variant: "destructive",
+      });
+    } finally {
+      setLogsLoading(false);
+    }
+  };
+
+  const filteredLogs = logs.filter(log => {
+    if (!searchTerm) return true;
+    
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      log.action.toLowerCase().includes(searchLower) ||
+      log.resource_type.toLowerCase().includes(searchLower) ||
+      (log.details && JSON.stringify(log.details).toLowerCase().includes(searchLower))
+    );
+  });
+
+  const formatDate = (dateString: string) => {
+    try {
+      return format(new Date(dateString), 'dd/MM/yyyy HH:mm', { locale: ar });
+    } catch {
+      return dateString;
+    }
+  };
+
+  const formatDetails = (details: any) => {
+    if (!details) return '-';
+    
+    if (typeof details === 'string') return details;
+    
+    try {
+      return JSON.stringify(details, null, 2);
+    } catch {
+      return '-';
+    }
+  };
+
+  const getActionColor = (action: string) => {
+    switch (action.toLowerCase()) {
+      case 'create':
+      case 'insert':
+        return 'bg-green-100 text-green-800';
+      case 'update':
+      case 'edit':
+        return 'bg-blue-100 text-blue-800';
+      case 'delete':
+      case 'remove':
+        return 'bg-red-100 text-red-800';
+      case 'login':
+        return 'bg-purple-100 text-purple-800';
+      case 'logout':
+        return 'bg-gray-100 text-gray-800';
+      default:
+        return 'bg-yellow-100 text-yellow-800';
+    }
+  };
+
+  const applyQuickFilter = (period: string) => {
+    const now = new Date();
+    const today = format(now, 'yyyy-MM-dd');
+    
+    switch (period) {
+      case 'today':
+        setStartDate(today);
+        setEndDate(today);
+        break;
+      case 'week':
+        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        setStartDate(format(weekAgo, 'yyyy-MM-dd'));
+        setEndDate(today);
+        break;
+      case 'month':
+        const monthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+        setStartDate(format(monthAgo, 'yyyy-MM-dd'));
+        setEndDate(today);
+        break;
+      case 'year':
+        const yearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+        setStartDate(format(yearAgo, 'yyyy-MM-dd'));
+        setEndDate(today);
+        break;
+      default:
+        setStartDate("");
+        setEndDate("");
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "activity-logs") {
+      fetchActivityLogs();
+    }
+  }, [activeTab, selectedUserId, startDate, endDate, actionFilter, resourceFilter]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -234,219 +435,451 @@ const FollowUpSettings = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground">إعدادات إدارة المتابعة</h1>
+        <h1 className="text-3xl font-bold text-foreground">إدارة المتابعة</h1>
         <p className="text-muted-foreground mt-2">
-          إدارة إعدادات المتابعة وإشعارات الواتساب الداخلية لفريق المتابعة والإدارة
+          إدارة إعدادات المتابعة وإشعارات الواتساب الداخلية وسجلات نشاط المستخدمين
         </p>
       </div>
 
-      <div className="grid gap-6">
-        {/* معلومات الاتصال */}
-        <Card className="bg-gradient-to-br from-card to-muted/20 border-primary/10 shadow-lg">
-          <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-2 text-xl">
-              <Phone className="h-5 w-5 text-primary" />
-              معلومات الاتصال
-            </CardTitle>
-            <CardDescription>
-              أرقام الواتساب والإيميل الخاصة بفريق المتابعة والإدارة لاستقبال الإشعارات الداخلية
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="whatsapp" className="text-sm font-medium">
-                  رقم واتساب فريق المتابعة (لاستقبال الإشعارات)
-                </Label>
-                <Input
-                  id="whatsapp"
-                  placeholder="966501234567"
-                  value={settings.follow_up_whatsapp || ''}
-                  onChange={(e) => setSettings({ ...settings, follow_up_whatsapp: e.target.value })}
-                  className="bg-background/50 border-primary/20 focus:border-primary"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-medium">
-                  إيميل المتابعة
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="follow-up@company.com"
-                  value={settings.follow_up_email || ''}
-                  onChange={(e) => setSettings({ ...settings, follow_up_email: e.target.value })}
-                  className="bg-background/50 border-primary/20 focus:border-primary"
-                />
-              </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="settings" className="flex items-center gap-2">
+            <MessageSquare className="h-4 w-4" />
+            إعدادات المتابعة
+          </TabsTrigger>
+          <TabsTrigger value="activity-logs" className="flex items-center gap-2">
+            <Activity className="h-4 w-4" />
+            سجلات النشاط
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="settings" className="space-y-6">
+          <div className="grid gap-6">
+            {/* معلومات الاتصال */}
+            <Card className="bg-gradient-to-br from-card to-muted/20 border-primary/10 shadow-lg">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-2 text-xl">
+                  <Phone className="h-5 w-5 text-primary" />
+                  معلومات الاتصال
+                </CardTitle>
+                <CardDescription>
+                  أرقام الواتساب والإيميل الخاصة بفريق المتابعة والإدارة لاستقبال الإشعارات الداخلية
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="whatsapp" className="text-sm font-medium">
+                      رقم واتساب فريق المتابعة (لاستقبال الإشعارات)
+                    </Label>
+                    <Input
+                      id="whatsapp"
+                      placeholder="966501234567"
+                      value={settings.follow_up_whatsapp || ''}
+                      onChange={(e) => setSettings({ ...settings, follow_up_whatsapp: e.target.value })}
+                      className="bg-background/50 border-primary/20 focus:border-primary"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="text-sm font-medium">
+                      إيميل المتابعة
+                    </Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="follow-up@company.com"
+                      value={settings.follow_up_email || ''}
+                      onChange={(e) => setSettings({ ...settings, follow_up_email: e.target.value })}
+                      className="bg-background/50 border-primary/20 focus:border-primary"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* إعدادات الرسائل التلقائية */}
+            <Card className="bg-gradient-to-br from-card to-accent/5 border-accent/20 shadow-lg">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-2 text-xl">
+                  <MessageSquare className="h-5 w-5 text-accent" />
+                  إعدادات الرسائل التلقائية
+                </CardTitle>
+                <CardDescription>
+                  إشعارات واتساب تلقائية لفريق المتابعة عند تغيير حالة الطلبات أو حدوث مشاكل في النظام
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid gap-4">
+                  <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/20">
+                    <div className="flex items-center gap-3">
+                      <Zap className="h-5 w-5 text-primary" />
+                      <div>
+                        <h4 className="font-medium">إشعار عند إنشاء طلب جديد</h4>
+                        <p className="text-sm text-muted-foreground">إرسال إشعار لفريق المتابعة عند إنشاء طلب جديد في النظام</p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={settings.send_whatsapp_on_new_order}
+                      onCheckedChange={(checked) => 
+                        setSettings({ ...settings, send_whatsapp_on_new_order: checked })
+                      }
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-orange-50 to-orange-100 border border-orange-200 dark:from-orange-900/20 dark:to-orange-800/20 dark:border-orange-700/30">
+                    <div className="flex items-center gap-3">
+                      <Clock className="h-5 w-5 text-orange-600" />
+                      <div>
+                        <h4 className="font-medium">إشعار تجاوز فترة التسليم</h4>
+                        <p className="text-sm text-muted-foreground">
+                          إرسال إشعار لفريق المتابعة عند تجاوز الطلب فترة التسليم المحددة
+                        </p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={settings.send_whatsapp_on_delivery_delay}
+                      onCheckedChange={(checked) => 
+                        setSettings({ ...settings, send_whatsapp_on_delivery_delay: checked })
+                      }
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-red-50 to-red-100 border border-red-200 dark:from-red-900/20 dark:to-red-800/20 dark:border-red-700/30">
+                    <div className="flex items-center gap-3">
+                      <DollarSign className="h-5 w-5 text-red-600" />
+                      <div>
+                        <h4 className="font-medium">إشعار تأخير المدفوعات</h4>
+                        <p className="text-sm text-muted-foreground">
+                          إرسال إشعار لفريق المتابعة عند تجاوز 30 يوم بدون دفع
+                        </p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={settings.send_whatsapp_on_payment_delay}
+                      onCheckedChange={(checked) => 
+                        setSettings({ ...settings, send_whatsapp_on_payment_delay: checked })
+                      }
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-yellow-50 to-yellow-100 border border-yellow-200 dark:from-yellow-900/20 dark:to-yellow-800/20 dark:border-yellow-700/30">
+                    <div className="flex items-center gap-3">
+                      <AlertCircle className="h-5 w-5 text-yellow-600" />
+                      <div>
+                        <h4 className="font-medium">إشعار عند فشل الواتساب</h4>
+                        <p className="text-sm text-muted-foreground">
+                          إرسال إشعار لفريق المتابعة عند فشل إرسال رسائل الواتساب في النظام
+                        </p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={settings.send_whatsapp_on_failure}
+                      onCheckedChange={(checked) => 
+                        setSettings({ ...settings, send_whatsapp_on_failure: checked })
+                      }
+                    />
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* إعدادات المهل الزمنية */}
+                <div className="space-y-4">
+                  <h4 className="font-medium text-lg flex items-center gap-2">
+                    <Clock className="h-5 w-5 text-muted-foreground" />
+                    المهل الزمنية
+                  </h4>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="delivery-delay" className="text-sm font-medium">
+                        مهلة التسليم (بالأيام)
+                      </Label>
+                       <Input
+                         id="delivery-delay"
+                         type="text"
+                         value={settings.delivery_delay_days}
+                         onChange={(e) => setSettings({ 
+                           ...settings, 
+                           delivery_delay_days: parseInt(e.target.value) || 7 
+                         })}
+                         className="bg-background/50 border-primary/20 focus:border-primary"
+                       />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="payment-delay" className="text-sm font-medium">
+                        مهلة الدفع (بالأيام)
+                      </Label>
+                       <Input
+                         id="payment-delay"
+                         type="text"
+                         value={settings.payment_delay_days}
+                         onChange={(e) => setSettings({ 
+                           ...settings, 
+                           payment_delay_days: parseInt(e.target.value) || 30 
+                         })}
+                         className="bg-background/50 border-primary/20 focus:border-primary"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* أزرار الحفظ والاختبار */}
+            <div className="flex justify-between items-center">
+              <Button 
+                onClick={testFollowUpSystem} 
+                disabled={testing || !settings.follow_up_whatsapp}
+                variant="outline"
+                size="lg"
+                className="min-w-[140px]"
+              >
+                {testing ? (
+                  <div className="flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                    جاري الاختبار...
+                  </div>
+                ) : (
+                  "اختبار النظام"
+                )}
+              </Button>
+              
+              <Button 
+                onClick={handleSave} 
+                disabled={saving}
+                size="lg"
+                className="min-w-[120px] bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 shadow-lg"
+              >
+                {saving ? (
+                  <div className="flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    جاري الحفظ...
+                  </div>
+                ) : (
+                  "حفظ الإعدادات"
+                )}
+              </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </TabsContent>
 
-        {/* إعدادات الرسائل التلقائية */}
-        <Card className="bg-gradient-to-br from-card to-accent/5 border-accent/20 shadow-lg">
-          <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-2 text-xl">
-              <MessageSquare className="h-5 w-5 text-accent" />
-              إعدادات الرسائل التلقائية
-            </CardTitle>
-            <CardDescription>
-              إشعارات واتساب تلقائية لفريق المتابعة عند تغيير حالة الطلبات أو حدوث مشاكل في النظام
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid gap-4">
-              <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/20">
-                <div className="flex items-center gap-3">
-                  <Zap className="h-5 w-5 text-primary" />
-                  <div>
-                    <h4 className="font-medium">إشعار عند إنشاء طلب جديد</h4>
-                    <p className="text-sm text-muted-foreground">إرسال إشعار لفريق المتابعة عند إنشاء طلب جديد في النظام</p>
-                  </div>
-                </div>
-                <Switch
-                  checked={settings.send_whatsapp_on_new_order}
-                  onCheckedChange={(checked) => 
-                    setSettings({ ...settings, send_whatsapp_on_new_order: checked })
-                  }
-                />
+        <TabsContent value="activity-logs" className="space-y-6">
+          {/* الفلاتر */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Filter className="h-5 w-5" />
+                الفلاتر والبحث
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* الفلاتر السريعة */}
+              <div className="flex gap-2 flex-wrap">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => applyQuickFilter('today')}
+                >
+                  اليوم
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => applyQuickFilter('week')}
+                >
+                  هذا الأسبوع
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => applyQuickFilter('month')}
+                >
+                  هذا الشهر
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => applyQuickFilter('year')}
+                >
+                  هذا العام
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => applyQuickFilter('all')}
+                >
+                  الكل
+                </Button>
               </div>
 
-              <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-orange-50 to-orange-100 border border-orange-200 dark:from-orange-900/20 dark:to-orange-800/20 dark:border-orange-700/30">
-                <div className="flex items-center gap-3">
-                  <Clock className="h-5 w-5 text-orange-600" />
-                  <div>
-                    <h4 className="font-medium">إشعار تجاوز فترة التسليم</h4>
-                    <p className="text-sm text-muted-foreground">
-                      إرسال إشعار لفريق المتابعة عند تجاوز الطلب فترة التسليم المحددة
-                    </p>
-                  </div>
-                </div>
-                <Switch
-                  checked={settings.send_whatsapp_on_delivery_delay}
-                  onCheckedChange={(checked) => 
-                    setSettings({ ...settings, send_whatsapp_on_delivery_delay: checked })
-                  }
-                />
-              </div>
-
-              <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-red-50 to-red-100 border border-red-200 dark:from-red-900/20 dark:to-red-800/20 dark:border-red-700/30">
-                <div className="flex items-center gap-3">
-                  <DollarSign className="h-5 w-5 text-red-600" />
-                  <div>
-                    <h4 className="font-medium">إشعار تأخير المدفوعات</h4>
-                    <p className="text-sm text-muted-foreground">
-                      إرسال إشعار لفريق المتابعة عند تجاوز 30 يوم بدون دفع
-                    </p>
-                  </div>
-                </div>
-                <Switch
-                  checked={settings.send_whatsapp_on_payment_delay}
-                  onCheckedChange={(checked) => 
-                    setSettings({ ...settings, send_whatsapp_on_payment_delay: checked })
-                  }
-                />
-              </div>
-
-              <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-yellow-50 to-yellow-100 border border-yellow-200 dark:from-yellow-900/20 dark:to-yellow-800/20 dark:border-yellow-700/30">
-                <div className="flex items-center gap-3">
-                  <AlertCircle className="h-5 w-5 text-yellow-600" />
-                  <div>
-                    <h4 className="font-medium">إشعار عند فشل الواتساب</h4>
-                    <p className="text-sm text-muted-foreground">
-                      إرسال إشعار لفريق المتابعة عند فشل إرسال رسائل الواتساب في النظام
-                    </p>
-                  </div>
-                </div>
-                <Switch
-                  checked={settings.send_whatsapp_on_failure}
-                  onCheckedChange={(checked) => 
-                    setSettings({ ...settings, send_whatsapp_on_failure: checked })
-                  }
-                />
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* إعدادات المهل الزمنية */}
-            <div className="space-y-4">
-              <h4 className="font-medium text-lg flex items-center gap-2">
-                <Clock className="h-5 w-5 text-muted-foreground" />
-                المهل الزمنية
-              </h4>
-              <div className="grid md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* اختيار المستخدم */}
                 <div className="space-y-2">
-                  <Label htmlFor="delivery-delay" className="text-sm font-medium">
-                    مهلة التسليم (بالأيام)
-                  </Label>
-                   <Input
-                     id="delivery-delay"
-                     type="text"
-                     value={settings.delivery_delay_days}
-                     onChange={(e) => setSettings({ 
-                       ...settings, 
-                       delivery_delay_days: parseInt(e.target.value) || 7 
-                     })}
-                     className="bg-background/50 border-primary/20 focus:border-primary"
-                   />
+                  <Label>المستخدم</Label>
+                  <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="جميع المستخدمين" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">جميع المستخدمين</SelectItem>
+                      {users.map((user) => (
+                        <SelectItem key={user.id} value={user.id}>
+                          {user.full_name || 'بدون اسم'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* نوع العملية */}
+                <div className="space-y-2">
+                  <Label>نوع العملية</Label>
+                  <Select value={actionFilter} onValueChange={setActionFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="جميع العمليات" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">جميع العمليات</SelectItem>
+                      <SelectItem value="create">إنشاء</SelectItem>
+                      <SelectItem value="update">تحديث</SelectItem>
+                      <SelectItem value="delete">حذف</SelectItem>
+                      <SelectItem value="login">تسجيل دخول</SelectItem>
+                      <SelectItem value="logout">تسجيل خروج</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* نوع المورد */}
+                <div className="space-y-2">
+                  <Label>نوع المورد</Label>
+                  <Select value={resourceFilter} onValueChange={setResourceFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="جميع الموارد" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">جميع الموارد</SelectItem>
+                      <SelectItem value="order">طلب</SelectItem>
+                      <SelectItem value="customer">عميل</SelectItem>
+                      <SelectItem value="invoice">فاتورة</SelectItem>
+                      <SelectItem value="payment">دفعة</SelectItem>
+                      <SelectItem value="user">مستخدم</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* البحث */}
+                <div className="space-y-2">
+                  <Label>البحث</Label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="البحث في السجلات..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* فلاتر التاريخ */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>من تاريخ</Label>
+                  <Input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                  />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="payment-delay" className="text-sm font-medium">
-                    مهلة الدفع (بالأيام)
-                  </Label>
-                   <Input
-                     id="payment-delay"
-                     type="text"
-                     value={settings.payment_delay_days}
-                     onChange={(e) => setSettings({ 
-                       ...settings, 
-                       payment_delay_days: parseInt(e.target.value) || 30 
-                     })}
-                     className="bg-background/50 border-primary/20 focus:border-primary"
+                  <Label>إلى تاريخ</Label>
+                  <Input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
                   />
                 </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        {/* أزرار الحفظ والاختبار */}
-        <div className="flex justify-between items-center">
-          <Button 
-            onClick={testFollowUpSystem} 
-            disabled={testing || !settings.follow_up_whatsapp}
-            variant="outline"
-            size="lg"
-            className="min-w-[140px]"
-          >
-            {testing ? (
-              <div className="flex items-center gap-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                جاري الاختبار...
-              </div>
-            ) : (
-              "اختبار النظام"
-            )}
-          </Button>
-          
-          <Button 
-            onClick={handleSave} 
-            disabled={saving}
-            size="lg"
-            className="min-w-[120px] bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 shadow-lg"
-          >
-            {saving ? (
-              <div className="flex items-center gap-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                جاري الحفظ...
-              </div>
-            ) : (
-              "حفظ الإعدادات"
-            )}
-          </Button>
-        </div>
-      </div>
+          {/* النتائج */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span>سجلات النشاط ({filteredLogs.length})</span>
+                <Badge variant="outline">{filteredLogs.length} سجل</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {logsLoading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                  <p className="mt-2 text-muted-foreground">جاري تحميل السجلات...</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>المستخدم</TableHead>
+                        <TableHead>العملية</TableHead>
+                        <TableHead>نوع المورد</TableHead>
+                        <TableHead>معرف المورد</TableHead>
+                        <TableHead>التفاصيل</TableHead>
+                        <TableHead>التاريخ</TableHead>
+                        <TableHead>عنوان IP</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredLogs.map((log) => (
+                        <TableRow key={log.id}>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <User className="h-4 w-4 text-gray-400" />
+                              {users.find(u => u.id === log.user_id)?.full_name || 'مستخدم غير معروف'}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={getActionColor(log.action)}>
+                              {log.action}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{log.resource_type}</TableCell>
+                          <TableCell className="font-mono text-sm">
+                            {log.resource_id}
+                          </TableCell>
+                          <TableCell>
+                            <div className="max-w-xs truncate" title={formatDetails(log.details)}>
+                              {formatDetails(log.details)}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <Clock className="h-4 w-4 text-gray-400" />
+                              {formatDate(log.created_at)}
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-mono text-sm">
+                            {log.ip_address || '-'}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  
+                  {filteredLogs.length === 0 && !logsLoading && (
+                    <div className="text-center py-8 text-gray-500">
+                      لا توجد سجلات نشاط مطابقة للفلاتر المحددة
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

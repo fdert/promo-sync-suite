@@ -150,12 +150,6 @@ const menuItems = [
     allowedRoles: ['admin', 'manager'] as UserRole[],
   },
   {
-    title: "سجلات النشاط",
-    icon: Activity,
-    href: "/admin/user-activity-logs",
-    allowedRoles: ['admin', 'manager'] as UserRole[],
-  },
-  {
     title: "ويب هوك",
     icon: Settings,
     href: "/admin/webhooks",

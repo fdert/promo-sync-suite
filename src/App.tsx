@@ -51,7 +51,7 @@ import BarcodeSettings from "./pages/admin/BarcodeSettings";
 import FollowUpSettings from "./pages/admin/FollowUpSettings";
 import FinancialMovements from "./pages/admin/FinancialMovements";
 import EmployeeFinancialMovements from "./pages/employee/FinancialMovements";
-import UserActivityLogs from "./pages/admin/UserActivityLogs";
+
 import OrderPayments from "./pages/admin/OrderPayments";
 
 const queryClient = new QueryClient();
@@ -115,7 +115,7 @@ const App = () => (
               <Route path="payments-by-type" element={<PaymentsByType />} />
               <Route path="financial-movements" element={<FinancialMovements />} />
               <Route path="order-payments/:orderId" element={<OrderPayments />} />
-              <Route path="user-activity-logs" element={<UserActivityLogs />} />
+              
               <Route path="reports" element={<Reports />} />
               <Route path="services" element={<ServiceTypes />} />
             <Route path="message-templates" element={
