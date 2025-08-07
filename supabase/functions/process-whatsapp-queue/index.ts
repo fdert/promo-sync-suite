@@ -145,10 +145,14 @@ async function sendToWhatsAppService(message: any): Promise<boolean> {
     // تحديد نوع الـ webhook حسب محتوى الرسالة
     let webhookType = 'outgoing'; // افتراضي للطلبات العادية
     
-    // إذا كانت الرسالة تحتوي على رابط جوجل، استخدم ويب هوك التقييمات
+    // إذا كانت الرسالة تحتوي على رابط جوجل أو كلمة تقييم، استخدم ويب هوك التقييمات
     if (message.message_content?.includes('google.com') || 
         message.message_content?.includes('تقييم') ||
-        message.message_content?.includes('جوجل')) {
+        message.message_content?.includes('جوجل') ||
+        message.message_content?.includes('خرائط جوجل') ||
+        message.message_content?.includes('writereview') ||
+        message.message_content?.includes('نرجو منك تقييم') ||
+        message.message_content?.includes('نرجو تقييم')) {
       webhookType = 'evaluation';
       console.log('🌟 رسالة تقييم تم اكتشافها - استخدام ويب هوك التقييمات');
     }
