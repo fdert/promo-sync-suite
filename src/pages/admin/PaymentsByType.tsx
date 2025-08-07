@@ -89,7 +89,7 @@ const PaymentsByType = () => {
     try {
       setLoading(true);
 
-      // جلب جميع المدفوعات مع بيانات الطلبات والعملاء
+      // جلب جميع المدفوعات من الطلبات مع بيانات العملاء
       const { data: allPaymentsData } = await supabase
         .from('payments')
         .select(`
@@ -100,10 +100,6 @@ const PaymentsByType = () => {
           order_id,
           orders(
             order_number,
-            customers(name)
-          ),
-          invoices(
-            invoice_number,
             customers(name)
           )
         `)
@@ -139,15 +135,14 @@ const PaymentsByType = () => {
 
         setPaymentSummary(summaryArray);
 
-        // تحضير بيانات المدفوعات الأخيرة
+        // تحضير بيانات المدفوعات الأخيرة من الطلبات
         const formattedRecent = allPaymentsData.map(payment => ({
           id: payment.id,
           amount: payment.amount,
           payment_type: payment.payment_type,
           payment_date: payment.payment_date,
-          customer_name: payment.orders?.customers?.name || payment.invoices?.customers?.name,
-          invoice_number: payment.invoices?.invoice_number,
-          order_number: payment.orders?.order_number
+          customer_name: payment.orders?.customers?.name || 'غير محدد',
+          order_number: payment.orders?.order_number || 'غير محدد'
         }));
         
         setRecentPayments(formattedRecent);

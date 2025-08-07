@@ -96,53 +96,62 @@ const AccountsReview = () => {
     }
   };
 
-  // جلب الفواتير غير المدفوعة مع التواريخ
+  // جلب الطلبات غير المدفوعة بالكامل من مدفوعات الطلبات
   const fetchUnpaidInvoices = async () => {
     try {
       const { data, error } = await supabase
-        .from('invoice_payment_summary')
+        .from('order_payment_summary')
         .select(`
-          *,
-          customers(name, phone, whatsapp_number)
+          *
         `)
         .order('due_date', { ascending: true });
 
       if (error) throw error;
 
-      // فلترة الفواتير غير المدفوعة بالكامل
-      const unpaid = (data || []).filter(invoice => {
-        const remainingAmount = invoice.remaining_amount || 0;
+      // جلب بيانات العملاء
+      const customerIds = [...new Set(data?.map(order => order.customer_id).filter(Boolean))];
+      const { data: customers } = await supabase
+        .from('customers')
+        .select('id, name, phone, whatsapp_number')
+        .in('id', customerIds);
+
+      const customerMap = new Map(customers?.map(c => [c.id, c]) || []);
+
+      // فلترة الطلبات غير المدفوعة بالكامل
+      const unpaid = (data || []).filter(order => {
+        const remainingAmount = order.remaining_amount || 0;
         return remainingAmount > 0.01;
-      }).map(invoice => {
+      }).map(order => {
+        const customer = customerMap.get(order.customer_id);
         const today = new Date();
-        const dueDate = new Date(invoice.due_date);
+        const dueDate = new Date(order.due_date);
         const daysDiff = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
         
         return {
-          ...invoice,
-          remaining_amount: invoice.remaining_amount || 0,
-          paid_amount: invoice.calculated_paid_amount || 0,
+          ...order,
+          customers: customer,
+          remaining_amount: order.remaining_amount || 0,
+          paid_amount: order.calculated_paid_amount || 0,
           days_overdue: daysDiff > 0 ? daysDiff : 0,
           is_overdue: daysDiff > 0,
-          payment_status: (invoice.calculated_paid_amount || 0) > 0 ? 'partial' : 'unpaid'
+          payment_status: (order.calculated_paid_amount || 0) > 0 ? 'partial' : 'unpaid'
         };
       });
 
       setUnpaidInvoices(unpaid);
     } catch (error) {
-      console.error('Error fetching unpaid invoices:', error);
+      console.error('Error fetching unpaid orders:', error);
     }
   };
 
-  // جلب المدفوعات الأخيرة
+  // جلب المدفوعات الأخيرة من الطلبات
   const fetchPayments = async () => {
     try {
       const { data, error } = await supabase
         .from('payments')
         .select(`
           *,
-          invoices(invoice_number),
-          orders(order_number)
+          orders(order_number, customers(name))
         `)
         .order('payment_date', { ascending: false })
         .limit(20);
@@ -306,14 +315,14 @@ const AccountsReview = () => {
               {stats.totalUnpaid.toLocaleString()} ر.س
             </div>
             <p className="text-xs text-muted-foreground">
-              من {stats.totalInvoices} فاتورة غير مدفوعة
+              من {stats.totalInvoices} طلب غير مدفوع
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">فواتير متأخرة</CardTitle>
+            <CardTitle className="text-sm font-medium">طلبات متأخرة</CardTitle>
             <AlertTriangle className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
@@ -414,7 +423,7 @@ const AccountsReview = () => {
           {/* فلاتر البحث */}
           <Card>
             <CardHeader>
-              <CardTitle>فلاتر البحث</CardTitle>
+              <CardTitle>فلاتر البحث للطلبات</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -449,7 +458,7 @@ const AccountsReview = () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">جميع الفواتير</SelectItem>
+                      <SelectItem value="all">جميع الطلبات</SelectItem>
                       <SelectItem value="unpaid">غير مدفوعة</SelectItem>
                       <SelectItem value="partial">مدفوعة جزئياً</SelectItem>
                       <SelectItem value="overdue">متأخرة</SelectItem>

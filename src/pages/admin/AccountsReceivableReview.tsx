@@ -106,29 +106,24 @@ const AccountsReceivableReview = () => {
         `)
         .gt('remaining_amount', 0);
 
-      // جلب ملخص الحسابات من الطلبات
+      // جلب ملخص الحسابات من مدفوعات الطلبات
       const { data: summaryData } = await supabase
         .from('order_payment_summary')
-        .select('*')
-        .gt('remaining_amount', 0.01);
+        .select('*');
 
       if (summaryData && summaryData.length > 0) {
         const totalOrdered = summaryData.reduce((sum, order) => sum + order.amount, 0);
         const totalPaid = summaryData.reduce((sum, order) => sum + (order.calculated_paid_amount || 0), 0);
         const totalOutstanding = summaryData.reduce((sum, order) => sum + (order.remaining_amount || 0), 0);
         
-        // جلب رصيد العملاء المدينين من الحسابات
-        const { data: accountData } = await supabase
-          .from('accounts')
-          .select('balance')
-          .eq('account_name', 'العملاء المدينون')
-          .maybeSingle();
+        // حساب رصيد العملاء المدينين من مدفوعات الطلبات
+        const actualReceivable = Math.max(0, totalOutstanding);
         
         setAccountingSummary({
           total_invoiced: totalOrdered,
           total_paid: totalPaid,
-          total_outstanding: totalOutstanding,
-          account_balance: accountData?.balance || 0
+          total_outstanding: actualReceivable,
+          account_balance: actualReceivable
         });
       }
 

@@ -242,7 +242,7 @@ const AccountsOverview = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">إجمالي الطلبات المعلقة</CardTitle>
+            <CardTitle className="text-sm font-medium">إجمالي الطلبات غير المدفوعة</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -324,9 +324,9 @@ const AccountsOverview = () => {
                             <Users className="h-5 w-5" />
                             تفاصيل العميل: {customer.customer_name}
                           </DialogTitle>
-                          <DialogDescription>
-                            عرض تفاصيل الطلبات والمدفوعات والفواتير المرتبطة بالعميل
-                          </DialogDescription>
+                           <DialogDescription>
+                             عرض تفاصيل الطلبات والمدفوعات المرتبطة بالعميل
+                           </DialogDescription>
                         </DialogHeader>
                         
                         {selectedCustomerId && (
