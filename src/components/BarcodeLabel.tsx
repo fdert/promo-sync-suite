@@ -73,7 +73,7 @@ export const BarcodeLabel: React.FC<BarcodeLabelProps> = ({
       
       {/* Header */}
       <div className="text-center mb-4 border-b border-border pb-2">
-        <h3 className="text-lg font-bold text-foreground">وكالة ابداع واحتراف للدعاية والاعلان</h3>
+        <h3 className="text-lg font-bold text-foreground">وكالة الابداع والاحتراف للدعاية والاعلان</h3>
         <p className="text-sm text-muted-foreground">ملصق طلب - {new Date().toLocaleDateString('ar-SA')}</p>
       </div>
 
