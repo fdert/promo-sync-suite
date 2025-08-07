@@ -56,11 +56,11 @@ const UserActivityLogs = () => {
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedUserId, setSelectedUserId] = useState("");
+  const [selectedUserId, setSelectedUserId] = useState("all");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [actionFilter, setActionFilter] = useState("");
-  const [resourceFilter, setResourceFilter] = useState("");
+  const [actionFilter, setActionFilter] = useState("all");
+  const [resourceFilter, setResourceFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
 
   const { toast } = useToast();
@@ -97,7 +97,7 @@ const UserActivityLogs = () => {
         .order('created_at', { ascending: false });
 
       // تطبيق الفلاتر
-      if (selectedUserId) {
+      if (selectedUserId && selectedUserId !== "all") {
         query = query.eq('user_id', selectedUserId);
       }
 
@@ -109,11 +109,11 @@ const UserActivityLogs = () => {
         query = query.lte('created_at', endDate + 'T23:59:59');
       }
 
-      if (actionFilter) {
+      if (actionFilter && actionFilter !== "all") {
         query = query.eq('action', actionFilter);
       }
 
-      if (resourceFilter) {
+      if (resourceFilter && resourceFilter !== "all") {
         query = query.eq('resource_type', resourceFilter);
       }
 
@@ -302,7 +302,7 @@ const UserActivityLogs = () => {
                   <SelectValue placeholder="جميع المستخدمين" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">جميع المستخدمين</SelectItem>
+                  <SelectItem value="all">جميع المستخدمين</SelectItem>
                   {users.map((user) => (
                     <SelectItem key={user.id} value={user.id}>
                       {user.full_name || 'بدون اسم'}
@@ -320,7 +320,7 @@ const UserActivityLogs = () => {
                   <SelectValue placeholder="جميع العمليات" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">جميع العمليات</SelectItem>
+                  <SelectItem value="all">جميع العمليات</SelectItem>
                   <SelectItem value="create">إنشاء</SelectItem>
                   <SelectItem value="update">تحديث</SelectItem>
                   <SelectItem value="delete">حذف</SelectItem>
@@ -338,7 +338,7 @@ const UserActivityLogs = () => {
                   <SelectValue placeholder="جميع الموارد" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">جميع الموارد</SelectItem>
+                  <SelectItem value="all">جميع الموارد</SelectItem>
                   <SelectItem value="order">طلب</SelectItem>
                   <SelectItem value="customer">عميل</SelectItem>
                   <SelectItem value="invoice">فاتورة</SelectItem>
