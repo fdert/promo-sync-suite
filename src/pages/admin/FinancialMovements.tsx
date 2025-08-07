@@ -79,12 +79,14 @@ const FinancialMovements = () => {
 
       const processedData = data?.map(item => {
         const customer = customersMap.get(item.customer_id);
-        const paidAmount = item.calculated_paid_amount || 0;
-        const totalAmount = item.amount || 0;
-        const remainingAmount = totalAmount - paidAmount;
+        const paidAmount = Math.max(0, item.calculated_paid_amount || 0);
+        const totalAmount = Math.max(0, item.amount || 0);
+        const remainingAmount = Math.max(0, totalAmount - paidAmount);
         
         let paymentStatus = 'غير مدفوع';
-        if (paidAmount >= totalAmount) {
+        if (totalAmount === 0) {
+          paymentStatus = 'لا يوجد مبلغ محدد';
+        } else if (paidAmount >= totalAmount) {
           paymentStatus = 'مدفوع بالكامل';
         } else if (paidAmount > 0) {
           paymentStatus = 'مدفوع جزئياً';
