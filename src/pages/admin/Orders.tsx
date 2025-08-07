@@ -2187,6 +2187,18 @@ ${companyName}`;
                   onChange={(e) => setNewOrder({...newOrder, paid_amount: parseFloat(e.target.value) || 0})}
                 />
               </div>
+              
+              <div>
+                <Label htmlFor="remaining_amount">المبلغ المتبقي</Label>
+                <Input
+                  id="remaining_amount"
+                  type="number"
+                  placeholder="0"
+                  value={newOrder.amount - newOrder.paid_amount}
+                  disabled
+                  className="bg-muted"
+                />
+              </div>
             </div>
             
             <div>

@@ -2345,8 +2345,8 @@ ${publicFileUrl}
                   <Label htmlFor="remaining_amount">المبلغ المتبقي</Label>
                   <Input
                     id="remaining_amount"
-                    type="text"
-                    value={`${(newOrder.amount - newOrder.paid_amount).toFixed(2)} ر.س`}
+                    type="number"
+                    value={newOrder.amount - newOrder.paid_amount}
                     disabled
                     className="bg-muted"
                   />
