@@ -1342,6 +1342,78 @@ ${publicFileUrl}
     fetchServices();
     setIsEditOrderDialogOpen(true);
   };
+
+  // تحديث الطلب
+  const updateOrder = async () => {
+    if (!selectedOrderForEditing) return;
+
+    try {
+      setLoading(true);
+
+      // تحديث بيانات الطلب الأساسية
+      const { error: orderError } = await supabase
+        .from('orders')
+        .update({
+          customer_id: newOrder.customer_id,
+          service_id: newOrder.service_id,
+          service_name: newOrder.service_name,
+          priority: newOrder.priority,
+          due_date: newOrder.due_date || null,
+          description: newOrder.description,
+          amount: newOrder.amount,
+          payment_type: newOrder.payment_type,
+          payment_notes: newOrder.payment_notes,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', selectedOrderForEditing.id);
+
+      if (orderError) throw orderError;
+
+      // حذف البنود القديمة
+      const { error: deleteItemsError } = await supabase
+        .from('order_items')
+        .delete()
+        .eq('order_id', selectedOrderForEditing.id);
+
+      if (deleteItemsError) throw deleteItemsError;
+
+      // إضافة البنود الجديدة
+      if (orderItems.length > 0 && orderItems[0].item_name) {
+        const itemsToInsert = orderItems.map(item => ({
+          order_id: selectedOrderForEditing.id,
+          item_name: item.item_name,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          total_amount: item.total_amount
+        }));
+
+        const { error: insertItemsError } = await supabase
+          .from('order_items')
+          .insert(itemsToInsert);
+
+        if (insertItemsError) throw insertItemsError;
+      }
+
+      toast({
+        title: "تم تحديث الطلب",
+        description: "تم تحديث الطلب بنجاح",
+      });
+
+      setIsEditOrderDialogOpen(false);
+      setSelectedOrderForEditing(null);
+      fetchOrders();
+
+    } catch (error) {
+      console.error('Error updating order:', error);
+      toast({
+        title: "خطأ في تحديث الطلب",
+        description: "حدث خطأ أثناء تحديث الطلب",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
   
   // فلترة الطلبات
   const filteredOrders = orders.filter(order => {
@@ -2455,6 +2527,202 @@ ${publicFileUrl}
                 className="bg-blue-600 hover:bg-blue-700"
               >
                 {loading ? 'جاري الإنشاء...' : 'إنشاء الطلب'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* حوار تعديل الطلب */}
+      <Dialog open={isEditOrderDialogOpen} onOpenChange={setIsEditOrderDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>تعديل الطلب</DialogTitle>
+            <DialogDescription>
+              تعديل بيانات الطلب وبنوده
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            {selectedOrderForEditing && (
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="text-sm"><strong>رقم الطلب:</strong> {selectedOrderForEditing.order_number}</p>
+                <p className="text-sm"><strong>العميل الحالي:</strong> {selectedOrderForEditing.customers?.name}</p>
+              </div>
+            )}
+            
+            {/* معلومات الطلب الأساسية */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit-customer">العميل</Label>
+                <select
+                  id="edit-customer"
+                  value={newOrder.customer_id}
+                  onChange={(e) => setNewOrder(prev => ({ ...prev, customer_id: e.target.value }))}
+                  className="w-full p-2 border rounded-md"
+                >
+                  <option value="">اختر العميل</option>
+                  {customers.map((customer) => (
+                    <option key={customer.id} value={customer.id}>
+                      {customer.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <Label htmlFor="edit-service">الخدمة</Label>
+                <Input
+                  id="edit-service"
+                  placeholder="اسم الخدمة"
+                  value={newOrder.service_name}
+                  onChange={(e) => setNewOrder(prev => ({ ...prev, service_name: e.target.value }))}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="edit-priority">الأولوية</Label>
+                <select
+                  id="edit-priority"
+                  value={newOrder.priority}
+                  onChange={(e) => setNewOrder(prev => ({ ...prev, priority: e.target.value }))}
+                  className="w-full p-2 border rounded-md"
+                >
+                  <option value="منخفضة">منخفضة</option>
+                  <option value="متوسطة">متوسطة</option>
+                  <option value="عالية">عالية</option>
+                </select>
+              </div>
+
+              <div>
+                <Label htmlFor="edit-due-date">تاريخ الاستحقاق</Label>
+                <Input
+                  id="edit-due-date"
+                  type="date"
+                  value={newOrder.due_date}
+                  onChange={(e) => setNewOrder(prev => ({ ...prev, due_date: e.target.value }))}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="edit-payment-type">نوع الدفع</Label>
+                <select
+                  id="edit-payment-type"
+                  value={newOrder.payment_type}
+                  onChange={(e) => setNewOrder(prev => ({ ...prev, payment_type: e.target.value }))}
+                  className="w-full p-2 border rounded-md"
+                >
+                  <option value="نقدي">نقدي</option>
+                  <option value="آجل">آجل</option>
+                  <option value="دفع آجل">دفع آجل</option>
+                  <option value="تحويل بنكي">تحويل بنكي</option>
+                  <option value="شبكة">شبكة</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="edit-description">الوصف</Label>
+              <Textarea
+                id="edit-description"
+                placeholder="وصف تفصيلي للطلب..."
+                value={newOrder.description}
+                onChange={(e) => setNewOrder(prev => ({ ...prev, description: e.target.value }))}
+                rows={3}
+              />
+            </div>
+
+            {/* بنود الطلب */}
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <Label className="text-lg font-semibold">بنود الطلب</Label>
+                <Button type="button" onClick={addOrderItem} variant="outline" size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  إضافة بند
+                </Button>
+              </div>
+              
+              <div className="space-y-3">
+                {orderItems.map((item, index) => (
+                  <div key={index} className="grid grid-cols-5 gap-3 p-3 border rounded-lg">
+                    <div className="space-y-2">
+                      <Label htmlFor={`edit_item_name_${index}`}>اسم البند</Label>
+                      <Input
+                        id={`edit_item_name_${index}`}
+                        placeholder="اسم البند"
+                        value={item.item_name}
+                        onChange={(e) => updateOrderItem(index, 'item_name', e.target.value)}
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor={`edit_quantity_${index}`}>الكمية</Label>
+                      <Input
+                         id={`edit_quantity_${index}`}
+                         type="text"
+                         value={item.quantity}
+                         onChange={(e) => updateOrderItem(index, 'quantity', parseInt(e.target.value) || 1)}
+                       />
+                     </div>
+
+                     <div className="space-y-2">
+                       <Label htmlFor={`edit_unit_price_${index}`}>السعر</Label>
+                       <Input
+                         id={`edit_unit_price_${index}`}
+                         type="text"
+                         value={item.unit_price}
+                         onChange={(e) => updateOrderItem(index, 'unit_price', parseFloat(e.target.value) || 0)}
+                       />
+                     </div>
+
+                    <div className="space-y-2">
+                      <Label>الإجمالي</Label>
+                      <Input
+                        type="text"
+                        value={item.total_amount.toLocaleString()}
+                        disabled
+                        className="bg-muted"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="invisible">حذف</Label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => removeOrderItem(index)}
+                        disabled={orderItems.length === 1}
+                        className="w-full"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="mt-3 p-3 bg-muted rounded-lg">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">إجمالي المبلغ:</span>
+                  <span className="font-bold text-lg">{newOrder.amount.toLocaleString()} ر.س</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex gap-2 justify-end pt-4 border-t">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsEditOrderDialogOpen(false)}
+                disabled={loading}
+              >
+                إلغاء
+              </Button>
+              <Button 
+                onClick={updateOrder}
+                disabled={loading || !newOrder.customer_id || !newOrder.service_name}
+              >
+                {loading ? 'جاري التحديث...' : 'حفظ التغييرات'}
               </Button>
             </div>
           </div>
