@@ -75,17 +75,11 @@ const ReviewsManagement = () => {
       // عرض جميع التقييمات للمراجعة اليدوية
       console.log('Total evaluations found:', data?.length || 0);
       
-      // تصفية التقييمات المناسبة للمراجعة (التي تم إرسالها وبها تقييم)
-      const filteredEvaluations = (data || []).filter(evaluation => {
-        // عرض التقييمات التي:
-        // 1. تم إرسالها (submitted_at !== null)
-        // 2. بها تقييم (rating !== null) 
-        // 3. أو كانت بحالة pending للمراجعة
-        return evaluation.submitted_at !== null || evaluation.google_review_status === 'pending';
-      });
+      // فلترة التقييمات: عرض كل التقييمات لكن التركيز على المناسبة للمراجعة
+      const allEvaluations = data || [];
       
-      console.log('Filtered evaluations for review:', filteredEvaluations.length);
-      setEvaluations(filteredEvaluations);
+      console.log('All evaluations for review:', allEvaluations.length);
+      setEvaluations(allEvaluations);
     } catch (error) {
       console.error("Error fetching evaluations:", error);
       toast({
@@ -244,6 +238,19 @@ const ReviewsManagement = () => {
       <div className="flex items-center gap-2">
         <MessageSquare className="h-6 w-6" />
         <h1 className="text-2xl font-bold">إدارة التقييمات لخرائط جوجل</h1>
+        <Badge variant="outline" className="ml-2">
+          {evaluations.length} تقييم
+        </Badge>
+      </div>
+
+      {/* إضافة معلومات حول التقييمات */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <h3 className="font-medium text-blue-800 mb-2">معلومات هامة:</h3>
+        <ul className="text-sm text-blue-700 space-y-1">
+          <li>• التقييمات المعروضة هنا هي التي تم إرسالها من العملاء</li>
+          <li>• يمكنك مراجعة التقييمات قبل إرسالها لخرائط جوجل</li>
+          <li>• التقييمات العالية (4-5 نجوم) مناسبة للنشر على جوجل</li>
+        </ul>
       </div>
 
       <div className="grid gap-4">
@@ -274,7 +281,7 @@ const ReviewsManagement = () => {
                   </>
                 ) : (
                   <span className="text-sm text-muted-foreground">
-                    لم يتم التقييم بعد
+                    لم يتم التقييم بعد - في انتظار رد العميل
                   </span>
                 )}
               </div>
@@ -306,19 +313,22 @@ const ReviewsManagement = () => {
                 )}
               </div>
 
-              {evaluation.google_review_status === "pending" && (
+              {/* إظهار أزرار الإجراءات للتقييمات المناسبة */}
+              {(evaluation.google_review_status === "pending" || 
+                (evaluation.rating && evaluation.rating >= 4)) && (
                 <div className="flex gap-2">
                   <Dialog>
                     <DialogTrigger asChild>
                       <Button
                         size="sm"
+                        disabled={!evaluation.rating}
                         onClick={() => {
                           setSelectedEvaluation(evaluation);
                           setAdminNotes(evaluation.admin_notes || "");
                         }}
                       >
                         <Send className="mr-2 h-4 w-4" />
-                        إرسال لخرائط جوجل
+                        {evaluation.rating ? "إرسال لخرائط جوجل" : "في انتظار التقييم"}
                       </Button>
                     </DialogTrigger>
                     <DialogContent>
@@ -361,14 +371,14 @@ const ReviewsManagement = () => {
                     size="sm"
                     variant="destructive"
                     onClick={() => declineEvaluation(evaluation.id)}
-                    disabled={actionLoading === evaluation.id}
+                    disabled={actionLoading === evaluation.id || !evaluation.rating}
                   >
                     {actionLoading === evaluation.id ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
                       <XCircle className="mr-2 h-4 w-4" />
                     )}
-                    رفض الإرسال
+                    {evaluation.rating ? "رفض الإرسال" : "غير متاح"}
                   </Button>
                 </div>
               )}
