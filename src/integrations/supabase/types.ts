@@ -1894,6 +1894,14 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: number
       }
+      check_delivery_delays: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      check_payment_delays: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       create_invoice_accounting_entry: {
         Args: {
           invoice_id: string
