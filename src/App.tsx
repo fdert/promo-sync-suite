@@ -48,6 +48,7 @@ import FinancialReports from "./pages/employee/FinancialReports";
 import ReviewsManagement from "./pages/admin/ReviewsManagement";
 import GoogleMapsIntegration from "./pages/admin/GoogleMapsIntegration";
 import BarcodeSettings from "./pages/admin/BarcodeSettings";
+import FollowUpSettings from "./pages/admin/FollowUpSettings";
 import FinancialMovements from "./pages/admin/FinancialMovements";
 import EmployeeFinancialMovements from "./pages/employee/FinancialMovements";
 
@@ -136,6 +137,11 @@ const App = () => (
                <Route path="barcode-settings" element={
                  <RoleProtectedRoute allowedRoles={['admin', 'manager']}>
                    <BarcodeSettings />
+                 </RoleProtectedRoute>
+               } />
+               <Route path="follow-up-settings" element={
+                 <RoleProtectedRoute allowedRoles={['admin', 'manager']}>
+                   <FollowUpSettings />
                  </RoleProtectedRoute>
                } />
                <Route path="evaluations" element={<Evaluations />} />

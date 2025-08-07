@@ -178,6 +178,12 @@ const menuItems = [
     href: "/admin/barcode-settings",
     allowedRoles: ['admin', 'manager'] as UserRole[],
   },
+  {
+    title: "إدارة المتابعة",
+    icon: MessageSquare,
+    href: "/admin/follow-up-settings",
+    allowedRoles: ['admin', 'manager'] as UserRole[],
+  },
 ];
 
 const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {

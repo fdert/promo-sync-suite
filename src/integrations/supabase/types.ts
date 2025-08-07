@@ -559,6 +559,51 @@ export type Database = {
         }
         Relationships: []
       }
+      follow_up_settings: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          delivery_delay_days: number | null
+          follow_up_email: string | null
+          follow_up_whatsapp: string | null
+          id: string
+          payment_delay_days: number | null
+          send_whatsapp_on_delivery_delay: boolean | null
+          send_whatsapp_on_failure: boolean | null
+          send_whatsapp_on_new_order: boolean | null
+          send_whatsapp_on_payment_delay: boolean | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          delivery_delay_days?: number | null
+          follow_up_email?: string | null
+          follow_up_whatsapp?: string | null
+          id?: string
+          payment_delay_days?: number | null
+          send_whatsapp_on_delivery_delay?: boolean | null
+          send_whatsapp_on_failure?: boolean | null
+          send_whatsapp_on_new_order?: boolean | null
+          send_whatsapp_on_payment_delay?: boolean | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          delivery_delay_days?: number | null
+          follow_up_email?: string | null
+          follow_up_whatsapp?: string | null
+          id?: string
+          payment_delay_days?: number | null
+          send_whatsapp_on_delivery_delay?: boolean | null
+          send_whatsapp_on_failure?: boolean | null
+          send_whatsapp_on_new_order?: boolean | null
+          send_whatsapp_on_payment_delay?: boolean | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       google_maps_settings: {
         Row: {
           auto_send_enabled: boolean | null
