@@ -108,13 +108,13 @@ const Customers = () => {
     customer.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // تصدير بيانات العملاء
+  // تصدير بيانات العملاء (الاسم ورقم الجوال فقط)
   const handleExportCustomers = () => {
     try {
       const csvContent = "data:text/csv;charset=utf-8," 
-        + "الاسم,البريد الإلكتروني,الهاتف,واتس آب,الشركة,المدينة,العنوان,الملاحظات,تاريخ الإنشاء\n"
+        + "الاسم,رقم الجوال\n"
         + customers.map(customer => 
-          `${customer.name || ''},${customer.email || ''},${customer.phone || ''},${customer.whatsapp_number || ''},${customer.company || ''},${customer.city || ''},${customer.address || ''},${customer.notes || ''},${customer.created_at || ''}`
+          `${customer.name || ''},${customer.phone || ''}`
         ).join("\n");
 
       const encodedUri = encodeURI(csvContent);
@@ -139,7 +139,7 @@ const Customers = () => {
     }
   };
 
-  // استيراد بيانات العملاء
+  // استيراد بيانات العملاء (الاسم ورقم الجوال فقط)
   const handleImportCustomers = async () => {
     if (!importFile) {
       toast({
@@ -157,20 +157,14 @@ const Customers = () => {
       const customers = rows
         .filter(row => row.trim())
         .map(row => {
-          const [name, email, phone, whatsapp_number, company, city, address, notes] = row.split(',');
+          const [name, phone] = row.split(',');
           return {
             name: name?.trim(),
-            email: email?.trim(),
             phone: phone?.trim(),
-            whatsapp_number: whatsapp_number?.trim(),
-            company: company?.trim(),
-            city: city?.trim(),
-            address: address?.trim(),
-            notes: notes?.trim(),
             import_source: 'CSV Import'
           };
         })
-        .filter(customer => customer.name && customer.email);
+        .filter(customer => customer.name && customer.phone);
 
       if (customers.length === 0) {
         toast({
@@ -484,6 +478,54 @@ const Customers = () => {
               className="pl-10 w-64"
             />
           </div>
+          
+          <Button onClick={handleExportCustomers} variant="outline" className="gap-2">
+            <Download className="h-4 w-4" />
+            تصدير
+          </Button>
+          
+          <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <Upload className="h-4 w-4" />
+                استيراد
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>استيراد العملاء</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="import-file">اختر ملف CSV</Label>
+                  <Input
+                    id="import-file"
+                    type="file"
+                    accept=".csv"
+                    onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                    className="mt-2"
+                  />
+                  <p className="text-sm text-muted-foreground mt-2">
+                    الملف يجب أن يحتوي على عمودين: الاسم، رقم الجوال
+                  </p>
+                </div>
+                <div className="flex justify-end gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setIsImportDialogOpen(false);
+                      setImportFile(null);
+                    }}
+                  >
+                    إلغاء
+                  </Button>
+                  <Button onClick={handleImportCustomers}>
+                    استيراد
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
           
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
