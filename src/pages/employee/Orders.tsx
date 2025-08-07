@@ -479,7 +479,7 @@ const Orders = () => {
       if (!order) throw new Error('الطلب غير موجود');
 
       // جلب اسم الشركة من قاعدة البيانات
-      let companyName = 'وكالة الإبداع للدعاية والإعلان';
+      let companyName = 'وكالة الابداع والاحتراف للدعاية والاعلان';
       try {
         const { data: companyData } = await supabase
           .from('website_settings')
