@@ -141,7 +141,6 @@ const UserActivityLogs = () => {
     return (
       log.action.toLowerCase().includes(searchLower) ||
       log.resource_type.toLowerCase().includes(searchLower) ||
-      log.profiles?.full_name?.toLowerCase().includes(searchLower) ||
       (log.details && JSON.stringify(log.details).toLowerCase().includes(searchLower))
     );
   });
@@ -414,7 +413,7 @@ const UserActivityLogs = () => {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <User className="h-4 w-4 text-gray-400" />
-                        {log.profiles?.full_name || 'مستخدم غير معروف'}
+                        {users.find(u => u.id === log.user_id)?.full_name || 'مستخدم غير معروف'}
                       </div>
                     </TableCell>
                     <TableCell>

@@ -19,6 +19,7 @@ import {
   Star,
   MapPin,
   Tags,
+  Activity,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -140,6 +141,12 @@ const menuItems = [
     title: "طباعة العملاء",
     icon: Users,
     href: "/admin/customer-print-orders",
+    allowedRoles: ['admin', 'manager'] as UserRole[],
+  },
+  {
+    title: "سجلات النشاط",
+    icon: Activity,
+    href: "/admin/user-activity-logs",
     allowedRoles: ['admin', 'manager'] as UserRole[],
   },
   {

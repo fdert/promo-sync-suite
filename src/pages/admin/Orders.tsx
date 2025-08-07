@@ -142,6 +142,14 @@ const Orders = () => {
   const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
   const [selectedOrderForInvoice, setSelectedOrderForInvoice] = useState<Order | null>(null);
 
+  // حالات تعديل الطلب
+  const [isEditOrderDialogOpen, setIsEditOrderDialogOpen] = useState(false);
+  const [selectedOrderForEditing, setSelectedOrderForEditing] = useState<Order | null>(null);
+  
+  // حالات حذف الطلب
+  const [isDeleteOrderDialogOpen, setIsDeleteOrderDialogOpen] = useState(false);
+  const [selectedOrderForDelete, setSelectedOrderForDelete] = useState<Order | null>(null);
+
   // حالات المدفوعات
   const [payments, setPayments] = useState<any[]>([]);
   const [newPayment, setNewPayment] = useState({
