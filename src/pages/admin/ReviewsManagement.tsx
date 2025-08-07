@@ -53,6 +53,8 @@ const ReviewsManagement = () => {
 
   const fetchEvaluations = async () => {
     try {
+      console.log('Fetching evaluations for reviews management...');
+      
       const { data, error } = await supabase
         .from("evaluations")
         .select(`
@@ -62,15 +64,28 @@ const ReviewsManagement = () => {
         `)
         .order("created_at", { ascending: false });
 
+      console.log('Evaluations data:', data);
+      console.log('Evaluations error:', error);
+
       if (error) {
-        console.error("Evaluations error:", error);
+        console.error("Error fetching evaluations:", error);
         throw error;
       }
       
       // عرض جميع التقييمات للمراجعة اليدوية
-      // سيتم إرسال رسائل جوجل ماب يدوياً من واجهة الإدارة
+      console.log('Total evaluations found:', data?.length || 0);
       
-      setEvaluations(data || []);
+      // تصفية التقييمات المناسبة للمراجعة (التي تم إرسالها وبها تقييم)
+      const filteredEvaluations = (data || []).filter(evaluation => {
+        // عرض التقييمات التي:
+        // 1. تم إرسالها (submitted_at !== null)
+        // 2. بها تقييم (rating !== null) 
+        // 3. أو كانت بحالة pending للمراجعة
+        return evaluation.submitted_at !== null || evaluation.google_review_status === 'pending';
+      });
+      
+      console.log('Filtered evaluations for review:', filteredEvaluations.length);
+      setEvaluations(filteredEvaluations);
     } catch (error) {
       console.error("Error fetching evaluations:", error);
       toast({
