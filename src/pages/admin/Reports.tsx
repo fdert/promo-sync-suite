@@ -33,18 +33,23 @@ const Reports = () => {
     try {
       setLoading(true);
 
-      // جلب الفواتير المدفوعة
-      const { data: invoices, error: invoicesError } = await supabase
-        .from('invoices')
+      // جلب مدفوعات الطلبات
+      const { data: payments, error: paymentsError } = await supabase
+        .from('payments')
         .select(`
           *,
-          customers(name, id)
+          orders!inner(
+            id,
+            customer_id,
+            status,
+            completion_date,
+            customers(name, id)
+          )
         `)
-        .eq('status', 'مدفوع')
         .gte('payment_date', startDate)
         .lte('payment_date', endDate);
 
-      if (invoicesError) throw invoicesError;
+      if (paymentsError) throw paymentsError;
 
       // جلب المصروفات
       const { data: expenses, error: expensesError } = await supabase
@@ -66,20 +71,20 @@ const Reports = () => {
       if (ordersError) throw ordersError;
 
       // حساب الإحصائيات
-      const totalRevenue = invoices?.reduce((sum, inv) => sum + (inv.total_amount || 0), 0) || 0;
+      const totalRevenue = payments?.reduce((sum, payment) => sum + (payment.amount || 0), 0) || 0;
       const totalExpenses = expenses?.reduce((sum, exp) => sum + (exp.amount || 0), 0) || 0;
-      const uniqueCustomers = new Set(invoices?.map(inv => inv.customer_id)).size;
+      const uniqueCustomers = new Set(payments?.map(payment => payment.orders?.customer_id)).size;
       const completedProjects = orders?.length || 0;
       const averageProjectValue = completedProjects > 0 ? totalRevenue / completedProjects : 0;
 
       // تجميع البيانات الشهرية
       const monthlyData = {};
-      invoices?.forEach(invoice => {
-        const month = new Date(invoice.payment_date).toLocaleDateString('ar-SA', { month: 'long' });
+      payments?.forEach(payment => {
+        const month = new Date(payment.payment_date).toLocaleDateString('ar-SA', { month: 'long' });
         if (!monthlyData[month]) {
           monthlyData[month] = { month, revenue: 0, expenses: 0 };
         }
-        monthlyData[month].revenue += invoice.total_amount || 0;
+        monthlyData[month].revenue += payment.amount || 0;
       });
 
       expenses?.forEach(expense => {
@@ -92,14 +97,16 @@ const Reports = () => {
 
       // أفضل العملاء
       const customerRevenue = {};
-      invoices?.forEach(invoice => {
-        const customerId = invoice.customer_id;
-        const customerName = invoice.customers?.name || 'غير محدد';
-        if (!customerRevenue[customerId]) {
+      payments?.forEach(payment => {
+        const customerId = payment.orders?.customer_id;
+        const customerName = payment.orders?.customers?.name || 'غير محدد';
+        if (customerId && !customerRevenue[customerId]) {
           customerRevenue[customerId] = { name: customerName, revenue: 0, projects: 0 };
         }
-        customerRevenue[customerId].revenue += invoice.total_amount || 0;
-        customerRevenue[customerId].projects += 1;
+        if (customerId) {
+          customerRevenue[customerId].revenue += payment.amount || 0;
+          customerRevenue[customerId].projects += 1;
+        }
       });
 
       const topCustomers = Object.values(customerRevenue)
