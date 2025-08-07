@@ -37,11 +37,14 @@ import {
   Receipt,
   Plus,
   Trash2,
+  Tags,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Switch } from "@/components/ui/switch";
+import { useThermalPrint } from "@/hooks/useThermalPrint";
+import "@/components/BarcodeLabel.css";
 
 interface Order {
   id: string;
@@ -173,6 +176,7 @@ const Orders = () => {
   
   const { toast } = useToast();
   const { user } = useAuth();
+  const { printBarcodeLabel } = useThermalPrint();
 
   // جلب الطلبات
   const fetchOrders = async () => {
@@ -266,6 +270,23 @@ const Orders = () => {
         variant: "destructive",
       });
     }
+  };
+
+  // طباعة ملصق باركود للطلب
+  const handlePrintBarcodeLabel = (order: Order) => {
+    const customerName = order.customers?.name || 'غير محدد';
+    const phoneNumber = order.customers?.whatsapp_number || order.customers?.phone || 'غير محدد';
+    const totalAmount = order.amount || 0;
+    const paidAmount = order.paid_amount || 0;
+    const paymentStatus = `payment|${totalAmount}|${paidAmount}`;
+    
+    printBarcodeLabel(
+      order.order_number,
+      customerName,
+      phoneNumber,
+      paymentStatus,
+      order.id
+    );
   };
 
   // جلب ملفات طلب معين
@@ -1366,7 +1387,7 @@ ${companyName}`;
               
               {/* الأزرار */}
               <div className="flex flex-col gap-2">
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   {/* تعديل حالة الطلب */}
                   <Button
                     variant="default"
@@ -1447,6 +1468,17 @@ ${companyName}`;
                   >
                     <Eye className="h-3 w-3 mr-1" />
                     ملفات
+                  </Button>
+                  
+                  {/* طباعة ملصق باركود */}
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="text-xs"
+                    onClick={() => handlePrintBarcodeLabel(order)}
+                  >
+                    <Tags className="h-3 w-3 mr-1" />
+                    ملصق
                   </Button>
                 </div>
               </div>

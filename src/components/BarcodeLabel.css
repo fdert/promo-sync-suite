@@ -1,0 +1,90 @@
+/* طباعة الملصق للطابعات الحرارية */
+@media print {
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+    -webkit-print-color-adjust: exact;
+    color-adjust: exact;
+  }
+  
+  @page {
+    size: 80mm auto; /* عرض الطابعة الحرارية 80mm */
+    margin: 2mm;
+  }
+  
+  .barcode-label {
+    width: 76mm;
+    max-width: 76mm;
+    margin: 0 auto;
+    padding: 2mm;
+    border: 1px solid #000;
+    background: white;
+    font-size: 10pt;
+    line-height: 1.2;
+  }
+  
+  .barcode-label * {
+    color: #000 !important;
+    background: transparent !important;
+  }
+  
+  .barcode-label svg {
+    width: 100%;
+    height: auto;
+  }
+  
+  /* إخفاء عناصر الواجهة أثناء الطباعة */
+  .no-print {
+    display: none !important;
+  }
+}
+
+/* تنسيق الملصق للشاشة */
+.barcode-label {
+  font-family: 'Arial', sans-serif;
+  max-width: 300px;
+  background: white;
+  border: 2px solid #333;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.barcode-label svg {
+  display: block;
+  margin: 0 auto;
+}
+
+/* تنسيق النص للقراءة الجيدة */
+.label-text {
+  font-weight: bold;
+  text-align: center;
+  margin: 4px 0;
+}
+
+.label-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2px 4px;
+  border-bottom: 1px solid #eee;
+}
+
+.label-info:last-child {
+  border-bottom: none;
+}
+
+.payment-status-paid {
+  color: #22c55e;
+  font-weight: bold;
+}
+
+.payment-status-partial {
+  color: #f59e0b;
+  font-weight: bold;
+}
+
+.payment-status-unpaid {
+  color: #ef4444;
+  font-weight: bold;
+}
