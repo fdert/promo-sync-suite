@@ -1637,6 +1637,7 @@ export type Database = {
         Row: {
           created_at: string
           customer_id: string | null
+          error_message: string | null
           from_number: string
           id: string
           is_reply: boolean | null
@@ -1646,6 +1647,7 @@ export type Database = {
           message_type: string | null
           replied_at: string | null
           replied_by: string | null
+          sent_at: string | null
           status: string | null
           timestamp: string | null
           to_number: string | null
@@ -1654,6 +1656,7 @@ export type Database = {
         Insert: {
           created_at?: string
           customer_id?: string | null
+          error_message?: string | null
           from_number: string
           id?: string
           is_reply?: boolean | null
@@ -1663,6 +1666,7 @@ export type Database = {
           message_type?: string | null
           replied_at?: string | null
           replied_by?: string | null
+          sent_at?: string | null
           status?: string | null
           timestamp?: string | null
           to_number?: string | null
@@ -1671,6 +1675,7 @@ export type Database = {
         Update: {
           created_at?: string
           customer_id?: string | null
+          error_message?: string | null
           from_number?: string
           id?: string
           is_reply?: boolean | null
@@ -1680,6 +1685,7 @@ export type Database = {
           message_type?: string | null
           replied_at?: string | null
           replied_by?: string | null
+          sent_at?: string | null
           status?: string | null
           timestamp?: string | null
           to_number?: string | null
