@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Download, Printer, Search, FileText } from "lucide-react";
+import { CalendarIcon, Download, Printer, Search, FileText, TrendingUp, TrendingDown, DollarSign, Users, CheckCircle, XCircle, AlertCircle, Phone, Calendar as CalendarIcon2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, startOfMonth, endOfMonth, startOfYear, endOfYear, subMonths, startOfDay, endOfDay } from "date-fns";
 import { ar } from "date-fns/locale";
@@ -352,107 +352,165 @@ const EmployeeFinancialMovements = () => {
     }
   };
 
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'مدفوع بالكامل':
+        return <CheckCircle className="h-4 w-4 text-green-600" />;
+      case 'مدفوع جزئياً':
+        return <AlertCircle className="h-4 w-4 text-yellow-600" />;
+      case 'غير مدفوع':
+        return <XCircle className="h-4 w-4 text-red-600" />;
+      default:
+        return <AlertCircle className="h-4 w-4 text-gray-600" />;
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">جاري تحميل البيانات...</p>
+        <div className="text-center space-y-4">
+          <div className="relative">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary/20 border-t-primary mx-auto"></div>
+            <div className="absolute inset-0 rounded-full h-12 w-12 border-4 border-transparent border-r-primary/40 animate-[spin_2s_linear_infinite_reverse] mx-auto"></div>
+          </div>
+          <p className="text-lg font-medium text-muted-foreground">جاري تحميل البيانات المالية...</p>
+          <p className="text-sm text-muted-foreground">نرجو الانتظار قليلاً</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">الحركة المالية للطلبات</h1>
-          <p className="text-muted-foreground">تتبع المدفوعات والمبالغ المتبقية للطلبات</p>
-        </div>
-        <div className="flex gap-2">
-          <Button onClick={exportToExcel} variant="outline" className="gap-2">
-            <Download className="h-4 w-4" />
-            تصدير Excel
-          </Button>
-          <Button onClick={printReport} variant="outline" className="gap-2">
-            <Printer className="h-4 w-4" />
-            طباعة التقرير
-          </Button>
+    <div className="container mx-auto p-6 space-y-8 bg-gradient-to-br from-background to-secondary/20 min-h-screen">
+      {/* Header Section */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary/10 via-accent/10 to-primary/5 p-8 border border-border/50">
+        <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
+        <div className="relative flex justify-between items-center">
+          <div className="space-y-2">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              الحركة المالية للطلبات
+            </h1>
+            <p className="text-lg text-muted-foreground flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-primary" />
+              تتبع المدفوعات والمبالغ المتبقية للطلبات
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <Button onClick={exportToExcel} variant="outline" className="gap-2 bg-white/50 hover:bg-white/80 border-primary/20 hover:border-primary transition-all duration-300 shadow-lg hover:shadow-xl">
+              <Download className="h-4 w-4" />
+              تصدير Excel
+            </Button>
+            <Button onClick={printReport} variant="outline" className="gap-2 bg-white/50 hover:bg-white/80 border-primary/20 hover:border-primary transition-all duration-300 shadow-lg hover:shadow-xl">
+              <Printer className="h-4 w-4" />
+              طباعة التقرير
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* الإحصائيات */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">إجمالي الطلبات</CardTitle>
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+        <Card className="group hover:shadow-lg transition-all duration-300 border-primary/20 hover:border-primary/40 bg-gradient-to-br from-white to-blue-50/50">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium text-muted-foreground">إجمالي الطلبات</CardTitle>
+              <Users className="h-5 w-5 text-blue-600 group-hover:scale-110 transition-transform duration-300" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalOrders}</div>
+            <div className="text-3xl font-bold text-blue-600">{stats.totalOrders}</div>
+            <p className="text-xs text-muted-foreground mt-1">طلب</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">إجمالي المبالغ</CardTitle>
+
+        <Card className="group hover:shadow-lg transition-all duration-300 border-purple/20 hover:border-purple/40 bg-gradient-to-br from-white to-purple-50/50">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium text-muted-foreground">إجمالي المبالغ</CardTitle>
+              <DollarSign className="h-5 w-5 text-purple-600 group-hover:scale-110 transition-transform duration-300" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(stats.totalAmount)}</div>
+            <div className="text-3xl font-bold text-purple-600">{formatCurrency(stats.totalAmount)}</div>
+            <p className="text-xs text-muted-foreground mt-1">ريال سعودي</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">إجمالي المدفوع</CardTitle>
+
+        <Card className="group hover:shadow-lg transition-all duration-300 border-green-500/20 hover:border-green-500/40 bg-gradient-to-br from-white to-green-50/50">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium text-muted-foreground">إجمالي المدفوع</CardTitle>
+              <TrendingUp className="h-5 w-5 text-green-600 group-hover:scale-110 transition-transform duration-300" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{formatCurrency(stats.totalPaid)}</div>
+            <div className="text-3xl font-bold text-green-600">{formatCurrency(stats.totalPaid)}</div>
+            <p className="text-xs text-muted-foreground mt-1">مدفوع</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">إجمالي المتبقي</CardTitle>
+        <Card className="group hover:shadow-lg transition-all duration-300 border-red-500/20 hover:border-red-500/40 bg-gradient-to-br from-white to-red-50/50">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium text-muted-foreground">إجمالي المتبقي</CardTitle>
+              <TrendingDown className="h-5 w-5 text-red-600 group-hover:scale-110 transition-transform duration-300" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{formatCurrency(stats.totalRemaining)}</div>
+            <div className="text-3xl font-bold text-red-600">{formatCurrency(stats.totalRemaining)}</div>
+            <p className="text-xs text-muted-foreground mt-1">متبقي</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">الطلبات المدفوعة</CardTitle>
+
+        <Card className="group hover:shadow-lg transition-all duration-300 border-emerald-500/20 hover:border-emerald-500/40 bg-gradient-to-br from-white to-emerald-50/50">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium text-muted-foreground">الطلبات المدفوعة</CardTitle>
+              <CheckCircle className="h-5 w-5 text-emerald-600 group-hover:scale-110 transition-transform duration-300" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.paidOrdersCount}</div>
+            <div className="text-3xl font-bold text-emerald-600">{stats.paidOrdersCount}</div>
+            <p className="text-xs text-muted-foreground mt-1">طلب مدفوع</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">الطلبات غير المدفوعة</CardTitle>
+
+        <Card className="group hover:shadow-lg transition-all duration-300 border-orange-500/20 hover:border-orange-500/40 bg-gradient-to-br from-white to-orange-50/50">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium text-muted-foreground">الطلبات غير المدفوعة</CardTitle>
+              <XCircle className="h-5 w-5 text-orange-600 group-hover:scale-110 transition-transform duration-300" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{stats.unpaidOrdersCount}</div>
+            <div className="text-3xl font-bold text-orange-600">{stats.unpaidOrdersCount}</div>
+            <p className="text-xs text-muted-foreground mt-1">طلب غير مدفوع</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* أدوات البحث والفلترة */}
-      <Card>
-        <CardHeader>
-          <CardTitle>البحث والفلترة</CardTitle>
+      {/* Search and Filter Section */}
+      <Card className="border-primary/20 shadow-lg bg-gradient-to-r from-white to-primary/5">
+        <CardHeader className="border-b border-primary/10">
+          <CardTitle className="flex items-center gap-2 text-xl">
+            <Search className="h-6 w-6 text-primary" />
+            البحث والفلترة
+          </CardTitle>
+          <CardDescription>استخدم الأدوات أدناه للبحث وتصفية النتائج</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+        <CardContent className="pt-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="relative group">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
               <Input
                 placeholder="البحث بالاسم أو الجوال أو رقم الطلب..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 border-primary/20 focus:border-primary bg-white/80 backdrop-blur-sm"
               />
             </div>
             
             <Select value={filterPeriod} onValueChange={setFilterPeriod}>
-              <SelectTrigger>
+              <SelectTrigger className="border-primary/20 focus:border-primary bg-white/80 backdrop-blur-sm">
                 <SelectValue placeholder="اختر الفترة" />
               </SelectTrigger>
               <SelectContent>
@@ -469,7 +527,10 @@ const EmployeeFinancialMovements = () => {
               <>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className={cn("justify-start text-left font-normal", !customDateFrom && "text-muted-foreground")}>
+                    <Button variant="outline" className={cn(
+                      "justify-start text-left font-normal border-primary/20 hover:border-primary bg-white/80 backdrop-blur-sm",
+                      !customDateFrom && "text-muted-foreground"
+                    )}>
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {customDateFrom ? format(customDateFrom, "PPP", { locale: ar }) : "من تاريخ"}
                     </Button>
@@ -481,7 +542,10 @@ const EmployeeFinancialMovements = () => {
 
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className={cn("justify-start text-left font-normal", !customDateTo && "text-muted-foreground")}>
+                    <Button variant="outline" className={cn(
+                      "justify-start text-left font-normal border-primary/20 hover:border-primary bg-white/80 backdrop-blur-sm",
+                      !customDateTo && "text-muted-foreground"
+                    )}>
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {customDateTo ? format(customDateTo, "PPP", { locale: ar }) : "إلى تاريخ"}
                     </Button>
@@ -496,54 +560,110 @@ const EmployeeFinancialMovements = () => {
         </CardContent>
       </Card>
 
-      {/* جدول البيانات */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            تفاصيل الحركة المالية ({filteredMovements.length} طلب)
+      {/* Data Table */}
+      <Card className="border-primary/20 shadow-xl bg-gradient-to-br from-white to-secondary/30 overflow-hidden">
+        <CardHeader className="bg-gradient-to-r from-primary/10 to-accent/10 border-b border-primary/20">
+          <CardTitle className="flex items-center gap-3 text-2xl">
+            <div className="p-2 rounded-lg bg-primary/20">
+              <FileText className="h-6 w-6 text-primary" />
+            </div>
+            تفاصيل الحركة المالية
+            <Badge variant="secondary" className="ml-auto text-lg px-4 py-2 bg-primary/20 text-primary border-primary/30">
+              {filteredMovements.length} طلب
+            </Badge>
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>رقم الطلب</TableHead>
-                  <TableHead>اسم العميل</TableHead>
-                  <TableHead>رقم الجوال</TableHead>
-                  <TableHead>اسم الخدمة</TableHead>
-                  <TableHead>المبلغ الإجمالي</TableHead>
-                  <TableHead>المبلغ المدفوع</TableHead>
-                  <TableHead>المبلغ المتبقي</TableHead>
-                  <TableHead>حالة الدفع</TableHead>
-                  <TableHead>التاريخ</TableHead>
+                <TableRow className="bg-gradient-to-r from-primary/5 to-accent/5 hover:from-primary/10 hover:to-accent/10 border-b-2 border-primary/20">
+                  <TableHead className="font-bold text-primary text-center py-4">رقم الطلب</TableHead>
+                  <TableHead className="font-bold text-primary text-center py-4">بيانات العميل</TableHead>
+                  <TableHead className="font-bold text-primary text-center py-4">الخدمة</TableHead>
+                  <TableHead className="font-bold text-primary text-center py-4">المبلغ الإجمالي</TableHead>
+                  <TableHead className="font-bold text-primary text-center py-4">المبلغ المدفوع</TableHead>
+                  <TableHead className="font-bold text-primary text-center py-4">المبلغ المتبقي</TableHead>
+                  <TableHead className="font-bold text-primary text-center py-4">حالة الدفع</TableHead>
+                  <TableHead className="font-bold text-primary text-center py-4">التاريخ</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredMovements.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-medium">{item.order_number}</TableCell>
-                    <TableCell>{item.customer_name}</TableCell>
-                    <TableCell>{item.customer_phone}</TableCell>
-                    <TableCell>{item.service_name}</TableCell>
-                    <TableCell>{formatCurrency(item.amount)}</TableCell>
-                    <TableCell className="text-green-600">{formatCurrency(item.calculated_paid_amount)}</TableCell>
-                    <TableCell className={cn("font-medium", item.remaining_amount > 0 ? "text-red-600" : "text-green-600")}>
-                      {formatCurrency(item.remaining_amount)}
+                {filteredMovements.map((item, index) => (
+                  <TableRow 
+                    key={item.id}
+                    className={cn(
+                      "hover:bg-gradient-to-r hover:from-primary/5 hover:to-accent/5 transition-all duration-300 border-b border-border/50",
+                      index % 2 === 0 ? "bg-white" : "bg-secondary/20"
+                    )}
+                  >
+                    <TableCell className="font-bold text-center py-6">
+                      <div className="bg-primary/10 rounded-lg px-3 py-2 inline-block">
+                        <span className="text-primary font-mono">{item.order_number}</span>
+                      </div>
                     </TableCell>
-                    <TableCell>
-                      <Badge variant={getStatusBadgeVariant(item.payment_status)}>
-                        {item.payment_status}
-                      </Badge>
+                    <TableCell className="text-center py-6">
+                      <div className="space-y-2">
+                        <div className="font-semibold text-foreground">{item.customer_name}</div>
+                        <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
+                          <Phone className="h-4 w-4" />
+                          <span dir="ltr">{item.customer_phone}</span>
+                        </div>
+                      </div>
                     </TableCell>
-                    <TableCell>{format(new Date(item.created_at), 'yyyy-MM-dd', { locale: ar })}</TableCell>
+                    <TableCell className="text-center py-6">
+                      <div className="bg-accent/10 rounded-lg px-3 py-2 inline-block max-w-32">
+                        <span className="text-accent-foreground font-medium text-sm">{item.service_name}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center py-6">
+                      <div className="text-lg font-bold text-purple-600">
+                        {formatCurrency(item.amount)}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center py-6">
+                      <div className="text-lg font-bold text-green-600 bg-green-50 rounded-lg px-3 py-2 inline-block">
+                        {formatCurrency(item.calculated_paid_amount)}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center py-6">
+                      <div className={cn(
+                        "text-lg font-bold rounded-lg px-3 py-2 inline-block",
+                        item.remaining_amount > 0 
+                          ? "text-red-600 bg-red-50" 
+                          : "text-green-600 bg-green-50"
+                      )}>
+                        {formatCurrency(item.remaining_amount)}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center py-6">
+                      <div className="flex items-center justify-center gap-2">
+                        {getStatusIcon(item.payment_status)}
+                        <Badge variant={getStatusBadgeVariant(item.payment_status)} className="text-sm px-3 py-1">
+                          {item.payment_status}
+                        </Badge>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center py-6">
+                      <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                        <CalendarIcon2 className="h-4 w-4" />
+                        <span>{format(new Date(item.created_at), 'yyyy-MM-dd', { locale: ar })}</span>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))}
                 {filteredMovements.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-6 text-muted-foreground">
-                      لا توجد بيانات لعرضها
+                    <TableCell colSpan={8} className="text-center py-12">
+                      <div className="flex flex-col items-center gap-4">
+                        <div className="p-4 rounded-full bg-muted/50">
+                          <FileText className="h-8 w-8 text-muted-foreground" />
+                        </div>
+                        <div className="space-y-2">
+                          <p className="text-lg font-medium text-muted-foreground">لا توجد بيانات لعرضها</p>
+                          <p className="text-sm text-muted-foreground">جرب تغيير معايير البحث أو الفلترة</p>
+                        </div>
+                      </div>
                     </TableCell>
                   </TableRow>
                 )}
