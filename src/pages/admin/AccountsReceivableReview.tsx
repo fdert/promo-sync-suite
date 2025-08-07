@@ -483,61 +483,6 @@ const AccountsReceivableReview = () => {
         </CardContent>
       </Card>
 
-      {/* الفواتير غير المدفوعة */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CalendarIcon className="h-5 w-5" />
-            الفواتير غير المدفوعة
-          </CardTitle>
-          <CardDescription>
-            مرتبة حسب الأولوية (المتأخرة أولاً)
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>رقم الفاتورة</TableHead>
-                <TableHead>العميل</TableHead>
-                <TableHead>المبلغ الإجمالي</TableHead>
-                <TableHead>المبلغ المدفوع</TableHead>
-                <TableHead>المبلغ المتبقي</TableHead>
-                <TableHead>تاريخ الاستحقاق</TableHead>
-                <TableHead>الحالة</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {unpaidInvoices.map((invoice) => {
-                const status = getOverdueStatus(invoice.days_overdue);
-                return (
-                  <TableRow key={invoice.invoice_id}>
-                    <TableCell className="font-medium">{invoice.invoice_number}</TableCell>
-                    <TableCell>{invoice.customer_name}</TableCell>
-                    <TableCell>{invoice.total_amount.toLocaleString()} ر.س</TableCell>
-                    <TableCell className="text-green-600">
-                      {invoice.paid_amount.toLocaleString()} ر.س
-                    </TableCell>
-                    <TableCell>
-                      <span className="font-bold text-orange-600">
-                        {invoice.remaining_amount.toLocaleString()} ر.س
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      {format(new Date(invoice.due_date), 'dd/MM/yyyy', { locale: ar })}
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={status.color} variant="secondary">
-                        {status.label}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
     </div>
   );
 };
