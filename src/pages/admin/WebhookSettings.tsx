@@ -206,7 +206,7 @@ const WebhookSettings = () => {
       </div>
 
       <Tabs defaultValue="whatsapp" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="whatsapp" className="gap-2">
             <MessageSquare className="h-4 w-4" />
             واتساب
@@ -214,6 +214,10 @@ const WebhookSettings = () => {
           <TabsTrigger value="orders" className="gap-2">
             <ClipboardList className="h-4 w-4" />
             الطلبات
+          </TabsTrigger>
+          <TabsTrigger value="evaluations" className="gap-2">
+            <Webhook className="h-4 w-4" />
+            التقييمات
           </TabsTrigger>
           <TabsTrigger value="invoices" className="gap-2">
             <FileText className="h-4 w-4" />
@@ -260,6 +264,31 @@ const WebhookSettings = () => {
                 onTest={testWebhook}
                 loading={loading}
                 webhookType="outgoing"
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Evaluation Webhooks */}
+        <TabsContent value="evaluations">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Webhook className="h-5 w-5" />
+                ويب هوك التقييمات
+              </CardTitle>
+              <CardDescription>
+                إضافة وإدارة ويب هوك مخصص لرسائل التقييم ومراجعات جوجل
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <WebhookManagement 
+                webhookSettings={webhookSettings.filter(w => w.webhook_type === 'evaluation')}
+                onSave={saveWebhookSetting}
+                onUpdate={updateWebhookSetting}
+                onTest={testWebhook}
+                loading={loading}
+                webhookType="evaluation"
               />
             </CardContent>
           </Card>
