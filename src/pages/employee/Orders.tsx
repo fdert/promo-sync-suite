@@ -1355,7 +1355,6 @@ ${publicFileUrl}
         .from('orders')
         .update({
           customer_id: newOrder.customer_id,
-          service_id: newOrder.service_id,
           service_name: newOrder.service_name,
           priority: newOrder.priority,
           due_date: newOrder.due_date || null,
