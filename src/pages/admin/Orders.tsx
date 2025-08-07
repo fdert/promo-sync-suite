@@ -156,6 +156,8 @@ const Orders = () => {
   const [services, setServices] = useState<Service[]>([]);
   const [newOrder, setNewOrder] = useState({
     customer_id: '',
+    customer_name: '',
+    customer_phone: '',
     service_id: '',
     service_name: '',
     priority: 'متوسطة',
@@ -1073,17 +1075,9 @@ ${companyName}`;
     setNewOrder(prev => ({ ...prev, amount: total }));
   };
 
-  // تحديث الخدمة المختارة
-  const handleServiceChange = (serviceId: string) => {
-    const selectedService = services.find(s => s.id === serviceId);
-    if (selectedService) {
-      setNewOrder(prev => ({
-        ...prev,
-        service_id: serviceId,
-        service_name: selectedService.name,
-        amount: selectedService.base_price || 0
-      }));
-    }
+  // تحديث الخدمة المختارة (لا تحتاج لهذه الدالة مع Input عادي)
+  const handleServiceChange = () => {
+    // لا تحتاج لهذه الدالة مع استخدام Input عادي
   };
 
   // فتح حوار الطلب الجديد
@@ -1096,13 +1090,39 @@ ${companyName}`;
   // إنشاء طلب جديد
   const createNewOrder = async () => {
     try {
-      if (!newOrder.customer_id || !newOrder.service_name || !newOrder.due_date) {
+      if (!newOrder.customer_name || !newOrder.service_name || !newOrder.due_date) {
         toast({
           title: "خطأ",
-          description: "يرجى ملء جميع الحقول المطلوبة",
+          description: "يرجى ملء جميع الحقول المطلوبة (اسم العميل، نوع الخدمة، تاريخ التسليم)",
           variant: "destructive",
         });
         return;
+      }
+
+      // البحث عن العميل أو إنشاؤه
+      let customerId = null;
+      const existingCustomer = customers.find(c => 
+        c.name.toLowerCase() === newOrder.customer_name.toLowerCase() ||
+        (newOrder.customer_phone && (c.phone === newOrder.customer_phone || c.whatsapp_number === newOrder.customer_phone))
+      );
+
+      if (existingCustomer) {
+        customerId = existingCustomer.id;
+      } else {
+        // إنشاء عميل جديد
+        const { data: newCustomer, error: customerError } = await supabase
+          .from('customers')
+          .insert({
+            name: newOrder.customer_name,
+            phone: newOrder.customer_phone,
+            whatsapp_number: newOrder.customer_phone,
+            status: 'نشط'
+          })
+          .select()
+          .single();
+
+        if (customerError) throw customerError;
+        customerId = newCustomer.id;
       }
 
       setLoading(true);
@@ -1118,7 +1138,7 @@ ${companyName}`;
         .from('orders')
         .insert({
           order_number: orderNumber,
-          customer_id: newOrder.customer_id,
+          customer_id: customerId,
           service_name: newOrder.service_name,
           description: newOrder.description,
           status: 'جديد',
@@ -1156,8 +1176,7 @@ ${companyName}`;
       }
 
       // إرسال إشعار واتساب للعميل بالطلب الجديد
-      const selectedCustomer = customers.find(c => c.id === newOrder.customer_id);
-      if (selectedCustomer?.whatsapp_number) {
+      if (newOrder.customer_phone) {
         console.log('Sending WhatsApp notification for new order...');
         
         const notificationData = {
@@ -1167,8 +1186,8 @@ ${companyName}`;
           webhook_preference: 'لوحة الإدارة',
           data: {
             order_number: orderNumber,
-            customer_name: selectedCustomer.name,
-            customer_phone: selectedCustomer.whatsapp_number,
+            customer_name: newOrder.customer_name,
+            customer_phone: newOrder.customer_phone,
             amount: newOrder.amount,
             service_name: newOrder.service_name,
             description: newOrder.description,
@@ -1204,6 +1223,8 @@ ${companyName}`;
       // إعادة تعيين النموذج
       setNewOrder({
         customer_id: '',
+        customer_name: '',
+        customer_phone: '',
         service_id: '',
         service_name: '',
         priority: 'متوسطة',
@@ -2108,35 +2129,33 @@ ${companyName}`;
             {/* بيانات الطلب الأساسية */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="customer">العميل *</Label>
-                <Select value={newOrder.customer_id} onValueChange={(value) => setNewOrder({...newOrder, customer_id: value})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="اختر العميل" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {customers.map((customer) => (
-                      <SelectItem key={customer.id} value={customer.id}>
-                        {customer.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="customer">اسم العميل *</Label>
+                <Input
+                  id="customer"
+                  placeholder="أدخل اسم العميل"
+                  value={newOrder.customer_name || ''}
+                  onChange={(e) => setNewOrder({...newOrder, customer_name: e.target.value})}
+                />
               </div>
               
               <div>
-                <Label htmlFor="service">الخدمة *</Label>
-                <Select value={newOrder.service_id} onValueChange={handleServiceChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="اختر الخدمة" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {services.map((service) => (
-                      <SelectItem key={service.id} value={service.id}>
-                        {service.name} {service.base_price && `(${service.base_price} ر.س)`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="customer_phone">هاتف العميل</Label>
+                <Input
+                  id="customer_phone"
+                  placeholder="أدخل رقم الهاتف"
+                  value={newOrder.customer_phone || ''}
+                  onChange={(e) => setNewOrder({...newOrder, customer_phone: e.target.value})}
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="service">نوع الخدمة *</Label>
+                <Input
+                  id="service"
+                  placeholder="أدخل نوع الخدمة"
+                  value={newOrder.service_name || ''}
+                  onChange={(e) => setNewOrder({...newOrder, service_name: e.target.value})}
+                />
               </div>
               
               <div>

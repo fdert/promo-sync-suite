@@ -164,6 +164,8 @@ const Orders = () => {
   const [services, setServices] = useState<Service[]>([]);
   const [newOrder, setNewOrder] = useState({
     customer_id: '',
+    customer_name: '',
+    customer_phone: '',
     service_id: '',
     service_name: '',
     priority: 'متوسطة',
@@ -1127,29 +1129,47 @@ ${publicFileUrl}
     setNewOrder(prev => ({ ...prev, amount: total }));
   };
 
-  // تحديث الخدمة المختارة
-  const handleServiceChange = (serviceId: string) => {
-    const selectedService = services.find(s => s.id === serviceId);
-    if (selectedService) {
-      setNewOrder(prev => ({
-        ...prev,
-        service_id: serviceId,
-        service_name: selectedService.name,
-        amount: selectedService.base_price || 0
-      }));
-    }
+  // تحديث الخدمة المختارة (لا تحتاج لهذه الدالة مع Input عادي)
+  const handleServiceChange = () => {
+    // لا تحتاج لهذه الدالة مع استخدام Input عادي
   };
 
   // إنشاء طلب جديد
   const createNewOrder = async () => {
     try {
-      if (!newOrder.customer_id || !newOrder.service_name || !newOrder.due_date) {
+      if (!newOrder.customer_name || !newOrder.service_name || !newOrder.due_date) {
         toast({
           title: "خطأ",
-          description: "يرجى ملء جميع الحقول المطلوبة",
+          description: "يرجى ملء جميع الحقول المطلوبة (اسم العميل، نوع الخدمة، تاريخ التسليم)",
           variant: "destructive",
         });
         return;
+      }
+
+      // البحث عن العميل أو إنشاؤه
+      let customerId = null;
+      const existingCustomer = customers.find(c => 
+        c.name.toLowerCase() === newOrder.customer_name.toLowerCase() ||
+        (newOrder.customer_phone && (c.phone === newOrder.customer_phone || c.whatsapp_number === newOrder.customer_phone))
+      );
+
+      if (existingCustomer) {
+        customerId = existingCustomer.id;
+      } else {
+        // إنشاء عميل جديد
+        const { data: newCustomer, error: customerError } = await supabase
+          .from('customers')
+          .insert({
+            name: newOrder.customer_name,
+            phone: newOrder.customer_phone,
+            whatsapp_number: newOrder.customer_phone,
+            status: 'نشط'
+          })
+          .select()
+          .single();
+
+        if (customerError) throw customerError;
+        customerId = newCustomer.id;
       }
 
       setLoading(true);
@@ -1221,8 +1241,7 @@ ${publicFileUrl}
       }
 
       // إرسال إشعار واتساب للعميل بالطلب الجديد
-      const selectedCustomer = customers.find(c => c.id === newOrder.customer_id);
-      if (selectedCustomer?.whatsapp_number) {
+      if (newOrder.customer_phone) {
         console.log('Sending WhatsApp notification for new order...');
         
         const notificationData = {
@@ -1232,8 +1251,8 @@ ${publicFileUrl}
           webhook_preference: 'لوحة الموظف', // الويب هوك المفضل
           data: {
             order_number: orderNumber,
-            customer_name: selectedCustomer.name,
-            customer_phone: selectedCustomer.whatsapp_number,
+            customer_name: newOrder.customer_name,
+            customer_phone: newOrder.customer_phone,
             amount: newOrder.amount,
             service_name: newOrder.service_name,
             description: newOrder.description,
@@ -1269,6 +1288,8 @@ ${publicFileUrl}
       // إعادة تعيين النموذج
       setNewOrder({
         customer_id: '',
+        customer_name: '',
+        customer_phone: '',
         service_id: '',
         service_name: '',
         priority: 'متوسطة',
@@ -2174,35 +2195,33 @@ ${publicFileUrl}
             {/* الصف الأول: العميل ونوع الخدمة والأولوية */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="customer">العميل *</Label>
-                <Select value={newOrder.customer_id} onValueChange={(value) => setNewOrder(prev => ({ ...prev, customer_id: value }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="ابحث واختر العميل..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {customers.map((customer) => (
-                      <SelectItem key={customer.id} value={customer.id}>
-                        {customer.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="customer">اسم العميل *</Label>
+                <Input
+                  id="customer"
+                  placeholder="أدخل اسم العميل"
+                  value={newOrder.customer_name || ''}
+                  onChange={(e) => setNewOrder(prev => ({ ...prev, customer_name: e.target.value }))}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="customer_phone">هاتف العميل</Label>
+                <Input
+                  id="customer_phone"
+                  placeholder="أدخل رقم الهاتف"
+                  value={newOrder.customer_phone || ''}
+                  onChange={(e) => setNewOrder(prev => ({ ...prev, customer_phone: e.target.value }))}
+                />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="service">نوع الخدمة *</Label>
-                <Select value={newOrder.service_id} onValueChange={handleServiceChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="اختر نوع الخدمة" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {services.map((service) => (
-                      <SelectItem key={service.id} value={service.id}>
-                        {service.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Input
+                  id="service"
+                  placeholder="أدخل نوع الخدمة"
+                  value={newOrder.service_name || ''}
+                  onChange={(e) => setNewOrder(prev => ({ ...prev, service_name: e.target.value }))}
+                />
               </div>
 
               <div className="space-y-2">
