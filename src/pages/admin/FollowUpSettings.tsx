@@ -136,7 +136,7 @@ const FollowUpSettings = () => {
       <div>
         <h1 className="text-3xl font-bold text-foreground">إعدادات إدارة المتابعة</h1>
         <p className="text-muted-foreground mt-2">
-          إدارة إعدادات المتابعة ورسائل الواتساب التلقائية
+          إدارة إعدادات المتابعة وإشعارات الواتساب الداخلية لفريق المتابعة والإدارة
         </p>
       </div>
 
@@ -149,14 +149,14 @@ const FollowUpSettings = () => {
               معلومات الاتصال
             </CardTitle>
             <CardDescription>
-              أرقام الواتساب والإيميل المخصصة للمتابعة
+              أرقام الواتساب والإيميل الخاصة بفريق المتابعة والإدارة لاستقبال الإشعارات الداخلية
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="whatsapp" className="text-sm font-medium">
-                  رقم واتساب المتابعة
+                  رقم واتساب فريق المتابعة (لاستقبال الإشعارات)
                 </Label>
                 <Input
                   id="whatsapp"
@@ -191,7 +191,7 @@ const FollowUpSettings = () => {
               إعدادات الرسائل التلقائية
             </CardTitle>
             <CardDescription>
-              تحكم في إرسال رسائل الواتساب التلقائية
+              إشعارات واتساب تلقائية لفريق المتابعة عند تغيير حالة الطلبات أو حدوث مشاكل في النظام
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -200,8 +200,8 @@ const FollowUpSettings = () => {
                 <div className="flex items-center gap-3">
                   <Zap className="h-5 w-5 text-primary" />
                   <div>
-                    <h4 className="font-medium">رسالة عند إنشاء طلب جديد</h4>
-                    <p className="text-sm text-muted-foreground">إرسال رسالة ترحيب عند إنشاء طلب جديد</p>
+                    <h4 className="font-medium">إشعار عند إنشاء طلب جديد</h4>
+                    <p className="text-sm text-muted-foreground">إرسال إشعار لفريق المتابعة عند إنشاء طلب جديد في النظام</p>
                   </div>
                 </div>
                 <Switch
@@ -216,9 +216,9 @@ const FollowUpSettings = () => {
                 <div className="flex items-center gap-3">
                   <Clock className="h-5 w-5 text-orange-600" />
                   <div>
-                    <h4 className="font-medium">رسالة تجاوز فترة التسليم</h4>
+                    <h4 className="font-medium">إشعار تجاوز فترة التسليم</h4>
                     <p className="text-sm text-muted-foreground">
-                      إرسال رسالة عند تجاوز الطلب فترة التسليم المحددة
+                      إرسال إشعار لفريق المتابعة عند تجاوز الطلب فترة التسليم المحددة
                     </p>
                   </div>
                 </div>
@@ -234,9 +234,9 @@ const FollowUpSettings = () => {
                 <div className="flex items-center gap-3">
                   <DollarSign className="h-5 w-5 text-red-600" />
                   <div>
-                    <h4 className="font-medium">رسالة تأخير المدفوعات</h4>
+                    <h4 className="font-medium">إشعار تأخير المدفوعات</h4>
                     <p className="text-sm text-muted-foreground">
-                      إرسال رسالة عند تجاوز 30 يوم بدون دفع
+                      إرسال إشعار لفريق المتابعة عند تجاوز 30 يوم بدون دفع
                     </p>
                   </div>
                 </div>
@@ -252,9 +252,9 @@ const FollowUpSettings = () => {
                 <div className="flex items-center gap-3">
                   <AlertCircle className="h-5 w-5 text-yellow-600" />
                   <div>
-                    <h4 className="font-medium">رسالة عند فشل الواتساب</h4>
+                    <h4 className="font-medium">إشعار عند فشل الواتساب</h4>
                     <p className="text-sm text-muted-foreground">
-                      إرسال إشعار عند فشل إرسال رسائل الواتساب
+                      إرسال إشعار لفريق المتابعة عند فشل إرسال رسائل الواتساب في النظام
                     </p>
                   </div>
                 </div>
