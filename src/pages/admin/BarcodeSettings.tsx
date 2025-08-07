@@ -110,21 +110,26 @@ const BarcodeSettings = () => {
       const { data, error } = await supabase
         .from('website_settings')
         .select('setting_value')
-        .eq('setting_key', 'company_info')
+        .eq('setting_key', 'website_content')
         .single();
 
       if (data?.setting_value && typeof data.setting_value === 'object') {
-        const companyInfo = data.setting_value as WebsiteSettings;
-        setSettings(prev => ({
-          ...prev,
-          company_name: companyInfo.company_name || prev.company_name,
-          company_phone: companyInfo.company_phone || prev.company_phone,
-          company_address: companyInfo.company_address || prev.company_address,
-          company_logo_url: companyInfo.company_logo || prev.company_logo_url,
-        }));
+        const websiteContent = data.setting_value as any;
+        const companyInfo = websiteContent.companyInfo;
+        const contactInfo = websiteContent.contactInfo;
         
-        if (companyInfo.company_logo) {
-          setLogoPreview(companyInfo.company_logo);
+        if (companyInfo || contactInfo) {
+          setSettings(prev => ({
+            ...prev,
+            company_name: companyInfo?.name || prev.company_name,
+            company_phone: contactInfo?.phone || prev.company_phone,
+            company_address: contactInfo?.address || prev.company_address,
+            company_logo_url: companyInfo?.logo || prev.company_logo_url,
+          }));
+          
+          if (companyInfo?.logo) {
+            setLogoPreview(companyInfo.logo);
+          }
         }
       }
     } catch (error) {
@@ -197,9 +202,12 @@ const BarcodeSettings = () => {
         setSettings(prev => ({ ...prev, id: data.id }));
       }
 
+      // تحديث معلومات الشركة في website_settings أيضاً
+      await updateWebsiteSettings();
+
       toast({
         title: "تم حفظ الإعدادات",
-        description: "تم حفظ إعدادات الملصق بنجاح",
+        description: "تم حفظ إعدادات الملصق ومعلومات الشركة بنجاح",
       });
 
     } catch (error) {
@@ -214,11 +222,59 @@ const BarcodeSettings = () => {
     }
   };
 
-  const testPrint = () => {
+  const updateWebsiteSettings = async () => {
+    try {
+      // جلب الإعدادات الحالية
+      const { data: currentData } = await supabase
+        .from('website_settings')
+        .select('setting_value')
+        .eq('setting_key', 'website_content')
+        .single();
+
+      if (currentData?.setting_value) {
+        const websiteContent = currentData.setting_value as any;
+        
+        // تحديث معلومات الشركة
+        const updatedContent = {
+          ...websiteContent,
+          companyInfo: {
+            ...websiteContent.companyInfo,
+            name: settings.company_name,
+            logo: settings.company_logo_url || websiteContent.companyInfo?.logo,
+          },
+          contactInfo: {
+            ...websiteContent.contactInfo,
+            phone: settings.company_phone || websiteContent.contactInfo?.phone,
+            address: settings.company_address || websiteContent.contactInfo?.address,
+          }
+        };
+
+        const { error } = await supabase
+          .from('website_settings')
+          .update({ 
+            setting_value: updatedContent,
+            updated_at: new Date().toISOString()
+          })
+          .eq('setting_key', 'website_content');
+
+        if (error) {
+          console.error('Error updating website settings:', error);
+        }
+      }
+    } catch (error) {
+      console.error('Error updating website settings:', error);
+    }
+  };
+
+  const testPrint = async () => {
+    // استخدام البيانات الحقيقية من الإعدادات
+    const companyName = settings.company_name || 'وكالة الإبداع للدعاية والإعلان';
+    const companyPhone = settings.company_phone || '966501234567';
+    
     printBarcodeLabel(
       'ORD-001',
       'عميل تجريبي',
-      '966501234567',
+      companyPhone,
       'payment|1000|500',
       'test-id-123',
       {
@@ -243,12 +299,13 @@ const BarcodeSettings = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">إعدادات ملصق الباركود</h1>
-          <p className="text-muted-foreground mt-1">
-            تخصيص مظهر ومقاسات ملصقات الباركود للطابعات الحرارية
-          </p>
-        </div>
+            <div>
+              <h1 className="text-3xl font-bold">إعدادات ملصق الباركود</h1>
+              <p className="text-muted-foreground mt-1">
+                تخصيص مظهر ومقاسات ملصقات الباركود للطابعات الحرارية<br/>
+                <span className="text-xs text-primary">مرتبط بمعلومات الوكالة الحقيقية من قاعدة البيانات</span>
+              </p>
+            </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={testPrint}>
             <Eye className="h-4 w-4 mr-2" />
@@ -417,9 +474,20 @@ const BarcodeSettings = () => {
         {/* معلومات الشركة */}
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>معلومات الشركة</CardTitle>
+            <CardTitle className="flex items-center justify-between">
+              معلومات الشركة
+              <span className="text-xs text-primary bg-primary/10 px-2 py-1 rounded">
+                مرتبط بموقع الوكالة
+              </span>
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="bg-blue-50 dark:bg-blue-950 p-3 rounded-lg mb-4">
+              <p className="text-sm text-blue-700 dark:text-blue-300">
+                💡 هذه المعلومات مرتبطة مع موقع الوكالة. أي تغيير هنا سيظهر في الموقع والملصقات.
+              </p>
+            </div>
+            
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-4">
                 <div>

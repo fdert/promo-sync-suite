@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface PrintOptions {
   paperSize?: 'thermal-80mm' | 'thermal-58mm' | 'a4';
@@ -7,7 +8,7 @@ interface PrintOptions {
 }
 
 export const useThermalPrint = () => {
-  const printBarcodeLabel = useCallback((
+  const printBarcodeLabel = useCallback(async (
     orderNumber: string,
     customerName: string,
     phoneNumber: string,
@@ -16,6 +17,51 @@ export const useThermalPrint = () => {
     options: PrintOptions = {}
   ) => {
     const { paperSize = 'thermal-80mm', margins = '2mm', settings } = options;
+    
+    // جلب معلومات الشركة الحقيقية من قاعدة البيانات
+    let companyInfo = {
+      name: 'وكالة الإبداع للدعاية والإعلان',
+      logo: null,
+      phone: null,
+      address: null
+    };
+
+    try {
+      // جلب من website_settings أولاً
+      const { data: websiteData } = await supabase
+        .from('website_settings')
+        .select('setting_value')
+        .eq('setting_key', 'website_content')
+        .single();
+
+      if (websiteData?.setting_value) {
+        const websiteContent = websiteData.setting_value as any;
+        if (websiteContent.companyInfo) {
+          companyInfo.name = websiteContent.companyInfo.name || companyInfo.name;
+          companyInfo.logo = websiteContent.companyInfo.logo || companyInfo.logo;
+        }
+        if (websiteContent.contactInfo) {
+          companyInfo.phone = websiteContent.contactInfo.phone || companyInfo.phone;
+          companyInfo.address = websiteContent.contactInfo.address || companyInfo.address;
+        }
+      }
+
+      // جلب من barcode_label_settings إذا كانت متاحة
+      const { data: labelSettings } = await supabase
+        .from('barcode_label_settings')
+        .select('*')
+        .eq('is_active', true)
+        .single();
+
+      if (labelSettings) {
+        companyInfo.name = labelSettings.company_name || companyInfo.name;
+        companyInfo.logo = labelSettings.company_logo_url || companyInfo.logo;
+        companyInfo.phone = labelSettings.company_phone || companyInfo.phone;
+        companyInfo.address = labelSettings.company_address || companyInfo.address;
+      }
+    } catch (error) {
+      console.log('Using default company info');
+    }
     
     // إنشاء نافذة طباعة منفصلة
     const printWindow = window.open('', '_blank', 'width=400,height=600');
@@ -69,8 +115,8 @@ export const useThermalPrint = () => {
       show_company_logo: true,
       show_company_name: true,
       show_date: true,
-      company_name: 'وكالة الإبداع للدعاية والإعلان',
-      company_logo_url: null
+      company_name: companyInfo.name,
+      company_logo_url: companyInfo.logo
     };
 
     // محتوى HTML للطباعة
@@ -224,11 +270,11 @@ export const useThermalPrint = () => {
         
         <div class="label-container">
           <div class="header">
-            ${finalSettings.show_company_logo && finalSettings.company_logo_url ? 
-              `<img src="${finalSettings.company_logo_url}" alt="شعار الشركة" class="company-logo">` : ''
+            ${finalSettings.show_company_logo && (finalSettings.company_logo_url || companyInfo.logo) ? 
+              `<img src="${finalSettings.company_logo_url || companyInfo.logo}" alt="شعار الشركة" class="company-logo">` : ''
             }
             ${finalSettings.show_company_name ? 
-              `<div class="company-name">${finalSettings.company_name}</div>` : ''
+              `<div class="company-name">${finalSettings.company_name || companyInfo.name}</div>` : ''
             }
             ${finalSettings.show_date ? 
               `<div class="date">ملصق طلب - ${new Date().toLocaleDateString('ar-SA')}</div>` : ''
@@ -263,6 +309,7 @@ export const useThermalPrint = () => {
           
           <div class="footer">
             <div>معرف الطلب: ${orderId.slice(-8)}</div>
+            ${companyInfo.phone ? `<div class="text-xs">هاتف: ${companyInfo.phone}</div>` : ''}
           </div>
         </div>
         
