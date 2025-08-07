@@ -380,34 +380,30 @@ const FollowUpSettings = () => {
                   <Label htmlFor="delivery-delay" className="text-sm font-medium">
                     مهلة التسليم (بالأيام)
                   </Label>
-                  <Input
-                    id="delivery-delay"
-                    type="number"
-                    min="1"
-                    max="365"
-                    value={settings.delivery_delay_days}
-                    onChange={(e) => setSettings({ 
-                      ...settings, 
-                      delivery_delay_days: parseInt(e.target.value) || 7 
-                    })}
-                    className="bg-background/50 border-primary/20 focus:border-primary"
-                  />
+                   <Input
+                     id="delivery-delay"
+                     type="text"
+                     value={settings.delivery_delay_days}
+                     onChange={(e) => setSettings({ 
+                       ...settings, 
+                       delivery_delay_days: parseInt(e.target.value) || 7 
+                     })}
+                     className="bg-background/50 border-primary/20 focus:border-primary"
+                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="payment-delay" className="text-sm font-medium">
                     مهلة الدفع (بالأيام)
                   </Label>
-                  <Input
-                    id="payment-delay"
-                    type="number"
-                    min="1"
-                    max="365"
-                    value={settings.payment_delay_days}
-                    onChange={(e) => setSettings({ 
-                      ...settings, 
-                      payment_delay_days: parseInt(e.target.value) || 30 
-                    })}
-                    className="bg-background/50 border-primary/20 focus:border-primary"
+                   <Input
+                     id="payment-delay"
+                     type="text"
+                     value={settings.payment_delay_days}
+                     onChange={(e) => setSettings({ 
+                       ...settings, 
+                       payment_delay_days: parseInt(e.target.value) || 30 
+                     })}
+                     className="bg-background/50 border-primary/20 focus:border-primary"
                   />
                 </div>
               </div>

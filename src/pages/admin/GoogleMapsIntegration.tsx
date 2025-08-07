@@ -185,14 +185,12 @@ const GoogleMapsIntegration = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label htmlFor="minimum_rating">الحد الأدنى للتقييم</Label>
-              <Input
-                id="minimum_rating"
-                type="number"
-                min="1"
-                max="5"
-                value={settings.minimum_rating}
-                onChange={(e) =>
-                  setSettings({
+               <Input
+                 id="minimum_rating"
+                 type="text"
+                 value={settings.minimum_rating}
+                 onChange={(e) =>
+                   setSettings({
                     ...settings,
                     minimum_rating: parseInt(e.target.value) || 4,
                   })

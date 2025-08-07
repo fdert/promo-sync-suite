@@ -1378,23 +1378,23 @@ const Accounts = () => {
                   <div className="grid grid-cols-3 gap-4">
                     <div>
                       <Label htmlFor="debit_amount">المبلغ المدين</Label>
-                      <Input
-                        id="debit_amount"
-                        type="number"
-                        value={newEntry.debit_amount}
-                        onChange={(e) => setNewEntry({...newEntry, debit_amount: e.target.value})}
-                        placeholder="0.00"
-                      />
+                       <Input
+                         id="debit_amount"
+                         type="text"
+                         value={newEntry.debit_amount}
+                         onChange={(e) => setNewEntry({...newEntry, debit_amount: e.target.value})}
+                         placeholder="0.00"
+                       />
                     </div>
                     <div>
                       <Label htmlFor="credit_amount">المبلغ الدائن</Label>
-                      <Input
-                        id="credit_amount"
-                        type="number"
-                        value={newEntry.credit_amount}
-                        onChange={(e) => setNewEntry({...newEntry, credit_amount: e.target.value})}
-                        placeholder="0.00"
-                      />
+                       <Input
+                         id="credit_amount"
+                         type="text"
+                         value={newEntry.credit_amount}
+                         onChange={(e) => setNewEntry({...newEntry, credit_amount: e.target.value})}
+                         placeholder="0.00"
+                       />
                     </div>
                     <div>
                       <Label htmlFor="entry_date">التاريخ</Label>
@@ -1486,13 +1486,13 @@ const Accounts = () => {
                     </div>
                     <div>
                       <Label htmlFor="amount">المبلغ (ر.س)</Label>
-                      <Input
-                        id="amount"
-                        type="number"
-                        value={newExpense.amount}
-                        onChange={(e) => setNewExpense({...newExpense, amount: e.target.value})}
-                        placeholder="0.00"
-                      />
+                       <Input
+                         id="amount"
+                         type="text"
+                         value={newExpense.amount}
+                         onChange={(e) => setNewExpense({...newExpense, amount: e.target.value})}
+                         placeholder="0.00"
+                       />
                     </div>
                   </div>
                   
@@ -1987,13 +1987,13 @@ const Accounts = () => {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="edit_amount">المبلغ</Label>
-                <Input
-                  id="edit_amount"
-                  type="number"
-                  value={editingExpense?.amount || ''}
-                  onChange={(e) => setEditingExpense({...editingExpense, amount: e.target.value})}
-                  placeholder="0.00"
-                />
+                 <Input
+                   id="edit_amount"
+                   type="text"
+                   value={editingExpense?.amount || ''}
+                   onChange={(e) => setEditingExpense({...editingExpense, amount: e.target.value})}
+                   placeholder="0.00"
+                 />
               </div>
               <div>
                 <Label htmlFor="edit_category">الفئة</Label>

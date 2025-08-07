@@ -1980,13 +1980,13 @@ ${publicFileUrl}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="payment-amount">المبلغ (ر.س)</Label>
-                      <Input
-                        id="payment-amount"
-                        type="number"
-                        placeholder="أدخل المبلغ"
-                        value={newPayment.amount}
-                        onChange={(e) => setNewPayment({...newPayment, amount: parseFloat(e.target.value) || 0})}
-                      />
+                       <Input
+                         id="payment-amount"
+                         type="text"
+                         placeholder="أدخل المبلغ"
+                         value={newPayment.amount}
+                         onChange={(e) => setNewPayment({...newPayment, amount: parseFloat(e.target.value) || 0})}
+                       />
                     </div>
                     <div>
                       <Label htmlFor="payment-type">طريقة الدفع</Label>
@@ -2291,13 +2291,13 @@ ${publicFileUrl}
                       <div className="space-y-2">
                         <Label htmlFor={`total_${index}`}>الإجمالي</Label>
                         <div className="flex items-center gap-2">
-                          <Input
-                            id={`total_${index}`}
-                            type="number"
-                            value={item.total_amount}
-                            disabled
-                            className="bg-muted"
-                          />
+                           <Input
+                             id={`total_${index}`}
+                             type="text"
+                             value={item.total_amount}
+                             disabled
+                             className="bg-muted"
+                           />
                           {orderItems.length > 1 && (
                             <Button
                               type="button"

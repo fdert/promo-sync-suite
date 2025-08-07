@@ -453,13 +453,13 @@ const Reports = () => {
               </div>
               <div>
                 <Label htmlFor="amount">المبلغ</Label>
-                <Input
-                  id="amount"
-                  type="number"
-                  value={newExpense.amount}
-                  onChange={(e) => setNewExpense({ ...newExpense, amount: e.target.value })}
-                  placeholder="0.00"
-                />
+                 <Input
+                   id="amount"
+                   type="text"
+                   value={newExpense.amount}
+                   onChange={(e) => setNewExpense({ ...newExpense, amount: e.target.value })}
+                   placeholder="0.00"
+                 />
               </div>
               <div>
                 <Label htmlFor="category">الفئة</Label>
@@ -901,13 +901,13 @@ const Reports = () => {
             </div>
             <div>
               <Label htmlFor="edit-amount">المبلغ</Label>
-              <Input
-                id="edit-amount"
-                type="number"
-                value={newExpense.amount}
-                onChange={(e) => setNewExpense({ ...newExpense, amount: e.target.value })}
-                placeholder="0.00"
-              />
+               <Input
+                 id="edit-amount"
+                 type="text"
+                 value={newExpense.amount}
+                 onChange={(e) => setNewExpense({ ...newExpense, amount: e.target.value })}
+                 placeholder="0.00"
+               />
             </div>
             <div>
               <Label htmlFor="edit-category">الفئة</Label>

@@ -897,47 +897,42 @@ const PrintManagement = () => {
                               
                               <div>
                                 <Label>التكلفة الفعلية</Label>
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  step="0.01"
-                                  value={orderMaterialForm.actual_cost}
-                                  onChange={(e) => setOrderMaterialForm({...orderMaterialForm, actual_cost: parseFloat(e.target.value) || 0})}
-                                  placeholder="0.00"
-                                />
+                                 <Input
+                                   type="text"
+                                   value={orderMaterialForm.actual_cost}
+                                   onChange={(e) => setOrderMaterialForm({...orderMaterialForm, actual_cost: parseFloat(e.target.value) || 0})}
+                                   placeholder="0.00"
+                                 />
                               </div>
                               
                               <div>
                                 <Label>العرض (سم)</Label>
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  value={orderMaterialForm.dimensions_width}
-                                  onChange={(e) => setOrderMaterialForm({...orderMaterialForm, dimensions_width: parseFloat(e.target.value) || 0})}
-                                  placeholder="100"
-                                />
+                                 <Input
+                                   type="text"
+                                   value={orderMaterialForm.dimensions_width}
+                                   onChange={(e) => setOrderMaterialForm({...orderMaterialForm, dimensions_width: parseFloat(e.target.value) || 0})}
+                                   placeholder="100"
+                                 />
                               </div>
                               
                               <div>
                                 <Label>الارتفاع (سم)</Label>
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  value={orderMaterialForm.dimensions_height}
-                                  onChange={(e) => setOrderMaterialForm({...orderMaterialForm, dimensions_height: parseFloat(e.target.value) || 0})}
-                                  placeholder="150"
-                                />
+                                 <Input
+                                   type="text"
+                                   value={orderMaterialForm.dimensions_height}
+                                   onChange={(e) => setOrderMaterialForm({...orderMaterialForm, dimensions_height: parseFloat(e.target.value) || 0})}
+                                   placeholder="150"
+                                 />
                               </div>
                               
                               <div>
                                 <Label>العمق (سم) - اختياري</Label>
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  value={orderMaterialForm.dimensions_depth}
-                                  onChange={(e) => setOrderMaterialForm({...orderMaterialForm, dimensions_depth: parseFloat(e.target.value) || 0})}
-                                  placeholder="5"
-                                />
+                                 <Input
+                                   type="text"
+                                   value={orderMaterialForm.dimensions_depth}
+                                   onChange={(e) => setOrderMaterialForm({...orderMaterialForm, dimensions_depth: parseFloat(e.target.value) || 0})}
+                                   placeholder="5"
+                                 />
                               </div>
                             </div>
                             
@@ -1074,15 +1069,13 @@ const PrintManagement = () => {
                       </div>
                       <div>
                         <Label htmlFor="cost_per_unit">التكلفة لكل وحدة</Label>
-                        <Input
-                          id="cost_per_unit"
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={materialForm.cost_per_unit}
-                          onChange={(e) => setMaterialForm({...materialForm, cost_per_unit: parseFloat(e.target.value) || 0})}
-                          placeholder="0.00"
-                        />
+                         <Input
+                           id="cost_per_unit"
+                           type="text"
+                           value={materialForm.cost_per_unit}
+                           onChange={(e) => setMaterialForm({...materialForm, cost_per_unit: parseFloat(e.target.value) || 0})}
+                           placeholder="0.00"
+                         />
                       </div>
                       <div>
                         <Label htmlFor="unit_type">وحدة القياس</Label>

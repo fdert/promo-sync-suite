@@ -347,33 +347,29 @@ const BarcodeSettings = () => {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="label_width">عرض الملصق (مم)</Label>
-                <Input
-                  id="label_width"
-                  type="number"
-                  value={settings.label_width}
-                  onChange={(e) => setSettings(prev => ({ 
-                    ...prev, 
-                    label_width: Number(e.target.value) 
-                  }))}
-                  min="50"
-                  max="150"
-                />
+                 <Input
+                   id="label_width"
+                   type="text"
+                   value={settings.label_width}
+                   onChange={(e) => setSettings(prev => ({ 
+                     ...prev, 
+                     label_width: Number(e.target.value) 
+                   }))}
+                 />
               </div>
               
               <div>
                 <Label htmlFor="label_height">ارتفاع الملصق (مم)</Label>
                 <Input
                   id="label_height"
-                  type="number"
-                  value={settings.label_height || ''}
-                  onChange={(e) => setSettings(prev => ({ 
-                    ...prev, 
-                    label_height: e.target.value ? Number(e.target.value) : undefined 
-                  }))}
-                  placeholder="تلقائي"
-                  min="30"
-                  max="200"
-                />
+                   type="text"
+                   value={settings.label_height || ''}
+                   onChange={(e) => setSettings(prev => ({ 
+                     ...prev, 
+                     label_height: e.target.value ? Number(e.target.value) : undefined 
+                   }))}
+                   placeholder="تلقائي"
+                 />
               </div>
             </div>
 
@@ -397,33 +393,28 @@ const BarcodeSettings = () => {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="margins">الهوامش (مم)</Label>
-                <Input
-                  id="margins"
-                  type="number"
-                  value={settings.margins}
-                  onChange={(e) => setSettings(prev => ({ 
-                    ...prev, 
-                    margins: Number(e.target.value) 
-                  }))}
-                  min="0"
-                  max="10"
-                  step="0.5"
-                />
+                 <Input
+                   id="margins"
+                   type="text"
+                   value={settings.margins}
+                   onChange={(e) => setSettings(prev => ({ 
+                     ...prev, 
+                     margins: Number(e.target.value) 
+                   }))}
+                 />
               </div>
               
               <div>
                 <Label htmlFor="font_size">حجم الخط</Label>
-                <Input
-                  id="font_size"
-                  type="number"
-                  value={settings.font_size}
-                  onChange={(e) => setSettings(prev => ({ 
-                    ...prev, 
-                    font_size: Number(e.target.value) 
-                  }))}
-                  min="8"
-                  max="20"
-                />
+                 <Input
+                   id="font_size"
+                   type="text"
+                   value={settings.font_size}
+                   onChange={(e) => setSettings(prev => ({ 
+                     ...prev, 
+                     font_size: Number(e.target.value) 
+                   }))}
+                 />
               </div>
             </div>
           </CardContent>
@@ -441,33 +432,28 @@ const BarcodeSettings = () => {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="barcode_height">ارتفاع الباركود (بكسل)</Label>
-                <Input
-                  id="barcode_height"
-                  type="number"
-                  value={settings.barcode_height}
-                  onChange={(e) => setSettings(prev => ({ 
-                    ...prev, 
-                    barcode_height: Number(e.target.value) 
-                  }))}
-                  min="30"
-                  max="100"
-                />
+                 <Input
+                   id="barcode_height"
+                   type="text"
+                   value={settings.barcode_height}
+                   onChange={(e) => setSettings(prev => ({ 
+                     ...prev, 
+                     barcode_height: Number(e.target.value) 
+                   }))}
+                 />
               </div>
               
               <div>
                 <Label htmlFor="barcode_width">عرض خطوط الباركود</Label>
-                <Input
-                  id="barcode_width"
-                  type="number"
-                  value={settings.barcode_width}
-                  onChange={(e) => setSettings(prev => ({ 
-                    ...prev, 
-                    barcode_width: Number(e.target.value) 
-                  }))}
-                  min="1"
-                  max="5"
-                  step="0.5"
-                />
+                 <Input
+                   id="barcode_width"
+                   type="text"
+                   value={settings.barcode_width}
+                   onChange={(e) => setSettings(prev => ({ 
+                     ...prev, 
+                     barcode_width: Number(e.target.value) 
+                   }))}
+                 />
               </div>
             </div>
 

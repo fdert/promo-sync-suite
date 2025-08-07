@@ -436,13 +436,13 @@ const ServiceTypes = () => {
             
             <div className="grid gap-2">
               <Label htmlFor="base_price">السعر الأساسي (ر.س)</Label>
-              <Input
-                id="base_price"
-                type="number"
-                value={formData.base_price}
-                onChange={(e) => setFormData({ ...formData, base_price: e.target.value })}
-                placeholder="أدخل السعر الأساسي"
-              />
+               <Input
+                 id="base_price"
+                 type="text"
+                 value={formData.base_price}
+                 onChange={(e) => setFormData({ ...formData, base_price: e.target.value })}
+                 placeholder="أدخل السعر الأساسي"
+               />
             </div>
             
             <div className="grid gap-2">

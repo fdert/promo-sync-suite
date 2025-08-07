@@ -326,13 +326,13 @@ const ServiceTypes = () => {
                 </div>
                 <div>
                   <Label htmlFor="base_price">السعر الأساسي (اختياري)</Label>
-                  <Input 
-                    id="base_price" 
-                    type="number"
-                    value={newService.base_price}
-                    onChange={(e) => setNewService({ ...newService, base_price: e.target.value })}
-                    placeholder="0.00" 
-                  />
+                   <Input 
+                     id="base_price" 
+                     type="text"
+                     value={newService.base_price}
+                     onChange={(e) => setNewService({ ...newService, base_price: e.target.value })}
+                     placeholder="0.00" 
+                   />
                 </div>
                 <div>
                   <Label htmlFor="description">وصف الخدمة</Label>
@@ -397,13 +397,13 @@ const ServiceTypes = () => {
                 </div>
                 <div>
                   <Label htmlFor="edit-base_price">السعر الأساسي (اختياري)</Label>
-                  <Input 
-                    id="edit-base_price" 
-                    type="number"
-                    value={newService.base_price}
-                    onChange={(e) => setNewService({ ...newService, base_price: e.target.value })}
-                    placeholder="0.00" 
-                  />
+                   <Input 
+                     id="edit-base_price" 
+                     type="text"
+                     value={newService.base_price}
+                     onChange={(e) => setNewService({ ...newService, base_price: e.target.value })}
+                     placeholder="0.00" 
+                   />
                 </div>
                 <div>
                   <Label htmlFor="edit-description">وصف الخدمة</Label>

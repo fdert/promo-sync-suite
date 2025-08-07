@@ -1444,39 +1444,39 @@ const Invoices = () => {
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label>المبلغ</Label>
-                  <Input
-                    type="number"
-                    value={editingInvoice.amount}
-                    onChange={(e) => {
-                      const amount = parseFloat(e.target.value) || 0;
-                      const taxAmount = amount * 0.15; // 15% ضريبة القيمة المضافة
-                      setEditingInvoice({
-                        ...editingInvoice, 
-                        amount: amount,
-                        tax_amount: taxAmount,
-                        total_amount: amount + taxAmount
-                      });
-                    }}
-                    placeholder="المبلغ"
-                  />
+                   <Input
+                     type="text"
+                     value={editingInvoice.amount}
+                     onChange={(e) => {
+                       const amount = parseFloat(e.target.value) || 0;
+                       const taxAmount = amount * 0.15; // 15% ضريبة القيمة المضافة
+                       setEditingInvoice({
+                         ...editingInvoice, 
+                         amount: amount,
+                         tax_amount: taxAmount,
+                         total_amount: amount + taxAmount
+                       });
+                     }}
+                     placeholder="المبلغ"
+                   />
                 </div>
                 <div className="space-y-2">
                   <Label>الضريبة (15%)</Label>
-                  <Input
-                    type="number"
-                    value={editingInvoice.tax_amount}
-                    readOnly
-                    className="bg-muted"
-                  />
+                   <Input
+                     type="text"
+                     value={editingInvoice.tax_amount}
+                     readOnly
+                     className="bg-muted"
+                   />
                 </div>
                 <div className="space-y-2">
                   <Label>المجموع الكلي</Label>
-                  <Input
-                    type="number"
-                    value={editingInvoice.total_amount}
-                    readOnly
-                    className="bg-muted font-bold"
-                  />
+                   <Input
+                     type="text"
+                     value={editingInvoice.total_amount}
+                     readOnly
+                     className="bg-muted font-bold"
+                   />
                 </div>
               </div>
 
