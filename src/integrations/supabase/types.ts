@@ -172,6 +172,75 @@ export type Database = {
         }
         Relationships: []
       }
+      barcode_label_settings: {
+        Row: {
+          barcode_height: number
+          barcode_width: number
+          company_address: string | null
+          company_logo_url: string | null
+          company_name: string | null
+          company_phone: string | null
+          created_at: string
+          created_by: string | null
+          font_size: number
+          id: string
+          is_active: boolean
+          label_height: number | null
+          label_width: number
+          margins: number
+          paper_type: string
+          show_company_logo: boolean
+          show_company_name: boolean
+          show_date: boolean
+          show_qr_code: boolean
+          updated_at: string
+        }
+        Insert: {
+          barcode_height?: number
+          barcode_width?: number
+          company_address?: string | null
+          company_logo_url?: string | null
+          company_name?: string | null
+          company_phone?: string | null
+          created_at?: string
+          created_by?: string | null
+          font_size?: number
+          id?: string
+          is_active?: boolean
+          label_height?: number | null
+          label_width?: number
+          margins?: number
+          paper_type?: string
+          show_company_logo?: boolean
+          show_company_name?: boolean
+          show_date?: boolean
+          show_qr_code?: boolean
+          updated_at?: string
+        }
+        Update: {
+          barcode_height?: number
+          barcode_width?: number
+          company_address?: string | null
+          company_logo_url?: string | null
+          company_name?: string | null
+          company_phone?: string | null
+          created_at?: string
+          created_by?: string | null
+          font_size?: number
+          id?: string
+          is_active?: boolean
+          label_height?: number | null
+          label_width?: number
+          margins?: number
+          paper_type?: string
+          show_company_logo?: boolean
+          show_company_name?: boolean
+          show_date?: boolean
+          show_qr_code?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       customers: {
         Row: {
           address: string | null
@@ -432,14 +501,14 @@ export type Database = {
           {
             foreignKeyName: "evaluations_order_id_fkey"
             columns: ["order_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "order_payment_summary"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "evaluations_order_id_fkey"
             columns: ["order_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "orders"
             referencedColumns: ["id"]
           },

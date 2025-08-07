@@ -18,6 +18,7 @@ import {
   CreditCard,
   Star,
   MapPin,
+  Tags,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -164,6 +165,12 @@ const menuItems = [
     icon: Settings,
     href: "/admin/settings",
     allowedRoles: ['admin'] as UserRole[],
+  },
+  {
+    title: "إعدادات الملصق",
+    icon: Tags,
+    href: "/admin/barcode-settings",
+    allowedRoles: ['admin', 'manager'] as UserRole[],
   },
 ];
 

@@ -281,20 +281,43 @@ const Orders = () => {
   };
 
   // طباعة ملصق باركود للطلب
-  const handlePrintBarcodeLabel = (order: Order) => {
+  const handlePrintBarcodeLabel = async (order: Order) => {
     const customerName = order.customers?.name || 'غير محدد';
     const phoneNumber = order.customers?.whatsapp_number || order.customers?.phone || 'غير محدد';
     const totalAmount = order.amount || 0;
     const paidAmount = order.paid_amount || 0;
     const paymentStatus = `payment|${totalAmount}|${paidAmount}`;
     
-    printBarcodeLabel(
-      order.order_number,
-      customerName,
-      phoneNumber,
-      paymentStatus,
-      order.id
-    );
+    // جلب إعدادات الملصق من قاعدة البيانات
+    try {
+      const { data: settings } = await supabase
+        .from('barcode_label_settings')
+        .select('*')
+        .eq('is_active', true)
+        .single();
+
+      printBarcodeLabel(
+        order.order_number,
+        customerName,
+        phoneNumber,
+        paymentStatus,
+        order.id,
+        {
+          paperSize: settings?.paper_type as any || 'thermal-80mm',
+          margins: `${settings?.margins || 2}mm`,
+          settings: settings
+        }
+      );
+    } catch (error) {
+      // استخدام الإعدادات الافتراضية في حالة فشل جلب الإعدادات
+      printBarcodeLabel(
+        order.order_number,
+        customerName,
+        phoneNumber,
+        paymentStatus,
+        order.id
+      );
+    }
   };
 
   // جلب ملفات طلب معين

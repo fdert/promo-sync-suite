@@ -3,6 +3,7 @@ import { useCallback } from 'react';
 interface PrintOptions {
   paperSize?: 'thermal-80mm' | 'thermal-58mm' | 'a4';
   margins?: string;
+  settings?: any; // إعدادات الملصق من قاعدة البيانات
 }
 
 export const useThermalPrint = () => {
@@ -14,7 +15,7 @@ export const useThermalPrint = () => {
     orderId: string,
     options: PrintOptions = {}
   ) => {
-    const { paperSize = 'thermal-80mm', margins = '2mm' } = options;
+    const { paperSize = 'thermal-80mm', margins = '2mm', settings } = options;
     
     // إنشاء نافذة طباعة منفصلة
     const printWindow = window.open('', '_blank', 'width=400,height=600');
@@ -58,6 +59,20 @@ export const useThermalPrint = () => {
     const labelWidth = paperSize === 'thermal-80mm' ? '76mm' : 
                        paperSize === 'thermal-58mm' ? '54mm' : '200mm';
 
+    // استخدام الإعدادات من قاعدة البيانات إذا كانت متوفرة
+    const finalSettings = settings || {
+      label_width: paperSize === 'thermal-80mm' ? 80 : 58,
+      margins: 2,
+      barcode_height: 50,
+      barcode_width: 2,
+      font_size: 12,
+      show_company_logo: true,
+      show_company_name: true,
+      show_date: true,
+      company_name: 'وكالة الإبداع للدعاية والإعلان',
+      company_logo_url: null
+    };
+
     // محتوى HTML للطباعة
     const printContent = `
       <!DOCTYPE html>
@@ -81,7 +96,7 @@ export const useThermalPrint = () => {
           
           @page {
             size: ${pageSize};
-            margin: ${margins};
+            margin: ${finalSettings.margins || 2}mm;
           }
           
           @media print {
@@ -95,13 +110,13 @@ export const useThermalPrint = () => {
           }
           
           .label-container {
-            width: ${labelWidth};
-            max-width: ${labelWidth};
+            width: ${finalSettings.label_width || 76}mm;
+            max-width: ${finalSettings.label_width || 76}mm;
             margin: 0 auto;
-            padding: 4mm;
+            padding: ${finalSettings.margins || 2}mm;
             border: 2px solid #000;
             background: white;
-            font-size: 12pt;
+            font-size: ${finalSettings.font_size || 12}pt;
             line-height: 1.3;
             box-sizing: border-box;
           }
@@ -113,14 +128,21 @@ export const useThermalPrint = () => {
             border-bottom: 1px solid #000;
           }
           
+          .company-logo {
+            max-width: 40mm;
+            max-height: 15mm;
+            margin: 0 auto 2mm auto;
+            display: block;
+          }
+          
           .company-name {
-            font-size: 14pt;
+            font-size: ${(finalSettings.font_size || 12) + 2}pt;
             font-weight: bold;
             margin-bottom: 1mm;
           }
           
           .date {
-            font-size: 10pt;
+            font-size: ${(finalSettings.font_size || 12) - 2}pt;
             color: #333;
           }
           
@@ -135,7 +157,7 @@ export const useThermalPrint = () => {
             margin-bottom: 1mm;
             padding: 1mm 0;
             border-bottom: 1px dotted #ccc;
-            font-size: 11pt;
+            font-size: ${(finalSettings.font_size || 12) - 1}pt;
           }
           
           .info-row:last-child {
@@ -176,7 +198,7 @@ export const useThermalPrint = () => {
             margin-top: 2mm;
             padding-top: 2mm;
             border-top: 1px solid #000;
-            font-size: 8pt;
+            font-size: ${(finalSettings.font_size || 12) - 4}pt;
             color: #666;
           }
           
@@ -202,8 +224,15 @@ export const useThermalPrint = () => {
         
         <div class="label-container">
           <div class="header">
-            <div class="company-name">وكالة الإبداع للدعاية والإعلان</div>
-            <div class="date">ملصق طلب - ${new Date().toLocaleDateString('ar-SA')}</div>
+            ${finalSettings.show_company_logo && finalSettings.company_logo_url ? 
+              `<img src="${finalSettings.company_logo_url}" alt="شعار الشركة" class="company-logo">` : ''
+            }
+            ${finalSettings.show_company_name ? 
+              `<div class="company-name">${finalSettings.company_name}</div>` : ''
+            }
+            ${finalSettings.show_date ? 
+              `<div class="date">ملصق طلب - ${new Date().toLocaleDateString('ar-SA')}</div>` : ''
+            }
           </div>
           
           <div class="info-section">
@@ -242,10 +271,10 @@ export const useThermalPrint = () => {
             try {
               JsBarcode("#barcode", "${orderNumber}", {
                 format: "CODE128",
-                width: 2,
-                height: 50,
+                width: ${finalSettings.barcode_width || 2},
+                height: ${finalSettings.barcode_height || 50},
                 displayValue: true,
-                fontSize: 12,
+                fontSize: ${(finalSettings.font_size || 12) - 2},
                 textMargin: 5,
                 margin: 5,
                 background: "white",

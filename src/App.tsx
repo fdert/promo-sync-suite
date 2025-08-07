@@ -47,6 +47,7 @@ import AccountsOverview from "./pages/employee/AccountsOverview";
 import FinancialReports from "./pages/employee/FinancialReports";
 import ReviewsManagement from "./pages/admin/ReviewsManagement";
 import GoogleMapsIntegration from "./pages/admin/GoogleMapsIntegration";
+import BarcodeSettings from "./pages/admin/BarcodeSettings";
 
 const queryClient = new QueryClient();
 
@@ -127,6 +128,11 @@ const App = () => (
                 <RoleProtectedRoute allowedRoles={['admin']}>
                   <Settings />
                 </RoleProtectedRoute>
+               } />
+               <Route path="barcode-settings" element={
+                 <RoleProtectedRoute allowedRoles={['admin', 'manager']}>
+                   <BarcodeSettings />
+                 </RoleProtectedRoute>
                } />
                <Route path="evaluations" element={<Evaluations />} />
                <Route path="reviews-management" element={
