@@ -50,8 +50,8 @@ const Evaluations = () => {
         .from('evaluations')
         .select(`
           *,
-          orders (order_number, service_name),
-          customers (name, phone)
+          orders!order_id (order_number, service_name),
+          customers!customer_id (name, phone)
         `)
         .order('created_at', { ascending: false });
 
@@ -69,12 +69,13 @@ const Evaluations = () => {
       }
 
       // حساب الإحصائيات من البيانات المتوفرة
-      const submittedEvaluations = (evaluationsData || []).filter(e => e.submitted_at !== null);
-      const totalEvaluations = submittedEvaluations.length;
+      const submittedEvaluations = (evaluationsData || []).filter(e => e.submitted_at !== null && e.rating !== null);
+      const allEvaluations = evaluationsData || [];
+      const totalEvaluations = allEvaluations.length;
       
       let calculatedStats = null;
-      if (totalEvaluations > 0) {
-        const averageRating = submittedEvaluations.reduce((sum, e) => sum + e.rating, 0) / totalEvaluations;
+      if (submittedEvaluations.length > 0) {
+        const averageRating = submittedEvaluations.reduce((sum, e) => sum + e.rating, 0) / submittedEvaluations.length;
         const fiveStarCount = submittedEvaluations.filter(e => e.rating === 5).length;
         const fourStarCount = submittedEvaluations.filter(e => e.rating === 4).length;
         const threeStarCount = submittedEvaluations.filter(e => e.rating === 3).length;
@@ -84,13 +85,14 @@ const Evaluations = () => {
         
         calculatedStats = {
           total_evaluations: totalEvaluations,
+          submitted_evaluations: submittedEvaluations.length,
           average_rating: Math.round(averageRating * 100) / 100,
           five_star_count: fiveStarCount,
           four_star_count: fourStarCount,
           three_star_count: threeStarCount,
           two_star_count: twoStarCount,
           one_star_count: oneStarCount,
-          recommendation_percentage: Math.round((recommendationCount / totalEvaluations) * 100),
+          recommendation_percentage: submittedEvaluations.length > 0 ? Math.round((recommendationCount / submittedEvaluations.length) * 100) : 0,
           service_quality_avg: submittedEvaluations.filter(e => e.service_quality_rating).reduce((sum, e) => sum + e.service_quality_rating, 0) / submittedEvaluations.filter(e => e.service_quality_rating).length || 0,
           delivery_time_avg: submittedEvaluations.filter(e => e.delivery_time_rating).reduce((sum, e) => sum + e.delivery_time_rating, 0) / submittedEvaluations.filter(e => e.delivery_time_rating).length || 0,
           communication_avg: submittedEvaluations.filter(e => e.communication_rating).reduce((sum, e) => sum + e.communication_rating, 0) / submittedEvaluations.filter(e => e.communication_rating).length || 0,
@@ -342,19 +344,33 @@ const Evaluations = () => {
                   <TableCell>
                     <p className="text-sm">{evaluation.orders?.service_name || 'غير محدد'}</p>
                   </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <div className="flex">{renderStars(evaluation.rating)}</div>
-                      <Badge className={getRatingColor(evaluation.rating)}>
-                        {evaluation.rating}/5
-                      </Badge>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={evaluation.submitted_at ? "default" : "secondary"}>
-                      {evaluation.submitted_at ? "مرسل" : "في الانتظار"}
-                    </Badge>
-                  </TableCell>
+                   <TableCell>
+                     {evaluation.rating ? (
+                       <div className="flex items-center gap-2">
+                         <div className="flex">{renderStars(evaluation.rating)}</div>
+                         <Badge className={getRatingColor(evaluation.rating)}>
+                           {evaluation.rating}/5
+                         </Badge>
+                       </div>
+                     ) : (
+                       <Badge variant="secondary">لم يتم التقييم</Badge>
+                     )}
+                   </TableCell>
+                   <TableCell>
+                     <Badge variant={evaluation.submitted_at ? "default" : "secondary"}>
+                       {evaluation.submitted_at ? "مرسل" : "في الانتظار"}
+                     </Badge>
+                     {evaluation.google_review_status && (
+                       <div className="mt-1">
+                         <Badge variant={evaluation.google_review_status === 'pending' ? "outline" : 
+                                      evaluation.google_review_status === 'sent_to_customer' ? "default" : "secondary"}>
+                           {evaluation.google_review_status === 'pending' ? 'قيد المراجعة' :
+                            evaluation.google_review_status === 'sent_to_customer' ? 'تم الإرسال للعميل' :
+                            evaluation.google_review_status === 'approved' ? 'معتمد' : evaluation.google_review_status}
+                         </Badge>
+                       </div>
+                     )}
+                   </TableCell>
                   <TableCell>
                     <Badge variant={evaluation.would_recommend ? "default" : "secondary"}>
                       {evaluation.would_recommend ? "ينصح" : "لا ينصح"}
