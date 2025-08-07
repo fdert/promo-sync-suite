@@ -2181,7 +2181,7 @@ ${companyName}`;
                 <Label htmlFor="paid_amount">المبلغ المدفوع مقدماً</Label>
                 <Input
                   id="paid_amount"
-                  type="number"
+                  type="text"
                   placeholder="0"
                   value={newOrder.paid_amount}
                   onChange={(e) => setNewOrder({...newOrder, paid_amount: parseFloat(e.target.value) || 0})}
@@ -2192,7 +2192,7 @@ ${companyName}`;
                 <Label htmlFor="remaining_amount">المبلغ المتبقي</Label>
                 <Input
                   id="remaining_amount"
-                  type="number"
+                  type="text"
                   placeholder="0"
                   value={newOrder.amount - newOrder.paid_amount}
                   disabled
@@ -2245,27 +2245,24 @@ ${companyName}`;
                         onChange={(e) => updateOrderItem(index, 'item_name', e.target.value)}
                       />
                     </div>
-                    <div className="col-span-2">
-                      <Label htmlFor={`quantity_${index}`}>الكمية</Label>
-                      <Input
-                        id={`quantity_${index}`}
-                        type="number"
-                        min="1"
-                        value={item.quantity}
-                        onChange={(e) => updateOrderItem(index, 'quantity', parseInt(e.target.value) || 1)}
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <Label htmlFor={`unit_price_${index}`}>سعر الوحدة</Label>
-                      <Input
-                        id={`unit_price_${index}`}
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={item.unit_price}
-                        onChange={(e) => updateOrderItem(index, 'unit_price', parseFloat(e.target.value) || 0)}
-                      />
-                    </div>
+                     <div className="col-span-2">
+                       <Label htmlFor={`quantity_${index}`}>الكمية</Label>
+                       <Input
+                         id={`quantity_${index}`}
+                         type="text"
+                         value={item.quantity}
+                         onChange={(e) => updateOrderItem(index, 'quantity', parseInt(e.target.value) || 1)}
+                       />
+                     </div>
+                     <div className="col-span-2">
+                       <Label htmlFor={`unit_price_${index}`}>سعر الوحدة</Label>
+                       <Input
+                         id={`unit_price_${index}`}
+                         type="text"
+                         value={item.unit_price}
+                         onChange={(e) => updateOrderItem(index, 'unit_price', parseFloat(e.target.value) || 0)}
+                       />
+                     </div>
                     <div className="col-span-2">
                       <Label>الإجمالي</Label>
                       <Input

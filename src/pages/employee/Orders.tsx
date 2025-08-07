@@ -2272,8 +2272,7 @@ ${publicFileUrl}
                         <Label htmlFor={`quantity_${index}`}>الكمية</Label>
                         <Input
                           id={`quantity_${index}`}
-                          type="number"
-                          min="1"
+                          type="text"
                           value={item.quantity}
                           onChange={(e) => updateOrderItem(index, 'quantity', parseInt(e.target.value) || 1)}
                         />
@@ -2283,9 +2282,7 @@ ${publicFileUrl}
                         <Label htmlFor={`unit_price_${index}`}>السعر المقرر</Label>
                         <Input
                           id={`unit_price_${index}`}
-                          type="number"
-                          min="0"
-                          step="0.01"
+                          type="text"
                           value={item.unit_price}
                           onChange={(e) => updateOrderItem(index, 'unit_price', parseFloat(e.target.value) || 0)}
                         />
@@ -2332,9 +2329,7 @@ ${publicFileUrl}
                   <Label htmlFor="paid_amount">المبلغ المدفوع (اختياري)</Label>
                   <Input
                     id="paid_amount"
-                    type="number"
-                    min="0"
-                    step="0.01"
+                    type="text"
                     placeholder="0.00 ر.س"
                     value={newOrder.paid_amount}
                     onChange={(e) => setNewOrder(prev => ({ ...prev, paid_amount: parseFloat(e.target.value) || 0 }))}
@@ -2345,7 +2340,7 @@ ${publicFileUrl}
                   <Label htmlFor="remaining_amount">المبلغ المتبقي</Label>
                   <Input
                     id="remaining_amount"
-                    type="number"
+                    type="text"
                     value={newOrder.amount - newOrder.paid_amount}
                     disabled
                     className="bg-muted"
