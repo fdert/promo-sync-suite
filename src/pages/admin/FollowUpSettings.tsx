@@ -33,6 +33,7 @@ const FollowUpSettings = () => {
   });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
 
   useEffect(() => {
     fetchSettings();
@@ -120,6 +121,35 @@ const FollowUpSettings = () => {
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const testFollowUpSystem = async () => {
+    setTesting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('test-follow-up-system');
+      
+      if (error) {
+        throw error;
+      }
+
+      if (data?.success) {
+        toast({
+          title: "نجح الاختبار",
+          description: `تم اختبار النظام بنجاح. تم العثور على ${data.tests.pendingMessages} رسالة معلقة`,
+        });
+      } else {
+        throw new Error(data?.error || 'فشل الاختبار');
+      }
+    } catch (error) {
+      console.error('Error testing follow-up system:', error);
+      toast({
+        title: "فشل الاختبار",
+        description: error.message || "حدث خطأ أثناء اختبار النظام",
+        variant: "destructive",
+      });
+    } finally {
+      setTesting(false);
     }
   };
 
@@ -315,8 +345,25 @@ const FollowUpSettings = () => {
           </CardContent>
         </Card>
 
-        {/* زر الحفظ */}
-        <div className="flex justify-end">
+        {/* أزرار الحفظ والاختبار */}
+        <div className="flex justify-between items-center">
+          <Button 
+            onClick={testFollowUpSystem} 
+            disabled={testing || !settings.follow_up_whatsapp}
+            variant="outline"
+            size="lg"
+            className="min-w-[140px]"
+          >
+            {testing ? (
+              <div className="flex items-center gap-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                جاري الاختبار...
+              </div>
+            ) : (
+              "اختبار النظام"
+            )}
+          </Button>
+          
           <Button 
             onClick={handleSave} 
             disabled={saving}
