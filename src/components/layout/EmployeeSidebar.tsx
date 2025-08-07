@@ -82,7 +82,7 @@ const employeeMenuItems = [
     allowedRoles: ['employee'] as UserRole[],
   },
   {
-    title: "نظرة عامة على الحسابات",
+    title: "العملاء المدينون",
     icon: TrendingUp,
     href: "/employee/accounts-overview",
     allowedRoles: ['employee'] as UserRole[],

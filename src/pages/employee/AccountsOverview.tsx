@@ -1,179 +1,220 @@
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { DollarSign, AlertTriangle, Clock, TrendingUp, TrendingDown, Receipt } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { CalendarIcon, AlertTriangle, Users, DollarSign, FileText, TrendingDown, ClipboardList, Eye } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { format, differenceInDays } from 'date-fns';
+import { ar } from 'date-fns/locale';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
-// توحيد أنواع المدفوعات
-const PAYMENT_TYPES = {
-  CASH: 'نقدي',
-  BANK: 'تحويل بنكي', 
-  NETWORK: 'الشبكة'
-} as const;
+interface CustomerBalance {
+  customer_id: string;
+  customer_name: string;
+  outstanding_balance: number;
+  unpaid_invoices_count: number;
+  earliest_due_date: string;
+  latest_due_date: string;
+}
+
+interface UnpaidInvoice {
+  invoice_id: string;
+  invoice_number: string;
+  customer_name: string;
+  total_amount: number;
+  paid_amount: number;
+  remaining_amount: number;
+  due_date: string;
+  days_overdue: number;
+  status: string;
+}
+
+interface OrderDetails {
+  id: string;
+  order_number: string;
+  service_name: string;
+  amount: number;
+  status: string;
+  created_at: string;
+  due_date: string;
+}
+
+interface PaymentDetails {
+  id: string;
+  amount: number;
+  payment_type: string;
+  payment_date: string;
+  invoice_id: string;
+}
 
 const AccountsOverview = () => {
-  const [accounts, setAccounts] = useState<any[]>([]);
-  const [unpaidInvoices, setUnpaidInvoices] = useState<any[]>([]);
-  const [recentPayments, setRecentPayments] = useState<any[]>([]);
+  const [customerBalances, setCustomerBalances] = useState<CustomerBalance[]>([]);
+  const [unpaidInvoices, setUnpaidInvoices] = useState<UnpaidInvoice[]>([]);
+  const [customerOrders, setCustomerOrders] = useState<Record<string, OrderDetails[]>>({});
+  const [customerPayments, setCustomerPayments] = useState<Record<string, PaymentDetails[]>>({});
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("overview");
-  
-  // فلاتر البحث للفواتير غير المدفوعة
-  const [searchFilters, setSearchFilters] = useState({
-    customerName: '',
-    dateFrom: '',
-    dateTo: '',
-    status: 'all'
-  });
-
-  const { toast } = useToast();
-
-  // جلب الحسابات
-  const fetchAccounts = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('accounts')
-        .select('*')
-        .eq('is_active', true)
-        .order('account_type', { ascending: true });
-
-      if (error) throw error;
-      setAccounts(data || []);
-    } catch (error) {
-      console.error('Error fetching accounts:', error);
-    }
-  };
-
-  // جلب الفواتير غير المدفوعة
-  const fetchUnpaidInvoices = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('invoice_payment_summary')
-        .select(`
-          *,
-          customers(name, phone, whatsapp_number)
-        `)
-        .order('due_date', { ascending: true });
-
-      if (error) throw error;
-
-      // فلترة الفواتير غير المدفوعة بالكامل
-      const unpaid = (data || []).filter(invoice => {
-        const remainingAmount = invoice.remaining_amount || 0;
-        return remainingAmount > 0.01;
-      }).map(invoice => {
-        const today = new Date();
-        const dueDate = new Date(invoice.due_date);
-        const daysDiff = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
-        
-        return {
-          ...invoice,
-          remaining_amount: invoice.remaining_amount || 0,
-          paid_amount: invoice.calculated_paid_amount || 0,
-          days_overdue: daysDiff > 0 ? daysDiff : 0,
-          is_overdue: daysDiff > 0,
-          payment_status: (invoice.calculated_paid_amount || 0) > 0 ? 'partial' : 'unpaid'
-        };
-      });
-
-      setUnpaidInvoices(unpaid);
-    } catch (error) {
-      console.error('Error fetching unpaid invoices:', error);
-    }
-  };
-
-  // جلب المدفوعات الأخيرة
-  const fetchRecentPayments = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('payments')
-        .select(`
-          *,
-          invoices(invoice_number),
-          orders(order_number)
-        `)
-        .order('payment_date', { ascending: false })
-        .limit(15);
-
-      if (error) throw error;
-      setRecentPayments(data || []);
-    } catch (error) {
-      console.error('Error fetching recent payments:', error);
-    }
-  };
-
-  // تحميل جميع البيانات
-  const loadAllData = async () => {
-    setLoading(true);
-    await Promise.all([
-      fetchAccounts(),
-      fetchUnpaidInvoices(),
-      fetchRecentPayments()
-    ]);
-    setLoading(false);
-  };
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
 
   useEffect(() => {
-    loadAllData();
+    fetchAccountsReceivableData();
   }, []);
 
-  // فلترة الفواتير غير المدفوعة
-  const filteredUnpaidInvoices = unpaidInvoices.filter(invoice => {
-    if (searchFilters.customerName && !invoice.customers?.name?.toLowerCase().includes(searchFilters.customerName.toLowerCase())) {
-      return false;
-    }
-    
-    if (searchFilters.dateFrom && new Date(invoice.issue_date) < new Date(searchFilters.dateFrom)) {
-      return false;
-    }
-    
-    if (searchFilters.dateTo && new Date(invoice.issue_date) > new Date(searchFilters.dateTo)) {
-      return false;
-    }
-    
-    if (searchFilters.status !== 'all') {
-      if (searchFilters.status === 'overdue' && !invoice.is_overdue) return false;
-      if (searchFilters.status === 'partial' && invoice.payment_status !== 'partial') return false;
-      if (searchFilters.status === 'unpaid' && invoice.payment_status !== 'unpaid') return false;
-    }
-    
-    return true;
-  });
+  const fetchAccountsReceivableData = async () => {
+    try {
+      setLoading(true);
 
-  // حساب الإحصائيات
-  const calculateStats = () => {
-    const totalUnpaid = filteredUnpaidInvoices.reduce((sum, inv) => sum + inv.remaining_amount, 0);
-    const overdueCount = filteredUnpaidInvoices.filter(inv => inv.is_overdue).length;
-    const partiallyPaidCount = filteredUnpaidInvoices.filter(inv => inv.payment_status === 'partial').length;
-    
-    const accountsByType = accounts.reduce((acc, account) => {
-      acc[account.account_type] = (acc[account.account_type] || 0) + (Number(account.balance) || 0);
-      return acc;
-    }, {} as Record<string, number>);
+      // جلب أرصدة العملاء المدينون
+      const { data: balancesData } = await supabase
+        .from('customer_outstanding_balances')
+        .select('*');
 
-    return {
-      totalUnpaid,
-      overdueCount,
-      partiallyPaidCount,
-      totalInvoices: filteredUnpaidInvoices.length,
-      accountsByType
-    };
+      if (balancesData) {
+        setCustomerBalances(balancesData);
+        
+        // جلب طلبات العملاء المدينون
+        const customerIds = balancesData.map(customer => customer.customer_id).filter(Boolean);
+        await fetchCustomerOrders(customerIds);
+        await fetchCustomerPayments(customerIds);
+      }
+
+      // جلب الفواتير غير المدفوعة مع تفاصيلها من الـ view الجديد
+      const { data: invoicesData } = await supabase
+        .from('invoice_payment_summary')
+        .select(`
+          id,
+          invoice_number,
+          total_amount,
+          calculated_paid_amount,
+          remaining_amount,
+          due_date,
+          status,
+          customer_id
+        `)
+        .gt('remaining_amount', 0);
+
+      // جلب أسماء العملاء
+      const customerIds = [...new Set(invoicesData?.map(inv => inv.customer_id).filter(Boolean))];
+      const { data: customersData } = await supabase
+        .from('customers')
+        .select('id, name')
+        .in('id', customerIds);
+
+      if (invoicesData && customersData) {
+        const customerMap = new Map(customersData.map(customer => [customer.id, customer.name]));
+        
+        const formattedInvoices = invoicesData.map(invoice => {
+          const dueDate = new Date(invoice.due_date);
+          const today = new Date();
+          const daysOverdue = differenceInDays(today, dueDate);
+          
+          return {
+            invoice_id: invoice.id,
+            invoice_number: invoice.invoice_number,
+            customer_name: customerMap.get(invoice.customer_id) || 'غير محدد',
+            total_amount: invoice.total_amount,
+            paid_amount: invoice.calculated_paid_amount || 0,
+            remaining_amount: invoice.remaining_amount,
+            due_date: invoice.due_date,
+            days_overdue: daysOverdue > 0 ? daysOverdue : 0,
+            status: invoice.status
+          };
+        });
+        
+        setUnpaidInvoices(formattedInvoices.sort((a, b) => b.days_overdue - a.days_overdue));
+      }
+
+    } catch (error) {
+      console.error('Error fetching accounts receivable data:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const stats = calculateStats();
+  const fetchCustomerOrders = async (customerIds: string[]) => {
+    try {
+      const { data: ordersData } = await supabase
+        .from('orders')
+        .select('id, order_number, service_name, amount, status, created_at, due_date, customer_id')
+        .in('customer_id', customerIds)
+        .order('created_at', { ascending: false });
+
+      if (ordersData) {
+        const ordersGrouped = ordersData.reduce((acc, order) => {
+          if (!acc[order.customer_id]) {
+            acc[order.customer_id] = [];
+          }
+          acc[order.customer_id].push(order);
+          return acc;
+        }, {} as Record<string, OrderDetails[]>);
+        
+        setCustomerOrders(ordersGrouped);
+      }
+    } catch (error) {
+      console.error('Error fetching customer orders:', error);
+    }
+  };
+
+  const fetchCustomerPayments = async (customerIds: string[]) => {
+    try {
+      const { data: paymentsData } = await supabase
+        .from('payments')
+        .select(`
+          id, 
+          amount, 
+          payment_type, 
+          payment_date, 
+          invoice_id,
+          invoices!inner(customer_id)
+        `)
+        .in('invoices.customer_id', customerIds)
+        .order('payment_date', { ascending: false });
+
+      if (paymentsData) {
+        const paymentsGrouped = paymentsData.reduce((acc, payment) => {
+          const customerId = (payment.invoices as any).customer_id;
+          if (!acc[customerId]) {
+            acc[customerId] = [];
+          }
+          acc[customerId].push({
+            id: payment.id,
+            amount: payment.amount,
+            payment_type: payment.payment_type,
+            payment_date: payment.payment_date,
+            invoice_id: payment.invoice_id
+          });
+          return acc;
+        }, {} as Record<string, PaymentDetails[]>);
+        
+        setCustomerPayments(paymentsGrouped);
+      }
+    } catch (error) {
+      console.error('Error fetching customer payments:', error);
+    }
+  };
+
+  const getOverdueStatus = (daysOverdue: number) => {
+    if (daysOverdue === 0) return { label: 'في الموعد', color: 'bg-green-100 text-green-800' };
+    if (daysOverdue <= 30) return { label: `متأخر ${daysOverdue} يوم`, color: 'bg-yellow-100 text-yellow-800' };
+    if (daysOverdue <= 60) return { label: `متأخر ${daysOverdue} يوم`, color: 'bg-orange-100 text-orange-800' };
+    return { label: `متأخر ${daysOverdue} يوم`, color: 'bg-red-100 text-red-800' };
+  };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">جاري تحميل بيانات الحسابات...</p>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold text-foreground">العملاء المدينون</h1>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <Card key={i}>
+              <CardHeader className="animate-pulse">
+                <div className="h-4 bg-muted rounded w-3/4"></div>
+                <div className="h-8 bg-muted rounded w-1/2"></div>
+              </CardHeader>
+            </Card>
+          ))}
         </div>
       </div>
     );
@@ -182,272 +223,254 @@ const AccountsOverview = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">نظرة عامة على الحسابات</h1>
+        <h1 className="text-3xl font-bold text-foreground">العملاء المدينون</h1>
       </div>
 
-      {/* بطاقات الإحصائيات */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* ملخص سريع */}
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">إجمالي المستحقات</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">عدد العملاء المدينون</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-primary">
+              {customerBalances.length}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">إجمالي الفواتير المعلقة</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-600">
+              {unpaidInvoices.length}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">المتأخرة أكثر من 30 يوم</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
-              {stats.totalUnpaid.toLocaleString()} ر.س
+              {unpaidInvoices.filter(inv => inv.days_overdue > 30).length}
             </div>
-            <p className="text-xs text-muted-foreground">
-              من {stats.totalInvoices} فاتورة غير مدفوعة
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">فواتير متأخرة</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-red-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{stats.overdueCount}</div>
-            <p className="text-xs text-muted-foreground">
-              تحتاج متابعة عاجلة
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">مدفوعة جزئياً</CardTitle>
-            <Clock className="h-4 w-4 text-yellow-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{stats.partiallyPaidCount}</div>
-            <p className="text-xs text-muted-foreground">
-              تحتاج استكمال دفع
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">الأصول</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {(stats.accountsByType['أصول'] || 0).toLocaleString()} ر.س
-            </div>
-            <p className="text-xs text-muted-foreground">
-              الأصول السائلة
-            </p>
           </CardContent>
         </Card>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="overview">نظرة عامة</TabsTrigger>
-          <TabsTrigger value="unpaid">الفواتير غير المدفوعة</TabsTrigger>
-          <TabsTrigger value="payments">المدفوعات الأخيرة</TabsTrigger>
-        </TabsList>
+      {/* أرصدة العملاء */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            أرصدة العملاء المدينون
+          </CardTitle>
+          <CardDescription>
+            العملاء الذين لديهم مبالغ مستحقة مع إمكانية عرض تفاصيل الطلبات والمدفوعات
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>اسم العميل</TableHead>
+                <TableHead>المبلغ المستحق</TableHead>
+                <TableHead>عدد الفواتير</TableHead>
+                <TableHead>أقرب استحقاق</TableHead>
+                <TableHead>آخر استحقاق</TableHead>
+                <TableHead>الإجراءات</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {customerBalances.map((customer) => (
+                <TableRow key={customer.customer_id}>
+                  <TableCell className="font-medium">{customer.customer_name}</TableCell>
+                  <TableCell>
+                    <span className="font-bold text-orange-600">
+                      {customer.outstanding_balance.toLocaleString()} ر.س
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">{customer.unpaid_invoices_count} فاتورة</Badge>
+                  </TableCell>
+                  <TableCell>
+                    {format(new Date(customer.earliest_due_date), 'dd/MM/yyyy', { locale: ar })}
+                  </TableCell>
+                  <TableCell>
+                    {format(new Date(customer.latest_due_date), 'dd/MM/yyyy', { locale: ar })}
+                  </TableCell>
+                  <TableCell>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setSelectedCustomerId(customer.customer_id)}
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          التفاصيل
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                        <DialogHeader>
+                          <DialogTitle className="flex items-center gap-2">
+                            <Users className="h-5 w-5" />
+                            تفاصيل العميل: {customer.customer_name}
+                          </DialogTitle>
+                          <DialogDescription>
+                            عرض تفاصيل الطلبات والمدفوعات والفواتير المرتبطة بالعميل
+                          </DialogDescription>
+                        </DialogHeader>
+                        
+                        {selectedCustomerId && (
+                          <div className="space-y-6">
+                            {/* طلبات العميل */}
+                            <Card>
+                              <CardHeader>
+                                <CardTitle className="flex items-center gap-2 text-lg">
+                                  <ClipboardList className="h-4 w-4" />
+                                  الطلبات ({customerOrders[selectedCustomerId]?.length || 0})
+                                </CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow>
+                                      <TableHead>رقم الطلب</TableHead>
+                                      <TableHead>الخدمة</TableHead>
+                                      <TableHead>المبلغ</TableHead>
+                                      <TableHead>الحالة</TableHead>
+                                      <TableHead>تاريخ الإنشاء</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {customerOrders[selectedCustomerId]?.slice(0, 5).map((order) => (
+                                      <TableRow key={order.id}>
+                                        <TableCell className="font-medium">{order.order_number}</TableCell>
+                                        <TableCell>{order.service_name}</TableCell>
+                                        <TableCell>{order.amount.toLocaleString()} ر.س</TableCell>
+                                        <TableCell>
+                                          <Badge variant="outline">{order.status}</Badge>
+                                        </TableCell>
+                                        <TableCell>
+                                          {format(new Date(order.created_at), 'dd/MM/yyyy', { locale: ar })}
+                                        </TableCell>
+                                      </TableRow>
+                                    ))}
+                                  </TableBody>
+                                </Table>
+                              </CardContent>
+                            </Card>
 
-        <TabsContent value="overview" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* أرصدة الحسابات */}
-            <Card>
-              <CardHeader>
-                <CardTitle>أرصدة الحسابات حسب النوع</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {Object.entries(stats.accountsByType).map(([type, balance]) => (
-                    <div key={type} className="flex justify-between items-center">
-                      <span className="font-medium">{type}</span>
-                      <span className={`font-bold ${
-                        Number(balance) >= 0 ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        {balance.toLocaleString()} ر.س
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                            {/* مدفوعات العميل */}
+                            <Card>
+                              <CardHeader>
+                                <CardTitle className="flex items-center gap-2 text-lg">
+                                  <DollarSign className="h-4 w-4" />
+                                  المدفوعات ({customerPayments[selectedCustomerId]?.length || 0})
+                                </CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow>
+                                      <TableHead>المبلغ</TableHead>
+                                      <TableHead>نوع الدفع</TableHead>
+                                      <TableHead>تاريخ الدفع</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {customerPayments[selectedCustomerId]?.slice(0, 5).map((payment) => (
+                                      <TableRow key={payment.id}>
+                                        <TableCell className="font-medium text-green-600">
+                                          {payment.amount.toLocaleString()} ر.س
+                                        </TableCell>
+                                        <TableCell>
+                                          <Badge variant="secondary">{payment.payment_type}</Badge>
+                                        </TableCell>
+                                        <TableCell>
+                                          {format(new Date(payment.payment_date), 'dd/MM/yyyy', { locale: ar })}
+                                        </TableCell>
+                                      </TableRow>
+                                    ))}
+                                  </TableBody>
+                                </Table>
+                              </CardContent>
+                            </Card>
+                          </div>
+                        )}
+                      </DialogContent>
+                    </Dialog>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
-            {/* ربط المدفوعات بالحسابات */}
-            <Card>
-              <CardHeader>
-                <CardTitle>ربط المدفوعات بالحسابات</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 bg-blue-50 rounded">
-                    <span>نقدي → النقدية</span>
-                    <Badge variant="secondary">متصل</Badge>
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-blue-50 rounded">
-                    <span>تحويل بنكي → البنك</span>
-                    <Badge variant="secondary">متصل</Badge>
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-blue-50 rounded">
-                    <span>الشبكة → الشبكة</span>
-                    <Badge variant="secondary">متصل</Badge>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="unpaid" className="space-y-4">
-          {/* فلاتر البحث */}
-          <Card>
-            <CardHeader>
-              <CardTitle>فلاتر البحث</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div>
-                  <Label>اسم العميل</Label>
-                  <Input
-                    placeholder="ابحث بالاسم"
-                    value={searchFilters.customerName}
-                    onChange={(e) => setSearchFilters({...searchFilters, customerName: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <Label>من تاريخ</Label>
-                  <Input
-                    type="date"
-                    value={searchFilters.dateFrom}
-                    onChange={(e) => setSearchFilters({...searchFilters, dateFrom: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <Label>إلى تاريخ</Label>
-                  <Input
-                    type="date"
-                    value={searchFilters.dateTo}
-                    onChange={(e) => setSearchFilters({...searchFilters, dateTo: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <Label>الحالة</Label>
-                  <Select value={searchFilters.status} onValueChange={(value) => setSearchFilters({...searchFilters, status: value})}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">جميع الفواتير</SelectItem>
-                      <SelectItem value="unpaid">غير مدفوعة</SelectItem>
-                      <SelectItem value="partial">مدفوعة جزئياً</SelectItem>
-                      <SelectItem value="overdue">متأخرة</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* جدول الفواتير غير المدفوعة */}
-          <Card>
-            <CardHeader>
-              <CardTitle>الفواتير غير المدفوعة ({filteredUnpaidInvoices.length})</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>رقم الفاتورة</TableHead>
-                    <TableHead>العميل</TableHead>
-                    <TableHead>المبلغ الكلي</TableHead>
-                    <TableHead>المدفوع</TableHead>
-                    <TableHead>المتبقي</TableHead>
-                    <TableHead>تاريخ الاستحقاق</TableHead>
-                    <TableHead>أيام التأخير</TableHead>
-                    <TableHead>الحالة</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredUnpaidInvoices.slice(0, 20).map((invoice) => (
-                    <TableRow key={invoice.id}>
-                      <TableCell className="font-medium">{invoice.invoice_number}</TableCell>
-                      <TableCell>{invoice.customers?.name || 'غير محدد'}</TableCell>
-                      <TableCell>{invoice.total_amount.toLocaleString()} ر.س</TableCell>
-                      <TableCell>{(invoice.paid_amount || 0).toLocaleString()} ر.س</TableCell>
-                      <TableCell className="font-bold text-red-600">
+      {/* الفواتير غير المدفوعة */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CalendarIcon className="h-5 w-5" />
+            الفواتير غير المدفوعة
+          </CardTitle>
+          <CardDescription>
+            مرتبة حسب الأولوية (المتأخرة أولاً)
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>رقم الفاتورة</TableHead>
+                <TableHead>العميل</TableHead>
+                <TableHead>المبلغ الإجمالي</TableHead>
+                <TableHead>المبلغ المدفوع</TableHead>
+                <TableHead>المبلغ المتبقي</TableHead>
+                <TableHead>تاريخ الاستحقاق</TableHead>
+                <TableHead>الحالة</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {unpaidInvoices.map((invoice) => {
+                const status = getOverdueStatus(invoice.days_overdue);
+                return (
+                  <TableRow key={invoice.invoice_id}>
+                    <TableCell className="font-medium">{invoice.invoice_number}</TableCell>
+                    <TableCell>{invoice.customer_name}</TableCell>
+                    <TableCell>{invoice.total_amount.toLocaleString()} ر.س</TableCell>
+                    <TableCell className="text-green-600">
+                      {invoice.paid_amount.toLocaleString()} ر.س
+                    </TableCell>
+                    <TableCell>
+                      <span className="font-bold text-orange-600">
                         {invoice.remaining_amount.toLocaleString()} ر.س
-                      </TableCell>
-                      <TableCell>{new Date(invoice.due_date).toLocaleDateString('ar')}</TableCell>
-                      <TableCell>
-                        {invoice.is_overdue ? (
-                          <Badge variant="destructive">{invoice.days_overdue} يوم</Badge>
-                        ) : (
-                          <Badge variant="secondary">في الموعد</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {invoice.payment_status === 'partial' ? (
-                          <Badge variant="secondary">مدفوع جزئياً</Badge>
-                        ) : invoice.is_overdue ? (
-                          <Badge variant="destructive">متأخر</Badge>
-                        ) : (
-                          <Badge variant="outline">غير مدفوع</Badge>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="payments" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>المدفوعات الأخيرة ({recentPayments.length})</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>التاريخ</TableHead>
-                    <TableHead>المبلغ</TableHead>
-                    <TableHead>نوع الدفع</TableHead>
-                    <TableHead>رقم الفاتورة/الطلب</TableHead>
-                    <TableHead>الحساب المرتبط</TableHead>
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      {format(new Date(invoice.due_date), 'dd/MM/yyyy', { locale: ar })}
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={status.color} variant="secondary">
+                        {status.label}
+                      </Badge>
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {recentPayments.map((payment) => (
-                    <TableRow key={payment.id}>
-                      <TableCell>{new Date(payment.payment_date).toLocaleDateString('ar')}</TableCell>
-                      <TableCell className="font-bold">{payment.amount.toLocaleString()} ر.س</TableCell>
-                      <TableCell>
-                        <Badge variant={
-                          payment.payment_type === PAYMENT_TYPES.CASH ? 'default' :
-                          payment.payment_type === PAYMENT_TYPES.BANK ? 'secondary' :
-                          payment.payment_type === PAYMENT_TYPES.NETWORK ? 'outline' :
-                          'destructive'
-                        }>
-                          {payment.payment_type}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{payment.invoices?.invoice_number || payment.orders?.order_number || '-'}</TableCell>
-                      <TableCell>
-                        {payment.payment_type === PAYMENT_TYPES.CASH && 'النقدية'}
-                        {payment.payment_type === PAYMENT_TYPES.BANK && 'البنك'} 
-                        {payment.payment_type === PAYMENT_TYPES.NETWORK && 'الشبكة'}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   );
 };
