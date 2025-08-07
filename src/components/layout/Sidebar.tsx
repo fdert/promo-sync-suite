@@ -144,6 +144,12 @@ const menuItems = [
     allowedRoles: ['admin', 'manager'] as UserRole[],
   },
   {
+    title: "إدارة المتابعة",
+    icon: MessageSquare,
+    href: "/admin/follow-up-settings",
+    allowedRoles: ['admin', 'manager'] as UserRole[],
+  },
+  {
     title: "سجلات النشاط",
     icon: Activity,
     href: "/admin/user-activity-logs",
@@ -183,12 +189,6 @@ const menuItems = [
     title: "إعدادات الملصق",
     icon: Tags,
     href: "/admin/barcode-settings",
-    allowedRoles: ['admin', 'manager'] as UserRole[],
-  },
-  {
-    title: "إدارة المتابعة",
-    icon: MessageSquare,
-    href: "/admin/follow-up-settings",
     allowedRoles: ['admin', 'manager'] as UserRole[],
   },
 ];
