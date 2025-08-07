@@ -23,19 +23,33 @@ Deno.serve(async (req) => {
     const { data: settings, error: settingsError } = await supabase
       .from('follow_up_settings')
       .select('*')
-      .single()
+      .maybeSingle()
     
     if (settingsError) {
       console.error('❌ Error fetching follow-up settings:', settingsError)
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: 'No follow-up settings found',
-          details: settingsError 
+          error: 'خطأ في جلب إعدادات المتابعة',
+          details: settingsError.message 
         }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 400 
+        }
+      )
+    }
+    
+    if (!settings) {
+      console.warn('⚠️ No follow-up settings found')
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'لم يتم العثور على إعدادات المتابعة. يرجى حفظ الإعدادات أولاً من صفحة إعدادات المتابعة'
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 404 
         }
       )
     }

@@ -17,3 +17,6 @@ verify_jwt = true
 
 [functions.test-follow-up-system]
 verify_jwt = false
+
+[functions.send-follow-up-messages]
+verify_jwt = false
