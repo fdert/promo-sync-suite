@@ -152,32 +152,54 @@ const Customers = () => {
 
     try {
       const text = await importFile.text();
-      const rows = text.split('\n').slice(1); // تجاهل السطر الأول (العناوين)
+      console.log('محتوى الملف الخام:', text);
       
-      console.log('إجمالي السطور بعد تجاهل العناوين:', rows.length);
+      // تنظيف النص وإزالة BOM إذا وجد
+      const cleanText = text.replace(/^\uFEFF/, '');
       
-      const customers = rows
-        .filter(row => row.trim())
+      // تقسيم النص بناءً على أنواع مختلفة من فواصل الأسطر
+      const rows = cleanText.split(/\r?\n|\r/).filter(row => row.trim());
+      console.log('جميع السطور:', rows);
+      
+      // التحقق إذا كان السطر الأول يحتوي على عناوين
+      const hasHeaders = rows.length > 0 && (
+        rows[0].includes('الاسم') || 
+        rows[0].includes('اسم') || 
+        rows[0].includes('Name') ||
+        rows[0].includes('name')
+      );
+      
+      // تجاهل السطر الأول إذا كان يحتوي على عناوين
+      const dataRows = hasHeaders ? rows.slice(1) : rows;
+      console.log('سطور البيانات:', dataRows);
+      
+      const customers = dataRows
         .map((row, index) => {
-          const [name, phone] = row.split(',').map(field => field?.trim());
+          // تنظيف السطر وإزالة المساحات الزائدة
+          const cleanRow = row.trim();
+          if (!cleanRow) return null;
           
-          console.log(`السطر ${index + 2}: الاسم="${name}", الهاتف="${phone}"`);
+          // تقسيم السطر بناءً على الفاصلة أو الفاصلة المنقوطة أو التاب
+          const fields = cleanRow.split(/[,;\t]/).map(field => field?.trim().replace(/"/g, ''));
+          const [name, phone] = fields;
           
-          // التحقق من وجود البيانات المطلوبة (يجب أن تكون غير فارغة)
-          if (!name || name === '' || !phone || phone === '') {
-            console.log(`السطر ${index + 2}: بيانات ناقصة أو فارغة`);
+          console.log(`معالجة السطر ${index + 1}: الاسم="${name}", الهاتف="${phone}"`);
+          
+          // التحقق من وجود البيانات المطلوبة
+          if (!name || !phone || name === '' || phone === '') {
+            console.log(`السطر ${index + 1}: بيانات ناقصة`);
             return null;
           }
           
           return {
-            name,
-            phone,
+            name: name,
+            phone: phone,
             import_source: 'CSV Import'
           };
         })
         .filter(customer => customer !== null);
         
-      console.log('عدد العملاء الصالحين:', customers.length);
+      console.log('العملاء النهائيون:', customers);
 
       if (customers.length === 0) {
         toast({
