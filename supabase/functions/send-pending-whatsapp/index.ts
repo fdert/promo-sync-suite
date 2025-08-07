@@ -64,62 +64,13 @@ Deno.serve(async (req) => {
 
     console.log(`Found ${pendingMessages.length} pending messages`);
 
-    // الحصول على إعدادات الويب هوك للإرسال - تحديد الويب هوك حسب نوع الرسالة
-    let webhookSettings;
-    
-    // تحديد نوع الرسائل: تقييم، بروفة، أو طلبات عادية
-    const hasGoogleReviewMessages = pendingMessages.some(msg => 
-      msg.message_content && (
-        msg.message_content.includes('google.com') ||
-        msg.message_content.includes('تقييم') ||
-        msg.message_content.includes('جوجل') ||
-        msg.message_content.includes('خرائط جوجل') ||
-        msg.message_content.includes('writereview') ||
-        msg.message_content.includes('نرجو منك تقييم') ||
-        msg.message_content.includes('نرجو تقييم')
-      )
-    );
-    
-    const hasProofMessages = pendingMessages.some(msg => 
-      msg.message_type === 'image' || 
-      (msg.message_content && msg.message_content.includes('بروفة التصميم')) ||
-      (msg.message_content && msg.message_content.includes('رابط البروفة'))
-    );
-    
-    if (hasGoogleReviewMessages) {
-      // استخدام ويب هوك التقييمات للرسائل التي تحتوي على روابط جوجل أو كلمات التقييم
-      const { data: evaluationWebhook } = await supabase
-        .from('webhook_settings')
-        .select('webhook_url, webhook_type, webhook_name')
-        .eq('webhook_type', 'evaluation')
-        .eq('is_active', true)
-        .single();
-      
-      webhookSettings = evaluationWebhook;
-      console.log('Using evaluation webhook for Google review messages');
-      
-    } else if (hasProofMessages) {
-      // استخدام ويب هوك البروفة للرسائل التي تحتوي على بروفة
-      const { data: proofWebhook } = await supabase
-        .from('webhook_settings')
-        .select('webhook_url, webhook_type, webhook_name')
-        .eq('webhook_type', 'proof')
-        .eq('is_active', true)
-        .single();
-      webhookSettings = proofWebhook;
-      console.log('Using proof webhook for proof messages');
-      
-    } else {
-      // استخدام ويب هوك الطلبات للرسائل النصية العادية
-      const { data: orderWebhook } = await supabase
-        .from('webhook_settings')
-        .select('webhook_url, webhook_type, webhook_name')
-        .eq('webhook_type', 'outgoing')
-        .eq('is_active', true)
-        .single();
-      webhookSettings = orderWebhook;
-      console.log('Using outgoing webhook for regular messages');
-    }
+    // استخدام ويب هوك الطلبات العادي لجميع الرسائل (بما في ذلك التقييمات)
+    const { data: webhookSettings } = await supabase
+      .from('webhook_settings')
+      .select('webhook_url, webhook_type, webhook_name')
+      .eq('webhook_type', 'outgoing')
+      .eq('is_active', true)
+      .single();
 
     if (!webhookSettings?.webhook_url) {
       console.error('No active outgoing webhook found');
@@ -131,6 +82,9 @@ Deno.serve(async (req) => {
         }
       );
     }
+
+    console.log('استخدام ويب هوك:', webhookSettings.webhook_name);
+
 
     const results = [];
 
