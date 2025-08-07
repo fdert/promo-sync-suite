@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Users as UsersIcon, UserPlus, Settings, Shield, Edit, Trash2 } from "lucide-react";
+import { Activity, UserPlus, Users as UsersIcon, Eye, Edit, Trash2, Shield, CheckCircle, XCircle, Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -939,6 +939,15 @@ const Users = () => {
                       </Button>
                       <Button variant="outline" size="sm" onClick={() => deleteUser(user.id)}>
                         <Trash2 className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        asChild
+                      >
+                        <a href={`/admin/user-activity-logs?user=${user.id}`}>
+                          <Activity className="h-4 w-4" />
+                        </a>
                       </Button>
                     </div>
                   </TableCell>

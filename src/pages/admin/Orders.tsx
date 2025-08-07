@@ -1278,6 +1278,165 @@ ${companyName}`;
     });
   };
 
+  // تحديث الطلب
+  const updateOrder = async () => {
+    if (!selectedOrderForEditing) return;
+
+    try {
+      setLoading(true);
+
+      // تحديث بيانات الطلب الأساسية
+      const { error: orderError } = await supabase
+        .from('orders')
+        .update({
+          customer_id: newOrder.customer_id,
+          service_id: newOrder.service_id,
+          service_name: newOrder.service_name,
+          priority: newOrder.priority,
+          due_date: newOrder.due_date || null,
+          description: newOrder.description,
+          amount: newOrder.amount,
+          payment_type: newOrder.payment_type,
+          payment_notes: newOrder.payment_notes,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', selectedOrderForEditing.id);
+
+      if (orderError) throw orderError;
+
+      // حذف البنود القديمة
+      const { error: deleteItemsError } = await supabase
+        .from('order_items')
+        .delete()
+        .eq('order_id', selectedOrderForEditing.id);
+
+      if (deleteItemsError) throw deleteItemsError;
+
+      // إضافة البنود الجديدة
+      if (orderItems.length > 0 && orderItems[0].item_name) {
+        const itemsToInsert = orderItems.map(item => ({
+          order_id: selectedOrderForEditing.id,
+          item_name: item.item_name,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          total_amount: item.total_amount
+        }));
+
+        const { error: insertItemsError } = await supabase
+          .from('order_items')
+          .insert(itemsToInsert);
+
+        if (insertItemsError) throw insertItemsError;
+      }
+
+      toast({
+        title: "تم تحديث الطلب",
+        description: "تم تحديث الطلب بنجاح",
+      });
+
+      setIsEditOrderDialogOpen(false);
+      setSelectedOrderForEditing(null);
+      fetchOrders();
+
+    } catch (error) {
+      console.error('Error updating order:', error);
+      toast({
+        title: "خطأ في تحديث الطلب",
+        description: "حدث خطأ أثناء تحديث الطلب",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // حذف الطلب
+  const deleteOrder = async () => {
+    if (!selectedOrderForDelete) return;
+
+    try {
+      setLoading(true);
+
+      // حذف البنود أولاً
+      const { error: deleteItemsError } = await supabase
+        .from('order_items')
+        .delete()
+        .eq('order_id', selectedOrderForDelete.id);
+
+      if (deleteItemsError) throw deleteItemsError;
+
+      // حذف المدفوعات
+      const { error: deletePaymentsError } = await supabase
+        .from('payments')
+        .delete()
+        .eq('order_id', selectedOrderForDelete.id);
+
+      if (deletePaymentsError) throw deletePaymentsError;
+
+      // حذف الطلب
+      const { error: deleteOrderError } = await supabase
+        .from('orders')
+        .delete()
+        .eq('id', selectedOrderForDelete.id);
+
+      if (deleteOrderError) throw deleteOrderError;
+
+      toast({
+        title: "تم حذف الطلب",
+        description: "تم حذف الطلب وجميع بياناته المرتبطة بنجاح",
+      });
+
+      setIsDeleteOrderDialogOpen(false);
+      setSelectedOrderForDelete(null);
+      fetchOrders();
+
+    } catch (error) {
+      console.error('Error deleting order:', error);
+      toast({
+        title: "خطأ في حذف الطلب",
+        description: "حدث خطأ أثناء حذف الطلب",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // فتح حوار تعديل الطلب
+  const openEditOrderDialog = (order: Order) => {
+    setSelectedOrderForEditing(order);
+    setNewOrder({
+      customer_id: order.customer_id || '',
+      service_id: '',
+      service_name: order.service_name,
+      priority: order.priority,
+      due_date: order.due_date || '',
+      description: order.description || '',
+      amount: order.amount,
+      payment_type: order.payment_type || 'دفع آجل',
+      paid_amount: order.paid_amount || 0,
+      payment_notes: ''
+    });
+    if (order.order_items && order.order_items.length > 0) {
+      setOrderItems(order.order_items.map(item => ({
+        id: item.id,
+        item_name: item.item_name,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        total_amount: item.total_amount
+      })));
+    }
+    fetchCustomers();
+    fetchServices();
+    setIsEditOrderDialogOpen(true);
+  };
+
+  // فتح حوار حذف الطلب
+  const openDeleteOrderDialog = (order: Order) => {
+    setSelectedOrderForDelete(order);
+    setIsDeleteOrderDialogOpen(true);
+  };
+
   useEffect(() => {
     fetchOrders();
   }, []);
@@ -2320,6 +2479,229 @@ ${companyName}`;
                 {loading ? 'جاري الإنشاء...' : 'إنشاء الطلب'}
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* حوار تعديل الطلب */}
+      <Dialog open={isEditOrderDialogOpen} onOpenChange={setIsEditOrderDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>تعديل الطلب</DialogTitle>
+            <DialogDescription>
+              تعديل بيانات الطلب {selectedOrderForEditing?.order_number}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit_customer">العميل</Label>
+                <Select value={newOrder.customer_id} onValueChange={(value) => setNewOrder({...newOrder, customer_id: value})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="اختر العميل" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {customers.map((customer) => (
+                      <SelectItem key={customer.id} value={customer.id}>
+                        {customer.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label htmlFor="edit_service">الخدمة</Label>
+                <Input
+                  id="edit_service"
+                  placeholder="اسم الخدمة"
+                  value={newOrder.service_name}
+                  onChange={(e) => setNewOrder({...newOrder, service_name: e.target.value})}
+                />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="edit_priority">الأولوية</Label>
+                <Select value={newOrder.priority} onValueChange={(value) => setNewOrder({...newOrder, priority: value})}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="منخفضة">منخفضة</SelectItem>
+                    <SelectItem value="متوسطة">متوسطة</SelectItem>
+                    <SelectItem value="عالية">عالية</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label htmlFor="edit_due_date">تاريخ الاستحقاق</Label>
+                <Input
+                  id="edit_due_date"
+                  type="date"
+                  value={newOrder.due_date}
+                  onChange={(e) => setNewOrder({...newOrder, due_date: e.target.value})}
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="edit_payment_type">نوع الدفع</Label>
+                <Select value={newOrder.payment_type} onValueChange={(value) => setNewOrder({...newOrder, payment_type: value})}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="دفع آجل">دفع آجل</SelectItem>
+                    <SelectItem value="دفع مقدم">دفع مقدم</SelectItem>
+                    <SelectItem value="دفع عند التسليم">دفع عند التسليم</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <div>
+              <Label htmlFor="edit_description">وصف الطلب</Label>
+              <Textarea
+                id="edit_description"
+                placeholder="أدخل وصف مفصل للطلب..."
+                value={newOrder.description}
+                onChange={(e) => setNewOrder({...newOrder, description: e.target.value})}
+                rows={3}
+              />
+            </div>
+            
+            {/* بنود الطلب في التعديل */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <Label>بنود الطلب</Label>
+                <Button type="button" variant="outline" size="sm" onClick={addOrderItem}>
+                  <Plus className="h-4 w-4 mr-1" />
+                  إضافة بند
+                </Button>
+              </div>
+              
+              <div className="space-y-3">
+                {orderItems.map((item, index) => (
+                  <div key={index} className="grid grid-cols-12 gap-2 items-end p-3 border rounded-lg">
+                    <div className="col-span-4">
+                      <Label htmlFor={`edit_item_name_${index}`}>اسم البند</Label>
+                      <Input
+                        id={`edit_item_name_${index}`}
+                        placeholder="اسم البند"
+                        value={item.item_name}
+                        onChange={(e) => updateOrderItem(index, 'item_name', e.target.value)}
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <Label htmlFor={`edit_quantity_${index}`}>الكمية</Label>
+                      <Input
+                        id={`edit_quantity_${index}`}
+                        type="text"
+                        value={item.quantity}
+                        onChange={(e) => updateOrderItem(index, 'quantity', parseInt(e.target.value) || 1)}
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <Label htmlFor={`edit_unit_price_${index}`}>سعر الوحدة</Label>
+                      <Input
+                        id={`edit_unit_price_${index}`}
+                        type="text"
+                        value={item.unit_price}
+                        onChange={(e) => updateOrderItem(index, 'unit_price', parseFloat(e.target.value) || 0)}
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <Label>الإجمالي</Label>
+                      <Input
+                        value={item.total_amount.toFixed(2)}
+                        disabled
+                        className="bg-muted"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => removeOrderItem(index)}
+                        disabled={orderItems.length === 1}
+                        className="w-full"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            <div className="flex gap-2 justify-end pt-4 border-t">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsEditOrderDialogOpen(false)}
+                disabled={loading}
+              >
+                إلغاء
+              </Button>
+              <Button 
+                onClick={updateOrder}
+                disabled={loading || !newOrder.customer_id || !newOrder.service_name}
+              >
+                {loading ? 'جاري التحديث...' : 'تحديث الطلب'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* حوار تأكيد حذف الطلب */}
+      <Dialog open={isDeleteOrderDialogOpen} onOpenChange={setIsDeleteOrderDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>تأكيد حذف الطلب</DialogTitle>
+            <DialogDescription>
+              هل أنت متأكد من رغبتك في حذف هذا الطلب؟ هذا الإجراء لا يمكن التراجع عنه.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedOrderForDelete && (
+            <div className="space-y-3 p-4 border rounded-lg bg-red-50">
+              <div className="flex items-center gap-2">
+                <Badge variant="outline">{selectedOrderForDelete.order_number}</Badge>
+                <span className="font-medium">{selectedOrderForDelete.service_name}</span>
+              </div>
+              <p><strong>العميل:</strong> {selectedOrderForDelete.customers?.name}</p>
+              <p><strong>المبلغ:</strong> {selectedOrderForDelete.amount.toLocaleString()} ر.س</p>
+              <div className="text-sm text-red-600 bg-red-100 p-2 rounded">
+                <strong>تحذير:</strong> سيتم حذف جميع البيانات المرتبطة بهذا الطلب:
+                <ul className="list-disc list-inside mt-1">
+                  <li>بنود الطلب</li>
+                  <li>المدفوعات المرتبطة</li>
+                  <li>ملفات الطباعة</li>
+                  <li>سجلات النشاط</li>
+                </ul>
+              </div>
+            </div>
+          )}
+          
+          <div className="flex gap-2 justify-end pt-4">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsDeleteOrderDialogOpen(false)}
+              disabled={loading}
+            >
+              إلغاء
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={deleteOrder}
+              disabled={loading}
+            >
+              {loading ? 'جاري الحذف...' : 'حذف الطلب نهائياً'}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
