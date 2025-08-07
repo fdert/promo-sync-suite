@@ -127,16 +127,30 @@ const FollowUpSettings = () => {
   const testFollowUpSystem = async () => {
     setTesting(true);
     try {
+      // أولاً، اختبار الاتصال العام مع الـ functions
+      console.log('Testing simple function first...');
+      const { data: simpleTest, error: simpleError } = await supabase.functions.invoke('test-simple');
+      
+      if (simpleError) {
+        console.error('Simple test failed:', simpleError);
+        throw new Error('فشل في الاتصال مع functions: ' + simpleError.message);
+      }
+      
+      console.log('Simple test result:', simpleTest);
+      
+      // الآن اختبار نظام المتابعة
+      console.log('Testing follow-up system...');
       const { data, error } = await supabase.functions.invoke('test-follow-up-system');
       
       if (error) {
-        throw error;
+        console.error('Follow-up test error:', error);
+        throw new Error('فشل اختبار نظام المتابعة: ' + error.message);
       }
 
       if (data?.success) {
         toast({
           title: "نجح الاختبار",
-          description: `تم اختبار النظام بنجاح. تم العثور على ${data.tests.pendingMessages} رسالة معلقة`,
+          description: data.summary || `تم اختبار النظام بنجاح. تم العثور على ${data.tests?.pendingMessages || 0} رسالة معلقة`,
         });
       } else {
         throw new Error(data?.error || 'فشل الاختبار');

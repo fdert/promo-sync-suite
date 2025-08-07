@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.send-follow-up-messages]
 verify_jwt = false
+
+[functions.test-simple]
+verify_jwt = false
