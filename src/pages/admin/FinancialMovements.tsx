@@ -7,13 +7,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Download, Printer, Search, FileText } from "lucide-react";
+import { CalendarIcon, Download, Printer, Search, FileText, Edit } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, startOfMonth, endOfMonth, startOfYear, endOfYear, subMonths, startOfDay, endOfDay } from "date-fns";
 import { ar } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
+import { useNavigate } from "react-router-dom";
 
 interface FinancialMovement {
   id: string;
@@ -29,6 +30,7 @@ interface FinancialMovement {
 }
 
 const FinancialMovements = () => {
+  const navigate = useNavigate();
   const [movements, setMovements] = useState<FinancialMovement[]>([]);
   const [filteredMovements, setFilteredMovements] = useState<FinancialMovement[]>([]);
   const [loading, setLoading] = useState(true);
@@ -518,6 +520,7 @@ const FinancialMovements = () => {
                   <TableHead>المبلغ المتبقي</TableHead>
                   <TableHead>حالة الدفع</TableHead>
                   <TableHead>التاريخ</TableHead>
+                  <TableHead>الإجراءات</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -538,11 +541,22 @@ const FinancialMovements = () => {
                       </Badge>
                     </TableCell>
                     <TableCell>{format(new Date(item.created_at), 'yyyy-MM-dd', { locale: ar })}</TableCell>
+                    <TableCell>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate(`/admin/order-payments/${item.id}`)}
+                        className="gap-2"
+                      >
+                        <Edit className="h-4 w-4" />
+                        تعديل المدفوعات
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
                 {filteredMovements.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-6 text-muted-foreground">
+                    <TableCell colSpan={10} className="text-center py-6 text-muted-foreground">
                       لا توجد بيانات لعرضها
                     </TableCell>
                   </TableRow>
