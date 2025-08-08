@@ -26,10 +26,14 @@ Deno.serve(async (req) => {
     try {
       requestBody = await req.json();
     } catch (e) {
-      // إذا لم تكن هناك بيانات JSON، استخدم كائن فارغ
+      console.log('لا توجد بيانات JSON في الطلب، استخدام كائن فارغ');
     }
     
-    console.log('Processing pending WhatsApp messages...', requestBody);
+    console.log('🚀 بدء معالجة رسائل الواتس آب المعلقة...', requestBody);
+    console.log('🔗 معلومات البيئة:', {
+      supabaseUrl: supabaseUrl ? 'متوفر' : 'مفقود',
+      serviceKey: supabaseServiceKey ? 'متوفر' : 'مفقود'
+    });
 
     // الحصول على الرسائل المعلقة (pending)
     let query = supabase
@@ -72,12 +76,16 @@ Deno.serve(async (req) => {
     // البحث عن ويب هوك الحملات الجماعية أولاً
     const { data: bulkCampaignWebhook, error: bulkError } = await supabase
       .from('webhook_settings')
-      .select('webhook_url, webhook_type, webhook_name')
+      .select('webhook_url, webhook_type, webhook_name, is_active')
       .eq('webhook_type', 'bulk_campaign')
       .eq('is_active', true)
       .maybeSingle();
     
-    console.log('نتيجة البحث عن ويب هوك الحملات الجماعية:', { bulkCampaignWebhook, bulkError });
+    console.log('🔎 نتيجة البحث عن ويب هوك الحملات الجماعية:', { 
+      data: bulkCampaignWebhook, 
+      error: bulkError,
+      hasUrl: !!bulkCampaignWebhook?.webhook_url
+    });
     
     if (bulkCampaignWebhook?.webhook_url) {
       webhookSettings = bulkCampaignWebhook;
@@ -88,22 +96,35 @@ Deno.serve(async (req) => {
       // إذا لم يوجد، ابحث عن ويب هوك عادي
       const { data: outgoingWebhook, error: outgoingError } = await supabase
         .from('webhook_settings')
-        .select('webhook_url, webhook_type, webhook_name')
+        .select('webhook_url, webhook_type, webhook_name, is_active')
         .eq('webhook_type', 'outgoing')
         .eq('is_active', true)
+        .limit(1)
         .maybeSingle();
       
-      console.log('نتيجة البحث عن ويب هوك outgoing:', { outgoingWebhook, outgoingError });
+      console.log('🔎 نتيجة البحث عن ويب هوك outgoing:', { 
+        data: outgoingWebhook, 
+        error: outgoingError,
+        hasUrl: !!outgoingWebhook?.webhook_url
+      });
       
       webhookSettings = outgoingWebhook;
     }
 
-    console.log('الويب هوك المختار نهائياً:', webhookSettings);
+    console.log('📡 الويب هوك المختار نهائياً:', {
+      name: webhookSettings?.webhook_name,
+      type: webhookSettings?.webhook_type,
+      hasUrl: !!webhookSettings?.webhook_url,
+      url: webhookSettings?.webhook_url ? 'متوفر' : 'مفقود'
+    });
 
     if (!webhookSettings?.webhook_url) {
-      console.error('❌ No active webhook found - لا يوجد ويب هوك نشط');
+      console.error('❌ خطأ: لا يوجد ويب هوك نشط - No active webhook found');
       return new Response(
-        JSON.stringify({ error: 'No webhook configured' }),
+        JSON.stringify({ 
+          error: 'No webhook configured',
+          details: 'لا يوجد ويب هوك مكون بشكل صحيح'
+        }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 400
