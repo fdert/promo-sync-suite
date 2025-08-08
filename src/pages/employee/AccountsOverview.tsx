@@ -339,6 +339,10 @@ ${payments.slice(0, 5).map(payment =>
       }
       
       // Send WhatsApp message
+      console.log('Starting WhatsApp message send...');
+      console.log('Customer phone:', customer.whatsapp_number || customer.phone);
+      console.log('Message length:', summaryText.length);
+      
       const { data, error } = await supabase.functions.invoke('send-whatsapp-simple', {
         body: {
           phone: customer.whatsapp_number || customer.phone,
@@ -350,7 +354,13 @@ ${payments.slice(0, 5).map(payment =>
       
       if (error) {
         console.error('Supabase function error:', error);
+        console.error('Error details:', JSON.stringify(error, null, 2));
         throw error;
+      }
+      
+      if (data?.error) {
+        console.error('Function returned error:', data.error);
+        throw new Error(data.error);
       }
       
       toast({
@@ -361,9 +371,18 @@ ${payments.slice(0, 5).map(payment =>
       setShowSummaryDialog(false);
     } catch (error) {
       console.error('Error sending WhatsApp:', error);
+      console.error('Error type:', typeof error);
+      console.error('Error details:', JSON.stringify(error, null, 2));
+      
+      let errorMessage = "فشل في إرسال الرسالة";
+      
+      if (error && typeof error === 'object' && 'message' in error) {
+        errorMessage += ": " + (error as any).message;
+      }
+      
       toast({
         title: "خطأ",
-        description: "فشل في إرسال الرسالة",
+        description: errorMessage,
         variant: "destructive"
       });
     }
