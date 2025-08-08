@@ -38,13 +38,23 @@ const PricingCalculator = () => {
   const designVolume = calculation.designLength * calculation.designWidth * calculation.designHeight;
   const designArea = calculation.designLength * calculation.designWidth;
   
-  // حساب المستخدم من اللوح بناءً على النسبة
-  const usedFromBoard = boardArea > 0 ? (designArea / boardArea) * 100 : 0; // النسبة المئوية
+  // حساب المستخدم من اللوح بناءً على وجود الارتفاع أم لا
+  let usedFromBoard = 0;
+  let finalPrice = 0;
   
-  // السعر النهائي = نسبة التصميم من اللوح × سعر اللوح × الكمية
-  const finalPrice = boardArea > 0 
-    ? (designArea / boardArea) * calculation.boardPrice * calculation.quantity
-    : 0;
+  if (boardArea > 0) {
+    if (calculation.designHeight === 0) {
+      // حساب بالمساحة فقط
+      usedFromBoard = (designArea / boardArea) * 100;
+      finalPrice = (designArea / boardArea) * calculation.boardPrice * calculation.quantity;
+    } else {
+      // حساب بالحجم (مساحة × ارتفاع)
+      const designVolumeUsed = designArea * calculation.designHeight;
+      const boardVolumeUnit = boardArea * 1; // وحدة واحدة من سماكة اللوح
+      usedFromBoard = (designVolumeUsed / boardVolumeUnit) * 100;
+      finalPrice = (designVolumeUsed / boardVolumeUnit) * calculation.boardPrice * calculation.quantity;
+    }
+  }
 
   const copyResult = () => {
     const result = `السعر النهائي: ${finalPrice.toFixed(2)} ر.س\nالكمية: ${calculation.quantity}\nحجم التصميم: ${designVolume} سم³\nمساحة التصميم: ${designArea} سم²\nالمستخدم من اللوح: ${usedFromBoard.toFixed(2)}%\nسعر السم²: ${pricePerCm2.toFixed(4)} ر.س`;
@@ -214,8 +224,12 @@ const PricingCalculator = () => {
           <p>• سعر لكل سم² = سعر اللوح ÷ مساحة اللوح</p>
           <p>• مساحة التصميم = طول التصميم × عرض التصميم</p>
           <p>• حجم التصميم = طول التصميم × عرض التصميم × ارتفاع التصميم</p>
-          <p>• المستخدم من اللوح (%) = (مساحة التصميم ÷ مساحة اللوح) × 100</p>
+          <p><strong>إذا الارتفاع = 0 (تصميم مسطح):</strong></p>
+          <p>• المستخدم من اللوح = (مساحة التصميم ÷ مساحة اللوح) × 100</p>
           <p>• السعر النهائي = (مساحة التصميم ÷ مساحة اللوح) × سعر اللوح × الكمية</p>
+          <p><strong>إذا الارتفاع {'>'}‎ 0 (تصميم ثلاثي الأبعاد):</strong></p>
+          <p>• المستخدم من اللوح = (حجم التصميم ÷ مساحة اللوح) × 100</p>
+          <p>• السعر النهائي = (حجم التصميم ÷ مساحة اللوح) × سعر اللوح × الكمية</p>
         </div>
       </CardContent>
     </Card>
