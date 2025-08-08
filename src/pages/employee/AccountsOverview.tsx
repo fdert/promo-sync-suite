@@ -343,11 +343,32 @@ ${payments.slice(0, 5).map(payment =>
       console.log('Customer phone:', customer.whatsapp_number || customer.phone);
       console.log('Message length:', summaryText.length);
       
-      const { data, error } = await supabase.functions.invoke('send-whatsapp-simple', {
-        body: {
-          phone: customer.whatsapp_number || customer.phone,
-          message: summaryText
-        }
+      // إدراج الرسالة في قاعدة البيانات أولاً
+      const { data: insertData, error: insertError } = await supabase
+        .from('whatsapp_messages')
+        .insert([
+          {
+            to_number: customer.whatsapp_number || customer.phone,
+            message_content: summaryText,
+            status: 'pending',
+            message_type: 'text',
+            from_number: 'system',
+            created_at: new Date().toISOString()
+          }
+        ])
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('Error inserting message:', insertError);
+        throw new Error('فشل في إدراج الرسالة في قاعدة البيانات');
+      }
+
+      console.log('Message inserted with ID:', insertData.id);
+
+      // الآن استدعاء دالة معالجة الرسائل المعلقة
+      const { data, error } = await supabase.functions.invoke('send-pending-whatsapp', {
+        body: {}
       });
       
       console.log('WhatsApp response:', { data, error });
