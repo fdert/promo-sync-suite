@@ -67,7 +67,7 @@ const BulkWhatsApp = () => {
 
   const fetchGroups = async () => {
     try {
-      // مؤقتاً سنعيد مصفوفة فارغة حتى يتم إنشاء الجداول
+      // تم إنشاء الجداول - سيتم تفعيل هذا بعد تحديث ملف الأنواع
       setGroups([]);
     } catch (error) {
       console.error('Error fetching groups:', error);
@@ -76,8 +76,13 @@ const BulkWhatsApp = () => {
   };
 
   const fetchCampaigns = async () => {
-    // مؤقتاً حتى يتم إنشاء الجداول
-    setCampaigns([]);
+    try {
+      // تم إنشاء الجداول - سيتم تفعيل هذا بعد تحديث ملف الأنواع
+      setCampaigns([]);
+    } catch (error) {
+      console.error('Error fetching campaigns:', error);
+      toast.error('حدث خطأ في جلب الحملات');
+    }
   };
 
   const fetchTemplates = async () => {
@@ -119,7 +124,7 @@ const BulkWhatsApp = () => {
         if (error) throw error;
         return count || 0;
       } else {
-        // مؤقتاً حتى يتم إنشاء الجداول
+        // تم إنشاء الجداول - سيتم تفعيل هذا بعد تحديث ملف الأنواع
         return 0;
       }
     } catch (error) {
@@ -143,7 +148,7 @@ const BulkWhatsApp = () => {
     try {
       const totalRecipients = await calculateTotalRecipients();
 
-      // مؤقتاً حتى يتم إنشاء الجداول
+      // تم إنشاء الجداول - سيتم تفعيل هذا بعد تحديث ملف الأنواع
       console.log('Campaign data:', {
         name: formData.name,
         message_content: formData.message_content,

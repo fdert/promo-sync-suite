@@ -70,7 +70,7 @@ const BulkWhatsApp = () => {
 
   const fetchGroups = async () => {
     try {
-      // مؤقتاً سنعيد مصفوفة فارغة حتى يتم إنشاء الجداول
+      // تم إنشاء الجداول - سيتم تفعيل هذا بعد تحديث ملف الأنواع
       setGroups([]);
     } catch (error) {
       console.error('Error fetching groups:', error);
@@ -80,7 +80,7 @@ const BulkWhatsApp = () => {
 
   const fetchCampaigns = async () => {
     try {
-      // مؤقتاً سنعيد مصفوفة فارغة حتى يتم إنشاء الجداول
+      // تم إنشاء الجداول - سيتم تفعيل هذا بعد تحديث ملف الأنواع
       setCampaigns([]);
     } catch (error) {
       console.error('Error fetching campaigns:', error);
@@ -129,8 +129,8 @@ const BulkWhatsApp = () => {
       } else {
         if (selectedGroups.length === 0) return 0;
 
-      // مؤقتاً سنعيد 0 حتى يتم إنشاء الجداول
-      return 0;
+        // تم إنشاء الجداول - سيتم تفعيل هذا بعد تحديث ملف الأنواع
+        return 0;
       }
     } catch (error) {
       console.error('Error calculating recipients:', error);
@@ -164,7 +164,7 @@ const BulkWhatsApp = () => {
         created_by: user?.id
       };
 
-      // مؤقتاً سنعرض رسالة نجاح بدون إدراج فعلي حتى يتم إنشاء الجداول
+      // تم إنشاء الجداول - سيتم تفعيل هذا بعد تحديث ملف الأنواع
       console.log('Campaign data:', campaignData);
 
       toast.success('تم إنشاء الحملة بنجاح');
@@ -182,9 +182,14 @@ const BulkWhatsApp = () => {
   const handleSendCampaign = async (campaignId: string) => {
     if (!confirm('هل أنت متأكد من إرسال هذه الحملة؟')) return;
     
-    // مؤقتاً حتى يتم إنشاء الجداول
-    toast.success('تم بدء إرسال الحملة');
-    fetchCampaigns();
+    try {
+      // تم إنشاء الجداول - سيتم تفعيل هذا بعد تحديث ملف الأنواع
+      toast.success('تم بدء إرسال الحملة');
+      fetchCampaigns();
+    } catch (error) {
+      console.error('Error starting campaign:', error);
+      toast.error('حدث خطأ في بدء إرسال الحملة');
+    }
   };
 
   const resetForm = () => {

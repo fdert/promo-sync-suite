@@ -54,7 +54,7 @@ const CustomerGroups = () => {
 
   const fetchGroups = async () => {
     try {
-      // مؤقتاً سنعيد مصفوفة فارغة حتى يتم إنشاء الجداول
+      // تم إنشاء الجداول - سيتم تفعيل هذا بعد تحديث ملف الأنواع
       setGroups([]);
     } catch (error) {
       console.error('Error fetching groups:', error);
@@ -78,7 +78,7 @@ const CustomerGroups = () => {
   };
 
   const fetchGroupMembers = async (groupId: string) => {
-    // مؤقتاً حتى يتم إنشاء الجداول
+    // تم إنشاء الجداول - سيتم تفعيل هذا بعد تحديث ملف الأنواع
     setGroupMembers([]);
   };
 
@@ -90,7 +90,7 @@ const CustomerGroups = () => {
 
     setLoading(true);
     try {
-      // مؤقتاً حتى يتم إنشاء الجداول
+      // تم إنشاء الجداول - سيتم تفعيل هذا بعد تحديث ملف الأنواع
       console.log('Creating group:', formData, selectedCustomers);
       
       toast.success('تم إنشاء المجموعة بنجاح');
@@ -109,7 +109,7 @@ const CustomerGroups = () => {
     if (!confirm('هل أنت متأكد من حذف هذه المجموعة؟')) return;
 
     try {
-      // مؤقتاً حتى يتم إنشاء الجداول
+      // تم إنشاء الجداول - سيتم تفعيل هذا بعد تحديث ملف الأنواع
       console.log('Deleting group:', groupId);
       
       toast.success('تم حذف المجموعة بنجاح');
