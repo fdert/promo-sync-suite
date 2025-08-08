@@ -73,9 +73,9 @@ Deno.serve(async (req) => {
       .select('webhook_url, webhook_type, webhook_name')
       .eq('webhook_type', 'bulk_campaign')
       .eq('is_active', true)
-      .single();
+      .maybeSingle();
     
-    if (bulkCampaignWebhook) {
+    if (bulkCampaignWebhook?.webhook_url) {
       webhookSettings = bulkCampaignWebhook;
       console.log('✅ استخدام ويب هوك الحملات الجماعية:', webhookSettings.webhook_name);
     } else {
@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
         .select('webhook_url, webhook_type, webhook_name')
         .eq('webhook_type', 'outgoing')
         .eq('is_active', true)
-        .single();
+        .maybeSingle();
       
       webhookSettings = outgoingWebhook;
     }
