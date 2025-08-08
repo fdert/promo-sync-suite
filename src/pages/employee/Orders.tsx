@@ -49,6 +49,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { CustomerSearchSelect } from "@/components/ui/customer-search-select";
 import { useAuth } from "@/contexts/AuthContext";
 import { Switch } from "@/components/ui/switch";
 import { useThermalPrint } from "@/hooks/useThermalPrint";
@@ -2290,18 +2291,12 @@ ${publicFileUrl}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="customer">العميل *</Label>
-                <Select value={newOrder.customer_id} onValueChange={(value) => setNewOrder(prev => ({ ...prev, customer_id: value }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="ابحث واختر العميل..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {customers.map((customer) => (
-                      <SelectItem key={customer.id} value={customer.id}>
-                        {customer.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <CustomerSearchSelect
+                  customers={customers}
+                  value={newOrder.customer_id}
+                  onValueChange={(value) => setNewOrder(prev => ({ ...prev, customer_id: value }))}
+                  placeholder="ابحث عن العميل بالاسم أو رقم الجوال..."
+                />
               </div>
 
               <div className="space-y-2">
@@ -2554,19 +2549,12 @@ ${publicFileUrl}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="edit-customer">العميل</Label>
-                <select
-                  id="edit-customer"
+                <CustomerSearchSelect
+                  customers={customers}
                   value={newOrder.customer_id}
-                  onChange={(e) => setNewOrder(prev => ({ ...prev, customer_id: e.target.value }))}
-                  className="w-full p-2 border rounded-md"
-                >
-                  <option value="">اختر العميل</option>
-                  {customers.map((customer) => (
-                    <option key={customer.id} value={customer.id}>
-                      {customer.name}
-                    </option>
-                  ))}
-                </select>
+                  onValueChange={(value) => setNewOrder(prev => ({ ...prev, customer_id: value }))}
+                  placeholder="ابحث عن العميل بالاسم أو رقم الجوال..."
+                />
               </div>
 
               <div>
