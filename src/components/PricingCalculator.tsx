@@ -36,11 +36,12 @@ const PricingCalculator = () => {
   const boardArea = calculation.boardLength * calculation.boardWidth;
   const pricePerCm2 = boardArea > 0 ? calculation.boardPrice / boardArea : 0;
   const designVolume = calculation.designLength * calculation.designWidth * calculation.designHeight;
-  const usedFromBoard = boardArea > 0 ? (designVolume / calculation.boardWidth) : 0; // المستخدم من اللوح
-  const finalPrice = pricePerCm2 * calculation.designLength * calculation.designWidth * calculation.quantity;
+  const designArea = calculation.designLength * calculation.designWidth;
+  const usedFromBoard = calculation.designHeight; // المستخدم من اللوح = الارتفاع (السماكة المطلوبة)
+  const finalPrice = pricePerCm2 * designArea * calculation.quantity;
 
   const copyResult = () => {
-    const result = `السعر النهائي: ${finalPrice.toFixed(2)} ر.س\nالكمية: ${calculation.quantity}\nحجم التصميم: ${designVolume} سم³\nالمستخدم من اللوح: ${usedFromBoard.toFixed(2)} سم\nسعر السم²: ${pricePerCm2.toFixed(4)} ر.س`;
+    const result = `السعر النهائي: ${finalPrice.toFixed(2)} ر.س\nالكمية: ${calculation.quantity}\nحجم التصميم: ${designVolume} سم³\nمساحة التصميم: ${designArea} سم²\nالمستخدم من اللوح: ${usedFromBoard} سم\nسعر السم²: ${pricePerCm2.toFixed(4)} ر.س`;
     navigator.clipboard.writeText(result);
     toast({
       title: "تم النسخ",
@@ -170,12 +171,16 @@ const PricingCalculator = () => {
               <div className="text-lg font-medium">{pricePerCm2.toFixed(4)} ر.س</div>
             </div>
             <div className="space-y-2">
+              <Label className="text-sm text-muted-foreground">مساحة التصميم (سم²)</Label>
+              <div className="text-lg font-medium">{designArea.toLocaleString()} سم²</div>
+            </div>
+            <div className="space-y-2">
               <Label className="text-sm text-muted-foreground">حجم التصميم (سم³)</Label>
               <div className="text-lg font-medium">{designVolume.toLocaleString()} سم³</div>
             </div>
             <div className="space-y-2">
               <Label className="text-sm text-muted-foreground">المستخدم من اللوح (سم)</Label>
-              <div className="text-lg font-medium">{usedFromBoard.toFixed(2)} سم</div>
+              <div className="text-lg font-medium">{usedFromBoard} سم</div>
             </div>
             <div className="space-y-2">
               <Label className="text-sm text-muted-foreground">السعر النهائي</Label>
@@ -201,9 +206,10 @@ const PricingCalculator = () => {
           <p><strong>المعادلات المستخدمة:</strong></p>
           <p>• مساحة اللوح = طول اللوح × عرض اللوح</p>
           <p>• سعر لكل سم² = سعر اللوح ÷ مساحة اللوح</p>
+          <p>• مساحة التصميم = طول التصميم × عرض التصميم</p>
           <p>• حجم التصميم = طول التصميم × عرض التصميم × ارتفاع التصميم</p>
-          <p>• المستخدم من اللوح = حجم التصميم ÷ عرض اللوح</p>
-          <p>• السعر النهائي = السعر لكل سم² × طول التصميم × عرض التصميم × الكمية</p>
+          <p>• المستخدم من اللوح = ارتفاع التصميم (السماكة المطلوبة)</p>
+          <p>• السعر النهائي = السعر لكل سم² × مساحة التصميم × الكمية</p>
         </div>
       </CardContent>
     </Card>
