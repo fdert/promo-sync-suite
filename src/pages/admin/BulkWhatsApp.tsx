@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Send, Users, MessageSquare, Clock, CheckCircle, XCircle, Eye } from "lucide-react";
+import WhatsAppMessageProcessor from './WhatsAppMessageProcessor';
 
 interface CustomerGroup {
   id: string;
@@ -270,13 +271,16 @@ const BulkWhatsApp = () => {
         throw new Error(result.error || 'خطأ في معالجة الحملة');
       }
       
-      // بعد إنشاء الرسائل، استدعي edge function لمعالجة الحملات
+      // بعد إنشاء الرسائل، استدعي edge function لمعالجة الحملات والرسائل
       setTimeout(async () => {
         try {
           console.log('🔄 استدعاء معالج الحملات...');
           await supabase.functions.invoke('process-bulk-campaigns');
+          
+          // استدعاء معالج الرسائل أيضاً
+          await supabase.functions.invoke('process-whatsapp-queue');
         } catch (error) {
-          console.error('خطأ في استدعاء معالج الحملات:', error);
+          console.error('خطأ في استدعاء المعالجات:', error);
         }
       }, 2000);
       
@@ -339,6 +343,9 @@ const BulkWhatsApp = () => {
 
   return (
     <div className="space-y-6">
+      {/* معالج الرسائل */}
+      <WhatsAppMessageProcessor />
+      
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-foreground">الإرسال الجماعي</h1>
