@@ -239,16 +239,42 @@ const BulkWhatsApp = () => {
     if (!confirm('هل أنت متأكد من إرسال هذه الحملة؟')) return;
     
     try {
+      console.log('بدء إرسال الحملة:', campaignId);
+      
+      // تحديث حالة الحملة إلى "sending"
+      const { error: updateError } = await supabase
+        .from('bulk_campaigns')
+        .update({ status: 'sending', started_at: new Date().toISOString() })
+        .eq('id', campaignId);
+      
+      if (updateError) {
+        console.error('خطأ في تحديث حالة الحملة:', updateError);
+        throw updateError;
+      }
+      
       // استدعاء edge function لمعالجة الحملات
-      const { error } = await supabase.functions.invoke('process-bulk-campaigns');
+      const { data, error } = await supabase.functions.invoke('process-bulk-campaigns', {
+        body: { campaignId }
+      });
       
-      if (error) throw error;
+      if (error) {
+        console.error('خطأ من edge function:', error);
+        throw error;
+      }
       
-      toast.success('تم بدء إرسال الحملة');
+      console.log('استجابة edge function:', data);
+      toast.success('تم بدء إرسال الحملة بنجاح');
       fetchCampaigns();
     } catch (error) {
       console.error('Error starting campaign:', error);
-      toast.error('حدث خطأ في بدء إرسال الحملة');
+      
+      // إرجاع حالة الحملة إلى draft في حالة الخطأ
+      await supabase
+        .from('bulk_campaigns')
+        .update({ status: 'draft', started_at: null })
+        .eq('id', campaignId);
+      
+      toast.error('حدث خطأ في بدء إرسال الحملة: ' + (error?.message || 'خطأ غير معروف'));
     }
   };
 

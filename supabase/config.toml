@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.process-follow-up-notifications]
 verify_jwt = false
+
+[functions.process-bulk-campaigns]
+verify_jwt = false
