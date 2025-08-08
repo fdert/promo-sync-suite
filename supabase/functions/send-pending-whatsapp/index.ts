@@ -68,49 +68,43 @@ Deno.serve(async (req) => {
 
     console.log(`Found ${pendingMessages.length} pending messages`);
 
-    // البحث عن ويب هوك مناسب - أولوية للحملات الجماعية
-    let webhookSettings;
-    
-    console.log('🔍 البحث عن ويب هوك الحملات الجماعية...');
-    
-    // البحث عن ويب هوك الحملات الجماعية أولاً
-    const { data: bulkCampaignWebhook, error: bulkError } = await supabase
+    // اختيار ويب هوك بنفس منطق send-order-notifications
+    let webhookSettings: any = null;
+
+    // اجلب جميع الويب هوكات النشطة مرة واحدة
+    const { data: allWebhooks, error: whError } = await supabase
       .from('webhook_settings')
-      .select('webhook_url, webhook_type, webhook_name, is_active')
-      .eq('webhook_type', 'bulk_campaign')
-      .eq('is_active', true)
-      .maybeSingle();
-    
-    console.log('🔎 نتيجة البحث عن ويب هوك الحملات الجماعية:', { 
-      data: bulkCampaignWebhook, 
-      error: bulkError,
-      hasUrl: !!bulkCampaignWebhook?.webhook_url,
-      url: bulkCampaignWebhook?.webhook_url || 'لا يوجد',
-      name: bulkCampaignWebhook?.webhook_name || 'لا يوجد'
+      .select('webhook_url, order_statuses, webhook_name, webhook_type, is_active')
+      .eq('is_active', true);
+
+    console.log('🔗 Webhooks fetched:', {
+      count: allWebhooks?.length || 0,
+      names: allWebhooks?.map(w => w.webhook_name),
+      types: allWebhooks?.map(w => w.webhook_type)
     });
-    
-    if (bulkCampaignWebhook?.webhook_url) {
-      webhookSettings = bulkCampaignWebhook;
-      console.log('✅ استخدام ويب هوك الحملات الجماعية:', webhookSettings.webhook_name);
-    } else {
-      console.log('⚠️ لا يوجد ويب هوك للحملات الجماعية، جاري البحث عن بديل...');
-      
-      // إذا لم يوجد، ابحث عن ويب هوك عادي
-      const { data: outgoingWebhook, error: outgoingError } = await supabase
-        .from('webhook_settings')
-        .select('webhook_url, webhook_type, webhook_name, is_active')
-        .eq('webhook_type', 'outgoing')
-        .eq('is_active', true)
-        .limit(1)
-        .maybeSingle();
-      
-      console.log('🔎 نتيجة البحث عن ويب هوك outgoing:', { 
-        data: outgoingWebhook, 
-        error: outgoingError,
-        hasUrl: !!outgoingWebhook?.webhook_url
-      });
-      
-      webhookSettings = outgoingWebhook;
+
+    if (whError) {
+      console.error('Error fetching webhooks:', whError);
+    }
+
+    if (allWebhooks && allWebhooks.length > 0) {
+      // 1) ابحث عن أي outgoing نشط بدون قيود على الحالات
+      webhookSettings = allWebhooks.find(w => w.is_active && w.webhook_type === 'outgoing' && (!w.order_statuses || w.order_statuses.length === 0));
+
+      // 2) إن لم يوجد، اختر أول outgoing نشط
+      if (!webhookSettings) {
+        webhookSettings = allWebhooks.find(w => w.is_active && w.webhook_type === 'outgoing');
+      }
+
+      // 3) إن لم يوجد أي outgoing، استخدم bulk_campaign كحل أخير
+      if (!webhookSettings) {
+        webhookSettings = allWebhooks.find(w => w.is_active && w.webhook_type === 'bulk_campaign');
+      }
+
+      // 4) وأخيراً، إن لم نجد أي شيء، خذ أول ويب هوك متاح
+      if (!webhookSettings) {
+        webhookSettings = allWebhooks[0];
+      }
     }
 
     console.log('📡 الويب هوك المختار نهائياً:', {
