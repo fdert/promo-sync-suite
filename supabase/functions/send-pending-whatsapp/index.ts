@@ -75,12 +75,11 @@ Deno.serve(async (req) => {
       .select('webhook_url, webhook_type, webhook_name')
       .eq('webhook_type', 'bulk_campaign')
       .eq('is_active', true)
-      .limit(1)
-      .single();
+      .maybeSingle();
     
     console.log('نتيجة البحث عن ويب هوك الحملات الجماعية:', { bulkCampaignWebhook, bulkError });
     
-    if (bulkCampaignWebhook && !bulkError) {
+    if (bulkCampaignWebhook?.webhook_url) {
       webhookSettings = bulkCampaignWebhook;
       console.log('✅ استخدام ويب هوك الحملات الجماعية:', webhookSettings.webhook_name);
     } else {
@@ -92,14 +91,11 @@ Deno.serve(async (req) => {
         .select('webhook_url, webhook_type, webhook_name')
         .eq('webhook_type', 'outgoing')
         .eq('is_active', true)
-        .limit(1)
-        .single();
+        .maybeSingle();
       
       console.log('نتيجة البحث عن ويب هوك outgoing:', { outgoingWebhook, outgoingError });
       
-      if (outgoingWebhook && !outgoingError) {
-        webhookSettings = outgoingWebhook;
-      }
+      webhookSettings = outgoingWebhook;
     }
 
     console.log('الويب هوك المختار نهائياً:', webhookSettings);
@@ -107,7 +103,7 @@ Deno.serve(async (req) => {
     if (!webhookSettings?.webhook_url) {
       console.error('❌ No active webhook found - لا يوجد ويب هوك نشط');
       return new Response(
-        JSON.stringify({ error: 'No outgoing webhook configured' }),
+        JSON.stringify({ error: 'No webhook configured' }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 400
