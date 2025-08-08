@@ -56,10 +56,7 @@ Deno.serve(async (req) => {
       try {
         console.log(`معالجة الرسالة إلى ${message.to_number}`);
 
-        // IMPORTANT: هنا يجب ربط الرسالة بخدمة واتس آب حقيقية
-        // حالياً سنضع placeholder لخدمة الواتس آب
-        
-        // محاكاة إرسال الرسالة (يجب استبدالها بخدمة واتس آب حقيقية)
+        // إرسال الرسالة إلى خدمة الواتس آب
         const success = await sendToWhatsAppService(message);
 
         let newStatus = success ? 'sent' : 'failed';
@@ -70,11 +67,13 @@ Deno.serve(async (req) => {
           updated_at: new Date().toISOString()
         };
         
-        // إضافة sent_at إذا تم الإرسال بنجاح، أو error_message إذا فشل
+        // إضافة sent_at فقط إذا تم الإرسال بنجاح
         if (success) {
           updateData.sent_at = new Date().toISOString();
+          console.log(`✅ تم إرسال الرسالة ${message.id} بنجاح - تحديث sent_at`);
         } else {
           updateData.error_message = 'فشل الإرسال إلى الويب هوك';
+          console.log(`❌ فشل إرسال الرسالة ${message.id} - لا يوجد sent_at`);
         }
         
         const { error: updateError } = await supabase
