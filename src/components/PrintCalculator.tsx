@@ -116,8 +116,9 @@ const PrintCalculator = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>طول الرول (متر)</Label>
-              <div className="h-10 px-3 py-2 border border-input bg-muted rounded-md flex items-center text-muted-foreground">
-                50 متر (ثابت)
+              <div className="h-10 px-3 py-2 border border-input bg-background rounded-md flex items-center justify-between">
+                <span className="text-sm">50 متر</span>
+                <span className="text-xs text-muted-foreground">(ثابت)</span>
               </div>
             </div>
             <div className="space-y-2">
