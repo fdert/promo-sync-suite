@@ -2137,6 +2137,13 @@ export type Database = {
       }
     }
     Functions: {
+      assign_user_role: {
+        Args: {
+          target_user_id: string
+          new_role: Database["public"]["Enums"]["app_role"]
+        }
+        Returns: boolean
+      }
       calculate_accounts_receivable_balance: {
         Args: Record<PropertyKey, never>
         Returns: number
@@ -2148,6 +2155,10 @@ export type Database = {
       calculate_total_customer_orders_receivable: {
         Args: Record<PropertyKey, never>
         Returns: number
+      }
+      can_assign_roles: {
+        Args: { user_id: string }
+        Returns: boolean
       }
       check_delivery_delays: {
         Args: Record<PropertyKey, never>
@@ -2230,6 +2241,13 @@ export type Database = {
       process_pending_whatsapp_messages: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      remove_user_role: {
+        Args: {
+          target_user_id: string
+          old_role: Database["public"]["Enums"]["app_role"]
+        }
+        Returns: boolean
       }
       send_whatsapp_notification: {
         Args: {
