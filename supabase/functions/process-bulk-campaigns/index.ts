@@ -6,62 +6,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface Database {
-  public: {
-    Tables: {
-      bulk_campaigns: {
-        Row: {
-          id: string;
-          name: string;
-          message_content: string;
-          target_type: 'all' | 'groups';
-          target_groups: string[];
-          status: 'draft' | 'scheduled' | 'sending' | 'completed' | 'failed' | 'paused';
-          total_recipients: number;
-          sent_count: number;
-          failed_count: number;
-          delay_between_messages: number;
-          created_at: string;
-          created_by: string;
-        };
-      };
-      bulk_campaign_messages: {
-        Row: {
-          id: string;
-          campaign_id: string;
-          customer_id: string;
-          whatsapp_number: string;
-          message_content: string;
-          status: 'pending' | 'sent' | 'failed' | 'delivered';
-          sent_at: string | null;
-          error_message: string | null;
-          created_at: string;
-        };
-      };
-      whatsapp_messages: {
-        Row: {
-          id: string;
-          from_number: string;
-          to_number: string;
-          message_type: string;
-          message_content: string;
-          status: string;
-          customer_id: string;
-          created_at: string;
-        };
-        Insert: {
-          from_number: string;
-          to_number: string;
-          message_type: string;
-          message_content: string;
-          status: string;
-          customer_id: string;
-        };
-      };
-    };
-  };
-}
-
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -69,18 +13,18 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseClient = createClient<Database>(
+    console.log('معالجة الحملات الجماعية - البداية');
+
+    const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    console.log('معالجة الحملات الجماعية...');
-
-    // البحث عن الحملات المجدولة والمستعدة للإرسال
+    // البحث عن الحملات الجاهزة للإرسال
     const { data: campaigns, error: campaignsError } = await supabaseClient
       .from('bulk_campaigns')
       .select('*')
-      .in('status', ['draft', 'scheduled'])
+      .in('status', ['draft', 'scheduled', 'sending'])
       .or('scheduled_at.is.null,scheduled_at.lte.' + new Date().toISOString());
 
     if (campaignsError) {
@@ -99,8 +43,10 @@ serve(async (req) => {
       );
     }
 
+    let processedCount = 0;
+
     for (const campaign of campaigns) {
-      console.log(`معالجة الحملة: ${campaign.name}`);
+      console.log(`معالجة الحملة: ${campaign.name} (${campaign.id})`);
 
       try {
         // استدعاء دالة قاعدة البيانات لمعالجة الحملة
@@ -157,7 +103,7 @@ serve(async (req) => {
         let failedCount = 0;
 
         // إرسال الرسائل مع الفاصل الزمني
-        for (let i = 0; i < messages.length; i++) {
+        for (let i = 0; i < Math.min(messages.length, 10); i++) { // محدود بـ 10 رسائل في المرة الواحدة
           const message = messages[i];
           
           try {
@@ -203,7 +149,6 @@ serve(async (req) => {
             // الانتظار بين الرسائل (الفاصل الزمني)
             if (i < messages.length - 1) {
               const delayMs = (campaign.delay_between_messages || 5) * 1000;
-              console.log(`انتظار ${campaign.delay_between_messages || 5} ثانية قبل الرسالة التالية...`);
               await new Promise(resolve => setTimeout(resolve, delayMs));
             }
 
@@ -214,17 +159,21 @@ serve(async (req) => {
         }
 
         // تحديث إحصائيات الحملة
+        const remainingMessages = messages.length - sentCount - failedCount;
+        const finalStatus = remainingMessages > 0 ? 'sending' : 'completed';
+        
         await supabaseClient
           .from('bulk_campaigns')
           .update({
-            status: 'completed',
-            sent_count: sentCount,
-            failed_count: failedCount,
-            completed_at: new Date().toISOString()
+            status: finalStatus,
+            sent_count: campaign.sent_count + sentCount,
+            failed_count: campaign.failed_count + failedCount,
+            ...(finalStatus === 'completed' && { completed_at: new Date().toISOString() })
           })
           .eq('id', campaign.id);
 
-        console.log(`تم إكمال الحملة ${campaign.name}: ${sentCount} مرسلة، ${failedCount} فاشلة`);
+        console.log(`تم معالجة الحملة ${campaign.name}: ${sentCount} مرسلة، ${failedCount} فاشلة`);
+        processedCount++;
 
       } catch (campaignError) {
         console.error(`خطأ في معالجة الحملة ${campaign.name}:`, campaignError);
@@ -244,7 +193,8 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         message: 'تم معالجة الحملات بنجاح',
-        processed_campaigns: campaigns.length
+        processed_campaigns: processedCount,
+        total_campaigns: campaigns.length
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
