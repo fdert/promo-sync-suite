@@ -50,6 +50,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { CustomerSearchSelect } from "@/components/ui/customer-search-select";
+import { ItemNameSelect } from "@/components/ui/item-name-select";
 import { useAuth } from "@/contexts/AuthContext";
 import { Switch } from "@/components/ui/switch";
 import { useThermalPrint } from "@/hooks/useThermalPrint";
@@ -2383,15 +2384,20 @@ ${publicFileUrl}
                 {orderItems.map((item, index) => (
                   <div key={index} className="p-4 border rounded-lg space-y-3">
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                      <div className="space-y-2">
-                        <Label htmlFor={`item_name_${index}`}>اسم البند</Label>
-                        <Input
-                          id={`item_name_${index}`}
-                          placeholder="اسم البند..."
-                          value={item.item_name}
-                          onChange={(e) => updateOrderItem(index, 'item_name', e.target.value)}
-                        />
-                      </div>
+                       <div className="space-y-2">
+                         <Label htmlFor={`item_name_${index}`}>اسم البند</Label>
+                         <ItemNameSelect
+                           services={services}
+                           value={item.item_name}
+                           onValueChange={(value, price) => {
+                             updateOrderItem(index, 'item_name', value);
+                             if (price) {
+                               updateOrderItem(index, 'unit_price', price);
+                             }
+                           }}
+                           placeholder="اختر من الخدمات أو اكتب اسماً جديداً..."
+                         />
+                       </div>
 
                       <div className="space-y-2">
                         <Label htmlFor={`quantity_${index}`}>الكمية</Label>
@@ -2647,15 +2653,20 @@ ${publicFileUrl}
               <div className="space-y-3">
                 {orderItems.map((item, index) => (
                   <div key={index} className="grid grid-cols-5 gap-3 p-3 border rounded-lg">
-                    <div className="space-y-2">
-                      <Label htmlFor={`edit_item_name_${index}`}>اسم البند</Label>
-                      <Input
-                        id={`edit_item_name_${index}`}
-                        placeholder="اسم البند"
-                        value={item.item_name}
-                        onChange={(e) => updateOrderItem(index, 'item_name', e.target.value)}
-                      />
-                    </div>
+                     <div className="space-y-2">
+                       <Label htmlFor={`edit_item_name_${index}`}>اسم البند</Label>
+                       <ItemNameSelect
+                         services={services}
+                         value={item.item_name}
+                         onValueChange={(value, price) => {
+                           updateOrderItem(index, 'item_name', value);
+                           if (price) {
+                             updateOrderItem(index, 'unit_price', price);
+                           }
+                         }}
+                         placeholder="اختر من الخدمات أو اكتب اسماً جديداً..."
+                       />
+                     </div>
                     
                     <div className="space-y-2">
                       <Label htmlFor={`edit_quantity_${index}`}>الكمية</Label>
