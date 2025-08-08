@@ -18,13 +18,32 @@ Deno.serve(async (req) => {
 
   try {
     console.log('Processing WhatsApp message request...');
+    console.log('Request method:', req.method);
+    console.log('Request headers:', Object.fromEntries(req.headers.entries()));
     
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { phone, message }: WhatsAppRequest = await req.json();
+    const requestBody = await req.text();
+    console.log('Raw request body:', requestBody);
+    
+    let requestData: WhatsAppRequest;
+    try {
+      requestData = JSON.parse(requestBody);
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError);
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON format' }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    const { phone, message } = requestData;
     
     if (!phone || !message) {
       console.error('Missing phone or message in request');
@@ -38,7 +57,7 @@ Deno.serve(async (req) => {
     }
 
     console.log(`Sending message to: ${phone}`);
-    console.log(`Message content: ${message.substring(0, 100)}...`);
+    console.log(`Message content length: ${message.length}`);
 
     // Clean phone number (remove non-digits except +)
     const cleanPhone = phone.replace(/[^\d+]/g, '');
@@ -49,10 +68,11 @@ Deno.serve(async (req) => {
       .from('whatsapp_messages')
       .insert([
         {
-          phone_number: cleanPhone,
+          to_number: cleanPhone,
           message_content: message,
           status: 'pending',
-          message_type: 'summary',
+          message_type: 'text',
+          from_number: 'system',
           created_at: new Date().toISOString()
         }
       ])
@@ -62,7 +82,7 @@ Deno.serve(async (req) => {
     if (insertError) {
       console.error('Error inserting message:', insertError);
       return new Response(
-        JSON.stringify({ error: 'Failed to queue message for sending' }),
+        JSON.stringify({ error: 'Failed to queue message for sending', details: insertError.message }),
         { 
           status: 500, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -71,41 +91,6 @@ Deno.serve(async (req) => {
     }
 
     console.log('Message queued successfully:', messageData.id);
-
-    // Try to send immediately via webhook
-    try {
-      const webhookUrl = 'https://gcuqfxacnbxdldsbmgvf.supabase.co/functions/v1/whatsapp-webhook';
-      const webhookResponse = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`
-        },
-        body: JSON.stringify({
-          phone: cleanPhone,
-          message: message,
-          messageId: messageData.id
-        })
-      });
-
-      if (webhookResponse.ok) {
-        console.log('Message sent immediately via webhook');
-        
-        // Update message status to sent
-        await supabase
-          .from('whatsapp_messages')
-          .update({ 
-            status: 'sent',
-            sent_at: new Date().toISOString()
-          })
-          .eq('id', messageData.id);
-          
-      } else {
-        console.warn('Webhook send failed, message will be processed by queue');
-      }
-    } catch (webhookError) {
-      console.warn('Webhook send error:', webhookError, 'message will be processed by queue');
-    }
 
     return new Response(
       JSON.stringify({ 
