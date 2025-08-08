@@ -181,7 +181,7 @@ const Orders = () => {
   });
   const [orderItems, setOrderItems] = useState<OrderItem[]>([{
     item_name: '',
-    quantity: 1,
+    quantity: 0,
     unit_price: 0,
     total_amount: 0
   }]);
@@ -1097,7 +1097,7 @@ ${publicFileUrl}
   const addOrderItem = () => {
     setOrderItems([...orderItems, {
       item_name: '',
-      quantity: 1,
+      quantity: 0,
       unit_price: 0,
       total_amount: 0
     }]);
@@ -1142,6 +1142,19 @@ ${publicFileUrl}
         service_name: selectedService.name,
         amount: selectedService.base_price || 0
       }));
+      
+      // تحديث البند الأول ليعكس الخدمة المختارة
+      if (orderItems.length > 0) {
+        const updatedItems = [...orderItems];
+        updatedItems[0] = {
+          ...updatedItems[0],
+          item_name: selectedService.name,
+          unit_price: selectedService.base_price || 0,
+          total_amount: (updatedItems[0].quantity || 0) * (selectedService.base_price || 0)
+        };
+        setOrderItems(updatedItems);
+        calculateOrderTotal(updatedItems);
+      }
     }
   };
 
@@ -2382,12 +2395,12 @@ ${publicFileUrl}
 
                       <div className="space-y-2">
                         <Label htmlFor={`quantity_${index}`}>الكمية</Label>
-                        <Input
-                          id={`quantity_${index}`}
-                          type="text"
-                          value={item.quantity}
-                          onChange={(e) => updateOrderItem(index, 'quantity', parseInt(e.target.value) || 1)}
-                        />
+                         <Input
+                           id={`quantity_${index}`}
+                           type="text"
+                           value={item.quantity}
+                           onChange={(e) => updateOrderItem(index, 'quantity', parseInt(e.target.value) || 0)}
+                         />
                       </div>
 
                       <div className="space-y-2">
@@ -2646,12 +2659,12 @@ ${publicFileUrl}
                     
                     <div className="space-y-2">
                       <Label htmlFor={`edit_quantity_${index}`}>الكمية</Label>
-                      <Input
-                         id={`edit_quantity_${index}`}
-                         type="text"
-                         value={item.quantity}
-                         onChange={(e) => updateOrderItem(index, 'quantity', parseInt(e.target.value) || 1)}
-                       />
+                        <Input
+                          id={`edit_quantity_${index}`}
+                          type="text"
+                          value={item.quantity}
+                          onChange={(e) => updateOrderItem(index, 'quantity', parseInt(e.target.value) || 0)}
+                        />
                      </div>
 
                      <div className="space-y-2">
