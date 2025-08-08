@@ -38,8 +38,10 @@ const PricingCalculator = () => {
   const designVolume = calculation.designLength * calculation.designWidth * calculation.designHeight;
   const designArea = calculation.designLength * calculation.designWidth;
   const usedFromBoard = calculation.designHeight; // المستخدم من اللوح = الارتفاع (السماكة المطلوبة)
-  // السعر النهائي = السعر لكل سم² × مساحة التصميم × الارتفاع × الكمية
-  const finalPrice = pricePerCm2 * designArea * calculation.designHeight * calculation.quantity;
+  // السعر النهائي - إذا كان الارتفاع 0، احسب على المساحة فقط، وإلا احسب على الحجم
+  const finalPrice = calculation.designHeight === 0 
+    ? pricePerCm2 * designArea * calculation.quantity
+    : pricePerCm2 * designArea * calculation.designHeight * calculation.quantity;
 
   const copyResult = () => {
     const result = `السعر النهائي: ${finalPrice.toFixed(2)} ر.س\nالكمية: ${calculation.quantity}\nحجم التصميم: ${designVolume} سم³\nمساحة التصميم: ${designArea} سم²\nالمستخدم من اللوح: ${usedFromBoard} سم\nسعر السم²: ${pricePerCm2.toFixed(4)} ر.س`;
@@ -210,7 +212,8 @@ const PricingCalculator = () => {
           <p>• مساحة التصميم = طول التصميم × عرض التصميم</p>
           <p>• حجم التصميم = طول التصميم × عرض التصميم × ارتفاع التصميم</p>
           <p>• المستخدم من اللوح = ارتفاع التصميم (السماكة المطلوبة)</p>
-          <p>• السعر النهائي = السعر لكل سم² × مساحة التصميم × الارتفاع × الكمية</p>
+          <p>• السعر النهائي = إذا الارتفاع = 0: السعر لكل سم² × مساحة التصميم × الكمية</p>
+          <p>• السعر النهائي = إذا الارتفاع أكبر من 0: السعر لكل سم² × مساحة التصميم × الارتفاع × الكمية</p>
         </div>
       </CardContent>
     </Card>
