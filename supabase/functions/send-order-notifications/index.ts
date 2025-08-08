@@ -37,10 +37,19 @@ Deno.serve(async (req) => {
     const { type, order_id, data, source, webhook_preference } = requestBody;
     console.log('Notification request:', { type, order_id, data, source, webhook_preference });
 
-    if (!type || !order_id) {
-      console.error('Missing required fields:', { type, order_id });
+    if (!type) {
+      console.error('Missing required field: type');
       return new Response(
-        JSON.stringify({ error: 'Missing required fields: type and order_id' }),
+        JSON.stringify({ error: 'Missing required field: type' }),
+        { headers: corsHeaders, status: 400 }
+      );
+    }
+    
+    // order_id is optional for direct messages
+    if (!order_id && !requestBody.customer_phone) {
+      console.error('Missing required fields: either order_id or customer_phone must be provided');
+      return new Response(
+        JSON.stringify({ error: 'Missing required fields: either order_id or customer_phone must be provided' }),
         { headers: corsHeaders, status: 400 }
       );
     }
@@ -342,6 +351,12 @@ ${data.file_url}
 فريق *${data.company_name || 'وكالة الإبداع للدعاية والإعلان'}*`;
           customerPhone = data.customer_phone;
           customerName = data.customer_name;
+          break;
+
+        case 'account_summary':
+          message = requestBody.message || 'ملخص الحساب';
+          customerPhone = requestBody.customer_phone;
+          customerName = requestBody.customer_name;
           break;
 
         default:
