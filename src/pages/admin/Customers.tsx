@@ -55,6 +55,7 @@ const Customers = () => {
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [importFile, setImportFile] = useState(null);
+  const [manualImportData, setManualImportData] = useState('');
   const [existingCustomer, setExistingCustomer] = useState(null);
   const [showExistingCustomer, setShowExistingCustomer] = useState(false);
   const [customerToDelete, setCustomerToDelete] = useState(null);
@@ -327,6 +328,137 @@ const Customers = () => {
       toast({
         title: "خطأ",
         description: "حدث خطأ في معالجة الملف",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // استيراد بيانات العملاء من النص اليدوي
+  const handleManualImport = async () => {
+    if (!manualImportData.trim()) {
+      toast({
+        title: "خطأ",
+        description: "يرجى إدخال البيانات للاستيراد",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      console.log('📝 بيانات الإدخال اليدوي:', manualImportData.substring(0, 200));
+      
+      // تقسيم النص إلى سطور
+      const lines = manualImportData
+        .split(/\r?\n|\r/)
+        .map(line => line.trim())
+        .filter(line => line.length > 0);
+
+      console.log('📋 عدد السطور:', lines.length);
+
+      // تحديد ما إذا كان السطر الأول عناوين
+      const firstLine = lines[0];
+      const hasHeaders = firstLine && (
+        firstLine.includes('اسم') || 
+        firstLine.includes('الاسم') || 
+        firstLine.includes('Name') ||
+        firstLine.includes('جوال') ||
+        firstLine.includes('هاتف') ||
+        firstLine.includes('phone')
+      );
+
+      const dataLines = hasHeaders ? lines.slice(1) : lines;
+      console.log('📊 سطور البيانات:', dataLines.slice(0, 3));
+
+      const newCustomers = dataLines
+        .map((line, index) => {
+          // تقسيم السطر بناءً على التاب أو الفاصلة أو مسافات متعددة
+          const parts = line.split(/\t|,|\s{2,}/).map(part => part.trim());
+          
+          if (parts.length < 2) {
+            console.log(`⚠️ السطر ${index + 1}: يحتاج عمودين على الأقل`);
+            return null;
+          }
+
+          const name = parts[0];
+          const phone = parts[1];
+
+          console.log(`📝 السطر ${index + 1}: الاسم="${name}", الهاتف="${phone}"`);
+
+          if (!name || !phone || name.length < 2 || phone.length < 8) {
+            console.log(`⚠️ السطر ${index + 1}: بيانات غير صالحة`);
+            return null;
+          }
+
+          return {
+            name: name,
+            phone: phone,
+            import_source: 'Manual Import'
+          };
+        })
+        .filter(customer => customer !== null);
+
+      console.log('👥 العملاء المستخرجون:', newCustomers.slice(0, 3));
+
+      if (newCustomers.length === 0) {
+        toast({
+          title: "خطأ",
+          description: "لم يتم العثور على بيانات صالحة",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // فحص التكرار
+      const existingPhones = customers.map(c => c.phone);
+      const uniqueCustomers = newCustomers.filter(newCustomer => 
+        !existingPhones.includes(newCustomer.phone)
+      );
+      
+      const finalCustomers = uniqueCustomers.filter((customer, index, self) =>
+        index === self.findIndex(c => c.phone === customer.phone)
+      );
+      
+      const duplicateCount = newCustomers.length - finalCustomers.length;
+
+      if (finalCustomers.length === 0) {
+        toast({
+          title: "تنبيه",
+          description: `جميع العملاء موجودون مسبقاً (${duplicateCount} عميل متكرر)`,
+        });
+        return;
+      }
+
+      console.log('💾 حفظ العملاء:', finalCustomers);
+      
+      const { error } = await supabase
+        .from('customers')
+        .insert(finalCustomers);
+
+      if (error) {
+        console.error('❌ خطأ في الحفظ:', error);
+        toast({
+          title: "خطأ",
+          description: "حدث خطأ في حفظ البيانات",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "✅ نجح الاستيراد",
+        description: `تم استيراد ${finalCustomers.length} عميل${duplicateCount > 0 ? ` (تجاهل ${duplicateCount} متكرر)` : ''}`,
+      });
+
+      setIsImportDialogOpen(false);
+      setManualImportData('');
+      setImportFile(null);
+      fetchCustomers();
+      
+    } catch (error) {
+      console.error('💥 خطأ عام:', error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ في معالجة البيانات",
         variant: "destructive",
       });
     }
@@ -781,13 +913,14 @@ const Customers = () => {
                 استيراد
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-2xl">
               <DialogHeader>
                 <DialogTitle>استيراد العملاء</DialogTitle>
               </DialogHeader>
-              <div className="space-y-4">
+              <div className="space-y-6">
+                {/* طريقة رفع الملف */}
                 <div>
-                  <Label htmlFor="import-file">اختر ملف CSV</Label>
+                  <Label htmlFor="import-file" className="text-base font-medium">📁 رفع ملف CSV</Label>
                   <Input
                     id="import-file"
                     type="file"
@@ -798,19 +931,54 @@ const Customers = () => {
                   <p className="text-sm text-muted-foreground mt-2">
                     الملف يجب أن يحتوي على عمودين: الاسم، رقم الجوال
                   </p>
+                  <div className="mt-2">
+                    <Button onClick={handleImportCustomers} disabled={!importFile} className="w-full">
+                      استيراد من ملف CSV
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex justify-end gap-3">
+
+                <div className="text-center text-muted-foreground text-sm font-medium">
+                  أو
+                </div>
+
+                {/* طريقة الإدخال اليدوي */}
+                <div>
+                  <Label htmlFor="manual-data" className="text-base font-medium">✍️ إدخال يدوي (نسخ ولصق)</Label>
+                  <Textarea
+                    id="manual-data"
+                    value={manualImportData}
+                    onChange={(e) => setManualImportData(e.target.value)}
+                    placeholder={`انسخ البيانات من Excel والصقها هنا...
+
+مثال:
+أحمد محمد	+966501234567
+فاطمة أحمد	+966512345678
+محمد علي	+966523456789
+
+يمكنك فصل الاسم ورقم الجوال بـ Tab أو فاصلة أو مسافات متعددة`}
+                    className="mt-2 min-h-[200px] font-mono text-sm"
+                  />
+                  <p className="text-sm text-muted-foreground mt-2">
+                    💡 <strong>نصيحة:</strong> انسخ العمودين (الاسم ورقم الجوال) من Excel مباشرة والصقهم هنا
+                  </p>
+                  <div className="mt-2">
+                    <Button onClick={handleManualImport} disabled={!manualImportData.trim()} className="w-full">
+                      استيراد البيانات اليدوية
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="flex justify-end">
                   <Button
                     variant="outline"
                     onClick={() => {
                       setIsImportDialogOpen(false);
                       setImportFile(null);
+                      setManualImportData('');
                     }}
                   >
                     إلغاء
-                  </Button>
-                  <Button onClick={handleImportCustomers}>
-                    استيراد
                   </Button>
                 </div>
               </div>
