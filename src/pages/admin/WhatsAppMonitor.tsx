@@ -79,7 +79,17 @@ export default function WhatsAppMonitor() {
     try {
       setProcessingPending(true);
       
-      const { data, error } = await supabase.functions.invoke('send-pending-whatsapp');
+      console.log('🚀 استدعاء Edge Function لمعالجة الرسائل المعلقة...');
+      
+      const { data, error } = await supabase.functions.invoke('send-pending-whatsapp', {
+        body: JSON.stringify({ 
+          action: 'process_pending_messages',
+          timestamp: new Date().toISOString()
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
       
       if (error) {
         console.error('Error processing pending messages:', error);
