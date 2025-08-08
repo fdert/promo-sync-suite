@@ -332,174 +332,89 @@ const Customers = () => {
     }
   };
 
-  // إصلاح أسماء العملاء الموجودين الذين تم استيرادهم بترميز خاطئ
+  // إصلاح العملاء المستوردين بترميز خاطئ عبر حذفهم وإعادة استيرادهم
   const handleFixExistingCustomers = async () => {
     try {
-      // البحث عن العملاء الذين قد يحتوون على رموز غريبة في الأسماء
-      const problematicCustomers = customers.filter(customer => 
-        customer.name && (
+      // البحث عن العملاء المستوردين الذين قد يحتوون على رموز غريبة
+      const importedCustomers = customers.filter(customer => 
+        customer.import_source === 'CSV Import' && (
+          !customer.name || 
           customer.name.includes('◆') || 
           customer.name.includes('�') ||
           customer.name.includes('??') ||
-          customer.import_source === 'CSV Import'
+          customer.name.length < 2 ||
+          /^عميل/.test(customer.name) // الأسماء التي تبدأ بكلمة "عميل"
         )
       );
 
-      if (problematicCustomers.length === 0) {
+      if (importedCustomers.length === 0) {
         toast({
           title: "لا توجد مشاكل",
-          description: "جميع أسماء العملاء تبدو صحيحة",
+          description: "لا توجد عملاء مستوردين يحتاجون لإصلاح",
         });
         return;
       }
 
-      // طلب ملف جديد لاستخراج الأسماء الصحيحة منه
-      const fileInput = document.createElement('input');
-      fileInput.type = 'file';
-      fileInput.accept = '.csv';
-      fileInput.onchange = async (e) => {
-        const file = (e.target as HTMLInputElement).files?.[0];
-        if (!file) return;
-
-        try {
-          toast({
-            title: "جاري الإصلاح...",
-            description: "يتم استخراج الأسماء الصحيحة من الملف",
-          });
-
-          // استخدام نفس منطق الاستيراد المحسن لقراءة الأسماء الصحيحة
-          const encodings = ['UTF-8', 'windows-1256', 'ISO-8859-6'];
-          let correctData: any[] = [];
-          
-          for (const encoding of encodings) {
-            try {
-              const parseResults = await new Promise((resolve) => {
-                Papa.parse(file, {
-                  encoding: encoding,
-                  skipEmptyLines: true,
-                  header: false,
-                  transform: (value) => value.replace(/[""'']/g, '').trim(),
-                  complete: resolve
-                });
-              });
-              
-              const rows = (parseResults as any).data as string[][];
-              
-              // فحص جودة البيانات
-              const hasGoodArabic = rows.some(row => 
-                row.some(cell => 
-                  cell && 
-                  !cell.includes('◆') && 
-                  !cell.includes('�') && 
-                  /[\u0600-\u06FF]/.test(cell)
-                )
-              );
-              
-              if (hasGoodArabic || encoding === 'UTF-8') {
-                // تحديد إذا كان السطر الأول عناوين
-                const firstRow = rows[0];
-                const hasHeaders = firstRow && firstRow.some(cell => 
-                  cell?.includes('اسم') || 
-                  cell?.includes('الاسم') || 
-                  cell?.includes('Name')
-                );
-                
-                const dataRows = hasHeaders ? rows.slice(1) : rows;
-                
-                correctData = dataRows
-                  .map(row => {
-                    if (!row || row.length < 2) return null;
-                    
-                    const name = String(row[0] || '').trim();
-                    const phone = String(row[1] || '').trim();
-                    
-                    if (!name || !phone) return null;
-                    
-                    return { name, phone };
-                  })
-                  .filter(item => item !== null);
-                
-                console.log(`✅ تم استخراج ${correctData.length} اسم صحيح باستخدام ${encoding}`);
-                break;
-              }
-            } catch (err) {
-              continue;
-            }
-          }
-
-          if (correctData.length === 0) {
-            toast({
-              title: "خطأ",
-              description: "لم نتمكن من استخراج الأسماء الصحيحة من الملف",
-              variant: "destructive",
-            });
-            return;
-          }
-
-          // مطابقة العملاء بأرقام الجوال وتحديث الأسماء
-          let updatedCount = 0;
-          const updatePromises = problematicCustomers.map(async (customer) => {
-            // البحث عن البيانات الصحيحة باستخدام رقم الجوال
-            const correctCustomer = correctData.find(item => item.phone === customer.phone);
-            
-            if (correctCustomer && correctCustomer.name !== customer.name) {
-              console.log(`🔄 تحديث العميل: ${customer.name} -> ${correctCustomer.name}`);
-              
-              const { error } = await supabase
-                .from('customers')
-                .update({ name: correctCustomer.name })
-                .eq('id', customer.id);
-                
-              if (!error) {
-                updatedCount++;
-                return true;
-              } else {
-                console.error('خطأ في تحديث العميل:', error);
-                return false;
-              }
-            }
-            return false;
-          });
-
-          await Promise.all(updatePromises);
-
-          if (updatedCount > 0) {
-            toast({
-              title: "تم الإصلاح بنجاح",
-              description: `تم إصلاح أسماء ${updatedCount} عميل`,
-            });
-            fetchCustomers();
-          } else {
-            toast({
-              title: "لا توجد تحديثات",
-              description: "لم يتم العثور على أسماء جديدة للتحديث",
-            });
-          }
-          
-        } catch (error) {
-          console.error('خطأ في إصلاح الأسماء:', error);
-          toast({
-            title: "خطأ",
-            description: "حدث خطأ في إصلاح الأسماء",
-            variant: "destructive",
-          });
-        }
-      };
-
-      // عرض رسالة للمستخدم ثم فتح نافذة اختيار الملف
+      // عرض تأكيد للمستخدم
       const confirmed = window.confirm(
-        `تم العثور على ${problematicCustomers.length} عميل يحتاج لإصلاح الاسم.\n\nسيتم طلب رفع نفس ملف CSV الأصلي لاستخراج الأسماء الصحيحة منه.\n\nهل تريد المتابعة؟`
+        `تم العثور على ${importedCustomers.length} عميل مستورد بترميز خاطئ.\n\n` +
+        `سيتم حذف هؤلاء العملاء وطلب إعادة استيرادهم من ملف CSV جديد.\n\n` +
+        `تأكد من حفظ ملف CSV بترميز UTF-8 قبل المتابعة.\n\n` +
+        `هل تريد المتابعة؟`
       );
 
-      if (confirmed) {
-        fileInput.click();
+      if (!confirmed) return;
+
+      // حذف العملاء المتأثرين
+      toast({
+        title: "جاري الحذف...",
+        description: "يتم حذف العملاء المتأثرين",
+      });
+
+      const deletePromises = importedCustomers.map(customer => 
+        supabase
+          .from('customers')
+          .delete()
+          .eq('id', customer.id)
+      );
+
+      const deleteResults = await Promise.all(deletePromises);
+      const deleteFailures = deleteResults.filter(result => result.error);
+
+      if (deleteFailures.length > 0) {
+        console.error('أخطاء في الحذف:', deleteFailures);
+        toast({
+          title: "خطأ في الحذف",
+          description: `فشل حذف ${deleteFailures.length} عميل`,
+          variant: "destructive",
+        });
+        return;
       }
+
+      // تحديث القائمة
+      await fetchCustomers();
+
+      toast({
+        title: "تم الحذف بنجاح",
+        description: `تم حذف ${importedCustomers.length} عميل. يمكنك الآن إعادة الاستيراد`,
+      });
+
+      // عرض نصائح للمستخدم
+      setTimeout(() => {
+        alert(
+          "نصائح لإعادة الاستيراد:\n\n" +
+          "1. تأكد من حفظ ملف Excel كـ CSV (UTF-8)\n" +
+          "2. أو استخدم Notepad وحفظ بترميز UTF-8\n" +
+          "3. أو استخدم Google Sheets وصدّر كـ CSV\n\n" +
+          "ثم استخدم زر 'استيراد' لرفع الملف الجديد"
+        );
+      }, 1000);
       
     } catch (error) {
-      console.error('خطأ في إصلاح الأسماء:', error);
+      console.error('خطأ في إصلاح العملاء:', error);
       toast({
         title: "خطأ",
-        description: "حدث خطأ في إصلاح أسماء العملاء",
+        description: "حدث خطأ في العملية",
         variant: "destructive",
       });
     }
