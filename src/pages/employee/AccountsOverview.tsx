@@ -339,14 +339,19 @@ ${payments.slice(0, 5).map(payment =>
       }
       
       // Send WhatsApp message
-      const { error } = await supabase.functions.invoke('send-whatsapp-simple', {
+      const { data, error } = await supabase.functions.invoke('send-whatsapp-simple', {
         body: {
           phone: customer.whatsapp_number || customer.phone,
           message: summaryText
         }
       });
       
-      if (error) throw error;
+      console.log('WhatsApp response:', { data, error });
+      
+      if (error) {
+        console.error('Supabase function error:', error);
+        throw error;
+      }
       
       toast({
         title: "تم الإرسال",
