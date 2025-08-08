@@ -9,7 +9,6 @@ import { useToast } from "@/hooks/use-toast";
 
 interface PrintCalculation {
   materialType: string;
-  rollLength: number; // بالمتر
   rollPrice: number; // سعر الرول كامل
   inkCost: number; // تكلفة الحبر
   designLength: number; // بالسم
@@ -21,7 +20,6 @@ const PrintCalculator = () => {
   const { toast } = useToast();
   const [calculation, setCalculation] = useState<PrintCalculation>({
     materialType: "",
-    rollLength: 0,
     rollPrice: 0,
     inkCost: 0,
     designLength: 0,
@@ -34,7 +32,8 @@ const PrintCalculator = () => {
   };
 
   // المعادلات
-  const rollLengthCm = calculation.rollLength * 100; // تحويل المتر إلى سم
+  const rollLength = 50; // طول الرول ثابت 50 متر
+  const rollLengthCm = rollLength * 100; // تحويل المتر إلى سم
   const designArea = calculation.designLength * calculation.designWidth; // مساحة التصميم بالسم²
   const pricePerCm = rollLengthCm > 0 ? calculation.rollPrice / rollLengthCm : 0; // سعر السم الطولي
   const materialCost = pricePerCm * calculation.designLength * calculation.quantity; // تكلفة المادة
@@ -70,7 +69,6 @@ const PrintCalculator = () => {
   const resetCalculation = () => {
     setCalculation({
       materialType: "",
-      rollLength: 0,
       rollPrice: 0,
       inkCost: 0,
       designLength: 0,
@@ -117,14 +115,10 @@ const PrintCalculator = () => {
           <h3 className="text-lg font-semibold text-foreground">بيانات الرول</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="rollLength">طول الرول (متر)</Label>
-              <Input
-                id="rollLength"
-                type="text"
-                value={calculation.rollLength}
-                onChange={(e) => updateField('rollLength', parseFloat(e.target.value) || 0)}
-                placeholder="0"
-              />
+              <Label>طول الرول (متر)</Label>
+              <div className="h-10 px-3 py-2 border border-input bg-muted rounded-md flex items-center text-muted-foreground">
+                50 متر (ثابت)
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="rollPrice">سعر الرول الكامل (ر.س)</Label>
@@ -192,7 +186,7 @@ const PrintCalculator = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label className="text-sm text-muted-foreground">طول الرول (سم)</Label>
-              <div className="text-lg font-medium">{rollLengthCm.toLocaleString()} سم</div>
+              <div className="text-lg font-medium">5000 سم (ثابت)</div>
             </div>
             <div className="space-y-2">
               <Label className="text-sm text-muted-foreground">مساحة التصميم (سم²)</Label>
@@ -232,7 +226,7 @@ const PrintCalculator = () => {
         {/* معلومات إضافية */}
         <div className="text-xs text-muted-foreground space-y-1">
           <p><strong>المعادلات المستخدمة:</strong></p>
-          <p>• طول الرول بالسم = طول الرول بالمتر × 100</p>
+          <p>• طول الرول = 50 متر (ثابت) = 5000 سم</p>
           <p>• مساحة التصميم = طول التصميم × عرض التصميم</p>
           <p>• سعر السم الطولي = سعر الرول ÷ طول الرول بالسم</p>
           <p>• تكلفة المادة = سعر السم الطولي × طول التصميم × الكمية</p>
