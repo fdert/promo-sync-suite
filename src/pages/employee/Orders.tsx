@@ -1143,19 +1143,6 @@ ${publicFileUrl}
         service_name: selectedService.name,
         amount: selectedService.base_price || 0
       }));
-      
-      // تحديث البند الأول ليعكس الخدمة المختارة
-      if (orderItems.length > 0) {
-        const updatedItems = [...orderItems];
-        updatedItems[0] = {
-          ...updatedItems[0],
-          item_name: selectedService.name,
-          unit_price: selectedService.base_price || 0,
-          total_amount: (updatedItems[0].quantity || 0) * (selectedService.base_price || 0)
-        };
-        setOrderItems(updatedItems);
-        calculateOrderTotal(updatedItems);
-      }
     }
   };
 
