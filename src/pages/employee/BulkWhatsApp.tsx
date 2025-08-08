@@ -26,13 +26,19 @@ interface BulkCampaign {
   id: string;
   name: string;
   message_content: string;
-  target_type: 'all' | 'groups';
+  target_type: string;
   target_groups?: string[];
-  status: 'draft' | 'scheduled' | 'sending' | 'completed' | 'failed';
+  scheduled_at?: string;
+  status: string;
   total_recipients: number;
   sent_count: number;
   failed_count: number;
   created_at: string;
+  delay_between_messages?: number;
+  completed_at?: string;
+  error_message?: string;
+  created_by?: string;
+  started_at?: string;
 }
 
 interface MessageTemplate {
@@ -67,8 +73,29 @@ const BulkWhatsApp = () => {
 
   const fetchGroups = async () => {
     try {
-      // تم إنشاء الجداول - سيتم تفعيل هذا بعد تحديث ملف الأنواع
-      setGroups([]);
+      const { data, error } = await supabase
+        .from('customer_groups')
+        .select('id, name, description, color')
+        .order('name');
+
+      if (error) throw error;
+      
+      // إضافة عدد الأعضاء لكل مجموعة
+      const groupsWithCounts = await Promise.all(
+        (data || []).map(async (group) => {
+          const { count } = await supabase
+            .from('customer_group_members')
+            .select('*', { count: 'exact', head: true })
+            .eq('group_id', group.id);
+          
+          return {
+            ...group,
+            member_count: count || 0
+          };
+        })
+      );
+      
+      setGroups(groupsWithCounts);
     } catch (error) {
       console.error('Error fetching groups:', error);
       toast.error('حدث خطأ في جلب المجموعات');
@@ -77,8 +104,14 @@ const BulkWhatsApp = () => {
 
   const fetchCampaigns = async () => {
     try {
-      // تم إنشاء الجداول - سيتم تفعيل هذا بعد تحديث ملف الأنواع
-      setCampaigns([]);
+      const { data, error } = await supabase
+        .from('bulk_campaigns')
+        .select('*')
+        .eq('created_by', user?.id) // الموظفون يرون حملاتهم فقط
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setCampaigns(data || []);
     } catch (error) {
       console.error('Error fetching campaigns:', error);
       toast.error('حدث خطأ في جلب الحملات');
@@ -124,8 +157,20 @@ const BulkWhatsApp = () => {
         if (error) throw error;
         return count || 0;
       } else {
-        // تم إنشاء الجداول - سيتم تفعيل هذا بعد تحديث ملف الأنواع
-        return 0;
+        if (selectedGroups.length === 0) return 0;
+
+        let totalCount = 0;
+        for (const groupId of selectedGroups) {
+          const { count, error } = await supabase
+            .from('customer_group_members')
+            .select('customer_id', { count: 'exact', head: true })
+            .eq('group_id', groupId);
+
+          if (!error) {
+            totalCount += count || 0;
+          }
+        }
+        return totalCount;
       }
     } catch (error) {
       console.error('Error calculating recipients:', error);
@@ -148,16 +193,23 @@ const BulkWhatsApp = () => {
     try {
       const totalRecipients = await calculateTotalRecipients();
 
-      // تم إنشاء الجداول - سيتم تفعيل هذا بعد تحديث ملف الأنواع
-      console.log('Campaign data:', {
+      const campaignData = {
         name: formData.name,
         message_content: formData.message_content,
         target_type: formData.target_type,
-        target_groups: formData.target_type === 'groups' ? selectedGroups : null,
+        target_groups: formData.target_type === 'groups' ? selectedGroups : [],
         total_recipients: totalRecipients,
-        status: 'draft',
+        status: 'draft', // الموظفون ينشئون حملات كمسودات
         created_by: user?.id
-      });
+      };
+
+      const { data, error } = await supabase
+        .from('bulk_campaigns')
+        .insert(campaignData)
+        .select()
+        .single();
+
+      if (error) throw error;
 
       toast.success('تم إنشاء الحملة بنجاح - في انتظار موافقة الإدارة');
       setShowCreateDialog(false);
@@ -298,31 +350,37 @@ const BulkWhatsApp = () => {
                   <TabsContent value="groups" className="mt-4">
                     <Card>
                       <CardContent className="pt-4">
-                        <div className="space-y-3">
-                          {groups.map((group) => (
-                            <div key={group.id} className="flex items-center space-x-2 space-x-reverse">
-                              <Checkbox
-                                id={group.id}
-                                checked={selectedGroups.includes(group.id)}
-                                onCheckedChange={() => handleGroupToggle(group.id)}
-                              />
-                              <Label htmlFor={group.id} className="flex-1 cursor-pointer">
-                                <div className="flex justify-between items-center">
-                                  <div className="flex items-center gap-2">
-                                    <div
-                                      className="w-3 h-3 rounded-full"
-                                      style={{ backgroundColor: group.color }}
-                                    />
-                                    <span>{group.name}</span>
-                                  </div>
-                                  <Badge variant="secondary">
-                                    {group.member_count} عضو
-                                  </Badge>
-                                </div>
-                              </Label>
-                            </div>
-                          ))}
-                        </div>
+                         <div className="space-y-3">
+                           {groups.length === 0 ? (
+                             <p className="text-center text-muted-foreground py-4">
+                               لا توجد مجموعات. يرجى إنشاء مجموعة أولاً من صفحة "مجموعات العملاء"
+                             </p>
+                           ) : (
+                             groups.map((group) => (
+                               <div key={group.id} className="flex items-center space-x-2 space-x-reverse">
+                                 <Checkbox
+                                   id={group.id}
+                                   checked={selectedGroups.includes(group.id)}
+                                   onCheckedChange={() => handleGroupToggle(group.id)}
+                                 />
+                                 <Label htmlFor={group.id} className="flex-1 cursor-pointer">
+                                   <div className="flex justify-between items-center">
+                                     <div className="flex items-center gap-2">
+                                       <div
+                                         className="w-3 h-3 rounded-full"
+                                         style={{ backgroundColor: group.color }}
+                                       />
+                                       <span>{group.name}</span>
+                                     </div>
+                                     <Badge variant="secondary">
+                                       {group.member_count} عضو
+                                     </Badge>
+                                   </div>
+                                 </Label>
+                               </div>
+                             ))
+                           )}
+                         </div>
                       </CardContent>
                     </Card>
                   </TabsContent>
