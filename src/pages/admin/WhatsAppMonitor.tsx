@@ -44,25 +44,29 @@ export default function WhatsAppMonitor() {
     try {
       setLoading(true);
       
-      // جلب رسائل الواتساب
+      // جلب رسائل الواتساب مع ترتيب أفضل
       const { data: messagesData, error: messagesError } = await supabase
         .from('whatsapp_messages')
         .select('*')
+        .order('status', { ascending: true }) // المعلقة أولاً
         .order('created_at', { ascending: false })
-        .limit(50);
+        .limit(100); // زيادة العدد لعرض أفضل
 
       if (messagesError) throw messagesError;
 
-      // جلب إعدادات الويب هوك
+      // جلب إعدادات الويب هوك النشطة فقط
       const { data: webhooksData, error: webhooksError } = await supabase
         .from('webhook_settings')
         .select('*')
+        .eq('is_active', true)
         .order('created_at', { ascending: false });
 
       if (webhooksError) throw webhooksError;
 
       setMessages(messagesData || []);
       setWebhooks(webhooksData || []);
+      
+      console.log(`📊 تم جلب ${messagesData?.length || 0} رسالة و ${webhooksData?.length || 0} ويب هوك نشط`);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({
@@ -194,33 +198,48 @@ export default function WhatsAppMonitor() {
 
       {/* إحصائيات سريعة */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
+        <Card className={pendingCount > 0 ? "border-yellow-200 bg-yellow-50" : ""}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">رسائل معلقة</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
+            <Clock className={`h-4 w-4 ${pendingCount > 0 ? 'text-yellow-600' : 'text-muted-foreground'}`} />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{pendingCount}</div>
+            <div className={`text-2xl font-bold ${pendingCount > 0 ? 'text-yellow-600' : 'text-green-600'}`}>
+              {pendingCount}
+            </div>
+            {pendingCount > 0 && (
+              <p className="text-xs text-yellow-600 mt-1">يحتاج معالجة</p>
+            )}
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className={failedCount > 0 ? "border-red-200 bg-red-50" : ""}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">رسائل فاشلة</CardTitle>
-            <AlertCircle className="h-4 w-4 text-muted-foreground" />
+            <AlertCircle className={`h-4 w-4 ${failedCount > 0 ? 'text-red-600' : 'text-muted-foreground'}`} />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{failedCount}</div>
+            <div className={`text-2xl font-bold ${failedCount > 0 ? 'text-red-600' : 'text-green-600'}`}>
+              {failedCount}
+            </div>
+            {failedCount > 0 && (
+              <p className="text-xs text-red-600 mt-1">يحتاج مراجعة</p>
+            )}
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className={activeWebhooks === 0 ? "border-red-200 bg-red-50" : "border-green-200 bg-green-50"}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">ويب هوك نشط</CardTitle>
-            <CheckCircle className="h-4 w-4 text-muted-foreground" />
+            <CheckCircle className={`h-4 w-4 ${activeWebhooks > 0 ? 'text-green-600' : 'text-red-600'}`} />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{activeWebhooks}</div>
+            <div className={`text-2xl font-bold ${activeWebhooks > 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {activeWebhooks}
+            </div>
+            <p className={`text-xs mt-1 ${activeWebhooks > 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {activeWebhooks > 0 ? 'متصل' : 'غير متصل'}
+            </p>
           </CardContent>
         </Card>
 
@@ -231,6 +250,7 @@ export default function WhatsAppMonitor() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{messages.length}</div>
+            <p className="text-xs text-muted-foreground mt-1">آخر 100 رسالة</p>
           </CardContent>
         </Card>
       </div>
@@ -262,25 +282,83 @@ export default function WhatsAppMonitor() {
                 )}
               </Button>
               <Button 
-                onClick={() => {
-                  const autoProcess = async () => {
-                    let remaining = pendingCount;
-                    while (remaining > 0) {
-                      await processPendingMessages();
-                      await new Promise(resolve => setTimeout(resolve, 2000));
-                      await fetchData();
-                      const newPending = messages.filter(m => m.status === 'pending').length;
-                      if (newPending >= remaining) break; // منع التكرار إذا لم تنجح المعالجة
-                      remaining = newPending;
+                onClick={async () => {
+                  if (processingPending) return;
+                  
+                  setProcessingPending(true);
+                  try {
+                    let totalProcessed = 0;
+                    let maxIterations = 50; // حد أقصى للتكرار لمنع الحلقة اللا نهائية
+                    
+                    while (maxIterations > 0) {
+                      // جلب عدد الرسائل المعلقة الحالي من قاعدة البيانات مباشرة
+                      const { data: pendingData } = await supabase
+                        .from('whatsapp_messages')
+                        .select('id')
+                        .eq('status', 'pending')
+                        .limit(1);
+                      
+                      if (!pendingData || pendingData.length === 0) {
+                        toast({
+                          title: "مكتمل ✅",
+                          description: `تمت معالجة جميع الرسائل بنجاح! إجمالي المعالج: ${totalProcessed}`,
+                        });
+                        break;
+                      }
+                      
+                      // معالجة دفعة من الرسائل
+                      const { data, error } = await supabase.functions.invoke('process-whatsapp-queue', {
+                        body: JSON.stringify({ 
+                          action: 'process_pending_messages',
+                          timestamp: new Date().toISOString()
+                        }),
+                        headers: { 'Content-Type': 'application/json' }
+                      });
+                      
+                      if (error || !data?.processed_count) {
+                        console.error('Error in auto processing:', error);
+                        break;
+                      }
+                      
+                      totalProcessed += data.processed_count;
+                      maxIterations--;
+                      
+                      // انتظار بين الدفعات
+                      await new Promise(resolve => setTimeout(resolve, 3000));
                     }
-                  };
-                  autoProcess();
+                    
+                    if (maxIterations === 0) {
+                      toast({
+                        title: "تحذير ⚠️",
+                        description: `تم إيقاف المعالجة بعد ${totalProcessed} رسالة لمنع الحلقة اللا نهائية`,
+                        variant: "destructive",
+                      });
+                    }
+                    
+                  } catch (error) {
+                    console.error('Auto processing error:', error);
+                    toast({
+                      title: "خطأ",
+                      description: "فشل في المعالجة التلقائية",
+                      variant: "destructive",
+                    });
+                  } finally {
+                    setProcessingPending(false);
+                    await fetchData(); // تحديث البيانات في النهاية
+                  }
                 }}
                 disabled={processingPending}
                 size="sm"
                 variant="outline"
               >
-                معالجة تلقائية للكل
+                {processingPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    معالجة تلقائية...
+                  </>
+                ) : (
+                  `معالجة تلقائية للكل (${pendingCount})`
+                )}
               </Button>
             </div>
           </AlertDescription>
