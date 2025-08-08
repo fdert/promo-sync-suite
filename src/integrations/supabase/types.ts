@@ -2168,6 +2168,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      process_and_send_bulk_campaign: {
+        Args: { campaign_id_param: string }
+        Returns: Json
+      }
       process_bulk_campaign: {
         Args: { campaign_id_param: string }
         Returns: undefined

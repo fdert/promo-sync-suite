@@ -252,18 +252,25 @@ const BulkWhatsApp = () => {
         throw updateError;
       }
       
-      // استدعاء edge function لمعالجة الحملات
-      const { data, error } = await supabase.functions.invoke('bulk-campaign-processor', {
-        body: { campaignId }
-      });
+      // استدعاء database function لمعالجة الحملات
+      const { data, error } = await supabase
+        .rpc('process_and_send_bulk_campaign', { campaign_id_param: campaignId });
       
       if (error) {
-        console.error('خطأ من edge function:', error);
+        console.error('خطأ من database function:', error);
         throw error;
       }
       
-      console.log('استجابة edge function:', data);
-      toast.success('تم بدء إرسال الحملة بنجاح');
+      console.log('استجابة database function:', data);
+      
+      // تحويل البيانات إلى الشكل المطلوب
+      const result = data as any;
+      
+      if (result && !result.success) {
+        throw new Error(result.error || 'خطأ في معالجة الحملة');
+      }
+      
+      toast.success(result?.message || 'تم بدء إرسال الحملة بنجاح');
       fetchCampaigns();
     } catch (error) {
       console.error('Error starting campaign:', error);
