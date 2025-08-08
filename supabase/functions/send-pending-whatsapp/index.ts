@@ -64,18 +64,38 @@ Deno.serve(async (req) => {
 
     console.log(`Found ${pendingMessages.length} pending messages`);
 
-    // استخدام ويب هوك الطلبات العادي لجميع الرسائل (بما في ذلك التقييمات)
-    const { data: webhookSettings } = await supabase
+    // البحث عن ويب هوك مناسب - أولوية للحملات الجماعية
+    let webhookSettings;
+    
+    // البحث عن ويب هوك الحملات الجماعية أولاً
+    const { data: bulkCampaignWebhook } = await supabase
       .from('webhook_settings')
       .select('webhook_url, webhook_type, webhook_name')
-      .eq('webhook_type', 'outgoing')
+      .eq('webhook_type', 'bulk_campaign')
       .eq('is_active', true)
       .single();
+    
+    if (bulkCampaignWebhook) {
+      webhookSettings = bulkCampaignWebhook;
+      console.log('✅ استخدام ويب هوك الحملات الجماعية:', webhookSettings.webhook_name);
+    } else {
+      console.log('⚠️ لا يوجد ويب هوك للحملات الجماعية، جاري البحث عن بديل...');
+      
+      // إذا لم يوجد، ابحث عن ويب هوك عادي
+      const { data: outgoingWebhook } = await supabase
+        .from('webhook_settings')
+        .select('webhook_url, webhook_type, webhook_name')
+        .eq('webhook_type', 'outgoing')
+        .eq('is_active', true)
+        .single();
+      
+      webhookSettings = outgoingWebhook;
+    }
 
     if (!webhookSettings?.webhook_url) {
-      console.error('No active outgoing webhook found');
+      console.error('No active webhook found');
       return new Response(
-        JSON.stringify({ error: 'No outgoing webhook configured' }),
+        JSON.stringify({ error: 'No webhook configured' }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 400
@@ -83,7 +103,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log('استخدام ويب هوك:', webhookSettings.webhook_name);
+    console.log('📡 استخدام ويب هوك:', webhookSettings.webhook_name, `(${webhookSettings.webhook_type})`);
 
 
     const results = [];
