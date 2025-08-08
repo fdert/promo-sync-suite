@@ -44,6 +44,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import Papa from 'papaparse';
 
 const Customers = () => {
   const [customers, setCustomers] = useState([]);
@@ -139,7 +140,7 @@ const Customers = () => {
     }
   };
 
-  // استيراد بيانات العملاء (الاسم ورقم الجوال فقط)
+  // استيراد بيانات العملاء باستخدام PapaParse (الاسم ورقم الجوال فقط)
   const handleImportCustomers = async () => {
     if (!importFile) {
       toast({
@@ -151,131 +152,137 @@ const Customers = () => {
     }
 
     try {
-      const fileReader = new FileReader();
-      
-      const readFileAsText = (file: File): Promise<string> => {
-        return new Promise((resolve, reject) => {
-          fileReader.onload = (event) => {
-            const result = event.target?.result as string;
-            console.log('محتوى الملف المقروء:', result?.substring(0, 200));
-            resolve(result || '');
-          };
-          fileReader.onerror = reject;
-          // قراءة الملف مع تشفير UTF-8 صراحة
-          fileReader.readAsText(file, 'UTF-8');
-        });
-      };
-      
-      const text = await readFileAsText(importFile);
-      console.log('محتوى الملف النهائي:', text.substring(0, 300));
-      
-      // تنظيف النص وإزالة BOM إذا وجد
-      const cleanText = text.replace(/^\uFEFF/, '');
-      
-      // تقسيم النص بناءً على أنواع مختلفة من فواصل الأسطر
-      const rows = cleanText.split(/\r?\n|\r/).filter(row => row.trim());
-      console.log('جميع السطور:', rows);
-      
-      // التحقق إذا كان السطر الأول يحتوي على عناوين
-      const hasHeaders = rows.length > 0 && (
-        rows[0].includes('الاسم') || 
-        rows[0].includes('اسم') || 
-        rows[0].includes('Name') ||
-        rows[0].includes('name') ||
-        rows[0].includes('رقم') ||
-        rows[0].includes('جوال') ||
-        rows[0].includes('phone')
-      );
-      
-      // تجاهل السطر الأول إذا كان يحتوي على عناوين
-      const dataRows = hasHeaders ? rows.slice(1) : rows;
-      console.log('سطور البيانات:', dataRows);
-      
-      const newCustomers = dataRows
-        .map((row, index) => {
-          // تنظيف السطر وإزالة المساحات الزائدة
-          const cleanRow = row.trim();
-          if (!cleanRow) return null;
+      Papa.parse(importFile, {
+        encoding: "UTF-8",
+        skipEmptyLines: true,
+        header: false,
+        complete: async (results) => {
+          console.log('نتائج PapaParse:', results);
           
-          // تقسيم السطر بناءً على الفاصلة أو الفاصلة المنقوطة أو التاب
-          const fields = cleanRow.split(/[,;\t]/).map(field => 
-            field?.trim().replace(/"/g, '').replace(/'/g, '')
-          );
-          const [name, phone] = fields;
-          
-          console.log(`معالجة السطر ${index + 1}: الاسم="${name}", الهاتف="${phone}"`);
-          
-          // التحقق من وجود البيانات المطلوبة
-          if (!name || !phone || name === '' || phone === '') {
-            console.log(`السطر ${index + 1}: بيانات ناقصة`);
-            return null;
+          if (results.errors.length > 0) {
+            console.error('أخطاء في تحليل الملف:', results.errors);
           }
           
-          return {
-            name: name,
-            phone: phone,
-            import_source: 'CSV Import'
-          };
-        })
-        .filter(customer => customer !== null);
-        
-      console.log('العملاء الجدد قبل فحص التكرار:', newCustomers);
+          const rows = results.data as string[][];
+          console.log('السطور المستخرجة:', rows);
+          
+          if (rows.length === 0) {
+            toast({
+              title: "خطأ",
+              description: "الملف فارغ أو لا يحتوي على بيانات صالحة",
+              variant: "destructive",
+            });
+            return;
+          }
+          
+          // تحديد ما إذا كان السطر الأول يحتوي على عناوين
+          const firstRow = rows[0];
+          const hasHeaders = firstRow && (
+            firstRow[0]?.includes('الاسم') || 
+            firstRow[0]?.includes('اسم') || 
+            firstRow[0]?.includes('Name') ||
+            firstRow[0]?.includes('name') ||
+            firstRow[1]?.includes('رقم') ||
+            firstRow[1]?.includes('جوال') ||
+            firstRow[1]?.includes('phone')
+          );
+          
+          // البدء من السطر المناسب
+          const dataRows = hasHeaders ? rows.slice(1) : rows;
+          console.log('سطور البيانات بعد إزالة العناوين:', dataRows);
+          
+          const newCustomers = dataRows
+            .map((row, index) => {
+              if (!row || row.length < 2) {
+                console.log(`السطر ${index + 1}: بيانات ناقصة`);
+                return null;
+              }
+              
+              const name = row[0]?.toString().trim();
+              const phone = row[1]?.toString().trim();
+              
+              console.log(`معالجة السطر ${index + 1}: الاسم="${name}", الهاتف="${phone}"`);
+              
+              if (!name || !phone || name === '' || phone === '') {
+                console.log(`السطر ${index + 1}: بيانات فارغة`);
+                return null;
+              }
+              
+              return {
+                name: name,
+                phone: phone,
+                import_source: 'CSV Import'
+              };
+            })
+            .filter(customer => customer !== null);
+            
+          console.log('العملاء الجدد قبل فحص التكرار:', newCustomers);
 
-      if (newCustomers.length === 0) {
-        toast({
-          title: "خطأ",
-          description: "لم يتم العثور على بيانات صالحة في الملف",
-          variant: "destructive",
-        });
-        return;
-      }
+          if (newCustomers.length === 0) {
+            toast({
+              title: "خطأ",
+              description: "لم يتم العثور على بيانات صالحة في الملف",
+              variant: "destructive",
+            });
+            return;
+          }
 
-      // فحص التكرار مع العملاء الموجودين
-      const existingPhones = customers.map(c => c.phone);
-      const uniqueCustomers = newCustomers.filter(newCustomer => 
-        !existingPhones.includes(newCustomer.phone)
-      );
-      
-      // إزالة التكرار داخل البيانات المستوردة نفسها
-      const finalCustomers = uniqueCustomers.filter((customer, index, self) =>
-        index === self.findIndex(c => c.phone === customer.phone)
-      );
-      
-      const duplicateCount = newCustomers.length - finalCustomers.length;
-      
-      console.log('العملاء النهائيون بعد إزالة التكرار:', finalCustomers);
+          // فحص التكرار مع العملاء الموجودين
+          const existingPhones = customers.map(c => c.phone);
+          const uniqueCustomers = newCustomers.filter(newCustomer => 
+            !existingPhones.includes(newCustomer.phone)
+          );
+          
+          // إزالة التكرار داخل البيانات المستوردة نفسها
+          const finalCustomers = uniqueCustomers.filter((customer, index, self) =>
+            index === self.findIndex(c => c.phone === customer.phone)
+          );
+          
+          const duplicateCount = newCustomers.length - finalCustomers.length;
+          
+          console.log('العملاء النهائيون بعد إزالة التكرار:', finalCustomers);
 
-      if (finalCustomers.length === 0) {
-        toast({
-          title: "تنبيه",
-          description: `جميع العملاء موجودون مسبقاً (${duplicateCount} عميل متكرر)`,
-          variant: "destructive",
-        });
-        return;
-      }
+          if (finalCustomers.length === 0) {
+            toast({
+              title: "تنبيه",
+              description: `جميع العملاء موجودون مسبقاً (${duplicateCount} عميل متكرر)`,
+              variant: "destructive",
+            });
+            return;
+          }
 
-      const { error } = await supabase
-        .from('customers')
-        .insert(finalCustomers);
+          const { error } = await supabase
+            .from('customers')
+            .insert(finalCustomers);
 
-      if (error) {
-        console.error('Import error:', error);
-        toast({
-          title: "خطأ",
-          description: "حدث خطأ في استيراد البيانات",
-          variant: "destructive",
-        });
-        return;
-      }
+          if (error) {
+            console.error('Import error:', error);
+            toast({
+              title: "خطأ",
+              description: "حدث خطأ في استيراد البيانات",
+              variant: "destructive",
+            });
+            return;
+          }
 
-      toast({
-        title: "نجح",
-        description: `تم استيراد ${finalCustomers.length} عميل بنجاح${duplicateCount > 0 ? ` (تم تجاهل ${duplicateCount} عميل متكرر)` : ''}`,
+          toast({
+            title: "نجح",
+            description: `تم استيراد ${finalCustomers.length} عميل بنجاح${duplicateCount > 0 ? ` (تم تجاهل ${duplicateCount} عميل متكرر)` : ''}`,
+          });
+
+          setIsImportDialogOpen(false);
+          setImportFile(null);
+          fetchCustomers();
+        },
+        error: (error) => {
+          console.error('خطأ في تحليل الملف:', error);
+          toast({
+            title: "خطأ",
+            description: "حدث خطأ في قراءة الملف. تأكد من أن الملف بصيغة CSV صحيحة",
+            variant: "destructive",
+          });
+        }
       });
-
-      setIsImportDialogOpen(false);
-      setImportFile(null);
-      fetchCustomers();
     } catch (error) {
       console.error('Import error:', error);
       toast({
