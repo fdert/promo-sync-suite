@@ -81,7 +81,7 @@ export default function WhatsAppMonitor() {
       
       console.log('🚀 استدعاء Edge Function لمعالجة الرسائل المعلقة...');
       
-      const { data, error } = await supabase.functions.invoke('send-pending-whatsapp', {
+      const { data, error } = await supabase.functions.invoke('process-whatsapp-queue', {
         body: JSON.stringify({ 
           action: 'process_pending_messages',
           timestamp: new Date().toISOString()
