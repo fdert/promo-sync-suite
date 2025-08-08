@@ -241,6 +241,208 @@ export type Database = {
         }
         Relationships: []
       }
+      bulk_campaign_messages: {
+        Row: {
+          campaign_id: string | null
+          created_at: string | null
+          customer_id: string | null
+          error_message: string | null
+          id: string
+          message_content: string
+          sent_at: string | null
+          status: string | null
+          whatsapp_number: string
+        }
+        Insert: {
+          campaign_id?: string | null
+          created_at?: string | null
+          customer_id?: string | null
+          error_message?: string | null
+          id?: string
+          message_content: string
+          sent_at?: string | null
+          status?: string | null
+          whatsapp_number: string
+        }
+        Update: {
+          campaign_id?: string | null
+          created_at?: string | null
+          customer_id?: string | null
+          error_message?: string | null
+          id?: string
+          message_content?: string
+          sent_at?: string | null
+          status?: string | null
+          whatsapp_number?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bulk_campaign_messages_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "bulk_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bulk_campaign_messages_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customer_order_balances"
+            referencedColumns: ["customer_id"]
+          },
+          {
+            foreignKeyName: "bulk_campaign_messages_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customer_outstanding_balances"
+            referencedColumns: ["customer_id"]
+          },
+          {
+            foreignKeyName: "bulk_campaign_messages_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bulk_campaigns: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          created_by: string | null
+          delay_between_messages: number | null
+          error_message: string | null
+          failed_count: number | null
+          id: string
+          message_content: string
+          name: string
+          scheduled_at: string | null
+          sent_count: number | null
+          started_at: string | null
+          status: string | null
+          target_groups: string[] | null
+          target_type: string | null
+          total_recipients: number | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          delay_between_messages?: number | null
+          error_message?: string | null
+          failed_count?: number | null
+          id?: string
+          message_content: string
+          name: string
+          scheduled_at?: string | null
+          sent_count?: number | null
+          started_at?: string | null
+          status?: string | null
+          target_groups?: string[] | null
+          target_type?: string | null
+          total_recipients?: number | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          delay_between_messages?: number | null
+          error_message?: string | null
+          failed_count?: number | null
+          id?: string
+          message_content?: string
+          name?: string
+          scheduled_at?: string | null
+          sent_count?: number | null
+          started_at?: string | null
+          status?: string | null
+          target_groups?: string[] | null
+          target_type?: string | null
+          total_recipients?: number | null
+        }
+        Relationships: []
+      }
+      customer_group_members: {
+        Row: {
+          created_at: string | null
+          customer_id: string | null
+          group_id: string | null
+          id: string
+        }
+        Insert: {
+          created_at?: string | null
+          customer_id?: string | null
+          group_id?: string | null
+          id?: string
+        }
+        Update: {
+          created_at?: string | null
+          customer_id?: string | null
+          group_id?: string | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_group_members_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customer_order_balances"
+            referencedColumns: ["customer_id"]
+          },
+          {
+            foreignKeyName: "customer_group_members_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customer_outstanding_balances"
+            referencedColumns: ["customer_id"]
+          },
+          {
+            foreignKeyName: "customer_group_members_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "customer_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_groups: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       customers: {
         Row: {
           address: string | null
@@ -1941,6 +2143,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_group_member_count: {
+        Args: { group_id_param: string }
+        Returns: number
+      }
       has_permission: {
         Args: { _user_id: string; _permission: string }
         Returns: boolean
@@ -1960,6 +2166,10 @@ export type Database = {
           _resource_id?: string
           _details?: Json
         }
+        Returns: undefined
+      }
+      process_bulk_campaign: {
+        Args: { campaign_id_param: string }
         Returns: undefined
       }
       process_missing_payment_entries: {

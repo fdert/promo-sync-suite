@@ -27,14 +27,19 @@ interface BulkCampaign {
   id: string;
   name: string;
   message_content: string;
-  target_type: 'all' | 'groups';
+  target_type: string;
   target_groups?: string[];
   scheduled_at?: string;
-  status: 'draft' | 'scheduled' | 'sending' | 'completed' | 'failed';
+  status: string;
   total_recipients: number;
   sent_count: number;
   failed_count: number;
   created_at: string;
+  delay_between_messages?: number;
+  completed_at?: string;
+  error_message?: string;
+  created_by?: string;
+  started_at?: string;
 }
 
 interface MessageTemplate {
@@ -71,58 +76,53 @@ const BulkWhatsApp = () => {
 
   const fetchGroups = async () => {
     try {
-      // جلب المجموعات من localStorage مؤقتاً - نفس البيانات المستخدمة في صفحة CustomerGroups
-      const savedGroups = localStorage.getItem('customerGroups');
-      console.log('Saved groups from localStorage:', savedGroups);
+      const { data, error } = await supabase
+        .from('customer_groups')
+        .select('id, name, description, color')
+        .order('name');
+
+      if (error) throw error;
       
-      if (savedGroups) {
-        const parsedGroups = JSON.parse(savedGroups);
-        console.log('Parsed groups:', parsedGroups);
-        setGroups(parsedGroups);
-      } else {
-        // إذا لم توجد بيانات محفوظة، استخدم البيانات الافتراضية
-        const defaultGroups = [
-          {
-            id: "1",
-            name: "عملاء VIP",
-            description: "العملاء المميزون والدائمون",
-            color: "#f59e0b",
-            member_count: 15
-          },
-          {
-            id: "2",
-            name: "عملاء جدد",
-            description: "العملاء الجدد هذا الشهر",
-            color: "#10b981",
-            member_count: 8
-          }
-        ];
-        console.log('Using default groups:', defaultGroups);
-        setGroups(defaultGroups);
-        localStorage.setItem('customerGroups', JSON.stringify(defaultGroups));
-      }
+      // إضافة عدد الأعضاء لكل مجموعة
+      const groupsWithCounts = await Promise.all(
+        (data || []).map(async (group) => {
+          const { count } = await supabase
+            .from('customer_group_members')
+            .select('*', { count: 'exact', head: true })
+            .eq('group_id', group.id);
+          
+          return {
+            ...group,
+            member_count: count || 0
+          };
+        })
+      );
+      
+      setGroups(groupsWithCounts);
+      console.log('Groups loaded:', groupsWithCounts);
     } catch (error) {
       console.error('Error fetching groups:', error);
       toast.error('حدث خطأ في جلب المجموعات');
+      
+      // استخدام البيانات المحفوظة محلياً كبديل
+      const savedGroups = localStorage.getItem('customerGroups');
+      if (savedGroups) {
+        const parsedGroups = JSON.parse(savedGroups);
+        setGroups(parsedGroups);
+      }
     }
   };
 
   const fetchCampaigns = async () => {
     try {
-      // إضافة بيانات تجريبية مؤقتاً حتى يتم تحديث ملف الأنواع
-      setCampaigns([
-        {
-          id: "1",
-          name: "حملة ترحيبية",
-          message_content: "مرحباً {{customer_name}}، نرحب بك في خدماتنا المميزة!",
-          target_type: "all" as 'all' | 'groups',
-          status: "draft" as 'draft' | 'scheduled' | 'sending' | 'completed' | 'failed',
-          total_recipients: 50,
-          sent_count: 0,
-          failed_count: 0,
-          created_at: new Date().toISOString()
-        }
-      ]);
+      const { data, error } = await supabase
+        .from('bulk_campaigns')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setCampaigns(data || []);
+      console.log('Campaigns loaded:', data);
     } catch (error) {
       console.error('Error fetching campaigns:', error);
       toast.error('حدث خطأ في جلب الحملات');
@@ -198,7 +198,7 @@ const BulkWhatsApp = () => {
         name: formData.name,
         message_content: formData.message_content,
         target_type: formData.target_type,
-        target_groups: formData.target_type === 'groups' ? selectedGroups : null,
+        target_groups: formData.target_type === 'groups' ? selectedGroups : [],
         scheduled_at: formData.scheduled_at ? new Date(formData.scheduled_at).toISOString() : null,
         total_recipients: totalRecipients,
         status: formData.scheduled_at ? 'scheduled' : 'draft',
@@ -206,13 +206,27 @@ const BulkWhatsApp = () => {
         created_by: user?.id
       };
 
-      // سيتم تفعيل الحفظ في قاعدة البيانات بعد تحديث ملف الأنواع
-      console.log('Campaign data with delay:', campaignData);
+      console.log('Creating campaign:', campaignData);
+
+      const { data, error } = await supabase
+        .from('bulk_campaigns')
+        .insert(campaignData)
+        .select()
+        .single();
+
+      if (error) throw error;
 
       toast.success('تم إنشاء الحملة بنجاح');
       setShowCreateDialog(false);
       resetForm();
       fetchCampaigns();
+
+      // إذا كانت الحملة غير مجدولة، اعرض خيار الإرسال الفوري
+      if (!formData.scheduled_at) {
+        if (confirm('هل تريد إرسال الحملة الآن؟')) {
+          await handleSendCampaign(data.id);
+        }
+      }
     } catch (error) {
       console.error('Error creating campaign:', error);
       toast.error('حدث خطأ في إنشاء الحملة');
@@ -225,7 +239,11 @@ const BulkWhatsApp = () => {
     if (!confirm('هل أنت متأكد من إرسال هذه الحملة؟')) return;
     
     try {
-      // تم إنشاء الجداول - سيتم تفعيل هذا بعد تحديث ملف الأنواع
+      // استدعاء edge function لمعالجة الحملات
+      const { error } = await supabase.functions.invoke('process-bulk-campaigns');
+      
+      if (error) throw error;
+      
       toast.success('تم بدء إرسال الحملة');
       fetchCampaigns();
     } catch (error) {

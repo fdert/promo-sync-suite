@@ -54,34 +54,29 @@ const CustomerGroups = () => {
 
   const fetchGroups = async () => {
     try {
-      // جلب المجموعات من localStorage مؤقتاً
-      const savedGroups = localStorage.getItem('customerGroups');
-      if (savedGroups) {
-        const parsedGroups = JSON.parse(savedGroups);
-        setGroups(parsedGroups);
-      } else {
-        // إذا لم توجد بيانات محفوظة، استخدم البيانات الافتراضية
-        const defaultGroups = [
-          {
-            id: "1",
-            name: "عملاء VIP",
-            description: "العملاء المميزون والدائمون",
-            color: "#f59e0b",
-            created_at: new Date().toISOString(),
-            member_count: 15
-          },
-          {
-            id: "2",
-            name: "عملاء جدد",
-            description: "العملاء الجدد هذا الشهر",
-            color: "#10b981",
-            created_at: new Date().toISOString(),
-            member_count: 8
-          }
-        ];
-        setGroups(defaultGroups);
-        localStorage.setItem('customerGroups', JSON.stringify(defaultGroups));
-      }
+      const { data, error } = await supabase
+        .from('customer_groups')
+        .select('*')
+        .order('name');
+
+      if (error) throw error;
+      
+      // إضافة عدد الأعضاء لكل مجموعة
+      const groupsWithCounts = await Promise.all(
+        (data || []).map(async (group) => {
+          const { count } = await supabase
+            .from('customer_group_members')
+            .select('*', { count: 'exact', head: true })
+            .eq('group_id', group.id);
+          
+          return {
+            ...group,
+            member_count: count || 0
+          };
+        })
+      );
+      
+      setGroups(groupsWithCounts);
     } catch (error) {
       console.error('Error fetching groups:', error);
       toast.error('حدث خطأ في جلب المجموعات');
@@ -125,24 +120,40 @@ const CustomerGroups = () => {
 
     setLoading(true);
     try {
-      // محاكاة إنشاء المجموعة
-      const newGroup: CustomerGroup = {
-        id: Date.now().toString(),
-        name: formData.name,
-        description: formData.description,
-        color: formData.color,
-        created_at: new Date().toISOString(),
-        member_count: selectedCustomers.length
-      };
-      
-      // إضافة المجموعة للقائمة المحلية وحفظها في localStorage
-      const updatedGroups = [newGroup, ...groups];
-      setGroups(updatedGroups);
-      localStorage.setItem('customerGroups', JSON.stringify(updatedGroups));
+      const { data, error } = await supabase
+        .from('customer_groups')
+        .insert({
+          name: formData.name,
+          description: formData.description,
+          color: formData.color,
+          created_by: user?.id
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // إضافة أعضاء المجموعة
+      if (selectedCustomers.length > 0) {
+        const memberInserts = selectedCustomers.map(customerId => ({
+          group_id: data.id,
+          customer_id: customerId
+        }));
+
+        const { error: membersError } = await supabase
+          .from('customer_group_members')
+          .insert(memberInserts);
+
+        if (membersError) {
+          console.error('Error adding group members:', membersError);
+          // لا نوقف العملية، فقط نسجل الخطأ
+        }
+      }
       
       toast.success('تم إنشاء المجموعة بنجاح');
       setShowCreateDialog(false);
       resetForm();
+      fetchGroups();
     } catch (error) {
       console.error('Error creating group:', error);
       toast.error('حدث خطأ في إنشاء المجموعة');
@@ -155,12 +166,15 @@ const CustomerGroups = () => {
     if (!confirm('هل أنت متأكد من حذف هذه المجموعة؟')) return;
 
     try {
-      // حذف المجموعة من القائمة المحلية وتحديث localStorage
-      const updatedGroups = groups.filter(group => group.id !== groupId);
-      setGroups(updatedGroups);
-      localStorage.setItem('customerGroups', JSON.stringify(updatedGroups));
+      const { error } = await supabase
+        .from('customer_groups')
+        .delete()
+        .eq('id', groupId);
+
+      if (error) throw error;
       
       toast.success('تم حذف المجموعة بنجاح');
+      fetchGroups();
     } catch (error) {
       console.error('Error deleting group:', error);
       toast.error('حدث خطأ في حذف المجموعة');
