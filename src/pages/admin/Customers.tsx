@@ -561,7 +561,7 @@ const Customers = () => {
     }
   };
 
-  // حذف العملاء المتكررين حسب رقم الجوال فقط
+  // حذف العملاء المتكررين حسب رقم الجوال مع معالجة القيود
   const handleRemoveDuplicates = async () => {
     try {
       console.log('🔍 بدء البحث عن العملاء المتكررين...');
@@ -570,7 +570,6 @@ const Customers = () => {
       const phoneGroups: { [key: string]: any[] } = {};
       
       customers.forEach(customer => {
-        // التأكد من وجود رقم جوال صالح
         if (customer.phone && customer.phone.trim() !== '') {
           const cleanPhone = customer.phone.trim();
           if (!phoneGroups[cleanPhone]) {
@@ -580,13 +579,8 @@ const Customers = () => {
         }
       });
 
-      console.log('📊 مجموعات الجوالات:', Object.keys(phoneGroups).length);
-
-      // العثور على المجموعات التي تحتوي على أكثر من عميل واحد
       const duplicateGroups = Object.entries(phoneGroups).filter(([phone, group]) => group.length > 1);
       
-      console.log('🔁 عدد الجوالات المتكررة:', duplicateGroups.length);
-
       if (duplicateGroups.length === 0) {
         toast({
           title: "✅ لا توجد متكررات",
@@ -595,49 +589,110 @@ const Customers = () => {
         return;
       }
 
-      // إعداد قائمة العملاء للحذف (الاحتفاظ بالأحدث من كل مجموعة)
+      // فحص العملاء المتكررين للبحث عن الذين لديهم بيانات مرتبطة
       const customersToDelete: any[] = [];
+      const customersWithData: any[] = [];
       let totalDuplicates = 0;
 
-      duplicateGroups.forEach(([phone, group]) => {
-        console.log(`📱 الجوال ${phone}: ${group.length} عملاء`);
-        
+      for (const [phone, group] of duplicateGroups) {
         // ترتيب المجموعة حسب تاريخ الإنشاء (الأحدث أولاً)
         const sortedGroup = group.sort((a, b) => {
           const dateA = new Date(a.created_at || 0).getTime();
           const dateB = new Date(b.created_at || 0).getTime();
-          return dateB - dateA; // الأحدث أولاً
+          return dateB - dateA;
         });
         
-        // الاحتفاظ بالأول (الأحدث) وإضافة الباقي للحذف
-        const toDelete = sortedGroup.slice(1);
-        customersToDelete.push(...toDelete);
         totalDuplicates += group.length;
         
-        console.log(`  ↳ سيتم الاحتفاظ بـ: ${sortedGroup[0].name} (${sortedGroup[0].id})`);
-        console.log(`  ↳ سيتم حذف: ${toDelete.length} عملاء`);
-      });
+        // فحص العملاء المراد حذفهم للتأكد من عدم وجود بيانات مرتبطة
+        for (let i = 1; i < sortedGroup.length; i++) {
+          const customer = sortedGroup[i];
+          
+          // فحص إذا كان العميل لديه طلبات
+          const { data: orders, error: ordersError } = await supabase
+            .from('orders')
+            .select('id')
+            .eq('customer_id', customer.id)
+            .limit(1);
+            
+          if (ordersError) {
+            console.error('خطأ في فحص الطلبات:', ordersError);
+            continue;
+          }
+          
+          // فحص إذا كان العميل لديه فواتير
+          const { data: invoices, error: invoicesError } = await supabase
+            .from('invoices')
+            .select('id')
+            .eq('customer_id', customer.id)
+            .limit(1);
+            
+          if (invoicesError) {
+            console.error('خطأ في فحص الفواتير:', invoicesError);
+            continue;
+          }
+          
+          if (orders && orders.length > 0) {
+            customersWithData.push({ customer, type: 'طلبات' });
+            console.log(`⚠️ العميل ${customer.name} لديه ${orders.length} طلب`);
+          } else if (invoices && invoices.length > 0) {
+            customersWithData.push({ customer, type: 'فواتير' });
+            console.log(`⚠️ العميل ${customer.name} لديه ${invoices.length} فاتورة`);
+          } else {
+            customersToDelete.push(customer);
+            console.log(`✅ العميل ${customer.name} يمكن حذفه`);
+          }
+        }
+      }
 
-      // عرض تأكيد للمستخدم
-      const confirmMessage = `تم العثور على ${totalDuplicates} عميل بأرقام جوال متكررة.\n\n` +
-        `سيتم حذف ${customersToDelete.length} عميل والاحتفاظ بالأحدث من كل رقم جوال.\n\n` +
-        `مثال على الحذف:\n${duplicateGroups.slice(0, 3).map(([phone, group]) => 
-          `• الجوال ${phone}: ${group.length} عملاء → سيبقى 1`
-        ).join('\n')}\n\nهل تريد المتابعة؟`;
+      if (customersToDelete.length === 0 && customersWithData.length > 0) {
+        toast({
+          title: "⚠️ لا يمكن الحذف",
+          description: `جميع العملاء المتكررين (${customersWithData.length}) لديهم بيانات مرتبطة (طلبات أو فواتير)`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      let confirmMessage = '';
+      
+      if (customersToDelete.length > 0) {
+        confirmMessage += `سيتم حذف ${customersToDelete.length} عميل متكرر.\n\n`;
+      }
+      
+      if (customersWithData.length > 0) {
+        confirmMessage += `تحذير: ${customersWithData.length} عميل لديهم بيانات مرتبطة ولن يتم حذفهم:\n`;
+        confirmMessage += customersWithData.slice(0, 3).map(item => 
+          `• ${item.customer.name} (لديه ${item.type})`
+        ).join('\n');
+        if (customersWithData.length > 3) {
+          confirmMessage += `\n... و ${customersWithData.length - 3} عملاء آخرين`;
+        }
+        confirmMessage += '\n\n';
+      }
+      
+      confirmMessage += 'هل تريد المتابعة؟';
 
       if (!window.confirm(confirmMessage)) {
         return;
       }
 
+      if (customersToDelete.length === 0) {
+        toast({
+          title: "لا شيء للحذف",
+          description: "جميع العملاء المتكررين لديهم بيانات مرتبطة",
+        });
+        return;
+      }
+
       toast({
         title: "🗑️ جاري الحذف...",
-        description: `يتم حذف ${customersToDelete.length} عميل متكرر`,
+        description: `يتم حذف ${customersToDelete.length} عميل`,
       });
 
-      // حذف العملاء المتكررين دفعة واحدة
+      // حذف العملاء الذين لا يحتوون على بيانات مرتبطة
       const customerIds = customersToDelete.map(customer => customer.id);
-      console.log('🗑️ معرفات العملاء للحذف:', customerIds);
-
+      
       const { error, count } = await supabase
         .from('customers')
         .delete()
@@ -648,14 +703,16 @@ const Customers = () => {
         throw error;
       }
 
-      console.log('✅ تم حذف عدد:', count);
-
-      // تحديث القائمة
       await fetchCustomers();
       
+      let successMessage = `تم حذف ${customersToDelete.length} عميل متكرر`;
+      if (customersWithData.length > 0) {
+        successMessage += ` (تم تجاهل ${customersWithData.length} عميل لديهم بيانات مرتبطة)`;
+      }
+      
       toast({
-        title: "✅ تم حذف المتكررين",
-        description: `تم حذف ${customersToDelete.length} عميل متكرر بنجاح`,
+        title: "✅ تم الحذف بنجاح",
+        description: successMessage,
       });
       
     } catch (error) {
