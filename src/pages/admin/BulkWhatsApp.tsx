@@ -270,6 +270,16 @@ const BulkWhatsApp = () => {
         throw new Error(result.error || 'خطأ في معالجة الحملة');
       }
       
+      // بعد إنشاء الرسائل، استدعي edge function لمعالجة الحملات
+      setTimeout(async () => {
+        try {
+          console.log('🔄 استدعاء معالج الحملات...');
+          await supabase.functions.invoke('process-bulk-campaigns');
+        } catch (error) {
+          console.error('خطأ في استدعاء معالج الحملات:', error);
+        }
+      }, 2000);
+      
       toast.success(result?.message || 'تم بدء إرسال الحملة بنجاح');
       fetchCampaigns();
     } catch (error) {
