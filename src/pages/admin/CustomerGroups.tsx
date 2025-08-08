@@ -54,7 +54,7 @@ const CustomerGroups = () => {
 
   const fetchGroups = async () => {
     try {
-      // إضافة بيانات تجريبية مؤقتاً حتى يتم تحديث ملف الأنواع
+      // البيانات الوهمية مؤقتاً - سيتم استبدالها بقاعدة البيانات الفعلية
       setGroups([
         {
           id: "1",
@@ -71,14 +71,6 @@ const CustomerGroups = () => {
           color: "#10b981",
           created_at: new Date().toISOString(),
           member_count: 8
-        },
-        {
-          id: "3",
-          name: "شركات كبيرة",
-          description: "الشركات والمؤسسات الكبيرة",
-          color: "#3b82f6",
-          created_at: new Date().toISOString(),
-          member_count: 12
         }
       ]);
     } catch (error) {
@@ -103,8 +95,17 @@ const CustomerGroups = () => {
   };
 
   const fetchGroupMembers = async (groupId: string) => {
-    // تم إنشاء الجداول - سيتم تفعيل هذا بعد تحديث ملف الأنواع
-    setGroupMembers([]);
+    try {
+      // بيانات وهمية لأعضاء المجموعة
+      const mockMembers = customers.slice(0, 3).map(customer => ({
+        ...customer,
+        id: customer.id
+      }));
+      setGroupMembers(mockMembers);
+    } catch (error) {
+      console.error('Error fetching group members:', error);
+      toast.error('حدث خطأ في جلب أعضاء المجموعة');
+    }
   };
 
   const handleCreateGroup = async () => {
@@ -115,13 +116,22 @@ const CustomerGroups = () => {
 
     setLoading(true);
     try {
-      // تم إنشاء الجداول - سيتم تفعيل هذا بعد تحديث ملف الأنواع
-      console.log('Creating group:', formData, selectedCustomers);
+      // محاكاة إنشاء المجموعة
+      const newGroup: CustomerGroup = {
+        id: Date.now().toString(),
+        name: formData.name,
+        description: formData.description,
+        color: formData.color,
+        created_at: new Date().toISOString(),
+        member_count: selectedCustomers.length
+      };
+      
+      // إضافة المجموعة للقائمة المحلية
+      setGroups(prev => [newGroup, ...prev]);
       
       toast.success('تم إنشاء المجموعة بنجاح');
       setShowCreateDialog(false);
       resetForm();
-      fetchGroups();
     } catch (error) {
       console.error('Error creating group:', error);
       toast.error('حدث خطأ في إنشاء المجموعة');
@@ -134,11 +144,10 @@ const CustomerGroups = () => {
     if (!confirm('هل أنت متأكد من حذف هذه المجموعة؟')) return;
 
     try {
-      // تم إنشاء الجداول - سيتم تفعيل هذا بعد تحديث ملف الأنواع
-      console.log('Deleting group:', groupId);
+      // حذف المجموعة من القائمة المحلية
+      setGroups(prev => prev.filter(group => group.id !== groupId));
       
       toast.success('تم حذف المجموعة بنجاح');
-      fetchGroups();
     } catch (error) {
       console.error('Error deleting group:', error);
       toast.error('حدث خطأ في حذف المجموعة');
