@@ -65,12 +65,19 @@ Deno.serve(async (req) => {
         let newStatus = success ? 'sent' : 'failed';
 
         // تحديث حالة الرسالة
+        const updateData: any = { 
+          status: newStatus,
+          updated_at: new Date().toISOString()
+        };
+        
+        // إضافة sent_at إذا تم الإرسال بنجاح
+        if (success) {
+          updateData.sent_at = new Date().toISOString();
+        }
+        
         const { error: updateError } = await supabase
           .from('whatsapp_messages')
-          .update({ 
-            status: newStatus,
-            updated_at: new Date().toISOString()
-          })
+          .update(updateData)
           .eq('id', message.id);
 
         if (updateError) {
