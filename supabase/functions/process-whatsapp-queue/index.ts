@@ -234,6 +234,9 @@ async function sendToWhatsAppService(message: any): Promise<boolean> {
 
     console.log('إرسال للـ webhook:', webhook.webhook_url);
     console.log('البيانات المرسلة:', JSON.stringify(payload, null, 2));
+    
+    // اختبار الاتصال مع الويب هوك
+    console.log('🔗 بدء اختبار الاتصال مع الويب هوك...');
 
     // إرسال للـ webhook
     const response = await fetch(webhook.webhook_url, {
