@@ -20,6 +20,7 @@ import {
   MapPin,
   Tags,
   Activity,
+  Send,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -171,6 +172,18 @@ const menuItems = [
     title: "مراقب الواتساب",
     icon: MessageSquare,
     href: "/admin/whatsapp-monitor",
+    allowedRoles: ['admin', 'manager'] as UserRole[],
+  },
+  {
+    title: "إرسال جماعي",
+    icon: Send,
+    href: "/admin/bulk-whatsapp",
+    allowedRoles: ['admin', 'manager'] as UserRole[],
+  },
+  {
+    title: "مجموعات العملاء",
+    icon: Users,
+    href: "/admin/customer-groups",
     allowedRoles: ['admin', 'manager'] as UserRole[],
   },
   {

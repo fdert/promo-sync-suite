@@ -13,6 +13,7 @@ import {
   Archive,
   Settings,
   Calculator,
+  Send,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -98,6 +99,12 @@ const employeeMenuItems = [
     title: "حاسبة التسعيرات الأولية",
     icon: Calculator,
     href: "/employee/pricing-calculator",
+    allowedRoles: ['employee'] as UserRole[],
+  },
+  {
+    title: "إرسال جماعي",
+    icon: Send,
+    href: "/employee/bulk-whatsapp",
     allowedRoles: ['employee'] as UserRole[],
   },
 ];
