@@ -322,10 +322,10 @@ ${payments.slice(0, 5).map(payment =>
     if (!selectedCustomerData) return;
     
     try {
-      // Get customer WhatsApp number
+      // Get customer WhatsApp number and name
       const { data: customer } = await supabase
         .from('customers')
-        .select('whatsapp_number, phone')
+        .select('whatsapp_number, phone, name')
         .eq('id', selectedCustomerData.customer_id)
         .single();
       
@@ -343,34 +343,15 @@ ${payments.slice(0, 5).map(payment =>
       console.log('Customer phone:', customer.whatsapp_number || customer.phone);
       console.log('Message length:', summaryText.length);
       
-      // إرسال مباشر عبر Edge Function بنفس منطق إشعارات الطلبات
-      const { data, error } = await supabase.functions.invoke('send-direct-whatsapp', {
+      // إرسال عبر دالة إشعارات الطلبات بدلاً من الدالة المخصصة
+      const { data, error } = await supabase.functions.invoke('send-order-notifications', {
         body: {
-          phone: customer.whatsapp_number || customer.phone,
-          message: summaryText
+          type: 'account_summary',
+          customer_phone: customer.whatsapp_number || customer.phone,
+          customer_name: customer.name,
+          message: summaryText,
+          company_name: 'وكالة الإبداع للدعاية والإعلان'
         }
-      });
-      
-      console.log('WhatsApp response:', { data, error });
-      
-      if (error) {
-        console.error('Supabase function error:', error);
-        console.error('Error details:', JSON.stringify(error, null, 2));
-        throw error;
-      }
-      
-      if (data?.error) {
-        console.error('Function returned error:', data.error);
-        throw new Error(data.error);
-      }
-      
-      if (data?.success === false) {
-        console.warn('Function indicates failure:', data);
-      }
-      
-      toast({
-        title: "تم الإرسال",
-        description: data?.success ? "تم إرسال الملخص عبر الواتساب بنجاح" : "تمت محاولة الإرسال، راجع السجل",
       });
       
       console.log('WhatsApp response:', { data, error });
