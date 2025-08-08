@@ -149,24 +149,41 @@ async function sendToWhatsAppService(message: any): Promise<boolean> {
     console.log(`إلى: ${message.to_number}`);
     console.log(`النص: ${message.message_content}`);
     
-    // تحديد نوع الـ webhook - أولوية للحملات الجماعية
-    let webhookType = 'bulk_campaign'; // أولوية للحملات الجماعية
+    // البحث عن أي webhook نشط متاح (أولوية للحملات الجماعية)
+    console.log('🔍 البحث عن webhooks نشطة...');
     
-    // جلب الـ webhook للحملات الجماعية أولاً
+    // جلب جميع الـ webhooks النشطة وترتيبها حسب الأولوية
     let { data: webhooks, error: webhookError } = await supabase
       .from('webhook_settings')
       .select('*')
       .eq('is_active', true)
-      .eq('webhook_type', 'bulk_campaign');
+      .order('webhook_type', { ascending: true }); // bulk_campaign سيكون أولاً أبجدياً
+    
+    console.log('📋 Webhooks المتاحة:', webhooks?.map(w => `${w.webhook_name} (${w.webhook_type})`));
 
-    // إذا لم يوجد ويب هوك للحملات الجماعية، استخدم الويب هوك المناسب
     if (!webhooks || webhooks.length === 0) {
-      console.log('⚠️ لا يوجد ويب هوك للحملات الجماعية، جاري البحث عن بديل...');
+      console.error('❌ لا يوجد أي webhook نشط في النظام');
+      console.log('💡 تحقق من إعدادات الـ webhooks في قسم إدارة الـ webhooks');
       
-      // تحديد نوع الـ webhook حسب محتوى الرسالة
-      webhookType = 'outgoing'; // افتراضي للطلبات العادية
+      // استعلام تشخيصي لمعرفة حالة جميع الـ webhooks
+      const { data: allWebhooks } = await supabase
+        .from('webhook_settings')
+        .select('webhook_name, webhook_type, is_active, webhook_url');
       
-      // إذا كانت الرسالة تحتوي على رابط جوجل أو كلمة تقييم، استخدم ويب هوك التقييمات
+      console.log('🔧 جميع الـ webhooks في النظام:', allWebhooks);
+      return false;
+    }
+
+    // اختيار الـ webhook المناسب
+    let selectedWebhook = null;
+    
+    // أولاً: البحث عن webhook للحملات الجماعية
+    selectedWebhook = webhooks.find(w => w.webhook_type === 'bulk_campaign');
+    
+    if (selectedWebhook) {
+      console.log('✅ تم العثور على ويب هوك الحملات الجماعية');
+    } else {
+      // ثانياً: البحث حسب محتوى الرسالة للتقييمات
       if (message.message_content?.includes('google.com') || 
           message.message_content?.includes('تقييم') ||
           message.message_content?.includes('جوجل') ||
@@ -174,48 +191,39 @@ async function sendToWhatsAppService(message: any): Promise<boolean> {
           message.message_content?.includes('writereview') ||
           message.message_content?.includes('نرجو منك تقييم') ||
           message.message_content?.includes('نرجو تقييم')) {
-        webhookType = 'evaluation';
-        console.log('🌟 رسالة تقييم تم اكتشافها - استخدام ويب هوك التقييمات');
+        selectedWebhook = webhooks.find(w => w.webhook_type === 'evaluation');
+        if (selectedWebhook) {
+          console.log('🌟 استخدام ويب هوك التقييمات لرسالة التقييم');
+        }
       }
       
-      // جلب الـ webhook المناسب
-      const { data: alternativeWebhooks, error: altError } = await supabase
-        .from('webhook_settings')
-        .select('*')
-        .eq('is_active', true)
-        .eq('webhook_type', webhookType);
-      
-      webhooks = alternativeWebhooks;
-      webhookError = altError;
-
-      // إذا لم يوجد ويب هوك للتقييمات، جرب ويب هوك الطلبات كبديل
-      if ((!webhooks || webhooks.length === 0) && webhookType === 'evaluation') {
-        console.log('⚠️ لا يوجد ويب هوك للتقييمات، جاري المحاولة مع ويب هوك الطلبات...');
-        const { data: fallbackWebhooks, error: fallbackError } = await supabase
-          .from('webhook_settings')
-          .select('*')
-          .eq('is_active', true)
-          .eq('webhook_type', 'outgoing');
-        
-        webhooks = fallbackWebhooks;
-        webhookError = fallbackError;
+      // ثالثاً: استخدام webhook الطلبات كبديل
+      if (!selectedWebhook) {
+        selectedWebhook = webhooks.find(w => w.webhook_type === 'outgoing');
+        if (selectedWebhook) {
+          console.log('📤 استخدام ويب هوك الطلبات العادية');
+        }
       }
-    } else {
-      console.log('✅ تم العثور على ويب هوك الحملات الجماعية');
+      
+      // رابعاً: استخدام أول webhook متاح
+      if (!selectedWebhook) {
+        selectedWebhook = webhooks[0];
+        console.log(`🔄 استخدام أول webhook متاح: ${selectedWebhook.webhook_name}`);
+      }
     }
+
+    const webhook = selectedWebhook;
 
     if (webhookError) {
       console.error('خطأ في جلب الـ webhooks:', webhookError);
       return false;
     }
 
-    if (!webhooks || webhooks.length === 0) {
-      console.error('لا يوجد webhook نشط للإرسال');
+    if (!webhook) {
+      console.error('❌ لم يتم العثور على أي webhook مناسب للإرسال');
+      console.log('💡 تأكد من تفعيل webhook واحد على الأقل في إعدادات الـ webhooks');
       return false;
     }
-
-    // استخدام أول webhook نشط
-    const webhook = webhooks[0];
     console.log(`📡 استخدام ويب هوك: ${webhook.webhook_name} (${webhook.webhook_type})`);
     
     // إعداد payload للإرسال لـ n8n
