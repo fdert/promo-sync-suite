@@ -233,7 +233,7 @@ async function sendToWhatsAppService(message: any): Promise<boolean> {
     
     // إعداد payload للإرسال لـ n8n متماشي مع اختبار الويب هوك
     const payload = {
-      event: 'bulk_campaign_message',
+      event: 'whatsapp_message_send',
       data: {
         to: message.to_number,
         phone: message.to_number,
@@ -245,6 +245,8 @@ async function sendToWhatsAppService(message: any): Promise<boolean> {
         message_type: 'text',
         timestamp: Math.floor(Date.now() / 1000),
         customer_id: message.customer_id,
+        message_id: message.id,
+        from_number: message.from_number || 'system',
         test: false
       }
     };
