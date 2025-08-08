@@ -3,11 +3,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon, AlertTriangle, Users, DollarSign, FileText, TrendingDown, ClipboardList, Eye } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { CalendarIcon, AlertTriangle, Users, DollarSign, FileText, TrendingDown, ClipboardList, Eye, Search, Filter, MessageSquare, Printer, Download, FileSpreadsheet, Plus, Edit } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { format, differenceInDays } from 'date-fns';
+import { format, differenceInDays, startOfDay, endOfDay, startOfMonth, endOfMonth, startOfYear, endOfYear, subMonths, subYears } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { toast } from '@/hooks/use-toast';
 
 interface CustomerBalance {
   customer_id: string;
@@ -55,6 +62,17 @@ const AccountsOverview = () => {
   const [customerPayments, setCustomerPayments] = useState<Record<string, PaymentDetails[]>>({});
   const [loading, setLoading] = useState(true);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  
+  // Search and filter states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [dateFilter, setDateFilter] = useState('all');
+  const [customDateFrom, setCustomDateFrom] = useState<Date | undefined>();
+  const [customDateTo, setCustomDateTo] = useState<Date | undefined>();
+  
+  // Summary dialog states
+  const [summaryText, setSummaryText] = useState('');
+  const [showSummaryDialog, setShowSummaryDialog] = useState(false);
+  const [selectedCustomerData, setSelectedCustomerData] = useState<CustomerBalance | null>(null);
 
   useEffect(() => {
     fetchAccountsReceivableData();
@@ -200,6 +218,232 @@ const AccountsOverview = () => {
     return { label: `متأخر ${daysOverdue} يوم`, color: 'bg-red-100 text-red-800' };
   };
 
+  // Filter functions
+  const getDateRange = (filter: string) => {
+    const now = new Date();
+    switch (filter) {
+      case 'today':
+        return { start: startOfDay(now), end: endOfDay(now) };
+      case 'this_month':
+        return { start: startOfMonth(now), end: endOfMonth(now) };
+      case 'last_month':
+        const lastMonth = subMonths(now, 1);
+        return { start: startOfMonth(lastMonth), end: endOfMonth(lastMonth) };
+      case 'this_year':
+        return { start: startOfYear(now), end: endOfYear(now) };
+      case 'last_year':
+        const lastYear = subYears(now, 1);
+        return { start: startOfYear(lastYear), end: endOfYear(lastYear) };
+      case 'custom':
+        return customDateFrom && customDateTo 
+          ? { start: startOfDay(customDateFrom), end: endOfDay(customDateTo) }
+          : null;
+      default:
+        return null;
+    }
+  };
+
+  const filteredData = () => {
+    let filtered = [...customerBalances];
+    
+    // Search filter
+    if (searchTerm) {
+      filtered = filtered.filter(customer =>
+        customer.customer_name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    // Date filter
+    const dateRange = getDateRange(dateFilter);
+    if (dateRange) {
+      filtered = filtered.filter(customer => {
+        const earliestDate = new Date(customer.earliest_due_date);
+        return earliestDate >= dateRange.start && earliestDate <= dateRange.end;
+      });
+    }
+    
+    return filtered;
+  };
+
+  const filteredOrders = () => {
+    let filtered = [...unpaidOrders];
+    
+    // Search filter
+    if (searchTerm) {
+      filtered = filtered.filter(order =>
+        order.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.order_number.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    // Date filter
+    const dateRange = getDateRange(dateFilter);
+    if (dateRange) {
+      filtered = filtered.filter(order => {
+        const dueDate = new Date(order.due_date);
+        return dueDate >= dateRange.start && dueDate <= dateRange.end;
+      });
+    }
+    
+    return filtered;
+  };
+
+  // Generate summary
+  const generateSummary = (customer: CustomerBalance) => {
+    const orders = customerOrders[customer.customer_id] || [];
+    const payments = customerPayments[customer.customer_id] || [];
+    
+    const summary = `
+تقرير مالي للعميل: ${customer.customer_name}
+
+المبلغ المستحق الإجمالي: ${customer.outstanding_balance.toLocaleString()} ر.س
+عدد الطلبات غير المدفوعة: ${customer.unpaid_invoices_count}
+أقرب تاريخ استحقاق: ${format(new Date(customer.earliest_due_date), 'dd/MM/yyyy', { locale: ar })}
+آخر تاريخ استحقاق: ${format(new Date(customer.latest_due_date), 'dd/MM/yyyy', { locale: ar })}
+
+آخر ${Math.min(5, orders.length)} طلبات:
+${orders.slice(0, 5).map(order => 
+  `- طلب رقم: ${order.order_number} | الخدمة: ${order.service_name} | المبلغ: ${order.amount.toLocaleString()} ر.س | الحالة: ${order.status}`
+).join('\n')}
+
+آخر ${Math.min(5, payments.length)} مدفوعات:
+${payments.slice(0, 5).map(payment => 
+  `- مبلغ: ${payment.amount.toLocaleString()} ر.س | نوع الدفع: ${payment.payment_type} | التاريخ: ${format(new Date(payment.payment_date), 'dd/MM/yyyy', { locale: ar })}`
+).join('\n')}
+
+تاريخ التقرير: ${format(new Date(), 'dd/MM/yyyy HH:mm', { locale: ar })}
+`;
+    
+    return summary;
+  };
+
+  // Handle summary actions
+  const handleSendWhatsApp = async () => {
+    if (!selectedCustomerData) return;
+    
+    try {
+      // Get customer WhatsApp number
+      const { data: customer } = await supabase
+        .from('customers')
+        .select('whatsapp_number, phone')
+        .eq('id', selectedCustomerData.customer_id)
+        .single();
+      
+      if (!customer?.whatsapp_number && !customer?.phone) {
+        toast({
+          title: "خطأ",
+          description: "لا يوجد رقم واتساب للعميل",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Send WhatsApp message
+      const { error } = await supabase.functions.invoke('send-whatsapp-simple', {
+        body: {
+          phone: customer.whatsapp_number || customer.phone,
+          message: summaryText
+        }
+      });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "تم الإرسال",
+        description: "تم إرسال الملخص عبر الواتساب بنجاح"
+      });
+      
+      setShowSummaryDialog(false);
+    } catch (error) {
+      console.error('Error sending WhatsApp:', error);
+      toast({
+        title: "خطأ",
+        description: "فشل في إرسال الرسالة",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handlePrint = () => {
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>ملخص العميل - ${selectedCustomerData?.customer_name}</title>
+            <style>
+              body { font-family: Arial, sans-serif; direction: rtl; padding: 20px; }
+              .header { text-align: center; margin-bottom: 30px; }
+              .content { white-space: pre-line; line-height: 1.6; }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <h1>ملخص العميل</h1>
+              <h2>${selectedCustomerData?.customer_name}</h2>
+            </div>
+            <div class="content">${summaryText}</div>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.print();
+    }
+  };
+
+  const handleDownloadPDF = () => {
+    toast({
+      title: "قريباً",
+      description: "خاصية تحميل PDF ستكون متاحة قريباً"
+    });
+  };
+
+  const handleDownloadExcel = () => {
+    if (!selectedCustomerData) return;
+    
+    const orders = customerOrders[selectedCustomerData.customer_id] || [];
+    const payments = customerPayments[selectedCustomerData.customer_id] || [];
+    
+    const data = [
+      ['ملخص العميل', selectedCustomerData.customer_name],
+      ['المبلغ المستحق', selectedCustomerData.outstanding_balance],
+      ['عدد الطلبات غير المدفوعة', selectedCustomerData.unpaid_invoices_count],
+      ['أقرب استحقاق', format(new Date(selectedCustomerData.earliest_due_date), 'dd/MM/yyyy')],
+      ['آخر استحقاق', format(new Date(selectedCustomerData.latest_due_date), 'dd/MM/yyyy')],
+      [''],
+      ['الطلبات'],
+      ['رقم الطلب', 'الخدمة', 'المبلغ', 'الحالة', 'تاريخ الإنشاء'],
+      ...orders.map(order => [
+        order.order_number,
+        order.service_name,
+        order.amount,
+        order.status,
+        format(new Date(order.created_at), 'dd/MM/yyyy')
+      ]),
+      [''],
+      ['المدفوعات'],
+      ['المبلغ', 'نوع الدفع', 'تاريخ الدفع'],
+      ...payments.map(payment => [
+        payment.amount,
+        payment.payment_type,
+        format(new Date(payment.payment_date), 'dd/MM/yyyy')
+      ])
+    ];
+    
+    const csvContent = data.map(row => row.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `customer_summary_${selectedCustomerData.customer_name}_${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    link.click();
+  };
+
+  const openSummaryDialog = (customer: CustomerBalance) => {
+    setSelectedCustomerData(customer);
+    setSummaryText(generateSummary(customer));
+    setShowSummaryDialog(true);
+  };
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -226,6 +470,96 @@ const AccountsOverview = () => {
         <h1 className="text-3xl font-bold text-foreground">العملاء المدينون</h1>
       </div>
 
+      {/* Search and Filter Controls */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Search className="h-5 w-5" />
+            البحث والفلترة
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {/* Search Input */}
+            <div className="space-y-2">
+              <Label htmlFor="search">البحث</Label>
+              <Input
+                id="search"
+                placeholder="اسم العميل، رقم الجوال، رقم الطلب..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full"
+              />
+            </div>
+
+            {/* Date Filter */}
+            <div className="space-y-2">
+              <Label htmlFor="dateFilter">فلترة حسب التاريخ</Label>
+              <Select value={dateFilter} onValueChange={setDateFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="اختر الفترة الزمنية" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">جميع الفترات</SelectItem>
+                  <SelectItem value="today">اليوم</SelectItem>
+                  <SelectItem value="this_month">هذا الشهر</SelectItem>
+                  <SelectItem value="last_month">الشهر الماضي</SelectItem>
+                  <SelectItem value="this_year">هذا العام</SelectItem>
+                  <SelectItem value="last_year">العام الماضي</SelectItem>
+                  <SelectItem value="custom">فترة مخصصة</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Custom Date From */}
+            {dateFilter === 'custom' && (
+              <div className="space-y-2">
+                <Label>من تاريخ</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start text-left">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {customDateFrom ? format(customDateFrom, 'dd/MM/yyyy') : 'اختر التاريخ'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={customDateFrom}
+                      onSelect={setCustomDateFrom}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            )}
+
+            {/* Custom Date To */}
+            {dateFilter === 'custom' && (
+              <div className="space-y-2">
+                <Label>إلى تاريخ</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start text-left">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {customDateTo ? format(customDateTo, 'dd/MM/yyyy') : 'اختر التاريخ'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={customDateTo}
+                      onSelect={setCustomDateTo}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* ملخص سريع */}
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
@@ -235,8 +569,11 @@ const AccountsOverview = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-primary">
-              {customerBalances.length}
+              {filteredData().length}
             </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              من أصل {customerBalances.length} عميل
+            </p>
           </CardContent>
         </Card>
 
@@ -247,8 +584,11 @@ const AccountsOverview = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">
-              {unpaidOrders.length}
+              {filteredOrders().length}
             </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              من أصل {unpaidOrders.length} طلب
+            </p>
           </CardContent>
         </Card>
 
@@ -259,8 +599,11 @@ const AccountsOverview = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
-              {unpaidOrders.filter(order => order.days_overdue > 30).length}
+              {filteredOrders().filter(order => order.days_overdue > 30).length}
             </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              طلبات متأخرة جداً
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -289,7 +632,7 @@ const AccountsOverview = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {customerBalances.map((customer) => (
+              {filteredData().map((customer) => (
                 <TableRow key={customer.customer_id}>
                   <TableCell className="font-medium">{customer.customer_name}</TableCell>
                   <TableCell>
@@ -307,107 +650,118 @@ const AccountsOverview = () => {
                     {format(new Date(customer.latest_due_date), 'dd/MM/yyyy', { locale: ar })}
                   </TableCell>
                   <TableCell>
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => setSelectedCustomerId(customer.customer_id)}
-                        >
-                          <Eye className="h-4 w-4 mr-2" />
-                          التفاصيل
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                        <DialogHeader>
-                          <DialogTitle className="flex items-center gap-2">
-                            <Users className="h-5 w-5" />
-                            تفاصيل العميل: {customer.customer_name}
-                          </DialogTitle>
-                           <DialogDescription>
-                             عرض تفاصيل الطلبات والمدفوعات المرتبطة بالعميل
-                           </DialogDescription>
-                        </DialogHeader>
-                        
-                        {selectedCustomerId && (
-                          <div className="space-y-6">
-                            {/* طلبات العميل */}
-                            <Card>
-                              <CardHeader>
-                                <CardTitle className="flex items-center gap-2 text-lg">
-                                  <ClipboardList className="h-4 w-4" />
-                                  الطلبات ({customerOrders[selectedCustomerId]?.length || 0})
-                                </CardTitle>
-                              </CardHeader>
-                              <CardContent>
-                                <Table>
-                                  <TableHeader>
-                                    <TableRow>
-                                      <TableHead>رقم الطلب</TableHead>
-                                      <TableHead>الخدمة</TableHead>
-                                      <TableHead>المبلغ</TableHead>
-                                      <TableHead>الحالة</TableHead>
-                                      <TableHead>تاريخ الإنشاء</TableHead>
-                                    </TableRow>
-                                  </TableHeader>
-                                  <TableBody>
-                                    {customerOrders[selectedCustomerId]?.slice(0, 5).map((order) => (
-                                      <TableRow key={order.id}>
-                                        <TableCell className="font-medium">{order.order_number}</TableCell>
-                                        <TableCell>{order.service_name}</TableCell>
-                                        <TableCell>{order.amount.toLocaleString()} ر.س</TableCell>
-                                        <TableCell>
-                                          <Badge variant="outline">{order.status}</Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                          {format(new Date(order.created_at), 'dd/MM/yyyy', { locale: ar })}
-                                        </TableCell>
+                    <div className="flex gap-2">
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => setSelectedCustomerId(customer.customer_id)}
+                          >
+                            <Eye className="h-4 w-4 mr-2" />
+                            التفاصيل
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                          <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2">
+                              <Users className="h-5 w-5" />
+                              تفاصيل العميل: {customer.customer_name}
+                            </DialogTitle>
+                             <DialogDescription>
+                               عرض تفاصيل الطلبات والمدفوعات المرتبطة بالعميل
+                             </DialogDescription>
+                          </DialogHeader>
+                          
+                          {selectedCustomerId && (
+                            <div className="space-y-6">
+                              {/* طلبات العميل */}
+                              <Card>
+                                <CardHeader>
+                                  <CardTitle className="flex items-center gap-2 text-lg">
+                                    <ClipboardList className="h-4 w-4" />
+                                    الطلبات ({customerOrders[selectedCustomerId]?.length || 0})
+                                  </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow>
+                                        <TableHead>رقم الطلب</TableHead>
+                                        <TableHead>الخدمة</TableHead>
+                                        <TableHead>المبلغ</TableHead>
+                                        <TableHead>الحالة</TableHead>
+                                        <TableHead>تاريخ الإنشاء</TableHead>
                                       </TableRow>
-                                    ))}
-                                  </TableBody>
-                                </Table>
-                              </CardContent>
-                            </Card>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {customerOrders[selectedCustomerId]?.slice(0, 5).map((order) => (
+                                        <TableRow key={order.id}>
+                                          <TableCell className="font-medium">{order.order_number}</TableCell>
+                                          <TableCell>{order.service_name}</TableCell>
+                                          <TableCell>{order.amount.toLocaleString()} ر.س</TableCell>
+                                          <TableCell>
+                                            <Badge variant="outline">{order.status}</Badge>
+                                          </TableCell>
+                                          <TableCell>
+                                            {format(new Date(order.created_at), 'dd/MM/yyyy', { locale: ar })}
+                                          </TableCell>
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
+                                </CardContent>
+                              </Card>
 
-                            {/* مدفوعات العميل */}
-                            <Card>
-                              <CardHeader>
-                                <CardTitle className="flex items-center gap-2 text-lg">
-                                  <DollarSign className="h-4 w-4" />
-                                  المدفوعات ({customerPayments[selectedCustomerId]?.length || 0})
-                                </CardTitle>
-                              </CardHeader>
-                              <CardContent>
-                                <Table>
-                                  <TableHeader>
-                                    <TableRow>
-                                      <TableHead>المبلغ</TableHead>
-                                      <TableHead>نوع الدفع</TableHead>
-                                      <TableHead>تاريخ الدفع</TableHead>
-                                    </TableRow>
-                                  </TableHeader>
-                                  <TableBody>
-                                    {customerPayments[selectedCustomerId]?.slice(0, 5).map((payment) => (
-                                      <TableRow key={payment.id}>
-                                        <TableCell className="font-medium text-green-600">
-                                          {payment.amount.toLocaleString()} ر.س
-                                        </TableCell>
-                                        <TableCell>
-                                          <Badge variant="secondary">{payment.payment_type}</Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                          {format(new Date(payment.payment_date), 'dd/MM/yyyy', { locale: ar })}
-                                        </TableCell>
+                              {/* مدفوعات العميل */}
+                              <Card>
+                                <CardHeader>
+                                  <CardTitle className="flex items-center gap-2 text-lg">
+                                    <DollarSign className="h-4 w-4" />
+                                    المدفوعات ({customerPayments[selectedCustomerId]?.length || 0})
+                                  </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow>
+                                        <TableHead>المبلغ</TableHead>
+                                        <TableHead>نوع الدفع</TableHead>
+                                        <TableHead>تاريخ الدفع</TableHead>
                                       </TableRow>
-                                    ))}
-                                  </TableBody>
-                                </Table>
-                              </CardContent>
-                            </Card>
-                          </div>
-                        )}
-                      </DialogContent>
-                    </Dialog>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {customerPayments[selectedCustomerId]?.slice(0, 5).map((payment) => (
+                                        <TableRow key={payment.id}>
+                                          <TableCell className="font-medium text-green-600">
+                                            {payment.amount.toLocaleString()} ر.س
+                                          </TableCell>
+                                          <TableCell>
+                                            <Badge variant="secondary">{payment.payment_type}</Badge>
+                                          </TableCell>
+                                          <TableCell>
+                                            {format(new Date(payment.payment_date), 'dd/MM/yyyy', { locale: ar })}
+                                          </TableCell>
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
+                                </CardContent>
+                              </Card>
+                            </div>
+                          )}
+                        </DialogContent>
+                      </Dialog>
+                      
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => openSummaryDialog(customer)}
+                      >
+                        <FileText className="h-4 w-4 mr-2" />
+                        ملخص
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -441,7 +795,7 @@ const AccountsOverview = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {unpaidOrders.map((order) => {
+              {filteredOrders().map((order) => {
                 const status = getOverdueStatus(order.days_overdue);
                 return (
                   <TableRow key={order.order_id}>
@@ -471,6 +825,83 @@ const AccountsOverview = () => {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Summary Dialog */}
+      <Dialog open={showSummaryDialog} onOpenChange={setShowSummaryDialog}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              ملخص العميل: {selectedCustomerData?.customer_name}
+            </DialogTitle>
+            <DialogDescription>
+              يمكنك تعديل الملخص وإرساله أو طباعته أو تحميله
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {/* Summary Content */}
+            <div className="space-y-2">
+              <Label htmlFor="summaryText">محتوى الملخص</Label>
+              <Textarea
+                id="summaryText"
+                value={summaryText}
+                onChange={(e) => setSummaryText(e.target.value)}
+                rows={15}
+                className="resize-none"
+                placeholder="محتوى الملخص..."
+              />
+            </div>
+            
+            {/* Action Buttons */}
+            <div className="flex flex-wrap gap-2 pt-4 border-t">
+              <Button 
+                onClick={handleSendWhatsApp}
+                className="flex items-center gap-2"
+                variant="default"
+              >
+                <MessageSquare className="h-4 w-4" />
+                إرسال واتساب
+              </Button>
+              
+              <Button 
+                onClick={handlePrint}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <Printer className="h-4 w-4" />
+                طباعة
+              </Button>
+              
+              <Button 
+                onClick={handleDownloadPDF}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <Download className="h-4 w-4" />
+                تحميل PDF
+              </Button>
+              
+              <Button 
+                onClick={handleDownloadExcel}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <FileSpreadsheet className="h-4 w-4" />
+                تحميل Excel
+              </Button>
+              
+              <Button 
+                onClick={() => setShowSummaryDialog(false)}
+                variant="secondary"
+                className="mr-auto"
+              >
+                إغلاق
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
