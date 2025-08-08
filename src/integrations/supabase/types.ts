@@ -1769,6 +1769,53 @@ export type Database = {
         }
         Relationships: []
       }
+      webhook_logs: {
+        Row: {
+          campaign_id: string | null
+          created_at: string | null
+          error_message: string | null
+          id: string
+          response_data: Json | null
+          status: string | null
+          trigger_type: string | null
+          updated_at: string | null
+          webhook_type: string
+          webhook_url: string | null
+        }
+        Insert: {
+          campaign_id?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          response_data?: Json | null
+          status?: string | null
+          trigger_type?: string | null
+          updated_at?: string | null
+          webhook_type: string
+          webhook_url?: string | null
+        }
+        Update: {
+          campaign_id?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          response_data?: Json | null
+          status?: string | null
+          trigger_type?: string | null
+          updated_at?: string | null
+          webhook_type?: string
+          webhook_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_logs_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "bulk_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       webhook_settings: {
         Row: {
           created_at: string
