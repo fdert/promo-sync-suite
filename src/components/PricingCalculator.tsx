@@ -8,8 +8,6 @@ import { useToast } from "@/hooks/use-toast";
 
 interface PricingCalculation {
   boardPrice: number;
-  boardLength: number;
-  boardWidth: number;
   designLength: number;
   designWidth: number;
   designHeight: number;
@@ -20,8 +18,6 @@ const PricingCalculator = () => {
   const { toast } = useToast();
   const [calculation, setCalculation] = useState<PricingCalculation>({
     boardPrice: 0,
-    boardLength: 0,
-    boardWidth: 0,
     designLength: 0,
     designWidth: 0,
     designHeight: 0,
@@ -33,7 +29,9 @@ const PricingCalculator = () => {
   };
 
   // المعادلات
-  const boardArea = calculation.boardLength * calculation.boardWidth;
+  const boardLength = 240; // طول اللوح ثابت 240 سم
+  const boardWidth = 120; // عرض اللوح ثابت 120 سم
+  const boardArea = boardLength * boardWidth;
   const pricePerCm2 = boardArea > 0 ? calculation.boardPrice / boardArea : 0;
   const designVolume = calculation.designLength * calculation.designWidth * calculation.designHeight;
   const designArea = calculation.designLength * calculation.designWidth;
@@ -55,8 +53,6 @@ const PricingCalculator = () => {
   const resetCalculation = () => {
     setCalculation({
       boardPrice: 0,
-      boardLength: 0,
-      boardWidth: 0,
       designLength: 0,
       designWidth: 0,
       designHeight: 0,
@@ -92,24 +88,18 @@ const PricingCalculator = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="boardLength">طول اللوح (سم)</Label>
-              <Input
-                id="boardLength"
-                type="text"
-                value={calculation.boardLength}
-                onChange={(e) => updateField('boardLength', parseFloat(e.target.value) || 0)}
-                placeholder="0"
-              />
+              <Label>طول اللوح (سم)</Label>
+              <div className="h-10 px-3 py-2 border border-input bg-background rounded-md flex items-center justify-between">
+                <span className="text-sm">240</span>
+                <span className="text-xs text-muted-foreground">(ثابت)</span>
+              </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="boardWidth">عرض اللوح (سم)</Label>
-              <Input
-                id="boardWidth"
-                type="text"
-                value={calculation.boardWidth}
-                onChange={(e) => updateField('boardWidth', parseFloat(e.target.value) || 0)}
-                placeholder="0"
-              />
+              <Label>عرض اللوح (سم)</Label>
+              <div className="h-10 px-3 py-2 border border-input bg-background rounded-md flex items-center justify-between">
+                <span className="text-sm">120</span>
+                <span className="text-xs text-muted-foreground">(ثابت)</span>
+              </div>
             </div>
           </div>
         </div>
@@ -167,7 +157,7 @@ const PricingCalculator = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label className="text-sm text-muted-foreground">مساحة اللوح (سم²)</Label>
-              <div className="text-lg font-medium">{boardArea.toLocaleString()} سم²</div>
+              <div className="text-lg font-medium">28800 سم² (ثابت)</div>
             </div>
             <div className="space-y-2">
               <Label className="text-sm text-muted-foreground">سعر لكل سم²</Label>
@@ -207,8 +197,10 @@ const PricingCalculator = () => {
         {/* معلومات إضافية */}
         <div className="text-xs text-muted-foreground space-y-1">
           <p><strong>المعادلات المستخدمة:</strong></p>
-          <p>• مساحة اللوح = طول اللوح × عرض اللوح</p>
-          <p>• سعر لكل سم² = سعر اللوح ÷ مساحة اللوح</p>
+          <p>• طول اللوح = 240 سم (ثابت)</p>
+          <p>• عرض اللوح = 120 سم (ثابت)</p>
+          <p>• مساحة اللوح = 240 × 120 = 28800 سم² (ثابت)</p>
+          <p>• سعر لكل سم² = سعر اللوح ÷ 28800</p>
           <p>• مساحة التصميم = طول التصميم × عرض التصميم</p>
           <p>• حجم التصميم = طول التصميم × عرض التصميم × ارتفاع التصميم</p>
           <p>• المستخدم من اللوح = ارتفاع التصميم (السماكة المطلوبة)</p>
