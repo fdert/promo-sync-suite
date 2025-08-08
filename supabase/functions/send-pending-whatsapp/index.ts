@@ -84,7 +84,9 @@ Deno.serve(async (req) => {
     console.log('🔎 نتيجة البحث عن ويب هوك الحملات الجماعية:', { 
       data: bulkCampaignWebhook, 
       error: bulkError,
-      hasUrl: !!bulkCampaignWebhook?.webhook_url
+      hasUrl: !!bulkCampaignWebhook?.webhook_url,
+      url: bulkCampaignWebhook?.webhook_url || 'لا يوجد',
+      name: bulkCampaignWebhook?.webhook_name || 'لا يوجد'
     });
     
     if (bulkCampaignWebhook?.webhook_url) {
