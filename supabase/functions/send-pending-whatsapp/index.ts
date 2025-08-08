@@ -67,13 +67,17 @@ Deno.serve(async (req) => {
     // البحث عن ويب هوك مناسب - أولوية للحملات الجماعية
     let webhookSettings;
     
+    console.log('🔍 البحث عن ويب هوك الحملات الجماعية...');
+    
     // البحث عن ويب هوك الحملات الجماعية أولاً
-    const { data: bulkCampaignWebhook } = await supabase
+    const { data: bulkCampaignWebhook, error: bulkError } = await supabase
       .from('webhook_settings')
       .select('webhook_url, webhook_type, webhook_name')
       .eq('webhook_type', 'bulk_campaign')
       .eq('is_active', true)
       .maybeSingle();
+    
+    console.log('نتيجة البحث عن ويب هوك الحملات الجماعية:', { bulkCampaignWebhook, bulkError });
     
     if (bulkCampaignWebhook?.webhook_url) {
       webhookSettings = bulkCampaignWebhook;
@@ -82,18 +86,22 @@ Deno.serve(async (req) => {
       console.log('⚠️ لا يوجد ويب هوك للحملات الجماعية، جاري البحث عن بديل...');
       
       // إذا لم يوجد، ابحث عن ويب هوك عادي
-      const { data: outgoingWebhook } = await supabase
+      const { data: outgoingWebhook, error: outgoingError } = await supabase
         .from('webhook_settings')
         .select('webhook_url, webhook_type, webhook_name')
         .eq('webhook_type', 'outgoing')
         .eq('is_active', true)
         .maybeSingle();
       
+      console.log('نتيجة البحث عن ويب هوك outgoing:', { outgoingWebhook, outgoingError });
+      
       webhookSettings = outgoingWebhook;
     }
 
+    console.log('الويب هوك المختار نهائياً:', webhookSettings);
+
     if (!webhookSettings?.webhook_url) {
-      console.error('No active webhook found');
+      console.error('❌ No active webhook found - لا يوجد ويب هوك نشط');
       return new Response(
         JSON.stringify({ error: 'No webhook configured' }),
         {
