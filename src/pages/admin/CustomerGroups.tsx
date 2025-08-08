@@ -100,15 +100,46 @@ const CustomerGroups = () => {
 
   const fetchGroupMembers = async (groupId: string) => {
     try {
-      // بيانات وهمية لأعضاء المجموعة
-      const mockMembers = customers.slice(0, 3).map(customer => ({
-        ...customer,
-        id: customer.id
-      }));
-      setGroupMembers(mockMembers);
+      console.log('جلب أعضاء المجموعة:', groupId);
+      
+      const { data, error } = await supabase
+        .from('customer_group_members')
+        .select(`
+          customer_id,
+          customers (
+            id,
+            name,
+            phone,
+            whatsapp_number,
+            email
+          )
+        `)
+        .eq('group_id', groupId);
+
+      if (error) {
+        console.error('خطأ في جلب أعضاء المجموعة:', error);
+        throw error;
+      }
+
+      console.log('بيانات أعضاء المجموعة:', data);
+
+      // تحويل البيانات للشكل المطلوب
+      const members = (data || [])
+        .filter(item => item.customers) // التأكد من وجود بيانات العميل
+        .map(item => ({
+          id: item.customers.id,
+          name: item.customers.name,
+          phone: item.customers.phone,
+          whatsapp_number: item.customers.whatsapp_number,
+          email: item.customers.email
+        }));
+
+      console.log('أعضاء المجموعة المحولة:', members);
+      setGroupMembers(members);
     } catch (error) {
       console.error('Error fetching group members:', error);
       toast.error('حدث خطأ في جلب أعضاء المجموعة');
+      setGroupMembers([]);
     }
   };
 
