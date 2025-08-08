@@ -20,12 +20,28 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+    // قراءة البيانات المرسلة من العميل
+    const requestBody = req.method === 'POST' ? await req.json() : {};
+    const specificCampaignId = requestBody?.campaignId;
+
+    console.log('معرف الحملة المحدد:', specificCampaignId);
+
     // البحث عن الحملات الجاهزة للإرسال
-    const { data: campaigns, error: campaignsError } = await supabaseClient
+    let campaignsQuery = supabaseClient
       .from('bulk_campaigns')
-      .select('*')
-      .in('status', ['draft', 'scheduled', 'sending'])
-      .or('scheduled_at.is.null,scheduled_at.lte.' + new Date().toISOString());
+      .select('*');
+
+    if (specificCampaignId) {
+      // إذا تم تحديد حملة معينة
+      campaignsQuery = campaignsQuery.eq('id', specificCampaignId);
+    } else {
+      // البحث عن جميع الحملات الجاهزة
+      campaignsQuery = campaignsQuery
+        .in('status', ['draft', 'scheduled', 'sending'])
+        .or('scheduled_at.is.null,scheduled_at.lte.' + new Date().toISOString());
+    }
+
+    const { data: campaigns, error: campaignsError } = await campaignsQuery;
 
     if (campaignsError) {
       console.error('خطأ في جلب الحملات:', campaignsError);
