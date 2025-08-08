@@ -70,9 +70,11 @@ Deno.serve(async (req) => {
           updated_at: new Date().toISOString()
         };
         
-        // إضافة sent_at إذا تم الإرسال بنجاح
+        // إضافة sent_at إذا تم الإرسال بنجاح، أو error_message إذا فشل
         if (success) {
           updateData.sent_at = new Date().toISOString();
+        } else {
+          updateData.error_message = 'فشل الإرسال إلى الويب هوك';
         }
         
         const { error: updateError } = await supabase
@@ -255,17 +257,19 @@ async function sendToWhatsAppService(message: any): Promise<boolean> {
       body: JSON.stringify(payload)
     });
 
-    const success = response.ok;
     console.log(`حالة الاستجابة: ${response.status}`);
+    console.log(`نص الحالة: ${response.statusText}`);
     
-    if (success) {
+    if (response.ok) {
       const responseText = await response.text();
-      console.log('استجابة الـ webhook:', responseText);
+      console.log('✅ استجابة الـ webhook ناجحة:', responseText);
+      return true;
     } else {
-      console.error('فشل إرسال للـ webhook:', response.status, response.statusText);
+      const errorText = await response.text();
+      console.error(`❌ فشل إرسال للـ webhook: ${response.status} - ${response.statusText}`);
+      console.error('تفاصيل الخطأ:', errorText);
+      return false;
     }
-
-    return success;
     
   } catch (error) {
     console.error('خطأ في إرسال الرسالة للواتس آب:', error);
