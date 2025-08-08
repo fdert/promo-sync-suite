@@ -31,16 +31,25 @@ const PricingCalculator = () => {
   // المعادلات
   const boardLength = 240; // طول اللوح ثابت 240 سم
   const boardWidth = 120; // عرض اللوح ثابت 120 سم
-  const boardArea = boardLength * boardWidth;
-  const pricePerCm2 = boardArea > 0 ? calculation.boardPrice / boardArea : 0;
+  const boardThickness = 1; // سماكة اللوح افتراضية 1 سم للحساب
+  const boardArea = boardLength * boardWidth; // مساحة اللوح
+  const boardVolume = boardLength * boardWidth * boardThickness; // حجم اللوح
+  
   const designVolume = calculation.designLength * calculation.designWidth * calculation.designHeight;
   const designArea = calculation.designLength * calculation.designWidth;
-  const usedFromBoard = calculation.designHeight; // المستخدم من اللوح = الارتفاع (السماكة المطلوبة)
-  // السعر النهائي = سعر لكل سم² × مساحة التصميم × الكمية
-  const finalPrice = pricePerCm2 * designArea * calculation.quantity;
+  
+  // المستخدم من اللوح = حجم التصميم (أو مساحة إذا كان الارتفاع = 0)
+  const usedFromBoard = calculation.designHeight === 0 ? designArea : designVolume;
+  
+  // حساب السعر بناءً على النسبة المستخدمة
+  const pricePerUnit = calculation.designHeight === 0 
+    ? calculation.boardPrice / boardArea  // سعر لكل سم² إذا كان التصميم مسطح
+    : calculation.boardPrice / boardVolume; // سعر لكل سم³ إذا كان التصميم له ارتفاع
+    
+  const finalPrice = pricePerUnit * usedFromBoard * calculation.quantity;
 
   const copyResult = () => {
-    const result = `السعر النهائي: ${finalPrice.toFixed(2)} ر.س\nالكمية: ${calculation.quantity}\nحجم التصميم: ${designVolume} سم³\nمساحة التصميم: ${designArea} سم²\nالمستخدم من اللوح: ${usedFromBoard} سم\nسعر السم²: ${pricePerCm2.toFixed(4)} ر.س`;
+    const result = `السعر النهائي: ${finalPrice.toFixed(2)} ر.س\nالكمية: ${calculation.quantity}\nمساحة التصميم: ${designArea} سم²\nحجم التصميم: ${designVolume} سم³\nالمستخدم من اللوح: ${usedFromBoard.toFixed(2)} ${calculation.designHeight === 0 ? 'سم²' : 'سم³'}\nسعر الوحدة: ${pricePerUnit.toFixed(4)} ر.س/${calculation.designHeight === 0 ? 'سم²' : 'سم³'}`;
     navigator.clipboard.writeText(result);
     toast({
       title: "تم النسخ",
@@ -158,8 +167,8 @@ const PricingCalculator = () => {
               <div className="text-lg font-medium">28800 سم² (ثابت)</div>
             </div>
             <div className="space-y-2">
-              <Label className="text-sm text-muted-foreground">سعر لكل سم²</Label>
-              <div className="text-lg font-medium">{pricePerCm2.toFixed(4)} ر.س</div>
+              <Label className="text-sm text-muted-foreground">سعر الوحدة</Label>
+              <div className="text-lg font-medium">{pricePerUnit.toFixed(6)} ر.س/{calculation.designHeight === 0 ? 'سم²' : 'سم³'}</div>
             </div>
             <div className="space-y-2">
               <Label className="text-sm text-muted-foreground">مساحة التصميم (سم²)</Label>
@@ -170,8 +179,8 @@ const PricingCalculator = () => {
               <div className="text-lg font-medium">{designVolume.toLocaleString()} سم³</div>
             </div>
             <div className="space-y-2">
-              <Label className="text-sm text-muted-foreground">المستخدم من اللوح (سم)</Label>
-              <div className="text-lg font-medium">{usedFromBoard} سم</div>
+              <Label className="text-sm text-muted-foreground">المستخدم من اللوح</Label>
+              <div className="text-lg font-medium">{usedFromBoard.toFixed(2)} {calculation.designHeight === 0 ? 'سم²' : 'سم³'}</div>
             </div>
             <div className="space-y-2">
               <Label className="text-sm text-muted-foreground">السعر النهائي</Label>
@@ -197,12 +206,12 @@ const PricingCalculator = () => {
           <p><strong>المعادلات المستخدمة:</strong></p>
           <p>• طول اللوح = 240 سم (ثابت)</p>
           <p>• عرض اللوح = 120 سم (ثابت)</p>
-          <p>• مساحة اللوح = 240 × 120 = 28800 سم² (ثابت)</p>
-          <p>• سعر لكل سم² = سعر اللوح ÷ 28800</p>
+          <p>• مساحة اللوح = 240 × 120 = 28,800 سم² (ثابت)</p>
           <p>• مساحة التصميم = طول التصميم × عرض التصميم</p>
           <p>• حجم التصميم = طول التصميم × عرض التصميم × ارتفاع التصميم</p>
-          <p>• المستخدم من اللوح = ارتفاع التصميم (السماكة المطلوبة)</p>
-          <p>• السعر النهائي = السعر لكل سم² × مساحة التصميم × الكمية</p>
+          <p>• المستخدم من اللوح = مساحة التصميم (إذا الارتفاع = 0) أو حجم التصميم (إذا الارتفاع أكبر من 0)</p>
+          <p>• سعر الوحدة = سعر اللوح ÷ مساحة اللوح (للمسطح) أو ÷ حجم اللوح (للمجسم)</p>
+          <p>• السعر النهائي = سعر الوحدة × المستخدم من اللوح × الكمية</p>
         </div>
       </CardContent>
     </Card>
