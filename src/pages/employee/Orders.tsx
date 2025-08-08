@@ -2376,11 +2376,8 @@ ${publicFileUrl}
                          <ItemNameSelect
                            services={services}
                            value={item.item_name}
-                           onValueChange={(value, price) => {
+                           onValueChange={(value) => {
                              updateOrderItem(index, 'item_name', value);
-                             if (price) {
-                               updateOrderItem(index, 'unit_price', price);
-                             }
                            }}
                            placeholder="اختر من الخدمات أو اكتب اسماً جديداً..."
                          />
