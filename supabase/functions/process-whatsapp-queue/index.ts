@@ -149,39 +149,59 @@ async function sendToWhatsAppService(message: any): Promise<boolean> {
     console.log(`إلى: ${message.to_number}`);
     console.log(`النص: ${message.message_content}`);
     
-    // تحديد نوع الـ webhook حسب محتوى الرسالة
-    let webhookType = 'outgoing'; // افتراضي للطلبات العادية
+    // تحديد نوع الـ webhook - أولوية للحملات الجماعية
+    let webhookType = 'bulk_campaign'; // أولوية للحملات الجماعية
     
-    // إذا كانت الرسالة تحتوي على رابط جوجل أو كلمة تقييم، استخدم ويب هوك التقييمات
-    if (message.message_content?.includes('google.com') || 
-        message.message_content?.includes('تقييم') ||
-        message.message_content?.includes('جوجل') ||
-        message.message_content?.includes('خرائط جوجل') ||
-        message.message_content?.includes('writereview') ||
-        message.message_content?.includes('نرجو منك تقييم') ||
-        message.message_content?.includes('نرجو تقييم')) {
-      webhookType = 'evaluation';
-      console.log('🌟 رسالة تقييم تم اكتشافها - استخدام ويب هوك التقييمات');
-    }
-    
-    // جلب الـ webhook المناسب من قاعدة البيانات
+    // جلب الـ webhook للحملات الجماعية أولاً
     let { data: webhooks, error: webhookError } = await supabase
       .from('webhook_settings')
       .select('*')
       .eq('is_active', true)
-      .eq('webhook_type', webhookType);
+      .eq('webhook_type', 'bulk_campaign');
 
-    // إذا لم يوجد ويب هوك للتقييمات، جرب ويب هوك الطلبات كبديل
-    if ((!webhooks || webhooks.length === 0) && webhookType === 'evaluation') {
-      console.log('⚠️ لا يوجد ويب هوك للتقييمات، جاري المحاولة مع ويب هوك الطلبات...');
-      const { data: fallbackWebhooks, error: fallbackError } = await supabase
+    // إذا لم يوجد ويب هوك للحملات الجماعية، استخدم الويب هوك المناسب
+    if (!webhooks || webhooks.length === 0) {
+      console.log('⚠️ لا يوجد ويب هوك للحملات الجماعية، جاري البحث عن بديل...');
+      
+      // تحديد نوع الـ webhook حسب محتوى الرسالة
+      webhookType = 'outgoing'; // افتراضي للطلبات العادية
+      
+      // إذا كانت الرسالة تحتوي على رابط جوجل أو كلمة تقييم، استخدم ويب هوك التقييمات
+      if (message.message_content?.includes('google.com') || 
+          message.message_content?.includes('تقييم') ||
+          message.message_content?.includes('جوجل') ||
+          message.message_content?.includes('خرائط جوجل') ||
+          message.message_content?.includes('writereview') ||
+          message.message_content?.includes('نرجو منك تقييم') ||
+          message.message_content?.includes('نرجو تقييم')) {
+        webhookType = 'evaluation';
+        console.log('🌟 رسالة تقييم تم اكتشافها - استخدام ويب هوك التقييمات');
+      }
+      
+      // جلب الـ webhook المناسب
+      const { data: alternativeWebhooks, error: altError } = await supabase
         .from('webhook_settings')
         .select('*')
         .eq('is_active', true)
-        .eq('webhook_type', 'outgoing');
+        .eq('webhook_type', webhookType);
       
-      webhooks = fallbackWebhooks;
-      webhookError = fallbackError;
+      webhooks = alternativeWebhooks;
+      webhookError = altError;
+
+      // إذا لم يوجد ويب هوك للتقييمات، جرب ويب هوك الطلبات كبديل
+      if ((!webhooks || webhooks.length === 0) && webhookType === 'evaluation') {
+        console.log('⚠️ لا يوجد ويب هوك للتقييمات، جاري المحاولة مع ويب هوك الطلبات...');
+        const { data: fallbackWebhooks, error: fallbackError } = await supabase
+          .from('webhook_settings')
+          .select('*')
+          .eq('is_active', true)
+          .eq('webhook_type', 'outgoing');
+        
+        webhooks = fallbackWebhooks;
+        webhookError = fallbackError;
+      }
+    } else {
+      console.log('✅ تم العثور على ويب هوك الحملات الجماعية');
     }
 
     if (webhookError) {
