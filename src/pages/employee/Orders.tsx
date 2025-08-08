@@ -2373,13 +2373,12 @@ ${publicFileUrl}
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                        <div className="space-y-2">
                          <Label htmlFor={`item_name_${index}`}>اسم البند</Label>
-                         <ItemNameSelect
-                           services={services}
+                         <Input
+                           id={`item_name_${index}`}
+                           type="text"
                            value={item.item_name}
-                           onValueChange={(value) => {
-                             updateOrderItem(index, 'item_name', value);
-                           }}
-                           placeholder="اختر من الخدمات أو اكتب اسماً جديداً..."
+                           onChange={(e) => updateOrderItem(index, 'item_name', e.target.value)}
+                           placeholder="اكتب اسم البند..."
                          />
                        </div>
 
