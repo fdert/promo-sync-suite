@@ -51,6 +51,7 @@ import BarcodeSettings from "./pages/admin/BarcodeSettings";
 import FollowUpSettings from "./pages/admin/FollowUpSettings";
 import FinancialMovements from "./pages/admin/FinancialMovements";
 import EmployeeFinancialMovements from "./pages/employee/FinancialMovements";
+import PricingCalculatorPage from "./pages/employee/PricingCalculator";
 
 import OrderPayments from "./pages/admin/OrderPayments";
 
@@ -95,6 +96,7 @@ const App = () => (
               <Route path="accounts-overview" element={<AccountsOverview />} />
               <Route path="financial-reports" element={<FinancialReports />} />
               <Route path="financial-movements" element={<EmployeeFinancialMovements />} />
+              <Route path="pricing-calculator" element={<PricingCalculatorPage />} />
               <Route path="reports" element={<EmployeeReports />} />
             </Route>
             <Route path="/admin" element={

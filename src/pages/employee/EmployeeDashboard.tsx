@@ -11,7 +11,6 @@ import {
   Star,
   TrendingUp,
 } from "lucide-react";
-import PricingCalculator from "@/components/PricingCalculator";
 
 interface DashboardStats {
   totalCustomers: number;
@@ -192,9 +191,6 @@ const EmployeeDashboard = () => {
           </CardContent>
         </Card>
       </div>
-
-      {/* حاسبة التسعيرات الأولية */}
-      <PricingCalculator />
 
       {/* معلومات المستخدم */}
       <Card>

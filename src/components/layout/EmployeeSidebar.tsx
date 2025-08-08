@@ -12,6 +12,7 @@ import {
   TrendingUp,
   Archive,
   Settings,
+  Calculator,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -91,6 +92,12 @@ const employeeMenuItems = [
     title: "الحركة المالية للطلبات",
     icon: TrendingUp,
     href: "/employee/financial-movements",
+    allowedRoles: ['employee'] as UserRole[],
+  },
+  {
+    title: "حاسبة التسعيرات الأولية",
+    icon: Calculator,
+    href: "/employee/pricing-calculator",
     allowedRoles: ['employee'] as UserRole[],
   },
 ];
