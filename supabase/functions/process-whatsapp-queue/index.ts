@@ -84,6 +84,9 @@ Deno.serve(async (req) => {
 
         if (updateError) {
           console.error(`خطأ في تحديث الرسالة ${message.id}:`, updateError);
+        } else {
+          // تحديث إحصائيات الحملة إذا كانت الرسالة جزء من حملة جماعية
+          await updateCampaignStats(message.customer_id, success);
         }
 
         results.push({
@@ -274,5 +277,156 @@ async function sendToWhatsAppService(message: any): Promise<boolean> {
   } catch (error) {
     console.error('خطأ في إرسال الرسالة للواتس آب:', error);
     return false;
+  }
+}
+
+// دالة مساعدة لتحديث إحصائيات الحملات الجماعية
+async function updateCampaignStats(customer_id: any, success: boolean): Promise<void> {
+  try {
+    // البحث عن الحملة الجماعية المرتبطة بهذا العميل
+    const { data: campaignMessage, error: campaignError } = await supabase
+      .from('bulk_campaign_messages')
+      .select('campaign_id')
+      .eq('customer_id', customer_id)
+      .eq('status', 'queued')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (campaignError || !campaignMessage) {
+      // ليس جزء من حملة جماعية، تجاهل
+      return;
+    }
+
+    const campaignId = campaignMessage.campaign_id;
+
+    // تحديث حالة الرسالة في جدول الحملة
+    await supabase
+      .from('bulk_campaign_messages')
+      .update({ 
+        status: success ? 'sent' : 'failed',
+        sent_at: success ? new Date().toISOString() : null,
+        error_message: success ? null : 'فشل الإرسال'
+      })
+      .eq('campaign_id', campaignId)
+      .eq('customer_id', customer_id);
+
+    // حساب الإحصائيات المحدثة للحملة
+    const { data: stats } = await supabase
+      .from('bulk_campaign_messages')
+      .select('status')
+      .eq('campaign_id', campaignId);
+
+    if (stats) {
+      const sentCount = stats.filter(s => s.status === 'sent').length;
+      const failedCount = stats.filter(s => s.status === 'failed').length;
+      const pendingCount = stats.filter(s => s.status === 'pending' || s.status === 'queued').length;
+      const totalCount = stats.length;
+
+      // تحديث إحصائيات الحملة
+      const campaignStatus = pendingCount === 0 ? 'completed' : 'processing';
+      
+      await supabase
+        .from('bulk_campaigns')
+        .update({
+          sent_count: sentCount,
+          failed_count: failedCount,
+          status: campaignStatus,
+          completed_at: campaignStatus === 'completed' ? new Date().toISOString() : null
+        })
+        .eq('id', campaignId);
+
+      console.log(`🔄 تحديث إحصائيات الحملة ${campaignId}: أُرسل ${sentCount}، فشل ${failedCount}، معلق ${pendingCount}`);
+
+      // إرسال webhook للحملة المكتملة
+      if (campaignStatus === 'completed') {
+        await sendCampaignWebhook(campaignId, sentCount, failedCount, totalCount);
+      }
+    }
+
+  } catch (error) {
+    console.error('خطأ في تحديث إحصائيات الحملة:', error);
+  }
+}
+
+// دالة إرسال webhook للحملات المكتملة
+async function sendCampaignWebhook(campaignId: string, sentCount: number, failedCount: number, totalCount: number): Promise<void> {
+  try {
+    console.log(`📡 إرسال webhook للحملة المكتملة ${campaignId}`);
+
+    // جلب بيانات الحملة
+    const { data: campaign } = await supabase
+      .from('bulk_campaigns')
+      .select('*')
+      .eq('id', campaignId)
+      .single();
+
+    if (!campaign) return;
+
+    // البحث عن webhook للحملات الجماعية
+    const { data: webhook } = await supabase
+      .from('webhook_settings')
+      .select('*')
+      .eq('webhook_type', 'bulk_campaign')
+      .eq('is_active', true)
+      .single();
+
+    if (!webhook) {
+      console.log('⚠️ لم يتم العثور على webhook نشط للحملات الجماعية');
+      return;
+    }
+
+    // إعداد البيانات للإرسال
+    const webhookData = {
+      campaign_id: campaignId,
+      campaign_name: campaign.name,
+      status: 'completed',
+      total_recipients: totalCount,
+      sent_count: sentCount,
+      failed_count: failedCount,
+      message_content: campaign.message_content,
+      target_type: campaign.target_type,
+      target_groups: campaign.target_groups || [],
+      started_at: campaign.started_at,
+      completed_at: campaign.completed_at,
+      created_by: campaign.created_by,
+      webhook_triggered_at: new Date().toISOString(),
+      trigger_type: 'campaign_completed',
+      success_rate: totalCount > 0 ? ((sentCount / totalCount) * 100).toFixed(2) : '0.00',
+      platform: 'Lovable WhatsApp System',
+      version: '1.0'
+    };
+
+    // إرسال للـ webhook
+    const response = await fetch(webhook.webhook_url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'Lovable-WhatsApp-Webhook/1.0'
+      },
+      body: JSON.stringify(webhookData)
+    });
+
+    // تسجيل النتيجة
+    await supabase
+      .from('webhook_logs')
+      .insert({
+        webhook_type: 'bulk_campaign',
+        campaign_id: campaignId,
+        webhook_url: webhook.webhook_url,
+        trigger_type: 'campaign_completed',
+        status: response.ok ? 'sent' : 'failed',
+        response_data: webhookData,
+        error_message: response.ok ? null : `HTTP ${response.status}: ${response.statusText}`
+      });
+
+    if (response.ok) {
+      console.log(`✅ تم إرسال webhook الحملة بنجاح إلى ${webhook.webhook_url}`);
+    } else {
+      console.error(`❌ فشل إرسال webhook الحملة: ${response.status} - ${response.statusText}`);
+    }
+
+  } catch (error) {
+    console.error('خطأ في إرسال webhook الحملة:', error);
   }
 }
