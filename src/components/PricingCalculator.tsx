@@ -77,9 +77,7 @@ const PricingCalculator = () => {
               <Label htmlFor="boardPrice">سعر اللوح الكامل (ر.س)</Label>
               <Input
                 id="boardPrice"
-                type="number"
-                min="0"
-                step="0.01"
+                type="text"
                 value={calculation.boardPrice || ''}
                 onChange={(e) => updateField('boardPrice', parseFloat(e.target.value) || 0)}
                 placeholder="0.00"
@@ -89,9 +87,7 @@ const PricingCalculator = () => {
               <Label htmlFor="boardLength">طول اللوح (سم)</Label>
               <Input
                 id="boardLength"
-                type="number"
-                min="0"
-                step="0.1"
+                type="text"
                 value={calculation.boardLength || ''}
                 onChange={(e) => updateField('boardLength', parseFloat(e.target.value) || 0)}
                 placeholder="0.0"
@@ -101,9 +97,7 @@ const PricingCalculator = () => {
               <Label htmlFor="boardWidth">عرض اللوح (سم)</Label>
               <Input
                 id="boardWidth"
-                type="number"
-                min="0"
-                step="0.1"
+                type="text"
                 value={calculation.boardWidth || ''}
                 onChange={(e) => updateField('boardWidth', parseFloat(e.target.value) || 0)}
                 placeholder="0.0"
@@ -120,9 +114,7 @@ const PricingCalculator = () => {
               <Label htmlFor="designLength">طول التصميم (سم)</Label>
               <Input
                 id="designLength"
-                type="number"
-                min="0"
-                step="0.1"
+                type="text"
                 value={calculation.designLength || ''}
                 onChange={(e) => updateField('designLength', parseFloat(e.target.value) || 0)}
                 placeholder="0.0"
@@ -132,9 +124,7 @@ const PricingCalculator = () => {
               <Label htmlFor="designWidth">عرض التصميم (سم)</Label>
               <Input
                 id="designWidth"
-                type="number"
-                min="0"
-                step="0.1"
+                type="text"
                 value={calculation.designWidth || ''}
                 onChange={(e) => updateField('designWidth', parseFloat(e.target.value) || 0)}
                 placeholder="0.0"
@@ -144,9 +134,7 @@ const PricingCalculator = () => {
               <Label htmlFor="quantity">الكمية</Label>
               <Input
                 id="quantity"
-                type="number"
-                min="1"
-                step="1"
+                type="text"
                 value={calculation.quantity || ''}
                 onChange={(e) => updateField('quantity', parseInt(e.target.value) || 1)}
                 placeholder="1"
