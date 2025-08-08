@@ -341,7 +341,7 @@ const Customers = () => {
           customer.name.includes('◆') || 
           customer.name.includes('�') ||
           customer.name.includes('??') ||
-          /[^\u0600-\u06FF\u0020-\u007E\s]/.test(customer.name) // رموز غير عربية أو إنجليزية
+          customer.import_source === 'CSV Import'
         )
       );
 
@@ -353,81 +353,147 @@ const Customers = () => {
         return;
       }
 
-      // عرض حوار تأكيد
-      const confirmed = window.confirm(
-        `تم العثور على ${problematicCustomers.length} عميل قد يحتاج لإصلاح الاسم. هل تريد المتابعة؟\n\n` +
-        `أمثلة على الأسماء المتأثرة:\n${problematicCustomers.slice(0, 3).map(c => `• ${c.name}`).join('\n')}`
-      );
+      // طلب ملف جديد لاستخراج الأسماء الصحيحة منه
+      const fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.accept = '.csv';
+      fileInput.onchange = async (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        if (!file) return;
 
-      if (!confirmed) return;
-
-      toast({
-        title: "جاري الإصلاح...",
-        description: "يتم إصلاح أسماء العملاء، يرجى الانتظار",
-      });
-
-      // محاولة إصلاح الأسماء باستخدام ترميزات مختلفة
-      const fixedCustomers = problematicCustomers.map(customer => {
-        let fixedName = customer.name;
-        
-        // محاولات إصلاح مختلفة
         try {
-          // إزالة الرموز الغريبة واستبدالها بنص افتراضي إذا لزم الأمر
-          if (fixedName.includes('◆')) {
-            // محاولة فك الترميز إذا كان محفوظاً بشكل خاطئ
-            fixedName = fixedName.replace(/◆+/g, 'عميل');
+          toast({
+            title: "جاري الإصلاح...",
+            description: "يتم استخراج الأسماء الصحيحة من الملف",
+          });
+
+          // استخدام نفس منطق الاستيراد المحسن لقراءة الأسماء الصحيحة
+          const encodings = ['UTF-8', 'windows-1256', 'ISO-8859-6'];
+          let correctData: any[] = [];
+          
+          for (const encoding of encodings) {
+            try {
+              const parseResults = await new Promise((resolve) => {
+                Papa.parse(file, {
+                  encoding: encoding,
+                  skipEmptyLines: true,
+                  header: false,
+                  transform: (value) => value.replace(/[""'']/g, '').trim(),
+                  complete: resolve
+                });
+              });
+              
+              const rows = (parseResults as any).data as string[][];
+              
+              // فحص جودة البيانات
+              const hasGoodArabic = rows.some(row => 
+                row.some(cell => 
+                  cell && 
+                  !cell.includes('◆') && 
+                  !cell.includes('�') && 
+                  /[\u0600-\u06FF]/.test(cell)
+                )
+              );
+              
+              if (hasGoodArabic || encoding === 'UTF-8') {
+                // تحديد إذا كان السطر الأول عناوين
+                const firstRow = rows[0];
+                const hasHeaders = firstRow && firstRow.some(cell => 
+                  cell?.includes('اسم') || 
+                  cell?.includes('الاسم') || 
+                  cell?.includes('Name')
+                );
+                
+                const dataRows = hasHeaders ? rows.slice(1) : rows;
+                
+                correctData = dataRows
+                  .map(row => {
+                    if (!row || row.length < 2) return null;
+                    
+                    const name = String(row[0] || '').trim();
+                    const phone = String(row[1] || '').trim();
+                    
+                    if (!name || !phone) return null;
+                    
+                    return { name, phone };
+                  })
+                  .filter(item => item !== null);
+                
+                console.log(`✅ تم استخراج ${correctData.length} اسم صحيح باستخدام ${encoding}`);
+                break;
+              }
+            } catch (err) {
+              continue;
+            }
           }
-          
-          if (fixedName.includes('�')) {
-            fixedName = fixedName.replace(/�+/g, 'عميل');
+
+          if (correctData.length === 0) {
+            toast({
+              title: "خطأ",
+              description: "لم نتمكن من استخراج الأسماء الصحيحة من الملف",
+              variant: "destructive",
+            });
+            return;
           }
-          
-          // تنظيف إضافي
-          fixedName = fixedName.replace(/[^\u0600-\u06FF\u0020-\u007E\s]/g, '').trim();
-          
-          // إذا كان الاسم فارغاً بعد التنظيف، استخدم اسم افتراضي
-          if (!fixedName || fixedName.length < 2) {
-            fixedName = `عميل ${customer.phone || customer.id.slice(-4)}`;
+
+          // مطابقة العملاء بأرقام الجوال وتحديث الأسماء
+          let updatedCount = 0;
+          const updatePromises = problematicCustomers.map(async (customer) => {
+            // البحث عن البيانات الصحيحة باستخدام رقم الجوال
+            const correctCustomer = correctData.find(item => item.phone === customer.phone);
+            
+            if (correctCustomer && correctCustomer.name !== customer.name) {
+              console.log(`🔄 تحديث العميل: ${customer.name} -> ${correctCustomer.name}`);
+              
+              const { error } = await supabase
+                .from('customers')
+                .update({ name: correctCustomer.name })
+                .eq('id', customer.id);
+                
+              if (!error) {
+                updatedCount++;
+                return true;
+              } else {
+                console.error('خطأ في تحديث العميل:', error);
+                return false;
+              }
+            }
+            return false;
+          });
+
+          await Promise.all(updatePromises);
+
+          if (updatedCount > 0) {
+            toast({
+              title: "تم الإصلاح بنجاح",
+              description: `تم إصلاح أسماء ${updatedCount} عميل`,
+            });
+            fetchCustomers();
+          } else {
+            toast({
+              title: "لا توجد تحديثات",
+              description: "لم يتم العثور على أسماء جديدة للتحديث",
+            });
           }
           
         } catch (error) {
-          console.error('خطأ في إصلاح الاسم:', error);
-          fixedName = `عميل ${customer.phone || customer.id.slice(-4)}`;
+          console.error('خطأ في إصلاح الأسماء:', error);
+          toast({
+            title: "خطأ",
+            description: "حدث خطأ في إصلاح الأسماء",
+            variant: "destructive",
+          });
         }
+      };
 
-        return {
-          ...customer,
-          name: fixedName
-        };
-      });
-
-      // تحديث قاعدة البيانات
-      const updatePromises = fixedCustomers.map(customer => 
-        supabase
-          .from('customers')
-          .update({ name: customer.name })
-          .eq('id', customer.id)
+      // عرض رسالة للمستخدم ثم فتح نافذة اختيار الملف
+      const confirmed = window.confirm(
+        `تم العثور على ${problematicCustomers.length} عميل يحتاج لإصلاح الاسم.\n\nسيتم طلب رفع نفس ملف CSV الأصلي لاستخراج الأسماء الصحيحة منه.\n\nهل تريد المتابعة؟`
       );
 
-      const results = await Promise.all(updatePromises);
-      const failures = results.filter(result => result.error);
-
-      if (failures.length > 0) {
-        console.error('أخطاء في التحديث:', failures);
-        toast({
-          title: "تم الإصلاح جزئياً",
-          description: `تم إصلاح ${fixedCustomers.length - failures.length} عميل، فشل ${failures.length}`,
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "تم الإصلاح بنجاح",
-          description: `تم إصلاح أسماء ${fixedCustomers.length} عميل`,
-        });
+      if (confirmed) {
+        fileInput.click();
       }
-
-      // تحديث القائمة
-      fetchCustomers();
       
     } catch (error) {
       console.error('خطأ في إصلاح الأسماء:', error);
