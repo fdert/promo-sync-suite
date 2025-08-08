@@ -41,7 +41,80 @@ serve(async (req) => {
     console.log('معالجة الحملة:', campaign_id);
     console.log('نوع التفعيل:', trigger_type);
 
-    // جلب بيانات الحملة
+    // إذا كان اختبار، إرسال بيانات تجريبية
+    if (trigger_type === 'test' || campaign_id === 'test-campaign-id') {
+      const testData = {
+        campaign_id: 'test-campaign-id',
+        campaign_name: 'حملة تجريبية',
+        status: 'test',
+        total_recipients: 100,
+        sent_count: 95,
+        failed_count: 5,
+        message_content: 'رسالة تجريبية للاختبار',
+        target_type: 'all',
+        target_groups: [],
+        started_at: new Date().toISOString(),
+        completed_at: new Date().toISOString(),
+        created_by: 'test-user',
+        webhook_triggered_at: new Date().toISOString(),
+        trigger_type: 'test',
+        success_rate: '95.00',
+        platform: 'Lovable WhatsApp System',
+        version: '1.0',
+      };
+
+      console.log('إرسال بيانات تجريبية:', testData);
+
+      // إرسال الـ webhook إلى n8n أو أي منصة أخرى
+      if (webhook_url) {
+        console.log('إرسال webhook تجريبي إلى:', webhook_url);
+        
+        const webhookResponse = await fetch(webhook_url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'User-Agent': 'Lovable-WhatsApp-Webhook/1.0',
+          },
+          body: JSON.stringify(testData),
+        });
+
+        if (!webhookResponse.ok) {
+          console.error('فشل في إرسال الـ webhook التجريبي:', webhookResponse.statusText);
+          throw new Error(`فشل في إرسال الـ webhook: ${webhookResponse.statusText}`);
+        }
+
+        console.log('تم إرسال الـ webhook التجريبي بنجاح');
+      }
+
+      // حفظ سجل الـ webhook
+      await supabaseClient
+        .from('webhook_logs')
+        .insert({
+          webhook_type: 'bulk_campaign',
+          campaign_id: 'test-campaign-id',
+          webhook_url: webhook_url,
+          trigger_type: 'test',
+          status: 'sent',
+          response_data: testData,
+          created_at: new Date().toISOString(),
+        })
+        .select()
+        .maybeSingle();
+
+      return new Response(
+        JSON.stringify({ 
+          success: true,
+          message: 'تم إرسال webhook تجريبي بنجاح',
+          data: testData
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200 
+        }
+      );
+    }
+
+    // جلب بيانات الحملة الحقيقية
     const { data: campaign, error: campaignError } = await supabaseClient
       .from('bulk_campaigns')
       .select('*')
