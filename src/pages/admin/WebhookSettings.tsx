@@ -24,6 +24,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import WebhookManagement from "@/components/WebhookManagement";
+import BulkCampaignWebhookSettings from "@/components/BulkCampaignWebhookSettings";
 
 const WebhookSettings = () => {
   const [webhookSettings, setWebhookSettings] = useState<any[]>([]);
@@ -206,10 +207,14 @@ const WebhookSettings = () => {
       </div>
 
       <Tabs defaultValue="whatsapp" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="whatsapp" className="gap-2">
             <MessageSquare className="h-4 w-4" />
             واتساب
+          </TabsTrigger>
+          <TabsTrigger value="bulk" className="gap-2">
+            <Send className="h-4 w-4" />
+            الإرسال الجماعي
           </TabsTrigger>
           <TabsTrigger value="orders" className="gap-2">
             <ClipboardList className="h-4 w-4" />
@@ -242,6 +247,11 @@ const WebhookSettings = () => {
             onTest={testWebhook}
             loading={loading}
           />
+        </TabsContent>
+
+        {/* Bulk Campaign Webhooks */}
+        <TabsContent value="bulk">
+          <BulkCampaignWebhookSettings />
         </TabsContent>
 
         {/* Order Webhooks */}
