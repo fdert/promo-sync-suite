@@ -231,18 +231,22 @@ async function sendToWhatsAppService(message: any): Promise<boolean> {
     }
     console.log(`📡 استخدام ويب هوك: ${webhook.webhook_name} (${webhook.webhook_type})`);
     
-    // إعداد payload للإرسال لـ n8n
+    // إعداد payload للإرسال لـ n8n متماشي مع اختبار الويب هوك
     const payload = {
-      to: message.to_number,
-      phone: message.to_number,
-      phoneNumber: message.to_number,
-      message: message.message_content,
-      messageText: message.message_content,
-      text: message.message_content,
-      type: 'text',
-      message_type: 'text',
-      timestamp: Math.floor(Date.now() / 1000),
-      customer_id: message.customer_id
+      event: 'bulk_campaign_message',
+      data: {
+        to: message.to_number,
+        phone: message.to_number,
+        phoneNumber: message.to_number,
+        message: message.message_content,
+        messageText: message.message_content,
+        text: message.message_content,
+        type: 'text',
+        message_type: 'text',
+        timestamp: Math.floor(Date.now() / 1000),
+        customer_id: message.customer_id,
+        test: false
+      }
     };
 
     console.log('إرسال للـ webhook:', webhook.webhook_url);
