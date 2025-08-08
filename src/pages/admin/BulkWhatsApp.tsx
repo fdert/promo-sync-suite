@@ -71,23 +71,32 @@ const BulkWhatsApp = () => {
 
   const fetchGroups = async () => {
     try {
-      // إضافة بيانات تجريبية مؤقتاً حتى يتم تحديث ملف الأنواع
-      setGroups([
-        {
-          id: "1",
-          name: "عملاء VIP",
-          description: "العملاء المميزون",
-          color: "#f59e0b",
-          member_count: 15
-        },
-        {
-          id: "2", 
-          name: "عملاء جدد",
-          description: "العملاء الجدد هذا الشهر",
-          color: "#10b981",
-          member_count: 8
-        }
-      ]);
+      // جلب المجموعات من localStorage مؤقتاً - نفس البيانات المستخدمة في صفحة CustomerGroups
+      const savedGroups = localStorage.getItem('customerGroups');
+      if (savedGroups) {
+        const parsedGroups = JSON.parse(savedGroups);
+        setGroups(parsedGroups);
+      } else {
+        // إذا لم توجد بيانات محفوظة، استخدم البيانات الافتراضية
+        const defaultGroups = [
+          {
+            id: "1",
+            name: "عملاء VIP",
+            description: "العملاء المميزون والدائمون",
+            color: "#f59e0b",
+            member_count: 15
+          },
+          {
+            id: "2",
+            name: "عملاء جدد",
+            description: "العملاء الجدد هذا الشهر",
+            color: "#10b981",
+            member_count: 8
+          }
+        ];
+        setGroups(defaultGroups);
+        localStorage.setItem('customerGroups', JSON.stringify(defaultGroups));
+      }
     } catch (error) {
       console.error('Error fetching groups:', error);
       toast.error('حدث خطأ في جلب المجموعات');

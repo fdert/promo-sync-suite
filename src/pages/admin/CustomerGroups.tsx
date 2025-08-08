@@ -54,25 +54,34 @@ const CustomerGroups = () => {
 
   const fetchGroups = async () => {
     try {
-      // البيانات الوهمية مؤقتاً - سيتم استبدالها بقاعدة البيانات الفعلية
-      setGroups([
-        {
-          id: "1",
-          name: "عملاء VIP",
-          description: "العملاء المميزون والدائمون",
-          color: "#f59e0b",
-          created_at: new Date().toISOString(),
-          member_count: 15
-        },
-        {
-          id: "2",
-          name: "عملاء جدد",
-          description: "العملاء الجدد هذا الشهر",
-          color: "#10b981",
-          created_at: new Date().toISOString(),
-          member_count: 8
-        }
-      ]);
+      // جلب المجموعات من localStorage مؤقتاً
+      const savedGroups = localStorage.getItem('customerGroups');
+      if (savedGroups) {
+        const parsedGroups = JSON.parse(savedGroups);
+        setGroups(parsedGroups);
+      } else {
+        // إذا لم توجد بيانات محفوظة، استخدم البيانات الافتراضية
+        const defaultGroups = [
+          {
+            id: "1",
+            name: "عملاء VIP",
+            description: "العملاء المميزون والدائمون",
+            color: "#f59e0b",
+            created_at: new Date().toISOString(),
+            member_count: 15
+          },
+          {
+            id: "2",
+            name: "عملاء جدد",
+            description: "العملاء الجدد هذا الشهر",
+            color: "#10b981",
+            created_at: new Date().toISOString(),
+            member_count: 8
+          }
+        ];
+        setGroups(defaultGroups);
+        localStorage.setItem('customerGroups', JSON.stringify(defaultGroups));
+      }
     } catch (error) {
       console.error('Error fetching groups:', error);
       toast.error('حدث خطأ في جلب المجموعات');
@@ -126,8 +135,10 @@ const CustomerGroups = () => {
         member_count: selectedCustomers.length
       };
       
-      // إضافة المجموعة للقائمة المحلية
-      setGroups(prev => [newGroup, ...prev]);
+      // إضافة المجموعة للقائمة المحلية وحفظها في localStorage
+      const updatedGroups = [newGroup, ...groups];
+      setGroups(updatedGroups);
+      localStorage.setItem('customerGroups', JSON.stringify(updatedGroups));
       
       toast.success('تم إنشاء المجموعة بنجاح');
       setShowCreateDialog(false);
@@ -144,8 +155,10 @@ const CustomerGroups = () => {
     if (!confirm('هل أنت متأكد من حذف هذه المجموعة؟')) return;
 
     try {
-      // حذف المجموعة من القائمة المحلية
-      setGroups(prev => prev.filter(group => group.id !== groupId));
+      // حذف المجموعة من القائمة المحلية وتحديث localStorage
+      const updatedGroups = groups.filter(group => group.id !== groupId);
+      setGroups(updatedGroups);
+      localStorage.setItem('customerGroups', JSON.stringify(updatedGroups));
       
       toast.success('تم حذف المجموعة بنجاح');
     } catch (error) {
