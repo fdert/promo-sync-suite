@@ -73,8 +73,11 @@ const BulkWhatsApp = () => {
     try {
       // جلب المجموعات من localStorage مؤقتاً - نفس البيانات المستخدمة في صفحة CustomerGroups
       const savedGroups = localStorage.getItem('customerGroups');
+      console.log('Saved groups from localStorage:', savedGroups);
+      
       if (savedGroups) {
         const parsedGroups = JSON.parse(savedGroups);
+        console.log('Parsed groups:', parsedGroups);
         setGroups(parsedGroups);
       } else {
         // إذا لم توجد بيانات محفوظة، استخدم البيانات الافتراضية
@@ -94,6 +97,7 @@ const BulkWhatsApp = () => {
             member_count: 8
           }
         ];
+        console.log('Using default groups:', defaultGroups);
         setGroups(defaultGroups);
         localStorage.setItem('customerGroups', JSON.stringify(defaultGroups));
       }
@@ -388,29 +392,39 @@ const BulkWhatsApp = () => {
                     <Card>
                       <CardContent className="pt-4">
                         <div className="space-y-3">
-                          {groups.map((group) => (
-                            <div key={group.id} className="flex items-center space-x-2 space-x-reverse">
-                              <Checkbox
-                                id={group.id}
-                                checked={selectedGroups.includes(group.id)}
-                                onCheckedChange={() => handleGroupToggle(group.id)}
-                              />
-                              <Label htmlFor={group.id} className="flex-1 cursor-pointer">
-                                <div className="flex justify-between items-center">
-                                  <div className="flex items-center gap-2">
-                                    <div
-                                      className="w-3 h-3 rounded-full"
-                                      style={{ backgroundColor: group.color }}
-                                    />
-                                    <span>{group.name}</span>
+                          {(() => {
+                            console.log('Rendering groups:', groups);
+                            return null;
+                          })()}
+                          {groups.length === 0 ? (
+                            <p className="text-center text-muted-foreground py-4">
+                              لا توجد مجموعات. يرجى إنشاء مجموعة أولاً من صفحة "مجموعات العملاء"
+                            </p>
+                          ) : (
+                            groups.map((group) => (
+                              <div key={group.id} className="flex items-center space-x-2 space-x-reverse">
+                                <Checkbox
+                                  id={group.id}
+                                  checked={selectedGroups.includes(group.id)}
+                                  onCheckedChange={() => handleGroupToggle(group.id)}
+                                />
+                                <Label htmlFor={group.id} className="flex-1 cursor-pointer">
+                                  <div className="flex justify-between items-center">
+                                    <div className="flex items-center gap-2">
+                                      <div
+                                        className="w-3 h-3 rounded-full"
+                                        style={{ backgroundColor: group.color }}
+                                      />
+                                      <span>{group.name}</span>
+                                    </div>
+                                    <Badge variant="secondary">
+                                      {group.member_count} عضو
+                                    </Badge>
                                   </div>
-                                  <Badge variant="secondary">
-                                    {group.member_count} عضو
-                                  </Badge>
-                                </div>
-                              </Label>
-                            </div>
-                          ))}
+                                </Label>
+                              </div>
+                            ))
+                          )}
                         </div>
                       </CardContent>
                     </Card>
