@@ -8,6 +8,8 @@ import { useToast } from "@/hooks/use-toast";
 
 interface PricingCalculation {
   boardPrice: number;
+  boardLength: number;
+  boardWidth: number;
   designLength: number;
   designWidth: number;
   designHeight: number;
@@ -18,6 +20,8 @@ const PricingCalculator = () => {
   const { toast } = useToast();
   const [calculation, setCalculation] = useState<PricingCalculation>({
     boardPrice: 0,
+    boardLength: 0,
+    boardWidth: 0,
     designLength: 0,
     designWidth: 0,
     designHeight: 0,
@@ -29,27 +33,18 @@ const PricingCalculator = () => {
   };
 
   // المعادلات
-  const boardLength = 240; // طول اللوح ثابت 240 سم
-  const boardWidth = 120; // عرض اللوح ثابت 120 سم
-  const boardThickness = 1; // سماكة اللوح افتراضية 1 سم للحساب
-  const boardArea = boardLength * boardWidth; // مساحة اللوح
-  const boardVolume = boardLength * boardWidth * boardThickness; // حجم اللوح
-  
+  const boardArea = calculation.boardLength * calculation.boardWidth;
+  const pricePerCm2 = boardArea > 0 ? calculation.boardPrice / boardArea : 0;
   const designVolume = calculation.designLength * calculation.designWidth * calculation.designHeight;
   const designArea = calculation.designLength * calculation.designWidth;
-  
-  // المستخدم من اللوح = حجم التصميم (أو مساحة إذا كان الارتفاع = 0)
-  const usedFromBoard = calculation.designHeight === 0 ? designArea : designVolume;
-  
-  // حساب السعر بناءً على النسبة المستخدمة
-  const pricePerUnit = calculation.designHeight === 0 
-    ? calculation.boardPrice / boardArea  // سعر لكل سم² إذا كان التصميم مسطح
-    : calculation.boardPrice / boardVolume; // سعر لكل سم³ إذا كان التصميم له ارتفاع
-    
-  const finalPrice = pricePerUnit * usedFromBoard * calculation.quantity;
+  const usedFromBoard = calculation.designHeight; // المستخدم من اللوح = الارتفاع (السماكة المطلوبة)
+  // السعر النهائي - إذا كان الارتفاع 0، احسب على المساحة فقط، وإلا احسب على الحجم
+  const finalPrice = calculation.designHeight === 0 
+    ? pricePerCm2 * designArea * calculation.quantity
+    : pricePerCm2 * designArea * calculation.designHeight * calculation.quantity;
 
   const copyResult = () => {
-    const result = `السعر النهائي: ${finalPrice.toFixed(2)} ر.س\nالكمية: ${calculation.quantity}\nمساحة التصميم: ${designArea} سم²\nحجم التصميم: ${designVolume} سم³\nالمستخدم من اللوح: ${usedFromBoard.toFixed(2)} ${calculation.designHeight === 0 ? 'سم²' : 'سم³'}\nسعر الوحدة: ${pricePerUnit.toFixed(4)} ر.س/${calculation.designHeight === 0 ? 'سم²' : 'سم³'}`;
+    const result = `السعر النهائي: ${finalPrice.toFixed(2)} ر.س\nالكمية: ${calculation.quantity}\nحجم التصميم: ${designVolume} سم³\nمساحة التصميم: ${designArea} سم²\nالمستخدم من اللوح: ${usedFromBoard} سم\nسعر السم²: ${pricePerCm2.toFixed(4)} ر.س`;
     navigator.clipboard.writeText(result);
     toast({
       title: "تم النسخ",
@@ -60,6 +55,8 @@ const PricingCalculator = () => {
   const resetCalculation = () => {
     setCalculation({
       boardPrice: 0,
+      boardLength: 0,
+      boardWidth: 0,
       designLength: 0,
       designWidth: 0,
       designHeight: 0,
@@ -95,18 +92,24 @@ const PricingCalculator = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label>طول اللوح (سم)</Label>
-              <div className="h-10 px-3 py-2 border border-input bg-background rounded-md flex items-center justify-between">
-                <span className="text-sm">240</span>
-                <span className="text-xs text-muted-foreground">(ثابت)</span>
-              </div>
+              <Label htmlFor="boardLength">طول اللوح (سم)</Label>
+              <Input
+                id="boardLength"
+                type="text"
+                value={calculation.boardLength}
+                onChange={(e) => updateField('boardLength', parseFloat(e.target.value) || 0)}
+                placeholder="0"
+              />
             </div>
             <div className="space-y-2">
-              <Label>عرض اللوح (سم)</Label>
-              <div className="h-10 px-3 py-2 border border-input bg-background rounded-md flex items-center justify-between">
-                <span className="text-sm">120</span>
-                <span className="text-xs text-muted-foreground">(ثابت)</span>
-              </div>
+              <Label htmlFor="boardWidth">عرض اللوح (سم)</Label>
+              <Input
+                id="boardWidth"
+                type="text"
+                value={calculation.boardWidth}
+                onChange={(e) => updateField('boardWidth', parseFloat(e.target.value) || 0)}
+                placeholder="0"
+              />
             </div>
           </div>
         </div>
@@ -164,11 +167,11 @@ const PricingCalculator = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label className="text-sm text-muted-foreground">مساحة اللوح (سم²)</Label>
-              <div className="text-lg font-medium">28800 سم² (ثابت)</div>
+              <div className="text-lg font-medium">{boardArea.toLocaleString()} سم²</div>
             </div>
             <div className="space-y-2">
-              <Label className="text-sm text-muted-foreground">سعر الوحدة</Label>
-              <div className="text-lg font-medium">{pricePerUnit.toFixed(6)} ر.س/{calculation.designHeight === 0 ? 'سم²' : 'سم³'}</div>
+              <Label className="text-sm text-muted-foreground">سعر لكل سم²</Label>
+              <div className="text-lg font-medium">{pricePerCm2.toFixed(4)} ر.س</div>
             </div>
             <div className="space-y-2">
               <Label className="text-sm text-muted-foreground">مساحة التصميم (سم²)</Label>
@@ -179,8 +182,8 @@ const PricingCalculator = () => {
               <div className="text-lg font-medium">{designVolume.toLocaleString()} سم³</div>
             </div>
             <div className="space-y-2">
-              <Label className="text-sm text-muted-foreground">المستخدم من اللوح</Label>
-              <div className="text-lg font-medium">{usedFromBoard.toFixed(2)} {calculation.designHeight === 0 ? 'سم²' : 'سم³'}</div>
+              <Label className="text-sm text-muted-foreground">المستخدم من اللوح (سم)</Label>
+              <div className="text-lg font-medium">{usedFromBoard} سم</div>
             </div>
             <div className="space-y-2">
               <Label className="text-sm text-muted-foreground">السعر النهائي</Label>
@@ -204,14 +207,13 @@ const PricingCalculator = () => {
         {/* معلومات إضافية */}
         <div className="text-xs text-muted-foreground space-y-1">
           <p><strong>المعادلات المستخدمة:</strong></p>
-          <p>• طول اللوح = 240 سم (ثابت)</p>
-          <p>• عرض اللوح = 120 سم (ثابت)</p>
-          <p>• مساحة اللوح = 240 × 120 = 28,800 سم² (ثابت)</p>
+          <p>• مساحة اللوح = طول اللوح × عرض اللوح</p>
+          <p>• سعر لكل سم² = سعر اللوح ÷ مساحة اللوح</p>
           <p>• مساحة التصميم = طول التصميم × عرض التصميم</p>
           <p>• حجم التصميم = طول التصميم × عرض التصميم × ارتفاع التصميم</p>
-          <p>• المستخدم من اللوح = مساحة التصميم (إذا الارتفاع = 0) أو حجم التصميم (إذا الارتفاع أكبر من 0)</p>
-          <p>• سعر الوحدة = سعر اللوح ÷ مساحة اللوح (للمسطح) أو ÷ حجم اللوح (للمجسم)</p>
-          <p>• السعر النهائي = سعر الوحدة × المستخدم من اللوح × الكمية</p>
+          <p>• المستخدم من اللوح = ارتفاع التصميم (السماكة المطلوبة)</p>
+          <p>• السعر النهائي = إذا الارتفاع = 0: السعر لكل سم² × مساحة التصميم × الكمية</p>
+          <p>• السعر النهائي = إذا الارتفاع أكبر من 0: السعر لكل سم² × مساحة التصميم × الارتفاع × الكمية</p>
         </div>
       </CardContent>
     </Card>
