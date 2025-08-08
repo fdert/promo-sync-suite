@@ -96,15 +96,15 @@ const employeeMenuItems = [
     allowedRoles: ['employee'] as UserRole[],
   },
   {
-    title: "حاسبة التسعيرات الأولية",
-    icon: Calculator,
-    href: "/employee/pricing-calculator",
-    allowedRoles: ['employee'] as UserRole[],
-  },
-  {
     title: "إرسال جماعي",
     icon: Send,
     href: "/employee/bulk-whatsapp",
+    allowedRoles: ['employee'] as UserRole[],
+  },
+  {
+    title: "حاسبة التسعيرات الأولية",
+    icon: Calculator,
+    href: "/employee/pricing-calculator",
     allowedRoles: ['employee'] as UserRole[],
   },
 ];

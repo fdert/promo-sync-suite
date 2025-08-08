@@ -54,8 +54,33 @@ const CustomerGroups = () => {
 
   const fetchGroups = async () => {
     try {
-      // تم إنشاء الجداول - سيتم تفعيل هذا بعد تحديث ملف الأنواع
-      setGroups([]);
+      // إضافة بيانات تجريبية مؤقتاً حتى يتم تحديث ملف الأنواع
+      setGroups([
+        {
+          id: "1",
+          name: "عملاء VIP",
+          description: "العملاء المميزون والدائمون",
+          color: "#f59e0b",
+          created_at: new Date().toISOString(),
+          member_count: 15
+        },
+        {
+          id: "2",
+          name: "عملاء جدد",
+          description: "العملاء الجدد هذا الشهر",
+          color: "#10b981",
+          created_at: new Date().toISOString(),
+          member_count: 8
+        },
+        {
+          id: "3",
+          name: "شركات كبيرة",
+          description: "الشركات والمؤسسات الكبيرة",
+          color: "#3b82f6",
+          created_at: new Date().toISOString(),
+          member_count: 12
+        }
+      ]);
     } catch (error) {
       console.error('Error fetching groups:', error);
       toast.error('حدث خطأ في جلب المجموعات');

@@ -59,7 +59,8 @@ const BulkWhatsApp = () => {
     message_content: "",
     target_type: "all" as 'all' | 'groups',
     scheduled_at: "",
-    selected_template: ""
+    selected_template: "",
+    delay_between_messages: 5
   });
 
   useEffect(() => {
@@ -70,8 +71,23 @@ const BulkWhatsApp = () => {
 
   const fetchGroups = async () => {
     try {
-      // تم إنشاء الجداول - سيتم تفعيل هذا بعد تحديث ملف الأنواع
-      setGroups([]);
+      // إضافة بيانات تجريبية مؤقتاً حتى يتم تحديث ملف الأنواع
+      setGroups([
+        {
+          id: "1",
+          name: "عملاء VIP",
+          description: "العملاء المميزون",
+          color: "#f59e0b",
+          member_count: 15
+        },
+        {
+          id: "2", 
+          name: "عملاء جدد",
+          description: "العملاء الجدد هذا الشهر",
+          color: "#10b981",
+          member_count: 8
+        }
+      ]);
     } catch (error) {
       console.error('Error fetching groups:', error);
       toast.error('حدث خطأ في جلب المجموعات');
@@ -80,8 +96,20 @@ const BulkWhatsApp = () => {
 
   const fetchCampaigns = async () => {
     try {
-      // تم إنشاء الجداول - سيتم تفعيل هذا بعد تحديث ملف الأنواع
-      setCampaigns([]);
+      // إضافة بيانات تجريبية مؤقتاً حتى يتم تحديث ملف الأنواع
+      setCampaigns([
+        {
+          id: "1",
+          name: "حملة ترحيبية",
+          message_content: "مرحباً {{customer_name}}، نرحب بك في خدماتنا المميزة!",
+          target_type: "all" as 'all' | 'groups',
+          status: "draft" as 'draft' | 'scheduled' | 'sending' | 'completed' | 'failed',
+          total_recipients: 50,
+          sent_count: 0,
+          failed_count: 0,
+          created_at: new Date().toISOString()
+        }
+      ]);
     } catch (error) {
       console.error('Error fetching campaigns:', error);
       toast.error('حدث خطأ في جلب الحملات');
@@ -129,8 +157,8 @@ const BulkWhatsApp = () => {
       } else {
         if (selectedGroups.length === 0) return 0;
 
-        // تم إنشاء الجداول - سيتم تفعيل هذا بعد تحديث ملف الأنواع
-        return 0;
+        // حساب تجريبي مؤقت حتى يتم تحديث ملف الأنواع
+        return selectedGroups.length * 10;
       }
     } catch (error) {
       console.error('Error calculating recipients:', error);
@@ -161,11 +189,12 @@ const BulkWhatsApp = () => {
         scheduled_at: formData.scheduled_at ? new Date(formData.scheduled_at).toISOString() : null,
         total_recipients: totalRecipients,
         status: formData.scheduled_at ? 'scheduled' : 'draft',
+        delay_between_messages: formData.delay_between_messages,
         created_by: user?.id
       };
 
-      // تم إنشاء الجداول - سيتم تفعيل هذا بعد تحديث ملف الأنواع
-      console.log('Campaign data:', campaignData);
+      // سيتم تفعيل الحفظ في قاعدة البيانات بعد تحديث ملف الأنواع
+      console.log('Campaign data with delay:', campaignData);
 
       toast.success('تم إنشاء الحملة بنجاح');
       setShowCreateDialog(false);
@@ -198,7 +227,8 @@ const BulkWhatsApp = () => {
       message_content: "",
       target_type: "all",
       scheduled_at: "",
-      selected_template: ""
+      selected_template: "",
+      delay_between_messages: 5
     });
     setSelectedGroups([]);
   };
@@ -277,6 +307,22 @@ const BulkWhatsApp = () => {
                     onChange={(e) => setFormData(prev => ({ ...prev, scheduled_at: e.target.value }))}
                   />
                 </div>
+              </div>
+
+              <div>
+                <Label htmlFor="delay_between_messages">الفاصل الزمني بين الرسائل (بالثواني)</Label>
+                <Input
+                  id="delay_between_messages"
+                  type="number"
+                  min="1"
+                  max="60"
+                  value={formData.delay_between_messages}
+                  onChange={(e) => setFormData(prev => ({ ...prev, delay_between_messages: parseInt(e.target.value) || 5 }))}
+                  placeholder="5"
+                />
+                <p className="text-sm text-muted-foreground mt-1">
+                  يُنصح بوضع فاصل زمني لتجنب حظر الواتساب (1-60 ثانية)
+                </p>
               </div>
 
               <div>
