@@ -12,6 +12,7 @@ interface PricingCalculation {
   boardWidth: number;
   designLength: number;
   designWidth: number;
+  designHeight: number;
   quantity: number;
 }
 
@@ -23,7 +24,8 @@ const PricingCalculator = () => {
     boardWidth: 0,
     designLength: 0,
     designWidth: 0,
-    quantity: 1,
+    designHeight: 0,
+    quantity: 0,
   });
 
   const updateField = (field: keyof PricingCalculation, value: number) => {
@@ -33,11 +35,12 @@ const PricingCalculator = () => {
   // المعادلات
   const boardArea = calculation.boardLength * calculation.boardWidth;
   const pricePerCm2 = boardArea > 0 ? calculation.boardPrice / boardArea : 0;
-  const designArea = calculation.designLength * calculation.designWidth;
-  const finalPrice = pricePerCm2 * designArea * calculation.quantity;
+  const designVolume = calculation.designLength * calculation.designWidth * calculation.designHeight;
+  const usedFromBoard = boardArea > 0 ? (designVolume / calculation.boardWidth) : 0; // المستخدم من اللوح
+  const finalPrice = pricePerCm2 * calculation.designLength * calculation.designWidth * calculation.quantity;
 
   const copyResult = () => {
-    const result = `السعر النهائي: ${finalPrice.toFixed(2)} ر.س\nالكمية: ${calculation.quantity}\nمساحة التصميم: ${designArea} سم²\nسعر السم²: ${pricePerCm2.toFixed(4)} ر.س`;
+    const result = `السعر النهائي: ${finalPrice.toFixed(2)} ر.س\nالكمية: ${calculation.quantity}\nحجم التصميم: ${designVolume} سم³\nالمستخدم من اللوح: ${usedFromBoard.toFixed(2)} سم\nسعر السم²: ${pricePerCm2.toFixed(4)} ر.س`;
     navigator.clipboard.writeText(result);
     toast({
       title: "تم النسخ",
@@ -52,7 +55,8 @@ const PricingCalculator = () => {
       boardWidth: 0,
       designLength: 0,
       designWidth: 0,
-      quantity: 1,
+      designHeight: 0,
+      quantity: 0,
     });
     toast({
       title: "تم إعادة التعيين",
@@ -78,9 +82,9 @@ const PricingCalculator = () => {
               <Input
                 id="boardPrice"
                 type="text"
-                value={calculation.boardPrice || ''}
+                value={calculation.boardPrice}
                 onChange={(e) => updateField('boardPrice', parseFloat(e.target.value) || 0)}
-                placeholder="0.00"
+                placeholder="0"
               />
             </div>
             <div className="space-y-2">
@@ -88,9 +92,9 @@ const PricingCalculator = () => {
               <Input
                 id="boardLength"
                 type="text"
-                value={calculation.boardLength || ''}
+                value={calculation.boardLength}
                 onChange={(e) => updateField('boardLength', parseFloat(e.target.value) || 0)}
-                placeholder="0.0"
+                placeholder="0"
               />
             </div>
             <div className="space-y-2">
@@ -98,9 +102,9 @@ const PricingCalculator = () => {
               <Input
                 id="boardWidth"
                 type="text"
-                value={calculation.boardWidth || ''}
+                value={calculation.boardWidth}
                 onChange={(e) => updateField('boardWidth', parseFloat(e.target.value) || 0)}
-                placeholder="0.0"
+                placeholder="0"
               />
             </div>
           </div>
@@ -109,15 +113,15 @@ const PricingCalculator = () => {
         {/* بيانات التصميم */}
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-foreground">بيانات التصميم</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-2">
               <Label htmlFor="designLength">طول التصميم (سم)</Label>
               <Input
                 id="designLength"
                 type="text"
-                value={calculation.designLength || ''}
+                value={calculation.designLength}
                 onChange={(e) => updateField('designLength', parseFloat(e.target.value) || 0)}
-                placeholder="0.0"
+                placeholder="0"
               />
             </div>
             <div className="space-y-2">
@@ -125,9 +129,19 @@ const PricingCalculator = () => {
               <Input
                 id="designWidth"
                 type="text"
-                value={calculation.designWidth || ''}
+                value={calculation.designWidth}
                 onChange={(e) => updateField('designWidth', parseFloat(e.target.value) || 0)}
-                placeholder="0.0"
+                placeholder="0"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="designHeight">ارتفاع التصميم (سم)</Label>
+              <Input
+                id="designHeight"
+                type="text"
+                value={calculation.designHeight}
+                onChange={(e) => updateField('designHeight', parseFloat(e.target.value) || 0)}
+                placeholder="0"
               />
             </div>
             <div className="space-y-2">
@@ -135,9 +149,9 @@ const PricingCalculator = () => {
               <Input
                 id="quantity"
                 type="text"
-                value={calculation.quantity || ''}
-                onChange={(e) => updateField('quantity', parseInt(e.target.value) || 1)}
-                placeholder="1"
+                value={calculation.quantity}
+                onChange={(e) => updateField('quantity', parseInt(e.target.value) || 0)}
+                placeholder="0"
               />
             </div>
           </div>
@@ -146,7 +160,7 @@ const PricingCalculator = () => {
         {/* النتائج */}
         <div className="space-y-4 p-4 bg-muted/50 rounded-lg border">
           <h3 className="text-lg font-semibold text-foreground">النتائج</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label className="text-sm text-muted-foreground">مساحة اللوح (سم²)</Label>
               <div className="text-lg font-medium">{boardArea.toLocaleString()} سم²</div>
@@ -156,8 +170,12 @@ const PricingCalculator = () => {
               <div className="text-lg font-medium">{pricePerCm2.toFixed(4)} ر.س</div>
             </div>
             <div className="space-y-2">
-              <Label className="text-sm text-muted-foreground">مساحة التصميم (سم²)</Label>
-              <div className="text-lg font-medium">{designArea.toLocaleString()} سم²</div>
+              <Label className="text-sm text-muted-foreground">حجم التصميم (سم³)</Label>
+              <div className="text-lg font-medium">{designVolume.toLocaleString()} سم³</div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm text-muted-foreground">المستخدم من اللوح (سم)</Label>
+              <div className="text-lg font-medium">{usedFromBoard.toFixed(2)} سم</div>
             </div>
             <div className="space-y-2">
               <Label className="text-sm text-muted-foreground">السعر النهائي</Label>
@@ -183,8 +201,9 @@ const PricingCalculator = () => {
           <p><strong>المعادلات المستخدمة:</strong></p>
           <p>• مساحة اللوح = طول اللوح × عرض اللوح</p>
           <p>• سعر لكل سم² = سعر اللوح ÷ مساحة اللوح</p>
-          <p>• مساحة التصميم = طول التصميم × عرض التصميم</p>
-          <p>• السعر النهائي = السعر لكل سم² × مساحة التصميم × الكمية</p>
+          <p>• حجم التصميم = طول التصميم × عرض التصميم × ارتفاع التصميم</p>
+          <p>• المستخدم من اللوح = حجم التصميم ÷ عرض اللوح</p>
+          <p>• السعر النهائي = السعر لكل سم² × طول التصميم × عرض التصميم × الكمية</p>
         </div>
       </CardContent>
     </Card>
