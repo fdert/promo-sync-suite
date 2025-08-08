@@ -92,11 +92,116 @@ Deno.serve(async (req) => {
 
     console.log('Message queued successfully:', messageData.id);
 
+    // البحث عن webhook settings مثلما يفعل send-pending-whatsapp
+    let webhookSettings;
+    
+    console.log('🔍 البحث عن ويب هوك الحملات الجماعية...');
+    
+    // البحث عن ويب هوك الحملات الجماعية أولاً
+    const { data: bulkCampaignWebhook, error: bulkError } = await supabase
+      .from('webhook_settings')
+      .select('webhook_url, webhook_type, webhook_name, is_active')
+      .eq('webhook_type', 'bulk_campaign')
+      .eq('is_active', true)
+      .maybeSingle();
+    
+    if (bulkCampaignWebhook?.webhook_url) {
+      webhookSettings = bulkCampaignWebhook;
+      console.log('✅ استخدام ويب هوك الحملات الجماعية:', webhookSettings.webhook_name);
+    } else {
+      console.log('⚠️ لا يوجد ويب هوك للحملات الجماعية، جاري البحث عن بديل...');
+      
+      // إذا لم يوجد، ابحث عن ويب هوك عادي
+      const { data: outgoingWebhook, error: outgoingError } = await supabase
+        .from('webhook_settings')
+        .select('webhook_url, webhook_type, webhook_name, is_active')
+        .eq('webhook_type', 'outgoing')
+        .eq('is_active', true)
+        .limit(1)
+        .maybeSingle();
+      
+      console.log('🔎 نتيجة البحث عن ويب هوك outgoing:', { 
+        data: outgoingWebhook, 
+        error: outgoingError,
+        hasUrl: !!outgoingWebhook?.webhook_url
+      });
+      
+      webhookSettings = outgoingWebhook;
+    }
+
+    console.log('📡 الويب هوك المختار نهائياً:', {
+      name: webhookSettings?.webhook_name,
+      type: webhookSettings?.webhook_type,
+      hasUrl: !!webhookSettings?.webhook_url,
+      url: webhookSettings?.webhook_url ? 'متوفر' : 'مفقود'
+    });
+
+    if (!webhookSettings?.webhook_url) {
+      console.error('❌ خطأ: لا يوجد ويب هوك نشط - No active webhook found');
+      return new Response(
+        JSON.stringify({ 
+          error: 'No webhook configured',
+          details: 'لا يوجد ويب هوك مكون بشكل صحيح'
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400
+        }
+      );
+    }
+
+    console.log('📡 استخدام ويب هوك:', webhookSettings.webhook_name, `(${webhookSettings.webhook_type})`);
+
+    // إعداد بيانات الرسالة للإرسال
+    const messagePayload = {
+      messaging_product: "whatsapp",
+      to: cleanPhone.replace('+', ''),
+      type: "text",
+      text: {
+        body: message
+      }
+    };
+
+    console.log('Sending message payload:', JSON.stringify(messagePayload, null, 2));
+
+    // إرسال الرسالة عبر webhook إلى n8n
+    const response = await fetch(webhookSettings.webhook_url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(messagePayload)
+    });
+
+    const responseData = await response.text();
+    console.log(`Webhook response:`, responseData);
+
+    let newStatus = 'sent';
+    
+    if (!response.ok) {
+      console.error(`Webhook failed:`, response.status, responseData);
+      newStatus = 'failed';
+    }
+
+    // تحديث حالة الرسالة
+    const { error: updateError } = await supabase
+      .from('whatsapp_messages')
+      .update({ 
+        status: newStatus,
+        replied_at: new Date().toISOString()
+      })
+      .eq('id', messageData.id);
+
+    if (updateError) {
+      console.error(`Error updating message:`, updateError);
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: 'تم إرسال الرسالة بنجاح',
-        messageId: messageData.id
+        message: newStatus === 'sent' ? 'تم إرسال الرسالة بنجاح' : 'تم إدخال الرسالة في قائمة الانتظار',
+        messageId: messageData.id,
+        status: newStatus
       }),
       { 
         status: 200, 
