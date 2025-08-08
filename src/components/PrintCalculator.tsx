@@ -117,7 +117,7 @@ const PrintCalculator = () => {
             <div className="space-y-2">
               <Label>طول الرول (متر)</Label>
               <div className="h-10 px-3 py-2 border border-input bg-background rounded-md flex items-center justify-between">
-                <span className="text-sm">50 متر</span>
+                <span className="text-sm">50</span>
                 <span className="text-xs text-muted-foreground">(ثابت)</span>
               </div>
             </div>
