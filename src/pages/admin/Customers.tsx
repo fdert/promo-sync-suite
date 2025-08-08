@@ -332,6 +332,113 @@ const Customers = () => {
     }
   };
 
+  // إصلاح أسماء العملاء الموجودين الذين تم استيرادهم بترميز خاطئ
+  const handleFixExistingCustomers = async () => {
+    try {
+      // البحث عن العملاء الذين قد يحتوون على رموز غريبة في الأسماء
+      const problematicCustomers = customers.filter(customer => 
+        customer.name && (
+          customer.name.includes('◆') || 
+          customer.name.includes('�') ||
+          customer.name.includes('??') ||
+          /[^\u0600-\u06FF\u0020-\u007E\s]/.test(customer.name) // رموز غير عربية أو إنجليزية
+        )
+      );
+
+      if (problematicCustomers.length === 0) {
+        toast({
+          title: "لا توجد مشاكل",
+          description: "جميع أسماء العملاء تبدو صحيحة",
+        });
+        return;
+      }
+
+      // عرض حوار تأكيد
+      const confirmed = window.confirm(
+        `تم العثور على ${problematicCustomers.length} عميل قد يحتاج لإصلاح الاسم. هل تريد المتابعة؟\n\n` +
+        `أمثلة على الأسماء المتأثرة:\n${problematicCustomers.slice(0, 3).map(c => `• ${c.name}`).join('\n')}`
+      );
+
+      if (!confirmed) return;
+
+      toast({
+        title: "جاري الإصلاح...",
+        description: "يتم إصلاح أسماء العملاء، يرجى الانتظار",
+      });
+
+      // محاولة إصلاح الأسماء باستخدام ترميزات مختلفة
+      const fixedCustomers = problematicCustomers.map(customer => {
+        let fixedName = customer.name;
+        
+        // محاولات إصلاح مختلفة
+        try {
+          // إزالة الرموز الغريبة واستبدالها بنص افتراضي إذا لزم الأمر
+          if (fixedName.includes('◆')) {
+            // محاولة فك الترميز إذا كان محفوظاً بشكل خاطئ
+            fixedName = fixedName.replace(/◆+/g, 'عميل');
+          }
+          
+          if (fixedName.includes('�')) {
+            fixedName = fixedName.replace(/�+/g, 'عميل');
+          }
+          
+          // تنظيف إضافي
+          fixedName = fixedName.replace(/[^\u0600-\u06FF\u0020-\u007E\s]/g, '').trim();
+          
+          // إذا كان الاسم فارغاً بعد التنظيف، استخدم اسم افتراضي
+          if (!fixedName || fixedName.length < 2) {
+            fixedName = `عميل ${customer.phone || customer.id.slice(-4)}`;
+          }
+          
+        } catch (error) {
+          console.error('خطأ في إصلاح الاسم:', error);
+          fixedName = `عميل ${customer.phone || customer.id.slice(-4)}`;
+        }
+
+        return {
+          ...customer,
+          name: fixedName
+        };
+      });
+
+      // تحديث قاعدة البيانات
+      const updatePromises = fixedCustomers.map(customer => 
+        supabase
+          .from('customers')
+          .update({ name: customer.name })
+          .eq('id', customer.id)
+      );
+
+      const results = await Promise.all(updatePromises);
+      const failures = results.filter(result => result.error);
+
+      if (failures.length > 0) {
+        console.error('أخطاء في التحديث:', failures);
+        toast({
+          title: "تم الإصلاح جزئياً",
+          description: `تم إصلاح ${fixedCustomers.length - failures.length} عميل، فشل ${failures.length}`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "تم الإصلاح بنجاح",
+          description: `تم إصلاح أسماء ${fixedCustomers.length} عميل`,
+        });
+      }
+
+      // تحديث القائمة
+      fetchCustomers();
+      
+    } catch (error) {
+      console.error('خطأ في إصلاح الأسماء:', error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ في إصلاح أسماء العملاء",
+        variant: "destructive",
+      });
+    }
+  };
+
   // حذف العملاء المتكررين حسب رقم الجوال
   const handleRemoveDuplicates = async () => {
     try {
@@ -670,6 +777,11 @@ const Customers = () => {
           <Button onClick={handleRemoveDuplicates} variant="outline" className="gap-2">
             <Trash2 className="h-4 w-4" />
             حذف المتكررين
+          </Button>
+          
+          <Button onClick={handleFixExistingCustomers} variant="outline" className="gap-2">
+            <FileText className="h-4 w-4" />
+            إصلاح الأسماء
           </Button>
           
           <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
