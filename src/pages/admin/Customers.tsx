@@ -151,7 +151,10 @@ const Customers = () => {
     }
 
     try {
-      const text = await importFile.text();
+      // قراءة الملف بتشفير UTF-8 لدعم العربي
+      const arrayBuffer = await importFile.arrayBuffer();
+      const decoder = new TextDecoder('utf-8');
+      const text = decoder.decode(arrayBuffer);
       console.log('محتوى الملف الخام:', text);
       
       // تنظيف النص وإزالة BOM إذا وجد
@@ -166,21 +169,26 @@ const Customers = () => {
         rows[0].includes('الاسم') || 
         rows[0].includes('اسم') || 
         rows[0].includes('Name') ||
-        rows[0].includes('name')
+        rows[0].includes('name') ||
+        rows[0].includes('رقم') ||
+        rows[0].includes('جوال') ||
+        rows[0].includes('phone')
       );
       
       // تجاهل السطر الأول إذا كان يحتوي على عناوين
       const dataRows = hasHeaders ? rows.slice(1) : rows;
       console.log('سطور البيانات:', dataRows);
       
-      const customers = dataRows
+      const newCustomers = dataRows
         .map((row, index) => {
           // تنظيف السطر وإزالة المساحات الزائدة
           const cleanRow = row.trim();
           if (!cleanRow) return null;
           
           // تقسيم السطر بناءً على الفاصلة أو الفاصلة المنقوطة أو التاب
-          const fields = cleanRow.split(/[,;\t]/).map(field => field?.trim().replace(/"/g, ''));
+          const fields = cleanRow.split(/[,;\t]/).map(field => 
+            field?.trim().replace(/"/g, '').replace(/'/g, '')
+          );
           const [name, phone] = fields;
           
           console.log(`معالجة السطر ${index + 1}: الاسم="${name}", الهاتف="${phone}"`);
@@ -199,9 +207,9 @@ const Customers = () => {
         })
         .filter(customer => customer !== null);
         
-      console.log('العملاء النهائيون:', customers);
+      console.log('العملاء الجدد قبل فحص التكرار:', newCustomers);
 
-      if (customers.length === 0) {
+      if (newCustomers.length === 0) {
         toast({
           title: "خطأ",
           description: "لم يتم العثور على بيانات صالحة في الملف",
@@ -210,9 +218,33 @@ const Customers = () => {
         return;
       }
 
+      // فحص التكرار مع العملاء الموجودين
+      const existingPhones = customers.map(c => c.phone);
+      const uniqueCustomers = newCustomers.filter(newCustomer => 
+        !existingPhones.includes(newCustomer.phone)
+      );
+      
+      // إزالة التكرار داخل البيانات المستوردة نفسها
+      const finalCustomers = uniqueCustomers.filter((customer, index, self) =>
+        index === self.findIndex(c => c.phone === customer.phone)
+      );
+      
+      const duplicateCount = newCustomers.length - finalCustomers.length;
+      
+      console.log('العملاء النهائيون بعد إزالة التكرار:', finalCustomers);
+
+      if (finalCustomers.length === 0) {
+        toast({
+          title: "تنبيه",
+          description: `جميع العملاء موجودون مسبقاً (${duplicateCount} عميل متكرر)`,
+          variant: "destructive",
+        });
+        return;
+      }
+
       const { error } = await supabase
         .from('customers')
-        .insert(customers);
+        .insert(finalCustomers);
 
       if (error) {
         console.error('Import error:', error);
@@ -226,7 +258,7 @@ const Customers = () => {
 
       toast({
         title: "نجح",
-        description: `تم استيراد ${customers.length} عميل بنجاح`,
+        description: `تم استيراد ${finalCustomers.length} عميل بنجاح${duplicateCount > 0 ? ` (تم تجاهل ${duplicateCount} عميل متكرر)` : ''}`,
       });
 
       setIsImportDialogOpen(false);
@@ -237,6 +269,64 @@ const Customers = () => {
       toast({
         title: "خطأ",
         description: "حدث خطأ في قراءة الملف",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // حذف العملاء المتكررين حسب رقم الجوال
+  const handleRemoveDuplicates = async () => {
+    try {
+      // البحث عن العملاء المتكررين
+      const phoneGroups: { [key: string]: any[] } = {};
+      customers.forEach(customer => {
+        if (customer.phone) {
+          if (!phoneGroups[customer.phone]) {
+            phoneGroups[customer.phone] = [];
+          }
+          phoneGroups[customer.phone].push(customer);
+        }
+      });
+
+      // العثور على المتكررين
+      const duplicates: any[] = [];
+      Object.values(phoneGroups).forEach((group: any[]) => {
+        if (group.length > 1) {
+          // الاحتفاظ بالأحدث وحذف الباقي
+          const sorted = group.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+          duplicates.push(...sorted.slice(1)); // حذف كل شيء عدا الأول (الأحدث)
+        }
+      });
+
+      if (duplicates.length === 0) {
+        toast({
+          title: "لا توجد متكررات",
+          description: "لا توجد عملاء متكررين للحذف",
+        });
+        return;
+      }
+
+      // حذف العملاء المتكررين
+      const { error } = await supabase
+        .from('customers')
+        .delete()
+        .in('id', duplicates.map(d => d.id));
+
+      if (error) {
+        throw error;
+      }
+
+      await fetchCustomers();
+      
+      toast({
+        title: "تم حذف المتكررين",
+        description: `تم حذف ${duplicates.length} عميل متكرر بنجاح`,
+      });
+    } catch (error) {
+      console.error('Error removing duplicates:', error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ في حذف العملاء المتكررين",
         variant: "destructive",
       });
     }
@@ -517,6 +607,11 @@ const Customers = () => {
           <Button onClick={handleExportCustomers} variant="outline" className="gap-2">
             <Download className="h-4 w-4" />
             تصدير
+          </Button>
+          
+          <Button onClick={handleRemoveDuplicates} variant="outline" className="gap-2">
+            <Trash2 className="h-4 w-4" />
+            حذف المتكررين
           </Button>
           
           <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
