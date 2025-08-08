@@ -283,22 +283,26 @@ async function sendToWhatsAppService(message: any): Promise<boolean> {
 // دالة مساعدة لتحديث إحصائيات الحملات الجماعية
 async function updateCampaignStats(customer_id: any, success: boolean): Promise<void> {
   try {
-    // البحث عن الحملة الجماعية المرتبطة بهذا العميل
-    const { data: campaignMessage, error: campaignError } = await supabase
+    console.log(`🔍 البحث عن حملة للعميل ${customer_id}`);
+    
+    // البحث عن الحملة الجماعية المرتبطة بهذا العميل (أحدث حملة معلقة أو في المعالجة)
+    const { data: campaignMessages, error: campaignError } = await supabase
       .from('bulk_campaign_messages')
-      .select('campaign_id')
+      .select('campaign_id, status')
       .eq('customer_id', customer_id)
-      .eq('status', 'queued')
+      .in('status', ['pending', 'queued'])
       .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
+      .limit(1);
 
-    if (campaignError || !campaignMessage) {
-      // ليس جزء من حملة جماعية، تجاهل
+    if (campaignError || !campaignMessages || campaignMessages.length === 0) {
+      console.log(`ℹ️ لم يتم العثور على حملة للعميل ${customer_id}`);
       return;
     }
 
+    const campaignMessage = campaignMessages[0];
     const campaignId = campaignMessage.campaign_id;
+    
+    console.log(`✅ تم العثور على الحملة ${campaignId} للعميل ${customer_id}`);
 
     // تحديث حالة الرسالة في جدول الحملة
     await supabase
