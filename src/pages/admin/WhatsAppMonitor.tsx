@@ -6,8 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
-import { AlertCircle, CheckCircle, Clock, Send, RefreshCw } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle, CheckCircle, Clock, Send, RefreshCw, Loader2, AlertTriangle } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface WhatsAppMessage {
   id: string;
@@ -109,12 +109,21 @@ export default function WhatsAppMonitor() {
         
         toast({
           title: "تمت المعالجة",
-          description: `تم إرسال ${successCount} رسالة بنجاح، فشل ${failedCount} رسالة`,
+          description: `تم معالجة ${data.processed_count} رسالة. نجح ${successCount}، فشل ${failedCount}`,
         });
+        
+        // إذا كان هناك رسائل معلقة أكثر، اعرض إشعار
+        if (data.processed_count === 10) {
+          toast({
+            title: "تنبيه",
+            description: "تم معالجة 10 رسائل. قد يكون هناك المزيد من الرسائل المعلقة. اضغط مرة أخرى للمتابعة.",
+            variant: "default",
+          });
+        }
       } else {
         toast({
-          title: "لا توجد رسائل معلقة",
-          description: "لم يتم العثور على رسائل معلقة للمعالجة",
+          title: "مكتمل",
+          description: data?.message || "لا توجد رسائل معلقة للمعالجة",
         });
       }
       
@@ -228,22 +237,52 @@ export default function WhatsAppMonitor() {
 
       {/* تحذيرات */}
       {pendingCount > 0 && (
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
+        <Alert className="border-orange-200 bg-orange-50">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>يوجد {pendingCount} رسائل معلقة</AlertTitle>
           <AlertDescription className="flex items-center justify-between">
-            <span>يوجد {pendingCount} رسالة معلقة لم يتم إرسالها بعد.</span>
-            <Button 
-              onClick={processPendingMessages} 
-              disabled={processingPending}
-              size="sm"
-            >
-              {processingPending ? (
-                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4 mr-2" />
-              )}
-              معالجة الرسائل المعلقة
-            </Button>
+            <span>هناك رسائل في انتظار الإرسال. اضغط لمعالجتها.</span>
+            <div className="flex gap-2">
+              <Button 
+                onClick={processPendingMessages} 
+                disabled={processingPending}
+                size="sm"
+                className="ml-2"
+              >
+                {processingPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    جاري المعالجة...
+                  </>
+                ) : (
+                  <>
+                    <Send className="mr-2 h-4 w-4" />
+                    معالجة الرسائل ({Math.min(pendingCount, 10)})
+                  </>
+                )}
+              </Button>
+              <Button 
+                onClick={() => {
+                  const autoProcess = async () => {
+                    let remaining = pendingCount;
+                    while (remaining > 0) {
+                      await processPendingMessages();
+                      await new Promise(resolve => setTimeout(resolve, 2000));
+                      await fetchData();
+                      const newPending = messages.filter(m => m.status === 'pending').length;
+                      if (newPending >= remaining) break; // منع التكرار إذا لم تنجح المعالجة
+                      remaining = newPending;
+                    }
+                  };
+                  autoProcess();
+                }}
+                disabled={processingPending}
+                size="sm"
+                variant="outline"
+              >
+                معالجة تلقائية للكل
+              </Button>
+            </div>
           </AlertDescription>
         </Alert>
       )}
