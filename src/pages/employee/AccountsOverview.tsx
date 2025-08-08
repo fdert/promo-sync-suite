@@ -343,32 +343,34 @@ ${payments.slice(0, 5).map(payment =>
       console.log('Customer phone:', customer.whatsapp_number || customer.phone);
       console.log('Message length:', summaryText.length);
       
-      // إدراج الرسالة في قاعدة البيانات أولاً
-      const { data: insertData, error: insertError } = await supabase
-        .from('whatsapp_messages')
-        .insert([
-          {
-            to_number: customer.whatsapp_number || customer.phone,
-            message_content: summaryText,
-            status: 'pending',
-            message_type: 'text',
-            from_number: 'system',
-            created_at: new Date().toISOString()
-          }
-        ])
-        .select()
-        .single();
-
-      if (insertError) {
-        console.error('Error inserting message:', insertError);
-        throw new Error('فشل في إدراج الرسالة في قاعدة البيانات');
+      // إرسال مباشر عبر Edge Function بنفس منطق إشعارات الطلبات
+      const { data, error } = await supabase.functions.invoke('send-direct-whatsapp', {
+        body: {
+          phone: customer.whatsapp_number || customer.phone,
+          message: summaryText
+        }
+      });
+      
+      console.log('WhatsApp response:', { data, error });
+      
+      if (error) {
+        console.error('Supabase function error:', error);
+        console.error('Error details:', JSON.stringify(error, null, 2));
+        throw error;
       }
-
-      console.log('Message inserted with ID:', insertData.id);
-
-      // الآن استدعاء دالة معالجة الرسائل المعلقة
-      const { data, error } = await supabase.functions.invoke('send-pending-whatsapp', {
-        body: {}
+      
+      if (data?.error) {
+        console.error('Function returned error:', data.error);
+        throw new Error(data.error);
+      }
+      
+      if (data?.success === false) {
+        console.warn('Function indicates failure:', data);
+      }
+      
+      toast({
+        title: "تم الإرسال",
+        description: data?.success ? "تم إرسال الملخص عبر الواتساب بنجاح" : "تمت محاولة الإرسال، راجع السجل",
       });
       
       console.log('WhatsApp response:', { data, error });
