@@ -253,7 +253,7 @@ const BulkWhatsApp = () => {
       }
       
       // استدعاء edge function لمعالجة الحملات
-      const { data, error } = await supabase.functions.invoke('process-bulk-campaigns', {
+      const { data, error } = await supabase.functions.invoke('bulk-campaign-processor', {
         body: { campaignId }
       });
       
