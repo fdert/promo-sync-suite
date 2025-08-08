@@ -151,47 +151,23 @@ const Customers = () => {
     }
 
     try {
-      // قراءة الملف مع دعم متعدد الترميزات لضمان دعم العربي
-      let text = '';
+      const fileReader = new FileReader();
       
-      try {
-        // محاولة قراءة بترميز UTF-8 أولاً
-        const arrayBuffer = await importFile.arrayBuffer();
-        const uint8Array = new Uint8Array(arrayBuffer);
-        
-        // التحقق من وجود BOM لـ UTF-8
-        if (uint8Array.length >= 3 && 
-            uint8Array[0] === 0xEF && 
-            uint8Array[1] === 0xBB && 
-            uint8Array[2] === 0xBF) {
-          // إزالة BOM وقراءة باقي الملف
-          const decoder = new TextDecoder('utf-8');
-          text = decoder.decode(uint8Array.slice(3));
-        } else {
-          // قراءة عادية بـ UTF-8
-          const decoder = new TextDecoder('utf-8');
-          text = decoder.decode(uint8Array);
-        }
-        
-        // إذا كان النص يحتوي على رموز غريبة، جرب ترميزات أخرى
-        if (text.includes('�') || text.includes('◆')) {
-          // جرب Windows-1256 للعربي
-          const decoder1256 = new TextDecoder('windows-1256');
-          text = decoder1256.decode(uint8Array);
-          
-          // إذا لم ينجح، جرب ISO-8859-6
-          if (text.includes('�') || text.includes('◆')) {
-            const decoderISO = new TextDecoder('iso-8859-6');
-            text = decoderISO.decode(uint8Array);
-          }
-        }
-      } catch (encodingError) {
-        console.error('خطأ في قراءة الترميز:', encodingError);
-        // استخدام الطريقة التقليدية كـ fallback
-        text = await importFile.text();
-      }
+      const readFileAsText = (file: File): Promise<string> => {
+        return new Promise((resolve, reject) => {
+          fileReader.onload = (event) => {
+            const result = event.target?.result as string;
+            console.log('محتوى الملف المقروء:', result?.substring(0, 200));
+            resolve(result || '');
+          };
+          fileReader.onerror = reject;
+          // قراءة الملف مع تشفير UTF-8 صراحة
+          fileReader.readAsText(file, 'UTF-8');
+        });
+      };
       
-      console.log('محتوى الملف بعد معالجة الترميز:', text.substring(0, 200));
+      const text = await readFileAsText(importFile);
+      console.log('محتوى الملف النهائي:', text.substring(0, 300));
       
       // تنظيف النص وإزالة BOM إذا وجد
       const cleanText = text.replace(/^\uFEFF/, '');
