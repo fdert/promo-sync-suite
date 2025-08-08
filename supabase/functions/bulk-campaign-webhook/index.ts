@@ -69,37 +69,44 @@ serve(async (req) => {
       if (webhook_url) {
         console.log('إرسال webhook تجريبي إلى:', webhook_url);
         
-        const webhookResponse = await fetch(webhook_url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'User-Agent': 'Lovable-WhatsApp-Webhook/1.0',
-          },
-          body: JSON.stringify(testData),
-        });
+        try {
+          const webhookResponse = await fetch(webhook_url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'User-Agent': 'Lovable-WhatsApp-Webhook/1.0',
+            },
+            body: JSON.stringify(testData),
+          });
 
-        if (!webhookResponse.ok) {
-          console.error('فشل في إرسال الـ webhook التجريبي:', webhookResponse.statusText);
-          throw new Error(`فشل في إرسال الـ webhook: ${webhookResponse.statusText}`);
+          if (!webhookResponse.ok) {
+            console.error('فشل في إرسال الـ webhook التجريبي:', webhookResponse.statusText);
+            console.log('Response status:', webhookResponse.status);
+          } else {
+            console.log('تم إرسال الـ webhook التجريبي بنجاح');
+          }
+        } catch (fetchError) {
+          console.error('خطأ في إرسال webhook:', fetchError);
+          // لا نرمي خطأ هنا لأن المشكلة قد تكون في URL المستقبل
         }
-
-        console.log('تم إرسال الـ webhook التجريبي بنجاح');
       }
 
       // حفظ سجل الـ webhook
-      await supabaseClient
-        .from('webhook_logs')
-        .insert({
-          webhook_type: 'bulk_campaign',
-          campaign_id: 'test-campaign-id',
-          webhook_url: webhook_url,
-          trigger_type: 'test',
-          status: 'sent',
-          response_data: testData,
-          created_at: new Date().toISOString(),
-        })
-        .select()
-        .maybeSingle();
+      try {
+        await supabaseClient
+          .from('webhook_logs')
+          .insert({
+            webhook_type: 'bulk_campaign',
+            campaign_id: 'test-campaign-id',
+            webhook_url: webhook_url,
+            trigger_type: 'test',
+            status: 'sent',
+            response_data: testData,
+            created_at: new Date().toISOString(),
+          });
+      } catch (logError) {
+        console.error('خطأ في حفظ السجل:', logError);
+      }
 
       return new Response(
         JSON.stringify({ 
@@ -170,37 +177,42 @@ serve(async (req) => {
     if (webhook_url) {
       console.log('إرسال webhook إلى:', webhook_url);
       
-      const webhookResponse = await fetch(webhook_url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': 'Lovable-WhatsApp-Webhook/1.0',
-        },
-        body: JSON.stringify(enrichedData),
-      });
+      try {
+        const webhookResponse = await fetch(webhook_url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'User-Agent': 'Lovable-WhatsApp-Webhook/1.0',
+          },
+          body: JSON.stringify(enrichedData),
+        });
 
-      if (!webhookResponse.ok) {
-        console.error('فشل في إرسال الـ webhook:', webhookResponse.statusText);
-        throw new Error(`فشل في إرسال الـ webhook: ${webhookResponse.statusText}`);
+        if (!webhookResponse.ok) {
+          console.error('فشل في إرسال الـ webhook:', webhookResponse.statusText);
+        } else {
+          console.log('تم إرسال الـ webhook بنجاح');
+        }
+      } catch (fetchError) {
+        console.error('خطأ في إرسال webhook:', fetchError);
       }
-
-      console.log('تم إرسال الـ webhook بنجاح');
     }
 
-    // حفظ سجل الـ webhook (اختياري)
-    await supabaseClient
-      .from('webhook_logs')
-      .insert({
-        webhook_type: 'bulk_campaign',
-        campaign_id: campaign_id,
-        webhook_url: webhook_url,
-        trigger_type,
-        status: 'sent',
-        response_data: enrichedData,
-        created_at: new Date().toISOString(),
-      })
-      .select()
-      .maybeSingle();
+    // حفظ سجل الـ webhook
+    try {
+      await supabaseClient
+        .from('webhook_logs')
+        .insert({
+          webhook_type: 'bulk_campaign',
+          campaign_id: campaign_id,
+          webhook_url: webhook_url,
+          trigger_type,
+          status: 'sent',
+          response_data: enrichedData,
+          created_at: new Date().toISOString(),
+        });
+    } catch (logError) {
+      console.error('خطأ في حفظ السجل:', logError);
+    }
 
     return new Response(
       JSON.stringify({ 
