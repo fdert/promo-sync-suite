@@ -335,17 +335,26 @@ const Customers = () => {
   // إصلاح العملاء المستوردين بترميز خاطئ عبر حذفهم وإعادة استيرادهم
   const handleFixExistingCustomers = async () => {
     try {
-      // البحث عن العملاء المستوردين الذين قد يحتوون على رموز غريبة
-      const importedCustomers = customers.filter(customer => 
-        customer.import_source === 'CSV Import' && (
-          !customer.name || 
-          customer.name.includes('◆') || 
+      // البحث عن جميع العملاء المستوردين الذين يحتوون على رموز غريبة
+      const importedCustomers = customers.filter(customer => {
+        if (!customer.name) return false;
+        
+        // فحص شامل لجميع أنواع الرموز المشوهة
+        const hasCorruptedChars = (
+          customer.name.includes('◆') ||
           customer.name.includes('�') ||
           customer.name.includes('??') ||
+          customer.name.includes('□') ||
+          customer.name.includes('▢') ||
+          /[^\u0600-\u06FF\u0020-\u007E\s\u060C\u061B\u061F]/.test(customer.name) || // رموز غير عربية/إنجليزية/علامات ترقيم
           customer.name.length < 2 ||
-          /^عميل/.test(customer.name) // الأسماء التي تبدأ بكلمة "عميل"
-        )
-      );
+          /^عميل/.test(customer.name) || // الأسماء التي تبدأ بكلمة "عميل"
+          customer.import_source === 'CSV Import' // جميع المستوردين لضمان الحذف
+        );
+        
+        console.log(`فحص العميل: "${customer.name}" - مشوه: ${hasCorruptedChars}`);
+        return hasCorruptedChars;
+      });
 
       if (importedCustomers.length === 0) {
         toast({
