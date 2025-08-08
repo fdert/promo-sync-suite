@@ -343,14 +343,12 @@ ${payments.slice(0, 5).map(payment =>
       console.log('Customer phone:', customer.whatsapp_number || customer.phone);
       console.log('Message length:', summaryText.length);
       
-      // إرسال عبر دالة إشعارات الطلبات بدلاً من الدالة المخصصة
-      const { data, error } = await supabase.functions.invoke('send-order-notifications', {
+      // إرسال عبر دالة ملخص الحساب المخصصة
+      const { data, error } = await supabase.functions.invoke('send-account-summary', {
         body: {
-          type: 'account_summary',
           customer_phone: customer.whatsapp_number || customer.phone,
           customer_name: customer.name,
-          message: summaryText,
-          company_name: 'وكالة الإبداع للدعاية والإعلان'
+          message: summaryText
         }
       });
       
@@ -358,19 +356,8 @@ ${payments.slice(0, 5).map(payment =>
       
       if (error) {
         console.error('Supabase function error:', error);
-        console.error('Error details:', JSON.stringify(error, null, 2));
         throw error;
       }
-      
-      if (data?.error) {
-        console.error('Function returned error:', data.error);
-        throw new Error(data.error);
-      }
-      
-      toast({
-        title: "تم الإرسال",
-        description: "تم إرسال الملخص عبر الواتساب بنجاح"
-      });
       
       setShowSummaryDialog(false);
     } catch (error) {

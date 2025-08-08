@@ -41,3 +41,6 @@ verify_jwt = false
 
 [functions.send-direct-whatsapp]
 verify_jwt = false
+
+[functions.send-account-summary]
+verify_jwt = false
