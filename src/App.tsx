@@ -52,6 +52,9 @@ import FollowUpSettings from "./pages/admin/FollowUpSettings";
 import FinancialMovements from "./pages/admin/FinancialMovements";
 import EmployeeFinancialMovements from "./pages/employee/FinancialMovements";
 import PricingCalculatorPage from "./pages/employee/PricingCalculator";
+import BulkWhatsApp from "./pages/admin/BulkWhatsApp";
+import CustomerGroups from "./pages/admin/CustomerGroups";
+import EmployeeBulkWhatsApp from "./pages/employee/BulkWhatsApp";
 
 import OrderPayments from "./pages/admin/OrderPayments";
 
@@ -98,6 +101,7 @@ const App = () => (
               <Route path="financial-movements" element={<EmployeeFinancialMovements />} />
               <Route path="pricing-calculator" element={<PricingCalculatorPage />} />
               <Route path="reports" element={<EmployeeReports />} />
+              <Route path="bulk-whatsapp" element={<EmployeeBulkWhatsApp />} />
             </Route>
             <Route path="/admin" element={
               <ProtectedRoute>
@@ -157,10 +161,20 @@ const App = () => (
                  </RoleProtectedRoute>
                } />
                <Route path="google-maps-integration" element={
-                 <RoleProtectedRoute allowedRoles={['admin', 'manager']}>
-                   <GoogleMapsIntegration />
-                 </RoleProtectedRoute>
-               } />
+                  <RoleProtectedRoute allowedRoles={['admin', 'manager']}>
+                    <GoogleMapsIntegration />
+                  </RoleProtectedRoute>
+                } />
+                <Route path="bulk-whatsapp" element={
+                  <RoleProtectedRoute allowedRoles={['admin', 'manager']}>
+                    <BulkWhatsApp />
+                  </RoleProtectedRoute>
+                } />
+                <Route path="customer-groups" element={
+                  <RoleProtectedRoute allowedRoles={['admin', 'manager']}>
+                    <CustomerGroups />
+                  </RoleProtectedRoute>
+                } />
             </Route>
             <Route path="/evaluation/:token" element={<Evaluation />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
