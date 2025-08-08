@@ -154,27 +154,84 @@ const BulkCampaignWebhookSettings = () => {
 
     setTesting(true);
     try {
-      const { data, error } = await supabase.functions.invoke('bulk-campaign-webhook', {
-        body: {
-          campaign_id: 'test-campaign-id',
-          webhook_url: webhookUrl,
-          trigger_type: 'test'
-        }
+      // إرسال webhook مباشر إلى URL المستهدف
+      const testData = {
+        campaign_id: 'test-campaign-id',
+        campaign_name: 'حملة تجريبية',
+        status: 'test',
+        total_recipients: 100,
+        sent_count: 95,
+        failed_count: 5,
+        message_content: 'رسالة تجريبية للاختبار',
+        target_type: 'all',
+        target_groups: [],
+        started_at: new Date().toISOString(),
+        completed_at: new Date().toISOString(),
+        created_by: 'test-user',
+        webhook_triggered_at: new Date().toISOString(),
+        trigger_type: 'test',
+        success_rate: '95.00',
+        platform: 'Lovable WhatsApp System',
+        version: '1.0',
+      };
+
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'Lovable-WhatsApp-Webhook/1.0',
+        },
+        body: JSON.stringify(testData),
       });
 
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      // حفظ سجل الاختبار
+      try {
+        await supabase
+          .from('webhook_logs')
+          .insert({
+            webhook_type: 'bulk_campaign',
+            campaign_id: 'test-campaign-id',
+            webhook_url: webhookUrl,
+            trigger_type: 'test',
+            status: 'sent',
+            response_data: testData,
+          });
+      } catch (logError) {
+        console.warn('Could not save log:', logError);
+      }
 
       toast({
-        title: "تم الاختبار",
+        title: "نجح الاختبار",
         description: "تم إرسال webhook تجريبي بنجاح",
       });
 
       fetchLogs();
     } catch (error) {
       console.error('Error testing webhook:', error);
+      
+      // حفظ سجل فشل الاختبار
+      try {
+        await supabase
+          .from('webhook_logs')
+          .insert({
+            webhook_type: 'bulk_campaign',
+            campaign_id: 'test-campaign-id',
+            webhook_url: webhookUrl,
+            trigger_type: 'test',
+            status: 'failed',
+            response_data: { error: error.message },
+          });
+      } catch (logError) {
+        console.warn('Could not save error log:', logError);
+      }
+
       toast({
-        title: "خطأ في الاختبار",
-        description: "فشل في إرسال webhook التجريبي",
+        title: "فشل الاختبار",
+        description: `فشل في إرسال webhook: ${error.message}`,
         variant: "destructive",
       });
     } finally {
