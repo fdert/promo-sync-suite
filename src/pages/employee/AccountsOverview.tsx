@@ -352,12 +352,17 @@ ${payments.slice(0, 5).map(payment =>
 
       if (error) throw error;
 
-      // استدعاء edge function لمعالجة رسائل الواتساب المعلقة (نفس طريقة البروفة)
+      // استدعاء edge function الجديد للإرسال المباشر
       try {
-        await supabase.functions.invoke('process-whatsapp-queue');
-      } catch (pendingError) {
-        console.warn('Error processing pending WhatsApp messages:', pendingError);
-        // لا نوقف العملية إذا فشل إرسال الرسائل المعلقة
+        const { data, error } = await supabase.functions.invoke('send-whatsapp-direct');
+        if (error) {
+          console.warn('Error in direct WhatsApp sending:', error);
+        } else {
+          console.log('Direct WhatsApp sending result:', data);
+        }
+      } catch (directError) {
+        console.warn('Error calling send-whatsapp-direct:', directError);
+        // لا نوقف العملية إذا فشل إرسال الرسائل
       }
 
       toast({
