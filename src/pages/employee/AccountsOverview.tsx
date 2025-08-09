@@ -390,16 +390,34 @@ ${payments.slice(0, 5).map(payment =>
     try {
       console.log('🚀 إرسال رسالة واتساب مباشرة عبر Edge Function...');
       
+      // Get customer WhatsApp number
+      const { data: customerData } = await supabase
+        .from('customers')
+        .select('whatsapp_number, phone, name')
+        .eq('id', customer.customer_id)
+        .single();
+      
+      if (!customerData?.whatsapp_number && !customerData?.phone) {
+        toast({
+          title: "خطأ",
+          description: "لا يوجد رقم واتساب للعميل",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      const phoneNumber = customerData.whatsapp_number || customerData.phone;
+      
       // إعداد التقرير المالي
       const summary = generateSummary(customer);
       
       console.log('📊 التقرير المالي جاهز للإرسال');
-      console.log('📱 الرقم المستهدف: +966535983261');
+      console.log('📱 الرقم المستهدف:', phoneNumber);
       
       // استدعاء Edge Function الجديد
       const { data, error } = await supabase.functions.invoke('send-whatsapp-direct', {
         body: {
-          phone: '+966535983261',
+          phone: phoneNumber,
           message: summary,
           customer_name: customer.customer_name
         }
