@@ -202,6 +202,57 @@ const WebhookSettings = () => {
     }
   };
 
+  const createTestMessage = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('test-webhook');
+      
+      if (error) {
+        toast({
+          title: "خطأ",
+          description: `فشل في إنشاء الرسالة التجريبية: ${error.message}`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (data?.success) {
+        toast({
+          title: "تم إنشاء الرسالة",
+          description: "تم إنشاء رسالة تجريبية بنجاح وسيتم معالجتها قريباً",
+        });
+        
+        // معالجة الرسائل المعلقة بعد ثانيتين
+        setTimeout(async () => {
+          try {
+            const { data: processData } = await supabase.functions.invoke('send-pending-whatsapp');
+            console.log('Process result:', processData);
+            if (processData?.processedCount > 0) {
+              toast({
+                title: "تم إرسال الرسالة",
+                description: `تم معالجة وإرسال ${processData.processedCount} رسالة`,
+              });
+            }
+          } catch (err) {
+            console.error('Process error:', err);
+          }
+        }, 2000);
+      } else {
+        toast({
+          title: "فشل",
+          description: data?.message || "فشل في إنشاء الرسالة التجريبية",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error creating test message:', error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ أثناء إنشاء الرسالة التجريبية",
+        variant: "destructive",
+      });
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "success":
@@ -258,13 +309,30 @@ const WebhookSettings = () => {
 
         {/* WhatsApp Configuration */}
         <TabsContent value="whatsapp">
-          <WebhookManagement 
-            webhookSettings={webhookSettings}
-            onSave={saveWebhookSetting}
-            onUpdate={updateWebhookSetting}
-            onTest={testWebhook}
-            loading={loading}
-          />
+          <div className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>اختبار إرسال الرسائل</CardTitle>
+                <CardDescription>
+                  اختبر إرسال رسالة تجريبية عبر الويب هوك
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button onClick={createTestMessage} className="w-full">
+                  <Send className="w-4 h-4 mr-2" />
+                  إنشاء ومعالجة رسالة تجريبية
+                </Button>
+              </CardContent>
+            </Card>
+            
+            <WebhookManagement 
+              webhookSettings={webhookSettings}
+              onSave={saveWebhookSetting}
+              onUpdate={updateWebhookSetting}
+              onTest={testWebhook}
+              loading={loading}
+            />
+          </div>
         </TabsContent>
 
         {/* Bulk Campaign Webhooks */}
