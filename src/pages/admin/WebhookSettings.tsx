@@ -220,84 +220,131 @@ const WebhookSettings = () => {
         return;
       }
       
-      console.log('استخدام ويب هوك:', {
+      console.log('📋 تفاصيل الويب هوك المستخدم:', {
         name: outgoingWebhook.webhook_name,
         url: outgoingWebhook.webhook_url,
-        type: outgoingWebhook.webhook_type
+        type: outgoingWebhook.webhook_type,
+        created_at: outgoingWebhook.created_at,
+        order_statuses: outgoingWebhook.order_statuses
       });
       
-      // إعداد بيانات الرسالة بنفس تنسيق رسائل الطلبات الناجحة
-      const messageData = {
-        // إضافة البيانات بنفس التنسيق المستخدم في الطلبات
-        customerPhone: '+966535983261',
-        customerName: 'مستخدم تجريبي',
-        orderNumber: 'TEST-001',
-        serviceName: 'اختبار الواتساب',
-        amount: '0',
-        status: 'اختبار',
-        companyName: 'وكالة الإبداع للدعاية والإعلان',
-        message: `🔔 رسالة تجريبية للتأكد من عمل النظام\n\nالعميل: مستخدم تجريبي\nرقم الواتساب: +966535983261\nالوقت: ${new Date().toLocaleString('ar-SA')}\n\n✅ إذا وصلتك هذه الرسالة فالنظام يعمل بشكل صحيح`,
-        timestamp: new Date().toISOString(),
-        notificationType: 'test_message'
-      };
-      
-      console.log('إرسال البيانات للويب هوك:', messageData);
-      
-      // إرسال مباشر للويب هوك مع headers إضافية
-      const response = await fetch(outgoingWebhook.webhook_url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': 'Ibda-WhatsApp-Test/1.0',
-          ...(outgoingWebhook.secret_key && {
-            'Authorization': `Bearer ${outgoingWebhook.secret_key}`
-          })
+      // إعداد بيانات الرسالة بتنسيق مختلف للاختبار
+      const testFormats = [
+        // التنسيق الأول - مثل رسائل الطلبات
+        {
+          customerPhone: '+966535983261',
+          customerName: 'مستخدم تجريبي',
+          orderNumber: 'TEST-001',
+          serviceName: 'اختبار الواتساب',
+          amount: '0',
+          status: 'اختبار',
+          companyName: 'وكالة الإبداع للدعاية والإعلان',
+          message: `🔔 رسالة تجريبية للتأكد من عمل النظام\n\n` +
+                   `العميل: مستخدم تجريبي\n` +
+                   `رقم الواتساب: +966535983261\n` +
+                   `الوقت: ${new Date().toLocaleString('ar-SA')}\n\n` +
+                   `✅ إذا وصلتك هذه الرسالة فالنظام يعمل بشكل صحيح`,
+          timestamp: new Date().toISOString(),
+          notificationType: 'test_message'
         },
-        body: JSON.stringify(messageData)
-      });
-      
-      const responseText = await response.text();
-      console.log('استجابة الويب هوك:', {
-        status: response.status,
-        statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries()),
-        body: responseText
-      });
-      
-      if (response.ok) {
-        // تسجيل الرسالة في قاعدة البيانات
-        const { error: dbError } = await supabase
-          .from('whatsapp_messages')
-          .insert({
-            from_number: 'system',
-            to_number: '+966535983261',
-            message_type: 'text',
-            message_content: messageData.message,
-            status: 'sent',
-            is_reply: false
-          });
-        
-        if (dbError) {
-          console.error('خطأ في حفظ الرسالة:', dbError);
+        // التنسيق الثاني - تنسيق بسيط
+        {
+          to: '+966535983261',
+          message: `رسالة تجريبية من وكالة الإبداع - ${new Date().toLocaleString('ar-SA')}`,
+          type: 'text'
+        },
+        // التنسيق الثالث - تنسيق WhatsApp API
+        {
+          messaging_product: 'whatsapp',
+          to: '+966535983261',
+          type: 'text',
+          text: {
+            body: `رسالة تجريبية من وكالة الإبداع للدعاية والإعلان\n\nالتاريخ: ${new Date().toLocaleString('ar-SA')}\n\nهذه رسالة اختبار لنظام الواتساب`
+          }
         }
+      ];
+      
+      let successCount = 0;
+      
+      for (let i = 0; i < testFormats.length; i++) {
+        const messageData = testFormats[i];
         
+        console.log(`🧪 محاولة الإرسال ${i + 1} بالتنسيق:`, messageData);
+        
+        try {
+          // إرسال مباشر للويب هوك مع headers إضافية
+          const response = await fetch(outgoingWebhook.webhook_url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'User-Agent': 'Ibda-WhatsApp-Test/1.0',
+              'Accept': 'application/json',
+              ...(outgoingWebhook.secret_key && {
+                'Authorization': `Bearer ${outgoingWebhook.secret_key}`
+              })
+            },
+            body: JSON.stringify(messageData)
+          });
+          
+          const responseText = await response.text();
+          
+          console.log(`📨 نتيجة المحاولة ${i + 1}:`, {
+            status: response.status,
+            statusText: response.statusText,
+            contentType: response.headers.get('content-type'),
+            responseSize: responseText.length,
+            responsePreview: responseText.substring(0, 200),
+            fullResponse: responseText
+          });
+          
+          if (response.ok) {
+            successCount++;
+            
+            // تسجيل الرسالة في قاعدة البيانات
+            const { error: dbError } = await supabase
+              .from('whatsapp_messages')
+              .insert({
+                from_number: 'system',
+                to_number: '+966535983261',
+                message_type: 'text',
+                message_content: (messageData as any).message || 
+                  (messageData as any).text?.body || 
+                  JSON.stringify(messageData),
+                status: 'sent',
+                is_reply: false
+              });
+            
+            if (dbError) {
+              console.error('خطأ في حفظ الرسالة:', dbError);
+            }
+          }
+          
+          // انتظار قصير بين المحاولات
+          if (i < testFormats.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          }
+          
+        } catch (error) {
+          console.error(`❌ خطأ في المحاولة ${i + 1}:`, error);
+        }
+      }
+      
+      if (successCount > 0) {
         toast({
-          title: "تم إرسال الطلب للويب هوك",
-          description: `تم إرسال الطلب بنجاح للويب هوك: ${outgoingWebhook.webhook_name}\n\nكود الاستجابة: ${response.status}\n\nتحقق من واتساب +966535983261 خلال دقيقة واحدة`,
+          title: "تم إرسال الطلبات للويب هوك",
+          description: `تم إرسال ${successCount} من ${testFormats.length} طلبات بنجاح للويب هوك: ${outgoingWebhook.webhook_name}\n\n📱 تحقق من واتساب +966535983261 خلال 5 دقائق\n\n⚠️ إذا لم تصل الرسالة، فالمشكلة في إعداد الويب هوك نفسه وليس في النظام`,
         });
         
         // عرض تفاصيل إضافية في الكونسول
-        console.log(`✅ تم إرسال الطلب بنجاح للويب هوك`);
-        console.log(`📱 يجب أن تصل الرسالة لرقم: +966535983261`);
-        console.log(`🔗 الويب هوك المستخدم: ${outgoingWebhook.webhook_name}`);
-        console.log(`📋 استجابة الخادم: ${responseText}`);
+        console.log(`✅ تم إرسال ${successCount} طلبات بنجاح من أصل ${testFormats.length}`);
+        console.log(`📱 يجب أن تصل الرسائل لرقم: +966535983261`);
+        console.log(`🔗 الويب هوك المستخدم: ${outgoingWebhook.webhook_name} (${outgoingWebhook.webhook_url})`);
+        console.log(`📝 ملاحظة: إذا لم تصل الرسائل، تحقق من إعدادات الويب هوك في n8n أو المنصة المستخدمة`);
         
       } else {
-        console.error('فشل في إرسال الرسالة:', response.status, responseText);
-        
         toast({
-          title: "فشل في إرسال الطلب للويب هوك",
-          description: `فشل في إرسال الطلب للويب هوك.\nكود الخطأ: ${response.status}\nالرسالة: ${responseText.substring(0, 100)}`,
+          title: "فشل في جميع المحاولات",
+          description: `فشل في إرسال جميع التنسيقات للويب هوك. تحقق من إعدادات الويب هوك.`,
           variant: "destructive",
         });
       }
