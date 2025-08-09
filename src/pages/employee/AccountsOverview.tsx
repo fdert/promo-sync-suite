@@ -388,51 +388,124 @@ ${payments.slice(0, 5).map(payment =>
   // Handle direct WhatsApp send for each customer
   const handleDirectWhatsApp = async (customer: CustomerBalance) => {
     try {
-      console.log('🚀 إرسال رسالة واتساب مباشرة عبر Edge Function...');
+      console.log('🔍 تشخيص شامل لنظام الواتساب...');
       
-      // إعداد التقرير المالي
-      const summary = generateSummary(customer);
+      const webhookUrl = 'https://n8n.srv894347.hstgr.cloud/webhook/ca719409-ac29-485a-99d4-3b602978eace';
       
-      console.log('📊 التقرير المالي جاهز للإرسال');
-      console.log('📱 الرقم المستهدف: +966535983261');
-      
-      // استدعاء Edge Function الجديد
-      const { data, error } = await supabase.functions.invoke('send-whatsapp-direct', {
-        body: {
-          phone: '+966535983261',
-          message: summary,
-          customer_name: customer.customer_name
-        }
+      // إعداد رسالة تشخيص مفصلة
+      const diagnosticMessage = `🔧 تشخيص نظام الواتساب
+
+📊 تفاصيل الطلب:
+- العميل: ${customer.customer_name}
+- المبلغ المستحق: ${customer.outstanding_balance} ر.س
+- عدد الفواتير: ${customer.unpaid_invoices_count}
+- وقت الإرسال: ${new Date().toLocaleString('ar-SA', { timeZone: 'Asia/Riyadh' })}
+
+🌐 معلومات تقنية:
+- URL: n8n.srv894347.hstgr.cloud
+- Webhook ID: ca719409-ac29-485a-99d4-3b602978eace
+- الرقم المستهدف: +966535983261
+- المتصفح: ${navigator.userAgent.substring(0, 50)}...
+
+⚡ حالة الاتصال:
+- حالة الإنترنت: ${navigator.onLine ? 'متصل' : 'غير متصل'}
+- رابط التطبيق: ${window.location.origin}
+
+🔍 خطوات التحقق:
+1. هل وصلت هذه الرسالة؟
+2. تحقق من إعدادات الواتساب في n8n
+3. تأكد من صحة رقم المستقبل
+4. راجع حالة خدمة الواتساب
+
+إذا وصلت هذه الرسالة، فالنظام يعمل بشكل صحيح!`;
+
+      const testPayload = {
+        phone: '+966535983261',
+        message: diagnosticMessage,
+        customer_name: `تشخيص - ${customer.customer_name}`,
+        diagnostic: true,
+        timestamp: new Date().toISOString()
+      };
+
+      console.log('📤 إرسال رسالة التشخيص...');
+      console.log('🔗 URL:', webhookUrl);
+      console.log('📄 البيانات:', testPayload);
+
+      // إرسال رسالة التشخيص
+      const diagnosticResponse = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(testPayload)
       });
 
-      console.log('📥 استجابة Edge Function:', data);
-      
-      if (error) {
-        console.error('❌ خطأ في Edge Function:', error);
-        throw error;
-      }
+      const diagnosticResponseText = await diagnosticResponse.text();
+      console.log('📥 استجابة رسالة التشخيص:');
+      console.log('Status:', diagnosticResponse.status);
+      console.log('Response:', diagnosticResponseText);
 
-      if (data?.success) {
-        console.log('✅ تم إرسال الرسالة بنجاح!');
-        console.log('🆔 معرف الرسالة:', data.message_id);
-        console.log('📊 حالة الويب هوك:', data.webhook_status);
-        console.log('💬 رد الويب هوك:', data.webhook_response);
-        
+      // انتظار 5 ثوانٍ للتأكد من وصول رسالة التشخيص
+      console.log('⏳ انتظار 5 ثوانٍ قبل إرسال التقرير الفعلي...');
+      await new Promise(resolve => setTimeout(resolve, 5000));
+
+      // إرسال التقرير المالي الفعلي
+      const summary = generateSummary(customer);
+      
+      const actualPayload = {
+        phone: '+966535983261',
+        message: summary,
+        customer_name: customer.customer_name,
+        report_type: 'financial_summary',
+        timestamp: new Date().toISOString()
+      };
+
+      console.log('📊 إرسال التقرير المالي الفعلي...');
+      
+      const finalResponse = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(actualPayload)
+      });
+
+      const finalResponseText = await finalResponse.text();
+      console.log('📱 استجابة التقرير المالي:');
+      console.log('Status:', finalResponse.status);
+      console.log('Response:', finalResponseText);
+
+      if (finalResponse.ok) {
+        // حفظ في قاعدة البيانات للسجلات
+        await supabase
+          .from('whatsapp_messages')
+          .insert({
+            from_number: 'system',
+            to_number: '+966535983261',
+            message_type: 'text',
+            message_content: summary,
+            status: 'sent',
+            customer_id: customer.customer_id
+          });
+
         toast({
-          title: "تم الإرسال بنجاح",
-          description: `تم إرسال التقرير المالي للعميل ${customer.customer_name}. معرف الرسالة: ${data.message_id}`,
+          title: "تم الإرسال",
+          description: `تم إرسال ملخص العميل ${customer.customer_name} بنجاح. إذا لم تصل الرسالة، تحقق من رقم WhatsApp أو إعدادات WhatsApp Business API.`,
         });
       } else {
-        console.error('❌ فشل في الإرسال:', data);
-        throw new Error(data?.error || 'فشل غير معروف');
+        toast({
+          title: "خطأ في الإرسال",
+          description: `فشل في إرسال الرسالة: ${finalResponse.status} - ${finalResponseText}`,
+          variant: "destructive"
+        });
       }
-
+      
     } catch (error) {
-      console.error('❌ خطأ في Edge Function:', error);
+      console.error('❌ خطأ في الاتصال:', error);
       
       toast({
-        title: "خطأ في الإرسال",
-        description: error instanceof Error ? error.message : "حدث خطأ غير متوقع",
+        title: "خطأ في الاتصال",
+        description: "فشل في الاتصال بـ webhook. تحقق من الاتصال بالإنترنت وإعدادات n8n.",
         variant: "destructive"
       });
     }
