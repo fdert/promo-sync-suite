@@ -152,7 +152,7 @@ const WebhookSettings = () => {
       // استخدام Edge Function لاختبار الويب هوك لتجنب مشاكل CORS
       console.log('Testing webhook:', { url, event });
       
-      const { data, error } = await supabase.functions.invoke('test-webhook-simple', {
+      const { data, error } = await supabase.functions.invoke('webhook-test', {
         body: {
           webhook_url: url,
           event: event + "_test",
@@ -177,14 +177,14 @@ const WebhookSettings = () => {
       if (data?.success) {
         toast({
           title: "نجح الاختبار",
-          description: `تم إرسال الويب هوك بنجاح. الحالة: ${data.webhookResponse?.status || 'غير محدد'}`,
+          description: `تم إرسال الويب هوك بنجاح. الحالة: ${data.status || 'غير محدد'}`,
         });
       } else {
         console.error('Webhook test failed:', data);
         const errorMsg = data?.error || 'فشل في الاختبار - لم يتم الحصول على استجابة صحيحة';
-        const details = data?.webhookResponse ? 
-          `الحالة: ${data.webhookResponse.status}, الاستجابة: ${data.webhookResponse.body}` : 
-          'لا توجد تفاصيل إضافية';
+        const details = data?.response ? 
+          `الحالة: ${data.status}, الاستجابة: ${data.response.substring(0, 100)}` : 
+          data?.details || 'لا توجد تفاصيل إضافية';
         
         toast({
           title: "فشل الاختبار",
