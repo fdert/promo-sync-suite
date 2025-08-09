@@ -385,6 +385,71 @@ ${payments.slice(0, 5).map(payment =>
     }
   };
 
+  // Handle direct WhatsApp send for each customer
+  const handleDirectWhatsApp = async (customer: CustomerBalance) => {
+    try {
+      // Get customer WhatsApp number and name
+      const { data: customerData } = await supabase
+        .from('customers')
+        .select('whatsapp_number, phone, name')
+        .eq('id', customer.customer_id)
+        .single();
+      
+      if (!customerData?.whatsapp_number && !customerData?.phone) {
+        toast({
+          title: "خطأ",
+          description: "لا يوجد رقم واتساب للعميل",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Generate summary for this customer
+      const summary = generateSummary(customer);
+      
+      // حفظ الرسالة في قاعدة البيانات مع حالة pending
+      const { error } = await supabase
+        .from('whatsapp_messages')
+        .insert({
+          from_number: 'system',
+          to_number: customerData.whatsapp_number || customerData.phone,
+          message_type: 'text',
+          message_content: summary,
+          status: 'pending',
+          customer_id: customer.customer_id
+        });
+
+      if (error) throw error;
+
+      // استدعاء edge function لمعالجة رسائل الواتساب المعلقة
+      try {
+        const { data: functionData, error: functionError } = await supabase.functions.invoke('process-whatsapp-queue');
+        
+        if (functionError) {
+          console.error('خطأ في استدعاء edge function:', functionError);
+        } else {
+          console.log('✅ تم إرسال الملخص المالي بنجاح');
+        }
+      } catch (pendingError) {
+        console.error('خطأ في معالجة رسائل الملخص المالي:', pendingError);
+      }
+
+      toast({
+        title: "تم الإرسال",
+        description: `تم إرسال ملخص العميل ${customer.customer_name} بنجاح`,
+      });
+      
+    } catch (error) {
+      console.error('Error sending WhatsApp message:', error);
+      
+      toast({
+        title: "خطأ",
+        description: "فشل في إرسال الرسالة",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handlePrint = () => {
     const printWindow = window.open('', '_blank');
     if (printWindow) {
@@ -670,120 +735,130 @@ ${payments.slice(0, 5).map(payment =>
                   <TableCell>
                     {format(new Date(customer.latest_due_date), 'dd/MM/yyyy', { locale: ar })}
                   </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => setSelectedCustomerId(customer.customer_id)}
-                          >
-                            <Eye className="h-4 w-4 mr-2" />
-                            التفاصيل
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                          <DialogHeader>
-                            <DialogTitle className="flex items-center gap-2">
-                              <Users className="h-5 w-5" />
-                              تفاصيل العميل: {customer.customer_name}
-                            </DialogTitle>
-                             <DialogDescription>
-                               عرض تفاصيل الطلبات والمدفوعات المرتبطة بالعميل
-                             </DialogDescription>
-                          </DialogHeader>
-                          
-                          {selectedCustomerId && (
-                            <div className="space-y-6">
-                              {/* طلبات العميل */}
-                              <Card>
-                                <CardHeader>
-                                  <CardTitle className="flex items-center gap-2 text-lg">
-                                    <ClipboardList className="h-4 w-4" />
-                                    الطلبات ({customerOrders[selectedCustomerId]?.length || 0})
-                                  </CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                  <Table>
-                                    <TableHeader>
-                                      <TableRow>
-                                        <TableHead>رقم الطلب</TableHead>
-                                        <TableHead>الخدمة</TableHead>
-                                        <TableHead>المبلغ</TableHead>
-                                        <TableHead>الحالة</TableHead>
-                                        <TableHead>تاريخ الإنشاء</TableHead>
-                                      </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                      {customerOrders[selectedCustomerId]?.slice(0, 5).map((order) => (
-                                        <TableRow key={order.id}>
-                                          <TableCell className="font-medium">{order.order_number}</TableCell>
-                                          <TableCell>{order.service_name}</TableCell>
-                                          <TableCell>{order.amount.toLocaleString()} ر.س</TableCell>
-                                          <TableCell>
-                                            <Badge variant="outline">{order.status}</Badge>
-                                          </TableCell>
-                                          <TableCell>
-                                            {format(new Date(order.created_at), 'dd/MM/yyyy', { locale: ar })}
-                                          </TableCell>
-                                        </TableRow>
-                                      ))}
-                                    </TableBody>
-                                  </Table>
-                                </CardContent>
-                              </Card>
+                   <TableCell>
+                     <div className="flex gap-2 flex-wrap">
+                       <Dialog>
+                         <DialogTrigger asChild>
+                           <Button 
+                             variant="outline" 
+                             size="sm"
+                             onClick={() => setSelectedCustomerId(customer.customer_id)}
+                           >
+                             <Eye className="h-4 w-4 mr-2" />
+                             التفاصيل
+                           </Button>
+                         </DialogTrigger>
+                         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                           <DialogHeader>
+                             <DialogTitle className="flex items-center gap-2">
+                               <Users className="h-5 w-5" />
+                               تفاصيل العميل: {customer.customer_name}
+                             </DialogTitle>
+                              <DialogDescription>
+                                عرض تفاصيل الطلبات والمدفوعات المرتبطة بالعميل
+                              </DialogDescription>
+                           </DialogHeader>
+                           
+                           {selectedCustomerId && (
+                             <div className="space-y-6">
+                               {/* طلبات العميل */}
+                               <Card>
+                                 <CardHeader>
+                                   <CardTitle className="flex items-center gap-2 text-lg">
+                                     <ClipboardList className="h-4 w-4" />
+                                     الطلبات ({customerOrders[selectedCustomerId]?.length || 0})
+                                   </CardTitle>
+                                 </CardHeader>
+                                 <CardContent>
+                                   <Table>
+                                     <TableHeader>
+                                       <TableRow>
+                                         <TableHead>رقم الطلب</TableHead>
+                                         <TableHead>الخدمة</TableHead>
+                                         <TableHead>المبلغ</TableHead>
+                                         <TableHead>الحالة</TableHead>
+                                         <TableHead>تاريخ الإنشاء</TableHead>
+                                       </TableRow>
+                                     </TableHeader>
+                                     <TableBody>
+                                       {customerOrders[selectedCustomerId]?.slice(0, 5).map((order) => (
+                                         <TableRow key={order.id}>
+                                           <TableCell className="font-medium">{order.order_number}</TableCell>
+                                           <TableCell>{order.service_name}</TableCell>
+                                           <TableCell>{order.amount.toLocaleString()} ر.س</TableCell>
+                                           <TableCell>
+                                             <Badge variant="outline">{order.status}</Badge>
+                                           </TableCell>
+                                           <TableCell>
+                                             {format(new Date(order.created_at), 'dd/MM/yyyy', { locale: ar })}
+                                           </TableCell>
+                                         </TableRow>
+                                       ))}
+                                     </TableBody>
+                                   </Table>
+                                 </CardContent>
+                               </Card>
 
-                              {/* مدفوعات العميل */}
-                              <Card>
-                                <CardHeader>
-                                  <CardTitle className="flex items-center gap-2 text-lg">
-                                    <DollarSign className="h-4 w-4" />
-                                    المدفوعات ({customerPayments[selectedCustomerId]?.length || 0})
-                                  </CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                  <Table>
-                                    <TableHeader>
-                                      <TableRow>
-                                        <TableHead>المبلغ</TableHead>
-                                        <TableHead>نوع الدفع</TableHead>
-                                        <TableHead>تاريخ الدفع</TableHead>
-                                      </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                      {customerPayments[selectedCustomerId]?.slice(0, 5).map((payment) => (
-                                        <TableRow key={payment.id}>
-                                          <TableCell className="font-medium text-green-600">
-                                            {payment.amount.toLocaleString()} ر.س
-                                          </TableCell>
-                                          <TableCell>
-                                            <Badge variant="secondary">{payment.payment_type}</Badge>
-                                          </TableCell>
-                                          <TableCell>
-                                            {format(new Date(payment.payment_date), 'dd/MM/yyyy', { locale: ar })}
-                                          </TableCell>
-                                        </TableRow>
-                                      ))}
-                                    </TableBody>
-                                  </Table>
-                                </CardContent>
-                              </Card>
-                            </div>
-                          )}
-                        </DialogContent>
-                      </Dialog>
-                      
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => openSummaryDialog(customer)}
-                      >
-                        <FileText className="h-4 w-4 mr-2" />
-                        ملخص
-                      </Button>
-                    </div>
-                  </TableCell>
+                               {/* مدفوعات العميل */}
+                               <Card>
+                                 <CardHeader>
+                                   <CardTitle className="flex items-center gap-2 text-lg">
+                                     <DollarSign className="h-4 w-4" />
+                                     المدفوعات ({customerPayments[selectedCustomerId]?.length || 0})
+                                   </CardTitle>
+                                 </CardHeader>
+                                 <CardContent>
+                                   <Table>
+                                     <TableHeader>
+                                       <TableRow>
+                                         <TableHead>المبلغ</TableHead>
+                                         <TableHead>نوع الدفع</TableHead>
+                                         <TableHead>تاريخ الدفع</TableHead>
+                                       </TableRow>
+                                     </TableHeader>
+                                     <TableBody>
+                                       {customerPayments[selectedCustomerId]?.slice(0, 5).map((payment) => (
+                                         <TableRow key={payment.id}>
+                                           <TableCell className="font-medium text-green-600">
+                                             {payment.amount.toLocaleString()} ر.س
+                                           </TableCell>
+                                           <TableCell>
+                                             <Badge variant="secondary">{payment.payment_type}</Badge>
+                                           </TableCell>
+                                           <TableCell>
+                                             {format(new Date(payment.payment_date), 'dd/MM/yyyy', { locale: ar })}
+                                           </TableCell>
+                                         </TableRow>
+                                       ))}
+                                     </TableBody>
+                                   </Table>
+                                 </CardContent>
+                               </Card>
+                             </div>
+                           )}
+                         </DialogContent>
+                       </Dialog>
+                       
+                       <Button 
+                         variant="outline" 
+                         size="sm"
+                         onClick={() => openSummaryDialog(customer)}
+                       >
+                         <FileText className="h-4 w-4 mr-2" />
+                         ملخص
+                       </Button>
+
+                       <Button 
+                         variant="default" 
+                         size="sm"
+                         onClick={() => handleDirectWhatsApp(customer)}
+                         className="bg-green-600 hover:bg-green-700 text-white"
+                       >
+                         <MessageSquare className="h-4 w-4 mr-2" />
+                         واتساب
+                       </Button>
+                     </div>
+                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
