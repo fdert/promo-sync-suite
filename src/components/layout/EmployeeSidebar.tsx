@@ -107,6 +107,12 @@ const employeeMenuItems = [
     href: "/employee/pricing-calculator",
     allowedRoles: ['employee'] as UserRole[],
   },
+  {
+    title: "إعدادات الويب هوك",
+    icon: Settings,
+    href: "/employee/webhook-settings",
+    allowedRoles: ['employee'] as UserRole[],
+  },
 ];
 
 const EmployeeSidebar = ({ collapsed, onToggle }: SidebarProps) => {

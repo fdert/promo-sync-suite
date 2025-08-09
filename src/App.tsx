@@ -55,6 +55,7 @@ import PricingCalculatorPage from "./pages/employee/PricingCalculator";
 import BulkWhatsApp from "./pages/admin/BulkWhatsApp";
 import CustomerGroups from "./pages/admin/CustomerGroups";
 import EmployeeBulkWhatsApp from "./pages/employee/BulkWhatsApp";
+import EmployeeWebhookSettings from "./pages/employee/WebhookSettings";
 
 import OrderPayments from "./pages/admin/OrderPayments";
 
@@ -102,6 +103,7 @@ const App = () => (
               <Route path="pricing-calculator" element={<PricingCalculatorPage />} />
               <Route path="reports" element={<EmployeeReports />} />
               <Route path="bulk-whatsapp" element={<EmployeeBulkWhatsApp />} />
+              <Route path="webhook-settings" element={<EmployeeWebhookSettings />} />
             </Route>
             <Route path="/admin" element={
               <ProtectedRoute>
