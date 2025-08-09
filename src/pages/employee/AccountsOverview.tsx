@@ -435,84 +435,111 @@ ${payments.slice(0, 5).map(payment =>
 
       console.log('✅ تم حفظ الرسالة بنجاح، ID:', messageData.id);
 
-      // إرسال الرسالة عبر الويب هوك مباشرة
-      console.log('📤 إرسال الرسالة للويب هوك...');
+      // استخدام Edge Function لمعالجة الرسائل المعلقة
+      console.log('📤 معالجة الرسالة عبر Edge Function...');
       
-      const webhookUrl = 'https://n8n.srv894347.hstgr.cloud/webhook/ca719409-ac29-485a-99d4-3b602978eace';
-      
-      let webhookResponse;
       try {
-        webhookResponse = await fetch(webhookUrl, {
-          method: 'POST',
-          mode: 'cors',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify({
-            phone: phoneNumber,
-            message: summary,
-            customer_name: customer.customer_name,
-            message_id: messageData.id,
-            timestamp: new Date().toISOString(),
-            source: 'accounts_overview'
-          })
-        });
-      } catch (fetchError) {
-        console.error('❌ خطأ في الاتصال بالويب هوك:', fetchError);
+        // استدعاء Edge Function لمعالجة الرسائل المعلقة
+        const { data: processData, error: processError } = await supabase.functions.invoke('send-pending-whatsapp');
         
-        // في حالة فشل الويب هوك، حفظ الرسالة كـ pending ليتم إرسالها لاحقاً
-        await supabase
+        if (processError) {
+          console.error('❌ خطأ في Edge Function:', processError);
+          throw new Error('فشل في معالجة الرسائل المعلقة');
+        }
+        
+        console.log('✅ تم استدعاء Edge Function بنجاح:', processData);
+        
+        // انتظار قليل للسماح للـ Edge Function بمعالجة الرسالة
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // التحقق من حالة الرسالة بعد المعالجة
+        const { data: updatedMessage } = await supabase
           .from('whatsapp_messages')
-          .update({ 
-            status: 'pending',
-            error_message: `Webhook connection failed: ${fetchError.message}`
-          })
-          .eq('id', messageData.id);
+          .select('status, error_message')
+          .eq('id', messageData.id)
+          .single();
         
-        toast({
-          title: "تم حفظ الرسالة",
-          description: `تم حفظ الرسالة وستُرسل تلقائياً عند توفر الاتصال. معرف الرسالة: ${messageData.id}`,
-          variant: "default"
-        });
+        if (updatedMessage?.status === 'sent') {
+          console.log('✅ تم إرسال الرسالة بنجاح!');
+          toast({
+            title: "تم الإرسال بنجاح",
+            description: `تم إرسال التقرير المالي للعميل ${customer.customer_name} بنجاح.`,
+          });
+        } else if (updatedMessage?.status === 'failed') {
+          throw new Error(updatedMessage.error_message || 'فشل في إرسال الرسالة');
+        } else {
+          // الرسالة لا تزال قيد المعالجة
+          toast({
+            title: "جاري المعالجة",
+            description: `تم حفظ الرسالة وهي قيد المعالجة. سيتم إرسالها قريباً للعميل ${customer.customer_name}.`,
+          });
+        }
         
-        return; // إنهاء الدالة هنا
-      }
+      } catch (edgeFunctionError) {
+        console.error('❌ خطأ في Edge Function:', edgeFunctionError);
+        
+        // إذا فشل Edge Function، استخدم الطريقة القديمة (الاتصال المباشر)
+        console.log('🔄 محاولة الاتصال المباشر بالويب هوك...');
+        
+        const webhookUrl = 'https://n8n.srv894347.hstgr.cloud/webhook/ca719409-ac29-485a-99d4-3b602978eace';
+        
+        try {
+          const webhookResponse = await fetch(webhookUrl, {
+            method: 'POST',
+            mode: 'cors',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+              phone: phoneNumber,
+              message: summary,
+              customer_name: customer.customer_name,
+              message_id: messageData.id,
+              timestamp: new Date().toISOString(),
+              source: 'direct_fallback'
+            })
+          });
 
-      const webhookResponseText = await webhookResponse.text();
-      console.log('📥 استجابة الويب هوك:', webhookResponse.status, webhookResponseText);
+          const webhookResponseText = await webhookResponse.text();
+          console.log('📥 استجابة الويب هوك:', webhookResponse.status, webhookResponseText);
 
-      // تحديث حالة الرسالة حسب نتيجة الويب هوك
-      const newStatus = webhookResponse.ok ? 'sent' : 'failed';
-      
-      await supabase
-        .from('whatsapp_messages')
-        .update({ 
-          status: newStatus,
-          error_message: webhookResponse.ok ? null : `Webhook error: ${webhookResponse.status} - ${webhookResponseText}`
-        })
-        .eq('id', messageData.id);
+          const newStatus = webhookResponse.ok ? 'sent' : 'failed';
+          
+          await supabase
+            .from('whatsapp_messages')
+            .update({ 
+              status: newStatus,
+              error_message: webhookResponse.ok ? null : `Webhook error: ${webhookResponse.status} - ${webhookResponseText}`
+            })
+            .eq('id', messageData.id);
 
-      if (webhookResponse.ok) {
-        console.log('✅ تم إرسال الرسالة للويب هوك بنجاح!');
-        console.log('🆔 معرف الرسالة:', messageData.id);
-        console.log('📊 حالة الويب هوك:', webhookResponse.status);
-        console.log('💬 رد الويب هوك:', webhookResponseText);
-        
-        // تحذير مهم للمستخدم
-        toast({
-          title: "تم إرسال الرسالة للويب هوك",
-          description: `الرسالة وصلت للويب هوك بنجاح (${webhookResponse.status}). إذا لم تصل للعميل، فالمشكلة في إعدادات n8n workflow.`,
-          variant: "default"
-        });
-        
-        console.log('⚠️ تنبيه: إذا لم تصل الرسالة للعميل، تحقق من:');
-        console.log('1. إعدادات الواتساب API في n8n');
-        console.log('2. أن workflow يحتوي على WhatsApp node صحيح');
-        console.log('3. أن رقم الهاتف مسجل في واتساب بيزنس');
-        console.log('4. إعدادات webhook في n8n تستقبل البيانات وترسلها للواتساب');
-      } else {
-        throw new Error(`خطأ في الويب هوك: ${webhookResponse.status} - ${webhookResponseText}`);
+          if (webhookResponse.ok) {
+            toast({
+              title: "تم الإرسال بنجاح",
+              description: `تم إرسال التقرير المالي للعميل ${customer.customer_name} عبر الاتصال المباشر.`,
+            });
+          } else {
+            throw new Error(`خطأ في الويب هوك: ${webhookResponse.status} - ${webhookResponseText}`);
+          }
+          
+        } catch (fetchError) {
+          console.error('❌ خطأ في الاتصال المباشر:', fetchError);
+          
+          await supabase
+            .from('whatsapp_messages')
+            .update({ 
+              status: 'pending',
+              error_message: `Both edge function and direct webhook failed: ${fetchError.message}`
+            })
+            .eq('id', messageData.id);
+          
+          toast({
+            title: "تم حفظ الرسالة",
+            description: `تم حفظ الرسالة وستُرسل تلقائياً عند توفر الاتصال. معرف الرسالة: ${messageData.id}`,
+            variant: "default"
+          });
+        }
       }
 
     } catch (error) {
