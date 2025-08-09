@@ -206,36 +206,73 @@ const WebhookSettings = () => {
     try {
       console.log('إرسال رسالة تجريبية مباشرة عبر ويب هوك...');
       
-      // إرسال الرسالة مباشرة عبر Edge Function المخصص للرسائل التجريبية
-      const { data, error } = await supabase.functions.invoke('send-test-whatsapp', {
-        body: {
-          customer_phone: '+966535983261',
-          customer_name: 'مستخدم تجريبي',
-          message: `رسالة تجريبية للتأكد من عمل النظام - ${new Date().toLocaleString('ar-SA')}`
-        }
-      });
-
-      if (error) {
-        console.error('خطأ في إرسال الرسالة:', error);
+      // البحث عن webhook نشط من النوع outgoing
+      const outgoingWebhook = webhookSettings.find(w => 
+        w.webhook_type === 'outgoing' && w.is_active === true
+      );
+      
+      if (!outgoingWebhook) {
         toast({
           title: "خطأ",
-          description: `فشل في إرسال الرسالة التجريبية: ${error.message}`,
+          description: "لم يتم العثور على ويب هوك نشط للرسائل الصادرة",
           variant: "destructive",
         });
         return;
       }
-
-      console.log('استجابة الإرسال:', data);
       
-      if (data?.success) {
+      console.log('استخدام ويب هوك:', outgoingWebhook.webhook_url);
+      
+      // إعداد بيانات الرسالة
+      const messageData = {
+        type: 'test_message',
+        customerPhone: '+966535983261',
+        customerName: 'مستخدم تجريبي',
+        message: `رسالة تجريبية للتأكد من عمل النظام - ${new Date().toLocaleString('ar-SA')}`,
+        companyName: 'وكالة الإبداع للدعاية والإعلان',
+        timestamp: new Date().toISOString()
+      };
+      
+      console.log('إرسال البيانات:', messageData);
+      
+      // إرسال مباشر للويب هوك
+      const response = await fetch(outgoingWebhook.webhook_url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(messageData)
+      });
+      
+      console.log('استجابة الويب هوك:', response.status, response.statusText);
+      
+      if (response.ok) {
+        // تسجيل الرسالة في قاعدة البيانات
+        const { error: dbError } = await supabase
+          .from('whatsapp_messages')
+          .insert({
+            from_number: 'system',
+            to_number: '+966535983261',
+            message_type: 'text',
+            message_content: messageData.message,
+            status: 'sent',
+            is_reply: false
+          });
+        
+        if (dbError) {
+          console.error('خطأ في حفظ الرسالة:', dbError);
+        }
+        
         toast({
           title: "تم إرسال الرسالة",
           description: `تم إرسال الرسالة التجريبية بنجاح إلى +966535983261`,
         });
       } else {
+        const errorText = await response.text();
+        console.error('فشل في إرسال الرسالة:', response.status, errorText);
+        
         toast({
           title: "فشل الإرسال",
-          description: data?.error || "فشل في إرسال الرسالة التجريبية",
+          description: `فشل في إرسال الرسالة. كود الخطأ: ${response.status}`,
           variant: "destructive",
         });
       }
