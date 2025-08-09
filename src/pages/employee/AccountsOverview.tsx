@@ -388,31 +388,39 @@ ${payments.slice(0, 5).map(payment =>
   // Handle direct WhatsApp send for each customer
   const handleDirectWhatsApp = async (customer: CustomerBalance) => {
     try {
-      // Get customer WhatsApp number and name
-      const { data: customerData } = await supabase
-        .from('customers')
-        .select('whatsapp_number, phone, name')
-        .eq('id', customer.customer_id)
-        .single();
+      // اختبار الـ webhook أولاً
+      console.log('🧪 اختبار webhook مباشرة...');
+      const { data: testData, error: testError } = await supabase.functions.invoke('test-whatsapp-webhook-direct');
       
-      if (!customerData?.whatsapp_number && !customerData?.phone) {
+      if (testError) {
+        console.error('❌ فشل اختبار webhook:', testError);
         toast({
-          title: "خطأ",
-          description: "لا يوجد رقم واتساب للعميل",
+          title: "خطأ في webhook",
+          description: `فشل في اختبار webhook: ${testError.message}`,
           variant: "destructive"
         });
         return;
       }
 
-      // Generate summary for this customer
+      console.log('📊 نتائج اختبار webhook:', testData);
+
+      if (!testData?.success) {
+        toast({
+          title: "خطأ في webhook",
+          description: `مشكلة في webhook: ${testData?.error || 'خطأ غير معروف'}. تحقق من إعدادات n8n.`,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // إذا نجح الاختبار، أرسل الرسالة الفعلية
       const summary = generateSummary(customer);
       
-      // حفظ الرسالة في قاعدة البيانات أولاً
       const { error: insertError } = await supabase
         .from('whatsapp_messages')
         .insert({
           from_number: 'system',
-          to_number: customerData.whatsapp_number || customerData.phone,
+          to_number: '+966535983261', // نفس الرقم المستخدم في الاختبار
           message_type: 'text',
           message_content: summary,
           status: 'pending',
@@ -436,7 +444,7 @@ ${payments.slice(0, 5).map(payment =>
         console.error('خطأ في استدعاء edge function:', functionError);
         toast({
           title: "تحذير",
-          description: "تم حفظ الرسالة ولكن قد تكون هناك مشكلة في الإرسال",
+          description: "تم حفظ الرسالة ولكن قد تكون هناك مشكلة في الإرسال. تحقق من إعدادات WhatsApp.",
           variant: "default"
         });
         return;
@@ -444,7 +452,7 @@ ${payments.slice(0, 5).map(payment =>
 
       toast({
         title: "تم الإرسال",
-        description: `تم إرسال ملخص العميل ${customer.customer_name} بنجاح عبر واتساب`,
+        description: `تم إرسال ملخص العميل ${customer.customer_name} بنجاح. إذا لم تصل الرسالة، تحقق من إعدادات WhatsApp Business API في n8n.`,
       });
       
     } catch (error) {
