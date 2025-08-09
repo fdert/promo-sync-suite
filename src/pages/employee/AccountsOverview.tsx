@@ -388,44 +388,68 @@ ${payments.slice(0, 5).map(payment =>
   // Handle direct WhatsApp send for each customer
   const handleDirectWhatsApp = async (customer: CustomerBalance) => {
     try {
-      console.log('🚀 إرسال رسالة واتساب مباشرة عبر Edge Function...');
+      console.log('🧪 إرسال التقرير المالي للعميل:', customer.customer_name);
       
-      // إعداد التقرير المالي
+      const webhookUrl = 'https://n8n.srv894347.hstgr.cloud/webhook/ca719409-ac29-485a-99d4-3b602978eace';
+      
+      // إعداد التقرير المالي الفعلي
       const summary = generateSummary(customer);
       
-      console.log('📊 التقرير المالي جاهز للإرسال');
-      console.log('📱 الرقم المستهدف: +966535983261');
+      console.log('📊 محتوى التقرير:', summary);
       
-      // استدعاء Edge Function الجديد
-      const { data, error } = await supabase.functions.invoke('send-whatsapp-direct', {
-        body: {
-          phone: '+966535983261',
-          message: summary,
-          customer_name: customer.customer_name
-        }
+      const payload = {
+        phone: '+966535983261',
+        message: summary,
+        customer_name: customer.customer_name
+      };
+
+      console.log('📤 إرسال بيانات إلى webhook:', webhookUrl);
+      console.log('📄 البيانات:', payload);
+
+      // إرسال التقرير المالي مباشرة
+      const webhookResponse = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
       });
 
-      console.log('📥 استجابة Edge Function:', data);
-      
-      if (error) {
-        console.error('❌ خطأ في Edge Function:', error);
-        throw error;
+      const responseText = await webhookResponse.text();
+      console.log('📥 استجابة webhook:');
+      console.log('Status:', webhookResponse.status);
+      console.log('Response:', responseText);
+
+      if (!webhookResponse.ok) {
+        toast({
+          title: "خطأ في webhook",
+          description: `فشل webhook: ${webhookResponse.status} - ${responseText}`,
+          variant: "destructive"
+        });
+        return;
       }
 
-      if (data?.success) {
-        console.log('✅ تم إرسال الرسالة بنجاح!');
-        console.log('🆔 معرف الرسالة:', data.message_id);
-        console.log('📊 حالة الويب هوك:', data.webhook_status);
-        console.log('💬 رد الويب هوك:', data.webhook_response);
-        
-        toast({
-          title: "تم الإرسال بنجاح",
-          description: `تم إرسال التقرير المالي للعميل ${customer.customer_name}. معرف الرسالة: ${data.message_id}`,
+      // حفظ الرسالة في قاعدة البيانات
+      const { error: saveError } = await supabase
+        .from('whatsapp_messages')
+        .insert({
+          from_number: 'system',
+          to_number: '+966535983261',
+          message_type: 'text',
+          message_content: summary,
+          status: 'sent',
+          customer_id: customer.customer_id
         });
-      } else {
-        console.error('❌ فشل في الإرسال:', data);
-        throw new Error(data?.error || 'فشل غير معروف');
+
+      if (saveError) {
+        console.error('❌ خطأ في حفظ الرسالة:', saveError);
       }
+
+      console.log('✅ تم إرسال التقرير المالي بنجاح');
+      toast({
+        title: "تم الإرسال بنجاح",
+        description: `تم إرسال التقرير المالي للعميل ${customer.customer_name}`,
+      });
 
     } catch (error) {
       console.error('❌ خطأ في Edge Function:', error);
