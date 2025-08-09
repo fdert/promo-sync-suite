@@ -481,22 +481,23 @@ const WebhookSettings = () => {
 
       console.log('✅ تم حفظ رسالة الاختبار، ID:', savedMessage.id);
 
-      // استخدام edge function الجديد لإرسال واتساب مباشرة
+      // اختبار الويب هوك مباشرة
       const startTime = Date.now();
-      const webhookResponse = await fetch(
-        `https://gcuqfxacnbxdldsbmgvf.supabase.co/functions/v1/send-whatsapp-simple`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdjdXFmeGFjbmJ4ZGxkc2JtZ3ZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0Nzg1MjQsImV4cCI6MjA2OTA1NDUyNH0.jzfLlevMRqw85cwBrTnGRRvut-3g9M1yRiXQB2pw-mc`,
-          },
-          body: JSON.stringify({
-            phone: phone,
-            message: testFinancialReport,
-          })
-        }
-      );
+      const webhookResponse = await fetch(financialWebhook.webhook_url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phone: phone,
+          message: testFinancialReport,
+          customer_name: testCustomer.name,
+          message_id: savedMessage.id,
+          test_mode: true,
+          notification_type: 'financial_report_test',
+          timestamp: new Date().toISOString()
+        })
+      });
       const endTime = Date.now();
 
       const responseText = await webhookResponse.text();
