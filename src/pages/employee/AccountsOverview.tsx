@@ -388,7 +388,7 @@ ${payments.slice(0, 5).map(payment =>
   // Handle direct WhatsApp send for each customer
   const handleDirectWhatsApp = async (customer: CustomerBalance) => {
     try {
-      console.log('🚀 إرسال رسالة واتساب مباشرة عبر Edge Function...');
+      console.log('🚀 إرسال رسالة واتساب مباشرة...');
       
       // Get customer WhatsApp number
       const { data: customerData } = await supabase
@@ -414,39 +414,76 @@ ${payments.slice(0, 5).map(payment =>
       console.log('📊 التقرير المالي جاهز للإرسال');
       console.log('📱 الرقم المستهدف:', phoneNumber);
       
-      // استدعاء Edge Function الجديد
-      const { data, error } = await supabase.functions.invoke('send-whatsapp-direct', {
-        body: {
-          phone: phoneNumber,
-          message: summary,
-          customer_name: customer.customer_name
-        }
-      });
+      // حفظ الرسالة في قاعدة البيانات أولاً
+      const { data: messageData, error: saveError } = await supabase
+        .from('whatsapp_messages')
+        .insert({
+          from_number: 'system',
+          to_number: phoneNumber,
+          message_type: 'text',
+          message_content: summary,
+          status: 'pending',
+          customer_id: customer.customer_id
+        })
+        .select()
+        .single();
 
-      console.log('📥 استجابة Edge Function:', data);
-      
-      if (error) {
-        console.error('❌ خطأ في Edge Function:', error);
-        throw error;
+      if (saveError) {
+        console.error('❌ خطأ في حفظ الرسالة:', saveError);
+        throw new Error('فشل في حفظ الرسالة');
       }
 
-      if (data?.success) {
+      console.log('✅ تم حفظ الرسالة بنجاح، ID:', messageData.id);
+
+      // إرسال الرسالة عبر الويب هوك مباشرة
+      console.log('📤 إرسال الرسالة للويب هوك...');
+      
+      const webhookUrl = 'https://n8n.srv894347.hstgr.cloud/webhook/ca719409-ac29-485a-99d4-3b602978eace';
+      
+      const webhookResponse = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phone: phoneNumber,
+          message: summary,
+          customer_name: customer.customer_name,
+          message_id: messageData.id,
+          timestamp: new Date().toISOString()
+        })
+      });
+
+      const webhookResponseText = await webhookResponse.text();
+      console.log('📥 استجابة الويب هوك:', webhookResponse.status, webhookResponseText);
+
+      // تحديث حالة الرسالة حسب نتيجة الويب هوك
+      const newStatus = webhookResponse.ok ? 'sent' : 'failed';
+      
+      await supabase
+        .from('whatsapp_messages')
+        .update({ 
+          status: newStatus,
+          error_message: webhookResponse.ok ? null : `Webhook error: ${webhookResponse.status} - ${webhookResponseText}`
+        })
+        .eq('id', messageData.id);
+
+      if (webhookResponse.ok) {
         console.log('✅ تم إرسال الرسالة بنجاح!');
-        console.log('🆔 معرف الرسالة:', data.message_id);
-        console.log('📊 حالة الويب هوك:', data.webhook_status);
-        console.log('💬 رد الويب هوك:', data.webhook_response);
+        console.log('🆔 معرف الرسالة:', messageData.id);
+        console.log('📊 حالة الويب هوك:', webhookResponse.status);
+        console.log('💬 رد الويب هوك:', webhookResponseText);
         
         toast({
           title: "تم الإرسال بنجاح",
-          description: `تم إرسال التقرير المالي للعميل ${customer.customer_name}. معرف الرسالة: ${data.message_id}`,
+          description: `تم إرسال التقرير المالي للعميل ${customer.customer_name}. معرف الرسالة: ${messageData.id}`,
         });
       } else {
-        console.error('❌ فشل في الإرسال:', data);
-        throw new Error(data?.error || 'فشل غير معروف');
+        throw new Error(`خطأ في الويب هوك: ${webhookResponse.status} - ${webhookResponseText}`);
       }
 
     } catch (error) {
-      console.error('❌ خطأ في Edge Function:', error);
+      console.error('❌ خطأ في الإرسال:', error);
       
       toast({
         title: "خطأ في الإرسال",
