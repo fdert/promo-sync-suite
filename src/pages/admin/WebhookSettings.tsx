@@ -204,9 +204,12 @@ const WebhookSettings = () => {
 
   const createTestMessage = async () => {
     try {
-      console.log('Invoking test-webhook function...');
-      const { data, error } = await supabase.functions.invoke('test-webhook', {
-        body: {}
+      console.log('Invoking simple-whatsapp function...');
+      const { data, error } = await supabase.functions.invoke('simple-whatsapp', {
+        body: {
+          phone_number: '+966535983261',
+          message: `رسالة تجريبية للتأكد من عمل النظام - ${new Date().toLocaleString('ar-SA')}`
+        }
       });
       
       if (error) {
