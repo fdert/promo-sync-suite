@@ -308,16 +308,34 @@ const WebhookSettings = () => {
           <div className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>اختبار إرسال الرسائل</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5" />
+                  اختبار رسائل الواتساب
+                </CardTitle>
                 <CardDescription>
-                  اختبر إرسال رسالة تجريبية عبر الويب هوك
+                  إرسال رسالة تجريبية للتأكد من عمل النظام
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <Button onClick={createTestMessage} className="w-full">
-                  <Send className="w-4 h-4 mr-2" />
-                  إنشاء ومعالجة رسالة تجريبية
-                </Button>
+              <CardContent className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <div className="flex-1">
+                    <label className="text-sm font-medium">رقم الواتساب للاختبار:</label>
+                    <div className="mt-1 p-2 bg-muted rounded text-sm">
+                      +966535983261
+                    </div>
+                  </div>
+                  <Button 
+                    onClick={createTestMessage}
+                    className="whitespace-nowrap"
+                    disabled={loading}
+                  >
+                    <Send className="w-4 h-4 mr-2" />
+                    إنشاء ومعالجة رسالة تجريبية
+                  </Button>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  ✅ سيتم استخدام هذا الرقم أيضاً لاختبار رسائل حالة الطلبات والفواتير
+                </div>
               </CardContent>
             </Card>
             
