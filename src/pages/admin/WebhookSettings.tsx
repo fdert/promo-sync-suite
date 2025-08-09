@@ -368,30 +368,150 @@ const WebhookSettings = () => {
         description: "يتم اختبار ويب هوك التقارير المالية",
       });
 
-      const { data, error } = await supabase.functions.invoke('test-financial-report-webhook');
-
-      if (error) {
-        console.error('❌ خطأ في Edge Function:', error);
+      // البحث عن webhook "واتساب التقارير المالية"
+      const financialWebhook = webhookSettings.find(w => 
+        w.webhook_name === 'واتساب التقارير المالية' && w.is_active === true
+      );
+      
+      if (!financialWebhook) {
         toast({
-          title: "فشل الاختبار",
-          description: `خطأ في تشغيل اختبار التقارير المالية: ${error.message}`,
+          title: "خطأ",
+          description: "لم يتم العثور على ويب هوك 'واتساب التقارير المالية' أو أنه غير نشط",
           variant: "destructive",
         });
         return;
       }
 
-      console.log('📊 نتائج اختبار التقارير المالية:', data);
+      // جلب عميل للاختبار
+      const { data: testCustomer, error: customerError } = await supabase
+        .from('customers')
+        .select('id, name, whatsapp_number, phone')
+        .limit(1)
+        .single();
 
-      if (data?.success) {
-        const summary = data.summary || {};
+      if (customerError || !testCustomer) {
         toast({
-          title: "نجح الاختبار",
-          description: `تم اختبار ${summary.total_webhooks} ويب هوك. نجح: ${summary.successful}, فشل: ${summary.failed}`,
+          title: "خطأ",
+          description: "لا توجد عملاء للاختبار",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const phone = testCustomer.whatsapp_number || testCustomer.phone || '+966535983261';
+
+      // إنشاء رسالة تقرير مالي تجريبي
+      const testFinancialReport = `
+🧪 اختبار تقرير مالي
+━━━━━━━━━━━━━━━━━━━━
+
+العميل: ${testCustomer.name}
+الرقم: ${phone}
+
+المبلغ المستحق: 100 ر.س
+عدد الطلبات المعلقة: 2
+أقرب تاريخ استحقاق: ${new Date().toLocaleDateString('ar-SA')}
+
+آخر الطلبات:
+• طلب TEST-001 - مبلغ: 50 ر.س
+• طلب TEST-002 - مبلغ: 50 ر.س
+
+تاريخ التقرير: ${new Date().toLocaleString('ar-SA')}
+
+✅ هذا اختبار لنظام التقارير المالية
+      `;
+
+      console.log('📝 التقرير المالي التجريبي:', testFinancialReport);
+
+      // حفظ رسالة الاختبار في قاعدة البيانات
+      const { data: savedMessage, error: saveError } = await supabase
+        .from('whatsapp_messages')
+        .insert({
+          from_number: 'test_financial_system',
+          to_number: phone,
+          message_type: 'text',
+          message_content: testFinancialReport,
+          status: 'pending',
+          customer_id: testCustomer.id
+        })
+        .select()
+        .single();
+
+      if (saveError) {
+        console.error('❌ خطأ في حفظ رسالة الاختبار:', saveError);
+        toast({
+          title: "خطأ",
+          description: "فشل في حفظ رسالة الاختبار",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log('✅ تم حفظ رسالة الاختبار، ID:', savedMessage.id);
+
+      // اختبار الويب هوك مباشرة
+      const startTime = Date.now();
+      const webhookResponse = await fetch(financialWebhook.webhook_url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phone: phone,
+          message: testFinancialReport,
+          customer_name: testCustomer.name,
+          message_id: savedMessage.id,
+          test_mode: true,
+          notification_type: 'financial_report_test',
+          timestamp: new Date().toISOString()
+        })
+      });
+      const endTime = Date.now();
+
+      const responseText = await webhookResponse.text();
+      const responseTime = endTime - startTime;
+
+      console.log('📊 نتيجة اختبار الويب هوك:', {
+        url: financialWebhook.webhook_url,
+        status: webhookResponse.status,
+        statusText: webhookResponse.statusText,
+        responseTime: responseTime + 'ms',
+        response: responseText
+      });
+
+      if (webhookResponse.ok) {
+        // تحديث حالة الرسالة إلى sent
+        await supabase
+          .from('whatsapp_messages')
+          .update({ 
+            status: 'sent',
+            error_message: null
+          })
+          .eq('id', savedMessage.id);
+
+        toast({
+          title: "نجح الاختبار ✅",
+          description: `تم اختبار ويب هوك التقارير المالية بنجاح
+الحالة: ${webhookResponse.status}
+زمن الاستجابة: ${responseTime}ms
+الرقم المستهدف: ${phone}
+يجب أن تصل الرسالة خلال 5 دقائق`,
         });
       } else {
+        // تحديث حالة الرسالة إلى failed
+        await supabase
+          .from('whatsapp_messages')
+          .update({ 
+            status: 'failed',
+            error_message: `Webhook test failed: ${webhookResponse.status} - ${responseText}`
+          })
+          .eq('id', savedMessage.id);
+
         toast({
-          title: "فشل الاختبار",
-          description: data?.error || "فشل في اختبار ويب هوك التقارير المالية",
+          title: "فشل الاختبار ❌",
+          description: `فشل في اختبار الويب هوك
+الحالة: ${webhookResponse.status}
+الاستجابة: ${responseText.substring(0, 100)}`,
           variant: "destructive",
         });
       }
@@ -400,7 +520,7 @@ const WebhookSettings = () => {
       console.error('❌ خطأ في اختبار التقارير المالية:', error);
       toast({
         title: "خطأ",
-        description: "فشل في تشغيل اختبار التقارير المالية",
+        description: `فشل في تشغيل اختبار التقارير المالية: ${error.message}`,
         variant: "destructive",
       });
     }
