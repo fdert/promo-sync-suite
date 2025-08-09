@@ -382,20 +382,52 @@ const WebhookSettings = () => {
         return;
       }
 
-      // جلب عميل للاختبار
-      const { data: testCustomer, error: customerError } = await supabase
+      // جلب عميل للاختبار أو إنشاء واحد تجريبي
+      let testCustomer;
+      const { data: existingCustomers, error: customerError } = await supabase
         .from('customers')
         .select('id, name, whatsapp_number, phone')
-        .limit(1)
-        .single();
+        .limit(1);
 
-      if (customerError || !testCustomer) {
+      if (customerError) {
+        console.error('❌ خطأ في جلب العملاء:', customerError);
         toast({
           title: "خطأ",
-          description: "لا توجد عملاء للاختبار",
+          description: "فشل في الوصول لقاعدة بيانات العملاء",
           variant: "destructive",
         });
         return;
+      }
+
+      if (existingCustomers && existingCustomers.length > 0) {
+        testCustomer = existingCustomers[0];
+      } else {
+        // إنشاء عميل تجريبي
+        console.log('📝 إنشاء عميل تجريبي للاختبار...');
+        const { data: newCustomer, error: createError } = await supabase
+          .from('customers')
+          .insert({
+            name: 'عميل تجريبي للاختبار',
+            whatsapp_number: '+966535983261',
+            phone: '+966535983261',
+            notes: 'عميل تم إنشاؤه تلقائياً لاختبار النظام',
+            status: 'نشط'
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('❌ خطأ في إنشاء العميل التجريبي:', createError);
+          toast({
+            title: "خطأ",
+            description: "فشل في إنشاء عميل تجريبي للاختبار",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        testCustomer = newCustomer;
+        console.log('✅ تم إنشاء عميل تجريبي:', testCustomer.name);
       }
 
       const phone = testCustomer.whatsapp_number || testCustomer.phone || '+966535983261';
