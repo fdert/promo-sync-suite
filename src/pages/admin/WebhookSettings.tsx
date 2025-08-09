@@ -220,30 +220,49 @@ const WebhookSettings = () => {
         return;
       }
       
-      console.log('استخدام ويب هوك:', outgoingWebhook.webhook_url);
+      console.log('استخدام ويب هوك:', {
+        name: outgoingWebhook.webhook_name,
+        url: outgoingWebhook.webhook_url,
+        type: outgoingWebhook.webhook_type
+      });
       
-      // إعداد بيانات الرسالة
+      // إعداد بيانات الرسالة بنفس تنسيق رسائل الطلبات الناجحة
       const messageData = {
-        type: 'test_message',
+        // إضافة البيانات بنفس التنسيق المستخدم في الطلبات
         customerPhone: '+966535983261',
         customerName: 'مستخدم تجريبي',
-        message: `رسالة تجريبية للتأكد من عمل النظام - ${new Date().toLocaleString('ar-SA')}`,
+        orderNumber: 'TEST-001',
+        serviceName: 'اختبار الواتساب',
+        amount: '0',
+        status: 'اختبار',
         companyName: 'وكالة الإبداع للدعاية والإعلان',
-        timestamp: new Date().toISOString()
+        message: `🔔 رسالة تجريبية للتأكد من عمل النظام\n\nالعميل: مستخدم تجريبي\nرقم الواتساب: +966535983261\nالوقت: ${new Date().toLocaleString('ar-SA')}\n\n✅ إذا وصلتك هذه الرسالة فالنظام يعمل بشكل صحيح`,
+        timestamp: new Date().toISOString(),
+        notificationType: 'test_message'
       };
       
-      console.log('إرسال البيانات:', messageData);
+      console.log('إرسال البيانات للويب هوك:', messageData);
       
-      // إرسال مباشر للويب هوك
+      // إرسال مباشر للويب هوك مع headers إضافية
       const response = await fetch(outgoingWebhook.webhook_url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'User-Agent': 'إبداع-واتساب-تست/1.0',
+          ...(outgoingWebhook.secret_key && {
+            'Authorization': `Bearer ${outgoingWebhook.secret_key}`
+          })
         },
         body: JSON.stringify(messageData)
       });
       
-      console.log('استجابة الويب هوك:', response.status, response.statusText);
+      const responseText = await response.text();
+      console.log('استجابة الويب هوك:', {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries()),
+        body: responseText
+      });
       
       if (response.ok) {
         // تسجيل الرسالة في قاعدة البيانات
@@ -263,16 +282,22 @@ const WebhookSettings = () => {
         }
         
         toast({
-          title: "تم إرسال الرسالة",
-          description: `تم إرسال الرسالة التجريبية بنجاح إلى +966535983261`,
+          title: "تم إرسال الطلب للويب هوك",
+          description: `تم إرسال الطلب بنجاح للويب هوك: ${outgoingWebhook.webhook_name}\n\nكود الاستجابة: ${response.status}\n\nتحقق من واتساب +966535983261 خلال دقيقة واحدة`,
         });
+        
+        // عرض تفاصيل إضافية في الكونسول
+        console.log(`✅ تم إرسال الطلب بنجاح للويب هوك`);
+        console.log(`📱 يجب أن تصل الرسالة لرقم: +966535983261`);
+        console.log(`🔗 الويب هوك المستخدم: ${outgoingWebhook.webhook_name}`);
+        console.log(`📋 استجابة الخادم: ${responseText}`);
+        
       } else {
-        const errorText = await response.text();
-        console.error('فشل في إرسال الرسالة:', response.status, errorText);
+        console.error('فشل في إرسال الرسالة:', response.status, responseText);
         
         toast({
-          title: "فشل الإرسال",
-          description: `فشل في إرسال الرسالة. كود الخطأ: ${response.status}`,
+          title: "فشل في إرسال الطلب للويب هوك",
+          description: `فشل في إرسال الطلب للويب هوك.\nكود الخطأ: ${response.status}\nالرسالة: ${responseText.substring(0, 100)}`,
           variant: "destructive",
         });
       }
@@ -280,8 +305,8 @@ const WebhookSettings = () => {
     } catch (error) {
       console.error('Error sending test message:', error);
       toast({
-        title: "خطأ",
-        description: `حدث خطأ أثناء إرسال الرسالة التجريبية: ${error.message}`,
+        title: "خطأ في الاتصال",
+        description: `حدث خطأ أثناء الاتصال بالويب هوك: ${error.message}`,
         variant: "destructive",
       });
     }
