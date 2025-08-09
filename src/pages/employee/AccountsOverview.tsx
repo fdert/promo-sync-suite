@@ -343,8 +343,8 @@ ${payments.slice(0, 5).map(payment =>
       console.log('Customer phone:', customer.whatsapp_number || customer.phone);
       console.log('Message length:', summaryText.length);
       
-      // إرسال عبر دالة واتساب البسيطة الموجودة
-      const { data, error } = await supabase.functions.invoke('send-whatsapp-simple', {
+      // إرسال عبر دالة واتساب بسيطة جداً
+      const { data, error } = await supabase.functions.invoke('simple-whatsapp', {
         body: {
           phone_number: customer.whatsapp_number || customer.phone,
           message: summaryText

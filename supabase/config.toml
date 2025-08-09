@@ -47,3 +47,6 @@ verify_jwt = false
 
 [functions.send-account-summary-simple]
 verify_jwt = false
+
+[functions.simple-whatsapp]
+verify_jwt = false
