@@ -180,11 +180,8 @@ Deno.serve(async (req) => {
           templateName = type;
           break;
         case 'account_summary':
-          // للرسائل المباشرة (ملخص الحساب)، استخدم الرسالة الموجودة مباشرة
+          // للرسائل المباشرة (ملخص الحساب)، لا نحتاج قالب
           templateName = null;
-          message = requestBody.message || '';
-          customerPhone = requestBody.customer_phone || '';
-          customerName = requestBody.customer_name || '';
           break;
         default:
           templateName = 'order_status_updated';
@@ -368,7 +365,25 @@ ${data.file_url}
           break;
 
         default:
+          // للحصول على بيانات الطلب إذا كان متوفراً
+          if (orderDetails) {
+            customerPhone = orderDetails.customers?.whatsapp_number || '';
+            customerName = orderDetails.customers?.name || 'عزيزنا العميل';
+          }
+          break;
+      }
+    } else {
+      // معالجة الحالات الخاصة عندما لا يوجد قالب
+      switch (type) {
+        case 'account_summary':
+          message = requestBody.message || 'ملخص الحساب';
+          customerPhone = requestBody.customer_phone;
+          customerName = requestBody.customer_name;
+          break;
+          
+        default:
           throw new Error(`Unknown notification type: ${type}`);
+      }
       }
     }
 
