@@ -352,11 +352,19 @@ ${payments.slice(0, 5).map(payment =>
 
       if (error) throw error;
 
-      // استدعاء edge function لمعالجة رسائل الواتساب المعلقة (نفس طريقة البروفة)
+      // استدعاء edge function المخصص لملخص العملاء المدينين
       try {
-        await supabase.functions.invoke('process-whatsapp-queue');
+        const { data: functionData, error: functionError } = await supabase.functions.invoke('send-account-summary-simple');
+        
+        if (functionError) {
+          console.error('خطأ في استدعاء edge function:', functionError);
+        } else if (functionData?.success) {
+          console.log('✅ تم إرسال الملخص المالي بنجاح:', functionData);
+        } else {
+          console.warn('⚠️ تحذير من edge function:', functionData);
+        }
       } catch (pendingError) {
-        console.warn('Error processing pending WhatsApp messages:', pendingError);
+        console.error('خطأ في معالجة رسائل الملخص المالي:', pendingError);
         // لا نوقف العملية إذا فشل إرسال الرسائل المعلقة
       }
 
