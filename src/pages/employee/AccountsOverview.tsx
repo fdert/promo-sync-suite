@@ -344,17 +344,25 @@ ${payments.slice(0, 5).map(payment =>
       console.log('Message length:', summaryText.length);
       
       // إرسال عبر دالة مخصصة لملخص الحساب
-      const { data, error } = await supabase.functions.invoke('send-account-summary-simple', {
-        body: {
+      const response = await fetch('https://gcuqfxacnbxdldsbmgvf.supabase.co/functions/v1/send-account-summary-simple', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdjdXFmeGFjbmJ4ZGxkc2JtZ3ZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0Nzg1MjQsImV4cCI6MjA2OTA1NDUyNH0.jzfLlevMRqw85cwBrTnGRRvut-3g9M1yRiXQB2pw-mc',
+        },
+        body: JSON.stringify({
           customer_phone: customer.whatsapp_number || customer.phone,
           customer_name: customer.name,
           message: summaryText
-        }
+        })
       });
 
-      if (error) {
-        throw new Error('فشل في إرسال الرسالة: ' + error.message);
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(`فشل في إرسال الرسالة: ${response.status} - ${errorData}`);
       }
+
+      const data = await response.json();
 
       toast({
         title: "تم بنجاح",
