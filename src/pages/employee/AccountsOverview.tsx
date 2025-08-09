@@ -356,8 +356,9 @@ ${payments.slice(0, 5).map(payment =>
       }
 
       toast({
-        title: "تم بنجاح",
-        description: "تم حفظ رسالة ملخص الحساب وسيتم إرسالها قريباً",
+        title: "تم الحفظ",
+        description: "تم حفظ الرسالة. ملاحظة: لإرسال الرسائل تلقائياً، يجب تكوين webhook الواتساب في الإعدادات",
+        variant: "default"
       });
       
       setShowSummaryDialog(false);
