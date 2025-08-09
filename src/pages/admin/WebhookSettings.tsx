@@ -204,7 +204,10 @@ const WebhookSettings = () => {
 
   const createTestMessage = async () => {
     try {
-      const { data, error } = await supabase.functions.invoke('test-webhook');
+      console.log('Invoking test-webhook function...');
+      const { data, error } = await supabase.functions.invoke('test-webhook', {
+        body: {}
+      });
       
       if (error) {
         toast({
