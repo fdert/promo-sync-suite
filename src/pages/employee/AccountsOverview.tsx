@@ -434,58 +434,45 @@ ${payments.slice(0, 5).map(payment =>
       }
 
       console.log('✅ تم حفظ الرسالة بنجاح، ID:', messageData.id);
-
-      // استخدام Edge Function المحسن الجديد
-      console.log('📤 إرسال الرسالة عبر Edge Function المحسن...');
       
-      const { data, error } = await supabase.functions.invoke('send-whatsapp-direct-improved', {
-        body: {
-          phone: phoneNumber,
-          message: summary,
-          customer_name: customer.customer_name,
-          message_id: messageData.id
-        }
+      // إظهار رسالة نجاح حفظ الرسالة
+      toast({
+        title: "تم حفظ الرسالة",
+        description: "تم حفظ الرسالة وسيتم إرسالها تلقائياً",
       });
 
-      console.log('📥 استجابة Edge Function:', data);
-      
-      if (error) {
-        console.error('❌ خطأ في Edge Function:', error);
-        throw error;
-      }
-
-      if (data?.success) {
-        console.log('✅ تم إرسال الرسالة بنجاح!');
-        toast({
-          title: "تم الإرسال بنجاح",
-          description: `تم إرسال التقرير المالي للعميل ${customer.customer_name} بنجاح.`,
+      // محاولة الإرسال المباشر عبر webhook
+      try {
+        const webhookResponse = await fetch('https://n8n.srv894347.hstgr.cloud/webhook/ca719409-ac29-485a-99d4-3b602978eace', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            phone: phoneNumber,
+            message: summary,
+            customer_name: customer.customer_name,
+            message_id: messageData.id
+          })
         });
-      } else {
-        // انتظار قليل للسماح للـ Edge Function بمعالجة الرسالة
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        // التحقق من حالة الرسالة بعد المعالجة
-        const { data: updatedMessage } = await supabase
-          .from('whatsapp_messages')
-          .select('status, error_message')
-          .eq('id', messageData.id)
-          .single();
-        
-        if (updatedMessage?.status === 'sent') {
+
+        if (webhookResponse.ok) {
+          // تحديث حالة الرسالة إلى sent
+          await supabase
+            .from('whatsapp_messages')
+            .update({ status: 'sent' })
+            .eq('id', messageData.id);
+          
           console.log('✅ تم إرسال الرسالة بنجاح!');
           toast({
             title: "تم الإرسال بنجاح",
             description: `تم إرسال التقرير المالي للعميل ${customer.customer_name} بنجاح.`,
           });
-        } else if (updatedMessage?.status === 'failed') {
-          throw new Error(updatedMessage.error_message || 'فشل في إرسال الرسالة');
         } else {
-          // الرسالة لا تزال قيد المعالجة
-          toast({
-            title: "جاري المعالجة",
-            description: `تم حفظ الرسالة وهي قيد المعالجة. سيتم إرسالها قريباً للعميل ${customer.customer_name}.`,
-          });
+          console.log('⚠️ فشل في الإرسال المباشر، الرسالة محفوظة للإرسال لاحقاً');
         }
+      } catch (webhookError) {
+        console.log('⚠️ فشل في الإرسال المباشر، الرسالة محفوظة للإرسال لاحقاً');
       }
 
     } catch (error) {
