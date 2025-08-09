@@ -338,15 +338,18 @@ ${payments.slice(0, 5).map(payment =>
         return;
       }
       
-      // إرسال الرسالة مباشرة عبر webhook الإرسال الجماعي
-      const { data: webhookData, error: webhookError } = await supabase
+      // البحث عن webhook نشط متاح
+      const { data: webhooks, error: webhooksError } = await supabase
         .from('webhook_settings')
         .select('*')
-        .eq('webhook_type', 'bulk_campaign')
         .eq('is_active', true)
-        .single();
+        .order('webhook_type', { ascending: true });
 
-      if (webhookError || !webhookData) {
+      if (webhooksError) {
+        throw new Error('خطأ في جلب إعدادات webhook: ' + webhooksError.message);
+      }
+
+      if (!webhooks || webhooks.length === 0) {
         // حفظ في قاعدة البيانات كبديل
         const { error } = await supabase
           .from('whatsapp_messages')
@@ -364,12 +367,17 @@ ${payments.slice(0, 5).map(payment =>
 
         toast({
           title: "تم الحفظ",
-          description: "تم حفظ الرسالة. يجب تفعيل webhook الحملات الجماعية للإرسال المباشر",
+          description: "تم حفظ الرسالة. لا يوجد webhook نشط للإرسال المباشر",
           variant: "default"
         });
         setShowSummaryDialog(false);
         return;
       }
+
+      // اختيار webhook مناسب (أولوية للحملات الجماعية ثم الصادرة)
+      let selectedWebhook = webhooks.find(w => w.webhook_type === 'bulk_campaign') ||
+                           webhooks.find(w => w.webhook_type === 'outgoing') ||
+                           webhooks[0];
 
       // إرسال عبر webhook
       const webhookPayload = {
@@ -388,17 +396,17 @@ ${payments.slice(0, 5).map(payment =>
         }
       };
 
-      const webhookResponse = await fetch(webhookData.webhook_url, {
+      const webhookResponse = await fetch(selectedWebhook.webhook_url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(webhookData.secret_key ? { 'Authorization': `Bearer ${webhookData.secret_key}` } : {})
+          ...(selectedWebhook.secret_key ? { 'Authorization': `Bearer ${selectedWebhook.secret_key}` } : {})
         },
         body: JSON.stringify(webhookPayload)
       });
 
       if (!webhookResponse.ok) {
-        throw new Error(`فشل في الإرسال عبر webhook: ${webhookResponse.status}`);
+        throw new Error(`فشل في الإرسال عبر webhook: ${webhookResponse.status} - ${await webhookResponse.text()}`);
       }
 
       // حفظ الرسالة مع حالة الإرسال
@@ -416,7 +424,7 @@ ${payments.slice(0, 5).map(payment =>
 
       toast({
         title: "تم الإرسال",
-        description: "تم إرسال رسالة ملخص الحساب بنجاح عبر webhook الحملات الجماعية",
+        description: `تم إرسال رسالة ملخص الحساب بنجاح عبر ${selectedWebhook.webhook_name}`,
       });
       
       setShowSummaryDialog(false);
