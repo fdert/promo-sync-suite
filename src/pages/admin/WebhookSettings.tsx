@@ -206,26 +206,26 @@ const WebhookSettings = () => {
     try {
       console.log('إرسال رسالة تجريبية مباشرة عبر ويب هوك...');
       
-      // البحث عن webhook نشط من النوع outgoing
-      const outgoingWebhook = webhookSettings.find(w => 
-        w.webhook_type === 'outgoing' && w.is_active === true
+      // البحث عن webhook "واتساب التقارير المالية"
+      const financialWebhook = webhookSettings.find(w => 
+        w.webhook_name === 'واتساب التقارير المالية' && w.is_active === true
       );
       
-      if (!outgoingWebhook) {
+      if (!financialWebhook) {
         toast({
           title: "خطأ",
-          description: "لم يتم العثور على ويب هوك نشط للرسائل الصادرة",
+          description: "لم يتم العثور على ويب هوك 'واتساب التقارير المالية' أو أنه غير نشط",
           variant: "destructive",
         });
         return;
       }
       
-      console.log('📋 تفاصيل الويب هوك المستخدم:', {
-        name: outgoingWebhook.webhook_name,
-        url: outgoingWebhook.webhook_url,
-        type: outgoingWebhook.webhook_type,
-        created_at: outgoingWebhook.created_at,
-        order_statuses: outgoingWebhook.order_statuses
+      console.log('📋 تفاصيل ويب هوك واتساب التقارير المالية:', {
+        name: financialWebhook.webhook_name,
+        url: financialWebhook.webhook_url,
+        type: financialWebhook.webhook_type,
+        created_at: financialWebhook.created_at,
+        order_statuses: financialWebhook.order_statuses
       });
       
       // إعداد بيانات الرسالة بتنسيق مختلف للاختبار
@@ -272,15 +272,15 @@ const WebhookSettings = () => {
         console.log(`🧪 محاولة الإرسال ${i + 1} بالتنسيق:`, messageData);
         
         try {
-          // إرسال مباشر للويب هوك مع headers إضافية
-          const response = await fetch(outgoingWebhook.webhook_url, {
+          // إرسال مباشر لويب هوك واتساب التقارير المالية
+          const response = await fetch(financialWebhook.webhook_url, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               'User-Agent': 'Ibda-WhatsApp-Test/1.0',
               'Accept': 'application/json',
-              ...(outgoingWebhook.secret_key && {
-                'Authorization': `Bearer ${outgoingWebhook.secret_key}`
+              ...(financialWebhook.secret_key && {
+                'Authorization': `Bearer ${financialWebhook.secret_key}`
               })
             },
             body: JSON.stringify(messageData)
@@ -331,14 +331,14 @@ const WebhookSettings = () => {
       
       if (successCount > 0) {
         toast({
-          title: "تم إرسال الطلبات للويب هوك",
-          description: `تم إرسال ${successCount} من ${testFormats.length} طلبات بنجاح للويب هوك: ${outgoingWebhook.webhook_name}\n\n📱 تحقق من واتساب +966535983261 خلال 5 دقائق\n\n⚠️ إذا لم تصل الرسالة، فالمشكلة في إعداد الويب هوك نفسه وليس في النظام`,
+          title: "تم إرسال الطلبات لويب هوك التقارير المالية",
+          description: `تم إرسال ${successCount} من ${testFormats.length} طلبات بنجاح لويب هوك: ${financialWebhook.webhook_name}\n\n📱 تحقق من واتساب +966535983261 خلال 5 دقائق\n\n⚠️ إذا لم تصل الرسالة، فالمشكلة في إعداد الويب هوك نفسه وليس في النظام`,
         });
         
         // عرض تفاصيل إضافية في الكونسول
         console.log(`✅ تم إرسال ${successCount} طلبات بنجاح من أصل ${testFormats.length}`);
         console.log(`📱 يجب أن تصل الرسائل لرقم: +966535983261`);
-        console.log(`🔗 الويب هوك المستخدم: ${outgoingWebhook.webhook_name} (${outgoingWebhook.webhook_url})`);
+        console.log(`🔗 الويب هوك المستخدم: ${financialWebhook.webhook_name} (${financialWebhook.webhook_url})`);
         console.log(`📝 ملاحظة: إذا لم تصل الرسائل، تحقق من إعدادات الويب هوك في n8n أو المنصة المستخدمة`);
         
       } else {
