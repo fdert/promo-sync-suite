@@ -354,7 +354,7 @@ ${payments.slice(0, 5).map(payment =>
 
       // استدعاء edge function لمعالجة رسائل الواتساب المعلقة (نفس طريقة البروفة)
       try {
-        await supabase.functions.invoke('send-pending-whatsapp');
+        await supabase.functions.invoke('process-whatsapp-queue');
       } catch (pendingError) {
         console.warn('Error processing pending WhatsApp messages:', pendingError);
         // لا نوقف العملية إذا فشل إرسال الرسائل المعلقة
