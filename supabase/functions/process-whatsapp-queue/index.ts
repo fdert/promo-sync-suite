@@ -201,6 +201,18 @@ async function sendToWhatsAppService(message: any): Promise<boolean> {
         }
       }
       
+      // ثالثاً: البحث عن رسائل التقارير المالية
+      if (!selectedWebhook && (message.message_content?.includes('تقرير مالي') || 
+          message.message_content?.includes('مبلغ مستحق') ||
+          message.message_content?.includes('طلبات غير مدفوعة') ||
+          message.message_content?.includes('المبلغ المستحق'))) {
+        // استخدام webhook الحملات الجماعية للتقارير المالية
+        selectedWebhook = webhooks.find(w => w.webhook_type === 'bulk_campaign');
+        if (selectedWebhook) {
+          console.log('💰 استخدام ويب هوك الحملات الجماعية للتقرير المالي');
+        }
+      }
+      
       // ثالثاً: استخدام webhook الطلبات كبديل
       if (!selectedWebhook) {
         selectedWebhook = webhooks.find(w => w.webhook_type === 'outgoing');
