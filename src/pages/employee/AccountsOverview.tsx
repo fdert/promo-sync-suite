@@ -343,26 +343,22 @@ ${payments.slice(0, 5).map(payment =>
       console.log('Customer phone:', customer.whatsapp_number || customer.phone);
       console.log('Message length:', summaryText.length);
       
-      // إرسال عبر دالة مخصصة لملخص الحساب
-      const response = await fetch('https://gcuqfxacnbxdldsbmgvf.supabase.co/functions/v1/send-account-summary-simple', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdjdXFmeGFjbmJ4ZGxkc2JtZ3ZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0Nzg1MjQsImV4cCI6MjA2OTA1NDUyNH0.jzfLlevMRqw85cwBrTnGRRvut-3g9M1yRiXQB2pw-mc',
-        },
-        body: JSON.stringify({
-          customer_phone: customer.whatsapp_number || customer.phone,
-          customer_name: customer.name,
-          message: summaryText
-        })
-      });
+      // إرسال الرسالة عبر حفظها في قاعدة البيانات
+      const { error: messageError } = await supabase
+        .from('whatsapp_messages')
+        .insert({
+          from_number: 'system',
+          to_number: customer.whatsapp_number || customer.phone,
+          message_type: 'text',
+          message_content: summaryText,
+          status: 'pending',
+          is_reply: false,
+          customer_id: selectedCustomerData.customer_id
+        });
 
-      if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(`فشل في إرسال الرسالة: ${response.status} - ${errorData}`);
+      if (messageError) {
+        throw new Error('فشل في حفظ الرسالة: ' + messageError.message);
       }
-
-      const data = await response.json();
 
       toast({
         title: "تم بنجاح",
