@@ -414,11 +414,10 @@ ${payments.slice(0, 5).map(payment =>
       console.log('📊 التقرير المالي جاهز للإرسال');
       console.log('📱 الرقم المستهدف:', phoneNumber);
       
-      // استدعاء edge function لإرسال ملخص العميل مع البيانات المطلوبة
-      const { data: functionData, error: functionError } = await supabase.functions.invoke('send-account-summary-simple', {
+      // استدعاء edge function بسيط لإرسال الرسالة مباشرة
+      const { data: functionData, error: functionError } = await supabase.functions.invoke('send-whatsapp-simple', {
         body: {
-          customer_phone: phoneNumber,
-          customer_name: customerData.name || customer.customer_name,
+          phone: phoneNumber,
           message: summary
         }
       });
