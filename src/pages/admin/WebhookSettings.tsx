@@ -204,83 +204,55 @@ const WebhookSettings = () => {
 
   const createTestMessage = async () => {
     try {
-      console.log('إنشاء رسالة تجريبية مباشرة...');
+      console.log('إرسال رسالة تجريبية مباشرة عبر ويب هوك...');
       
-      // إنشاء رسالة تجريبية مباشرة في قاعدة البيانات
-      const testMessage = {
-        from_number: 'system',
-        to_number: '+966535983261',
-        message_type: 'text',
-        message_content: `رسالة تجريبية للتأكد من عمل النظام - ${new Date().toLocaleString('ar-SA')}`,
-        status: 'pending',
-        is_reply: false,
-      };
+      // إرسال الرسالة مباشرة عبر send-order-notifications (نفس طريقة رسائل الطلبات)
+      const { data, error } = await supabase.functions.invoke('send-order-notifications', {
+        body: {
+          type: 'test_message',
+          customer_phone: '+966535983261',
+          customer_name: 'مستخدم تجريبي',
+          message: `رسالة تجريبية للتأكد من عمل النظام - ${new Date().toLocaleString('ar-SA')}`,
+          order_number: 'TEST-001',
+          service_name: 'اختبار النظام',
+          amount: '0',
+          paid_amount: '0',
+          remaining_amount: '0',
+          status: 'اختبار',
+          company_name: 'وكالة الإبداع للدعاية والإعلان'
+        }
+      });
 
-      const { data: messageData, error: messageError } = await supabase
-        .from('whatsapp_messages')
-        .insert(testMessage)
-        .select()
-        .single();
-
-      if (messageError) {
-        console.error('خطأ في إنشاء الرسالة:', messageError);
+      if (error) {
+        console.error('خطأ في إرسال الرسالة:', error);
         toast({
           title: "خطأ",
-          description: `فشل في إنشاء الرسالة التجريبية: ${messageError.message}`,
+          description: `فشل في إرسال الرسالة التجريبية: ${error.message}`,
           variant: "destructive",
         });
         return;
       }
 
-      console.log('تم إنشاء الرسالة بنجاح:', messageData);
+      console.log('استجابة الإرسال:', data);
       
-      toast({
-        title: "تم إنشاء الرسالة",
-        description: "تم إنشاء رسالة تجريبية بنجاح",
-      });
-
-      // محاكاة إرسال فوري بدلاً من انتظار edge function
-      setTimeout(async () => {
-        try {
-          console.log('محاكاة إرسال الرسالة...');
-          
-          // تحديث حالة الرسالة إلى "sent" مباشرة (محاكاة)
-          const { error: updateError } = await supabase
-            .from('whatsapp_messages')
-            .update({ 
-              status: 'sent',
-              sent_at: new Date().toISOString()
-            })
-            .eq('id', messageData.id);
-
-          if (updateError) {
-            console.error('خطأ في تحديث حالة الرسالة:', updateError);
-          } else {
-            console.log('✅ تم تحديث حالة الرسالة إلى "sent"');
-            
-            toast({
-              title: "تم إرسال الرسالة",
-              description: `تم إرسال الرسالة بنجاح إلى ${testMessage.to_number} (محاكاة)`,
-            });
-
-            // إضافة سجل وهمي لإثبات الإرسال
-            console.log('📱 رسالة وهمية تم إرسالها:', {
-              to: testMessage.to_number,
-              message: testMessage.message_content,
-              status: 'delivered',
-              timestamp: new Date().toISOString()
-            });
-          }
-        } catch (error) {
-          console.error('خطأ في محاكاة الإرسال:', error);
-        }
-      }, 2000);
+      if (data?.success) {
+        toast({
+          title: "تم إرسال الرسالة",
+          description: `تم إرسال الرسالة التجريبية بنجاح إلى +966535983261`,
+        });
+      } else {
+        toast({
+          title: "فشل الإرسال",
+          description: data?.message || "فشل في إرسال الرسالة التجريبية",
+          variant: "destructive",
+        });
+      }
       
     } catch (error) {
-      console.error('Error creating test message:', error);
+      console.error('Error sending test message:', error);
       toast({
         title: "خطأ",
-        description: `حدث خطأ أثناء إنشاء الرسالة التجريبية: ${error.message}`,
+        description: `حدث خطأ أثناء إرسال الرسالة التجريبية: ${error.message}`,
         variant: "destructive",
       });
     }
