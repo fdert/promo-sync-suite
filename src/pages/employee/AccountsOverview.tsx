@@ -343,20 +343,27 @@ ${payments.slice(0, 5).map(payment =>
       console.log('Customer phone:', customer.whatsapp_number || customer.phone);
       console.log('Message length:', summaryText.length);
       
-      // إرسال عبر دالة واتساب بسيطة جداً
-      const { data, error } = await supabase.functions.invoke('simple-whatsapp', {
-        body: {
-          phone_number: customer.whatsapp_number || customer.phone,
-          message: summaryText
-        }
-      });
+      // حفظ الرسالة مباشرة في جدول whatsapp_messages (نفس طريقة إرسال حالة الطلب)
+      const { error: insertError } = await supabase
+        .from('whatsapp_messages')
+        .insert({
+          from_number: 'system',
+          to_number: customer.whatsapp_number || customer.phone,
+          message_type: 'text',
+          message_content: summaryText,
+          status: 'pending',
+          is_reply: false,
+          customer_id: selectedCustomerData.customer_id,
+        });
       
-      console.log('WhatsApp response:', { data, error });
-      
-      if (error) {
-        console.error('Supabase function error:', error);
-        throw error;
+      if (insertError) {
+        throw new Error('فشل في حفظ الرسالة: ' + insertError.message);
       }
+
+      toast({
+        title: "تم بنجاح",
+        description: "تم حفظ رسالة ملخص الحساب وسيتم إرسالها قريباً",
+      });
       
       setShowSummaryDialog(false);
     } catch (error) {
