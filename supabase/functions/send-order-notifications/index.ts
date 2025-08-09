@@ -384,11 +384,30 @@ ${data.file_url}
         default:
           throw new Error(`Unknown notification type: ${type}`);
       }
-      }
     }
+    
+    // التحقق من أن البيانات مكتملة
+    console.log('Final values before sending:', { 
+      customerPhone, 
+      customerName, 
+      messageLength: message.length,
+      type 
+    });
 
     if (!customerPhone || !message) {
-      throw new Error('Missing customer phone or message content');
+      console.error('Missing data:', { 
+        hasCustomerPhone: !!customerPhone, 
+        hasMessage: !!message,
+        customerPhone,
+        messagePreview: message.substring(0, 100)
+      });
+      return new Response(
+        JSON.stringify({ 
+          error: 'Missing customer phone or message content',
+          details: { hasCustomerPhone: !!customerPhone, hasMessage: !!message }
+        }),
+        { headers: corsHeaders, status: 400 }
+      );
     }
 
     // البحث عن إعدادات الويب هوك للإرسال
