@@ -469,15 +469,23 @@ ${payments.slice(0, 5).map(payment =>
         .eq('id', messageData.id);
 
       if (webhookResponse.ok) {
-        console.log('✅ تم إرسال الرسالة بنجاح!');
+        console.log('✅ تم إرسال الرسالة للويب هوك بنجاح!');
         console.log('🆔 معرف الرسالة:', messageData.id);
         console.log('📊 حالة الويب هوك:', webhookResponse.status);
         console.log('💬 رد الويب هوك:', webhookResponseText);
         
+        // تحذير مهم للمستخدم
         toast({
-          title: "تم الإرسال بنجاح",
-          description: `تم إرسال التقرير المالي للعميل ${customer.customer_name}. معرف الرسالة: ${messageData.id}`,
+          title: "تم إرسال الرسالة للويب هوك",
+          description: `الرسالة وصلت للويب هوك بنجاح (${webhookResponse.status}). إذا لم تصل للعميل، فالمشكلة في إعدادات n8n workflow.`,
+          variant: "default"
         });
+        
+        console.log('⚠️ تنبيه: إذا لم تصل الرسالة للعميل، تحقق من:');
+        console.log('1. إعدادات الواتساب API في n8n');
+        console.log('2. أن workflow يحتوي على WhatsApp node صحيح');
+        console.log('3. أن رقم الهاتف مسجل في واتساب بيزنس');
+        console.log('4. إعدادات webhook في n8n تستقبل البيانات وترسلها للواتساب');
       } else {
         throw new Error(`خطأ في الويب هوك: ${webhookResponse.status} - ${webhookResponseText}`);
       }
