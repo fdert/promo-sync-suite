@@ -62,3 +62,6 @@ verify_jwt = false
 
 [functions.webhook-test]
 verify_jwt = false
+
+[functions.mock-whatsapp-webhook]
+verify_jwt = false

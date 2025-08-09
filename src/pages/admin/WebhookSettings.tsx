@@ -231,6 +231,29 @@ const WebhookSettings = () => {
 
       console.log('تم إنشاء الرسالة بنجاح:', data);
       
+      // التأكد من وجود ويب هوك تجريبي للاختبار
+      const mockWebhookUrl = `https://gcuqfxacnbxdldsbmgvf.supabase.co/functions/v1/mock-whatsapp-webhook`;
+      
+      // التحقق من وجود ويب هوك نشط، وإذا لم يوجد أنشئ واحد تجريبي
+      const { data: existingWebhooks } = await supabase
+        .from('webhook_settings')
+        .select('*')
+        .eq('is_active', true)
+        .eq('webhook_type', 'outgoing');
+        
+      if (!existingWebhooks || existingWebhooks.length === 0) {
+        console.log('إنشاء ويب هوك تجريبي...');
+        await supabase
+          .from('webhook_settings')
+          .insert({
+            webhook_name: 'Mock WhatsApp Webhook (للاختبار)',
+            webhook_url: mockWebhookUrl,
+            webhook_type: 'outgoing',
+            is_active: true,
+            created_by: (await supabase.auth.getUser()).data.user?.id
+          });
+      }
+      
       toast({
         title: "تم إنشاء الرسالة",
         description: "تم إنشاء رسالة تجريبية بنجاح وستتم معالجتها تلقائياً",
