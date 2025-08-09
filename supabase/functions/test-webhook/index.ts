@@ -12,39 +12,54 @@ Deno.serve(async (req) => {
   }
 
   try {
+    console.log('بداية معالجة طلب إنشاء رسالة تجريبية...');
+    
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
+    console.log('تم إنشاء عميل Supabase بنجاح');
+
     // إرسال رسالة تجريبية
-    const { error: insertError } = await supabase
+    const messageData = {
+      from_number: 'system',
+      to_number: '+966535983261',
+      message_type: 'text',
+      message_content: `رسالة تجريبية للتأكد من عمل الويب هوك الجديد - ${new Date().toLocaleString('ar-SA')}`,
+      status: 'pending',
+      is_reply: false,
+    };
+
+    console.log('بيانات الرسالة المراد إدراجها:', messageData);
+
+    const { data: insertedData, error: insertError } = await supabase
       .from('whatsapp_messages')
-      .insert({
-        from_number: 'system',
-        to_number: '+966535983261',
-        message_type: 'text',
-        message_content: `رسالة تجريبية للتأكد من عمل الويب هوك الجديد - ${new Date().toLocaleString('ar-SA')}`,
-        status: 'pending',
-        is_reply: false,
-      });
+      .insert(messageData)
+      .select();
 
     if (insertError) {
       console.error('خطأ في إدراج الرسالة:', insertError);
       return new Response(
-        JSON.stringify({ error: 'فشل في إدراج الرسالة', details: insertError.message }),
-        { headers: corsHeaders, status: 500 }
+        JSON.stringify({ 
+          success: false,
+          error: 'فشل في إدراج الرسالة', 
+          details: insertError.message,
+          code: insertError.code 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }
 
-    console.log('تم إدراج رسالة تجريبية بنجاح');
+    console.log('تم إدراج رسالة تجريبية بنجاح:', insertedData);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: 'تم إرسال رسالة تجريبية بنجاح'
+        message: 'تم إرسال رسالة تجريبية بنجاح',
+        data: insertedData
       }),
-      { headers: corsHeaders }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
