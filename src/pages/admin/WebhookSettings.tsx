@@ -149,30 +149,33 @@ const WebhookSettings = () => {
     });
 
     try {
-      const testData = {
-        event: event + "_test",
-        data: {
-          test: true,
-          timestamp: new Date().toISOString(),
-          message: "هذا اختبار للويب هوك"
+      // استخدام Edge Function لاختبار الويب هوك لتجنب مشاكل CORS
+      const { data, error } = await supabase.functions.invoke('test-webhook-simple', {
+        body: {
+          webhook_url: url,
+          event: event + "_test",
+          test_data: {
+            test: true,
+            timestamp: new Date().toISOString(),
+            message: "هذا اختبار للويب هوك",
+            customerPhone: '+966535983261',
+            customerName: 'عميل تجريبي',
+            notificationType: event
+          }
         }
-      };
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(testData)
       });
 
-      if (response.ok) {
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (data?.success) {
         toast({
           title: "نجح الاختبار",
           description: "تم إرسال الويب هوك بنجاح",
         });
       } else {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        throw new Error(data?.error || 'فشل في الاختبار');
       }
     } catch (error) {
       console.error('Webhook test failed:', error);

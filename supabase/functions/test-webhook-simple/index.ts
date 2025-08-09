@@ -12,22 +12,27 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // اختبار الويب هوك الجديد مباشرة
-    const testMessage = {
-      customerPhone: '+966535983261',
-      customerName: 'اختبار العميل',
-      message: 'رسالة اختبار للويب هوك الجديد - ' + new Date().toLocaleString('ar-SA'),
-      notificationType: 'test'
-    };
+    const body = await req.json();
+    const { webhook_url, event, test_data } = body;
 
-    console.log('إرسال رسالة اختبار للويب هوك:', testMessage);
+    if (!webhook_url) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'مطلوب رابط الويب هوك' }),
+        { headers: corsHeaders, status: 400 }
+      );
+    }
 
-    const response = await fetch('https://n8n.srv894347.hstgr.cloud/webhook-test/ca719409-ac29-485a-99d4-3b602978eace', {
+    console.log('إرسال طلب اختبار للويب هوك:', { webhook_url, event, test_data });
+
+    const response = await fetch(webhook_url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(testMessage),
+      body: JSON.stringify({
+        event: event,
+        data: test_data
+      }),
     });
 
     const responseText = await response.text();
