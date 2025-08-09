@@ -204,15 +204,23 @@ const WebhookSettings = () => {
 
   const createTestMessage = async () => {
     try {
-      console.log('Invoking simple-whatsapp function...');
-      const { data, error } = await supabase.functions.invoke('simple-whatsapp', {
-        body: {
-          phone_number: '+966535983261',
-          message: `رسالة تجريبية للتأكد من عمل النظام - ${new Date().toLocaleString('ar-SA')}`
-        }
-      });
+      console.log('إنشاء رسالة تجريبية مباشرة في قاعدة البيانات...');
       
+      // إنشاء رسالة تجريبية مباشرة في قاعدة البيانات
+      const { data, error } = await supabase
+        .from('whatsapp_messages')
+        .insert({
+          from_number: 'system',
+          to_number: '+966535983261',
+          message_type: 'text',
+          message_content: `رسالة تجريبية للتأكد من عمل النظام - ${new Date().toLocaleString('ar-SA')}`,
+          status: 'pending',
+          is_reply: false,
+        })
+        .select();
+
       if (error) {
+        console.error('خطأ في إنشاء الرسالة:', error);
         toast({
           title: "خطأ",
           description: `فشل في إنشاء الرسالة التجريبية: ${error.message}`,
@@ -221,39 +229,21 @@ const WebhookSettings = () => {
         return;
       }
 
-      if (data?.success) {
-        toast({
-          title: "تم إنشاء الرسالة",
-          description: "تم إنشاء رسالة تجريبية بنجاح وسيتم معالجتها قريباً",
-        });
-        
-        // معالجة الرسائل المعلقة بعد ثانيتين
-        setTimeout(async () => {
-          try {
-            const { data: processData } = await supabase.functions.invoke('send-pending-whatsapp');
-            console.log('Process result:', processData);
-            if (processData?.processedCount > 0) {
-              toast({
-                title: "تم إرسال الرسالة",
-                description: `تم معالجة وإرسال ${processData.processedCount} رسالة`,
-              });
-            }
-          } catch (err) {
-            console.error('Process error:', err);
-          }
-        }, 2000);
-      } else {
-        toast({
-          title: "فشل",
-          description: data?.message || "فشل في إنشاء الرسالة التجريبية",
-          variant: "destructive",
-        });
-      }
+      console.log('تم إنشاء الرسالة بنجاح:', data);
+      
+      toast({
+        title: "تم إنشاء الرسالة",
+        description: "تم إنشاء رسالة تجريبية بنجاح وستتم معالجتها تلقائياً",
+      });
+      
+      // تحديث قائمة الرسائل إذا كانت الصفحة تعرضها
+      fetchWebhookSettings();
+      
     } catch (error) {
       console.error('Error creating test message:', error);
       toast({
         title: "خطأ",
-        description: "حدث خطأ أثناء إنشاء الرسالة التجريبية",
+        description: `حدث خطأ أثناء إنشاء الرسالة التجريبية: ${error.message}`,
         variant: "destructive",
       });
     }
