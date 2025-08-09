@@ -388,21 +388,51 @@ ${payments.slice(0, 5).map(payment =>
   // Handle direct WhatsApp send for each customer
   const handleDirectWhatsApp = async (customer: CustomerBalance) => {
     try {
-      // اختبار webhook مباشرة من المتصفح
-      console.log('🧪 اختبار webhook مباشرة من المتصفح...');
+      console.log('🔍 تشخيص شامل لنظام الواتساب...');
       
       const webhookUrl = 'https://n8n.srv894347.hstgr.cloud/webhook/ca719409-ac29-485a-99d4-3b602978eace';
+      
+      // إعداد رسالة تشخيص مفصلة
+      const diagnosticMessage = `🔧 تشخيص نظام الواتساب
+
+📊 تفاصيل الطلب:
+- العميل: ${customer.customer_name}
+- المبلغ المستحق: ${customer.outstanding_balance} ر.س
+- عدد الفواتير: ${customer.unpaid_invoices_count}
+- وقت الإرسال: ${new Date().toLocaleString('ar-SA', { timeZone: 'Asia/Riyadh' })}
+
+🌐 معلومات تقنية:
+- URL: n8n.srv894347.hstgr.cloud
+- Webhook ID: ca719409-ac29-485a-99d4-3b602978eace
+- الرقم المستهدف: +966535983261
+- المتصفح: ${navigator.userAgent.substring(0, 50)}...
+
+⚡ حالة الاتصال:
+- حالة الإنترنت: ${navigator.onLine ? 'متصل' : 'غير متصل'}
+- رابط التطبيق: ${window.location.origin}
+
+🔍 خطوات التحقق:
+1. هل وصلت هذه الرسالة؟
+2. تحقق من إعدادات الواتساب في n8n
+3. تأكد من صحة رقم المستقبل
+4. راجع حالة خدمة الواتساب
+
+إذا وصلت هذه الرسالة، فالنظام يعمل بشكل صحيح!`;
+
       const testPayload = {
         phone: '+966535983261',
-        message: 'رسالة اختبار مباشرة من المتصفح\n\nهذه رسالة تجريبية للتأكد من عمل webhook WhatsApp.\n\nالتاريخ: ' + new Date().toLocaleString('ar-SA'),
-        customer_name: 'عميل تجريبي'
+        message: diagnosticMessage,
+        customer_name: `تشخيص - ${customer.customer_name}`,
+        diagnostic: true,
+        timestamp: new Date().toISOString()
       };
 
-      console.log('📤 إرسال بيانات إلى webhook:', webhookUrl);
+      console.log('📤 إرسال رسالة التشخيص...');
+      console.log('🔗 URL:', webhookUrl);
       console.log('📄 البيانات:', testPayload);
 
-      // اختبار webhook مباشرة
-      const webhookResponse = await fetch(webhookUrl, {
+      // إرسال رسالة التشخيص
+      const diagnosticResponse = await fetch(webhookUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -410,32 +440,28 @@ ${payments.slice(0, 5).map(payment =>
         body: JSON.stringify(testPayload)
       });
 
-      const responseText = await webhookResponse.text();
-      console.log('📥 استجابة webhook:');
-      console.log('Status:', webhookResponse.status);
-      console.log('Response:', responseText);
+      const diagnosticResponseText = await diagnosticResponse.text();
+      console.log('📥 استجابة رسالة التشخيص:');
+      console.log('Status:', diagnosticResponse.status);
+      console.log('Response:', diagnosticResponseText);
 
-      if (!webhookResponse.ok) {
-        toast({
-          title: "خطأ في webhook",
-          description: `فشل webhook: ${webhookResponse.status} - ${responseText}. تحقق من إعدادات n8n.`,
-          variant: "destructive"
-        });
-        return;
-      }
+      // انتظار 5 ثوانٍ للتأكد من وصول رسالة التشخيص
+      console.log('⏳ انتظار 5 ثوانٍ قبل إرسال التقرير الفعلي...');
+      await new Promise(resolve => setTimeout(resolve, 5000));
 
-      console.log('✅ webhook يعمل! الآن سنرسل الرسالة الفعلية...');
-
-      // إذا نجح الاختبار، أرسل الرسالة الفعلية
+      // إرسال التقرير المالي الفعلي
       const summary = generateSummary(customer);
       
-      // إرسال الرسالة الفعلية لـ webhook
       const actualPayload = {
         phone: '+966535983261',
         message: summary,
-        customer_name: customer.customer_name
+        customer_name: customer.customer_name,
+        report_type: 'financial_summary',
+        timestamp: new Date().toISOString()
       };
 
+      console.log('📊 إرسال التقرير المالي الفعلي...');
+      
       const finalResponse = await fetch(webhookUrl, {
         method: 'POST',
         headers: {
@@ -445,7 +471,7 @@ ${payments.slice(0, 5).map(payment =>
       });
 
       const finalResponseText = await finalResponse.text();
-      console.log('📱 استجابة الرسالة الفعلية:');
+      console.log('📱 استجابة التقرير المالي:');
       console.log('Status:', finalResponse.status);
       console.log('Response:', finalResponseText);
 
