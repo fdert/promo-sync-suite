@@ -486,6 +486,46 @@ ${payments.slice(0, 5).map(payment =>
     }
   };
 
+  // Handle processing pending messages
+  const handleProcessPendingMessages = async () => {
+    try {
+      console.log('🔄 تشغيل معالج الرسائل المعلقة...');
+      
+      const { data, error } = await supabase.functions.invoke('send-pending-whatsapp');
+      
+      if (error) {
+        console.error('❌ خطأ في معالج الرسائل المعلقة:', error);
+        toast({
+          title: "خطأ",
+          description: "فشل في تشغيل معالج الرسائل المعلقة",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      console.log('📊 نتائج معالجة الرسائل:', data);
+      
+      if (data?.success) {
+        toast({
+          title: "تم بنجاح",
+          description: `تم معالجة ${data.processed} رسالة. نجح: ${data.successful}, فشل: ${data.failed}`,
+        });
+      } else {
+        toast({
+          title: "تحذير",
+          description: data?.message || "لا توجد رسائل معلقة للمعالجة",
+        });
+      }
+    } catch (error) {
+      console.error('❌ خطأ في تشغيل معالج الرسائل:', error);
+      toast({
+        title: "خطأ",
+        description: "فشل في تشغيل معالج الرسائل",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handlePrint = () => {
     const printWindow = window.open('', '_blank');
     if (printWindow) {
@@ -590,6 +630,14 @@ ${payments.slice(0, 5).map(payment =>
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-foreground">العملاء المدينون</h1>
+        <Button 
+          onClick={handleProcessPendingMessages}
+          variant="outline"
+          className="flex items-center gap-2"
+        >
+          <MessageSquare className="h-4 w-4" />
+          إرسال الرسائل المعلقة
+        </Button>
       </div>
 
       {/* Search and Filter Controls */}

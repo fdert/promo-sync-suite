@@ -1,269 +1,158 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.52.1';
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
-};
+  'Access-Control-Allow-Methods': 'POST, OPTIONS'
+}
 
-// إنشاء عميل Supabase
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-Deno.serve(async (req) => {
+serve(async (req) => {
+  console.log('🔄 معالج الرسائل المعلقة بدأ العمل')
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { 
-      headers: corsHeaders,
-      status: 200 
-    });
+    return new Response(null, { headers: corsHeaders })
   }
 
   try {
-    // قراءة بيانات الطلب
-    let requestBody = {};
-    try {
-      requestBody = await req.json();
-    } catch (e) {
-      console.log('لا توجد بيانات JSON في الطلب، استخدام كائن فارغ');
-    }
-    
-    console.log('🚀 بدء معالجة رسائل الواتس آب المعلقة...', requestBody);
-    console.log('🔗 معلومات البيئة:', {
-      supabaseUrl: supabaseUrl ? 'متوفر' : 'مفقود',
-      serviceKey: supabaseServiceKey ? 'متوفر' : 'مفقود'
-    });
+    // إنشاء عميل Supabase
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const supabase = createClient(supabaseUrl, supabaseKey)
 
-    // الحصول على الرسائل المعلقة (pending)
-    let query = supabase
+    // جلب الرسائل المعلقة (غير المرسلة)
+    const { data: pendingMessages, error: fetchError } = await supabase
       .from('whatsapp_messages')
       .select('*')
-      .eq('status', 'pending');
-    
-    // إذا كان هناك معطى review_messages_only، اجلب رسائل التقييم فقط
-    if (requestBody?.review_messages_only) {
-      console.log('Filtering for Google review messages only...');
-      query = query.not('customer_id', 'is', null)
-                   .like('message_content', '%search.google.com%');
-    }
-    
-    const { data: pendingMessages, error: fetchError } = await query.limit(10); // معالجة 10 رسائل في المرة الواحدة
+      .eq('status', 'pending')
+      .order('created_at', { ascending: true })
+      .limit(10) // معالجة 10 رسائل في كل مرة
 
     if (fetchError) {
-      console.error('Error fetching pending messages:', fetchError);
-      throw fetchError;
+      console.error('❌ خطأ في جلب الرسائل المعلقة:', fetchError)
+      return new Response(JSON.stringify({ 
+        error: 'فشل في جلب الرسائل المعلقة',
+        details: fetchError.message 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
     }
 
     if (!pendingMessages || pendingMessages.length === 0) {
-      console.log('No pending messages found');
-      return new Response(
-        JSON.stringify({ message: 'No pending messages to process' }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200
-        }
-      );
+      console.log('✅ لا توجد رسائل معلقة للمعالجة')
+      return new Response(JSON.stringify({ 
+        success: true,
+        message: 'لا توجد رسائل معلقة',
+        processed: 0
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
     }
 
-    console.log(`Found ${pendingMessages.length} pending messages`);
+    console.log(`📨 تم العثور على ${pendingMessages.length} رسالة معلقة`)
 
-    // اختيار ويب هوك بنفس منطق send-order-notifications
-    let webhookSettings: any = null;
-
-    // اجلب جميع الويب هوكات النشطة مرة واحدة
-    const { data: allWebhooks, error: whError } = await supabase
-      .from('webhook_settings')
-      .select('webhook_url, order_statuses, webhook_name, webhook_type, is_active')
-      .eq('is_active', true);
-
-    console.log('🔗 Webhooks fetched:', {
-      count: allWebhooks?.length || 0,
-      names: allWebhooks?.map(w => w.webhook_name),
-      types: allWebhooks?.map(w => w.webhook_type)
-    });
-
-    if (whError) {
-      console.error('Error fetching webhooks:', whError);
-    }
-
-    if (allWebhooks && allWebhooks.length > 0) {
-      // 1) ابحث عن أي outgoing نشط بدون قيود على الحالات
-      webhookSettings = allWebhooks.find(w => w.is_active && w.webhook_type === 'outgoing' && (!w.order_statuses || w.order_statuses.length === 0));
-
-      // 2) إن لم يوجد، اختر أول outgoing نشط
-      if (!webhookSettings) {
-        webhookSettings = allWebhooks.find(w => w.is_active && w.webhook_type === 'outgoing');
-      }
-
-      // 3) إن لم يوجد أي outgoing، استخدم bulk_campaign كحل أخير
-      if (!webhookSettings) {
-        webhookSettings = allWebhooks.find(w => w.is_active && w.webhook_type === 'bulk_campaign');
-      }
-
-      // 4) وأخيراً، إن لم نجد أي شيء، خذ أول ويب هوك متاح
-      if (!webhookSettings) {
-        webhookSettings = allWebhooks[0];
-      }
-    }
-
-    console.log('📡 الويب هوك المختار نهائياً:', {
-      name: webhookSettings?.webhook_name,
-      type: webhookSettings?.webhook_type,
-      hasUrl: !!webhookSettings?.webhook_url,
-      url: webhookSettings?.webhook_url ? 'متوفر' : 'مفقود'
-    });
-
-    if (!webhookSettings?.webhook_url) {
-      console.error('❌ خطأ: لا يوجد ويب هوك نشط - No active webhook found');
-      return new Response(
-        JSON.stringify({ 
-          error: 'No webhook configured',
-          details: 'لا يوجد ويب هوك مكون بشكل صحيح'
-        }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400
-        }
-      );
-    }
-
-    console.log('📡 استخدام ويب هوك:', webhookSettings.webhook_name, `(${webhookSettings.webhook_type})`);
-
-
-    const results = [];
+    let successCount = 0
+    let failedCount = 0
 
     // معالجة كل رسالة معلقة
     for (const message of pendingMessages) {
       try {
-        // إعداد بيانات الرسالة للإرسال عبر n8n
-        let messagePayload;
-        
-        if (message.message_type === 'image' && message.media_url) {
-          // رسالة مع صورة - إرسال الصورة مع النص المدمج
-          messagePayload = {
-            messaging_product: "whatsapp",
-            to: message.to_number.replace('+', ''),
-            type: "image",
-            image: {
-              link: message.media_url,
-              caption: message.message_content
-            }
-          };
-        } else if (message.message_type === 'document' && message.media_url) {
-          // ملف PDF أو مستند
-          messagePayload = {
-            messaging_product: "whatsapp",
-            to: message.to_number.replace('+', ''),
-            type: "document",
-            document: {
-              link: message.media_url,
-              caption: message.message_content,
-              filename: "proof.pdf"
-            }
-          };
-        } else {
-          // رسالة نصية عادية
-          messagePayload = {
-            messaging_product: "whatsapp",
-            to: message.to_number.replace('+', ''),
-            type: "text",
-            text: {
-              body: message.message_content
-            }
-          };
-        }
+        console.log(`📤 معالجة رسالة ID: ${message.id} للرقم: ${message.to_number}`)
 
-        console.log(`Sending message to ${message.to_number}:`, JSON.stringify(messagePayload, null, 2));
-
-        // إرسال الرسالة عبر webhook إلى n8n
-        const response = await fetch(webhookSettings.webhook_url, {
+        // محاولة إرسال الرسالة عبر webhook
+        const webhookResponse = await fetch('https://n8n.srv894347.hstgr.cloud/webhook/ca719409-ac29-485a-99d4-3b602978eace', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(messagePayload)
-        });
-
-        const responseData = await response.text();
-        console.log(`Webhook response for message ${message.id}:`, responseData);
-
-        let newStatus = 'sent';
-        
-        if (!response.ok) {
-          console.error(`Webhook failed for message ${message.id}:`, response.status, responseData);
-          newStatus = 'failed';
-        }
-
-        // إذا كانت رسالة نصية منفصلة للبروفة، لا تُرسل رسالة إضافية
-        // النظام الآن يرسل رسالة نصية ورسالة صورة منفصلتين من التطبيق
-
-        // تحديث حالة الرسالة
-        const { error: updateError } = await supabase
-          .from('whatsapp_messages')
-          .update({ 
-            status: newStatus,
-            replied_at: new Date().toISOString()
+          body: JSON.stringify({
+            phone: message.to_number,
+            message: message.message_content,
+            customer_name: 'عميل',
+            message_id: message.id,
+            source: 'pending_processor'
           })
-          .eq('id', message.id);
+        })
 
-        if (updateError) {
-          console.error(`Error updating message ${message.id}:`, updateError);
+        if (webhookResponse.ok) {
+          // تحديث حالة الرسالة إلى sent
+          const { error: updateError } = await supabase
+            .from('whatsapp_messages')
+            .update({ 
+              status: 'sent',
+              error_message: null
+            })
+            .eq('id', message.id)
+
+          if (updateError) {
+            console.error(`❌ خطأ في تحديث حالة الرسالة ${message.id}:`, updateError)
+          } else {
+            console.log(`✅ تم إرسال الرسالة ${message.id} بنجاح`)
+            successCount++
+          }
+        } else {
+          const errorText = await webhookResponse.text()
+          console.error(`❌ فشل إرسال الرسالة ${message.id}:`, webhookResponse.status, errorText)
+          
+          // تحديث حالة الرسالة إلى failed
+          await supabase
+            .from('whatsapp_messages')
+            .update({ 
+              status: 'failed',
+              error_message: `Webhook error: ${webhookResponse.status} - ${errorText}`
+            })
+            .eq('id', message.id)
+          
+          failedCount++
         }
-
-        results.push({
-          message_id: message.id,
-          to_number: message.to_number,
-          status: newStatus,
-          webhook_response: responseData
-        });
-
-        // تأخير قصير بين الرسائل لتجنب الضغط على API
-        await new Promise(resolve => setTimeout(resolve, 500));
 
       } catch (messageError) {
-        console.error(`Error processing message ${message.id}:`, messageError);
+        console.error(`❌ خطأ في معالجة الرسالة ${message.id}:`, messageError)
         
         // تحديث حالة الرسالة إلى failed
         await supabase
           .from('whatsapp_messages')
-          .update({ status: 'failed' })
-          .eq('id', message.id);
-
-        results.push({
-          message_id: message.id,
-          to_number: message.to_number,
-          status: 'failed',
-          error: messageError.message
-        });
+          .update({ 
+            status: 'failed',
+            error_message: `Processing error: ${messageError.message}`
+          })
+          .eq('id', message.id)
+        
+        failedCount++
       }
+
+      // انتظار قصير بين الرسائل لتجنب إرهاق الخادم
+      await new Promise(resolve => setTimeout(resolve, 1000))
     }
 
-    console.log('Processing completed:', results);
+    const response = {
+      success: true,
+      processed: pendingMessages.length,
+      successful: successCount,
+      failed: failedCount,
+      timestamp: new Date().toISOString()
+    }
 
-    return new Response(
-      JSON.stringify({ 
-        success: true,
-        processed_count: results.length,
-        results: results
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200
-      }
-    );
+    console.log('📊 نتائج المعالجة:', response)
+
+    return new Response(JSON.stringify(response), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
 
   } catch (error) {
-    console.error('General error:', error);
-    return new Response(
-      JSON.stringify({ 
-        error: 'Failed to process pending messages', 
-        details: error.message 
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500
-      }
-    );
+    console.error('❌ خطأ عام في معالج الرسائل المعلقة:', error)
+    
+    return new Response(JSON.stringify({ 
+      error: 'خطأ في الخادم',
+      details: error.message,
+      timestamp: new Date().toISOString()
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
   }
-});
+})
