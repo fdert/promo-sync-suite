@@ -440,19 +440,44 @@ ${payments.slice(0, 5).map(payment =>
       
       const webhookUrl = 'https://n8n.srv894347.hstgr.cloud/webhook/ca719409-ac29-485a-99d4-3b602978eace';
       
-      const webhookResponse = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          phone: phoneNumber,
-          message: summary,
-          customer_name: customer.customer_name,
-          message_id: messageData.id,
-          timestamp: new Date().toISOString()
-        })
-      });
+      let webhookResponse;
+      try {
+        webhookResponse = await fetch(webhookUrl, {
+          method: 'POST',
+          mode: 'cors',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({
+            phone: phoneNumber,
+            message: summary,
+            customer_name: customer.customer_name,
+            message_id: messageData.id,
+            timestamp: new Date().toISOString(),
+            source: 'accounts_overview'
+          })
+        });
+      } catch (fetchError) {
+        console.error('❌ خطأ في الاتصال بالويب هوك:', fetchError);
+        
+        // في حالة فشل الويب هوك، حفظ الرسالة كـ pending ليتم إرسالها لاحقاً
+        await supabase
+          .from('whatsapp_messages')
+          .update({ 
+            status: 'pending',
+            error_message: `Webhook connection failed: ${fetchError.message}`
+          })
+          .eq('id', messageData.id);
+        
+        toast({
+          title: "تم حفظ الرسالة",
+          description: `تم حفظ الرسالة وستُرسل تلقائياً عند توفر الاتصال. معرف الرسالة: ${messageData.id}`,
+          variant: "default"
+        });
+        
+        return; // إنهاء الدالة هنا
+      }
 
       const webhookResponseText = await webhookResponse.text();
       console.log('📥 استجابة الويب هوك:', webhookResponse.status, webhookResponseText);
