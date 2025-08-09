@@ -57,6 +57,7 @@ const WebhookManagement = ({
     order_statuses: []
   });
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingWebhook, setEditingWebhook] = useState<WebhookSetting | null>(null);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
@@ -103,6 +104,42 @@ const WebhookManagement = ({
     } catch (error) {
       // Error handled in parent component
     }
+  };
+
+  const handleEditStart = (webhook: WebhookSetting) => {
+    setEditingWebhook({...webhook});
+    setEditingId(webhook.id!);
+  };
+
+  const handleEditSave = async () => {
+    if (!editingWebhook) return;
+    
+    if (!editingWebhook.webhook_name || !editingWebhook.webhook_url) {
+      toast({
+        title: "خطأ",
+        description: "يرجى ملء جميع الحقول المطلوبة",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await onUpdate(editingWebhook.id!, {
+        webhook_name: editingWebhook.webhook_name,
+        webhook_url: editingWebhook.webhook_url,
+        secret_key: editingWebhook.secret_key,
+        order_statuses: editingWebhook.order_statuses
+      });
+      setEditingId(null);
+      setEditingWebhook(null);
+    } catch (error) {
+      // Error handled in parent component
+    }
+  };
+
+  const handleEditCancel = () => {
+    setEditingId(null);
+    setEditingWebhook(null);
   };
 
   const handleTest = async (webhook: WebhookSetting) => {
@@ -246,95 +283,186 @@ const WebhookManagement = ({
               <TableBody>
                 {webhookSettings.map((webhook) => (
                   <TableRow key={webhook.id}>
-                    <TableCell>
-                      {editingId === webhook.id ? (
-                        <Input
-                          value={webhook.webhook_name}
-                          onChange={(e) => {
-                            const updated = {...webhook, webhook_name: e.target.value};
-                            handleUpdate(webhook.id!, {webhook_name: e.target.value});
-                          }}
-                          onBlur={() => setEditingId(null)}
-                          autoFocus
-                        />
-                      ) : (
-                        <span className="font-medium">{webhook.webhook_name}</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <code className="text-xs bg-muted px-2 py-1 rounded">
-                        {webhook.webhook_url.length > 50 
-                          ? `${webhook.webhook_url.substring(0, 50)}...` 
-                          : webhook.webhook_url
-                        }
-                      </code>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">
-                        {webhook.webhook_type}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {webhook.webhook_type === 'outgoing' && webhook.order_statuses ? (
-                        webhook.order_statuses.length > 0 ? (
-                          <div className="flex flex-wrap gap-1">
-                            {webhook.order_statuses.map((status) => {
-                              const statusLabel = orderStatusOptions.find(opt => opt.value === status)?.label;
-                              return (
-                                <Badge key={status} variant="outline" className="text-xs">
-                                  {statusLabel}
-                                </Badge>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <Badge variant="outline" className="text-xs">جميع الحالات</Badge>
-                        )
-                      ) : (
-                        <span className="text-muted-foreground text-sm">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Switch
-                          checked={webhook.is_active}
-                          onCheckedChange={(checked) => 
-                            handleUpdate(webhook.id!, {is_active: checked})
-                          }
-                        />
-                        <Badge variant={webhook.is_active ? "default" : "secondary"}>
-                          {webhook.is_active ? (
-                            <>
-                              <Check className="w-3 h-3 mr-1" />
-                              نشط
-                            </>
+                    {editingId === webhook.id ? (
+                      <TableCell colSpan={6}>
+                        <Card className="border-primary">
+                          <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                              <Edit className="h-5 w-5" />
+                              تعديل الويب هوك
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label>اسم الويب هوك</Label>
+                                <Input
+                                  value={editingWebhook?.webhook_name || ''}
+                                  onChange={(e) => setEditingWebhook(prev => prev ? {...prev, webhook_name: e.target.value} : null)}
+                                  placeholder="مثال: n8n Webhook"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>رابط الويب هوك</Label>
+                                <Input
+                                  value={editingWebhook?.webhook_url || ''}
+                                  onChange={(e) => setEditingWebhook(prev => prev ? {...prev, webhook_url: e.target.value} : null)}
+                                  placeholder="https://n8n.example.com/webhook/..."
+                                />
+                              </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label>مفتاح الأمان (اختياري)</Label>
+                                <Input
+                                  type="password"
+                                  value={editingWebhook?.secret_key || ''}
+                                  onChange={(e) => setEditingWebhook(prev => prev ? {...prev, secret_key: e.target.value} : null)}
+                                  placeholder="مفتاح أمان للتحقق من الهوية"
+                                />
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <Label className="text-base">تفعيل الويب هوك</Label>
+                                  <p className="text-sm text-muted-foreground">تشغيل/إيقاف إرسال الإشعارات</p>
+                                </div>
+                                <Switch 
+                                  checked={editingWebhook?.is_active || false} 
+                                  onCheckedChange={(checked) => setEditingWebhook(prev => prev ? {...prev, is_active: checked} : null)}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Order Status Selection for Orders Webhook */}
+                            {webhook.webhook_type === 'outgoing' && (
+                              <div className="space-y-2">
+                                <Label>حالات الطلب المطلوب إرسال إشعارات لها</Label>
+                                <p className="text-sm text-muted-foreground">اختر حالات الطلب التي تريد إرسال الويب هوك عندها (فارغ = جميع الحالات)</p>
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                  {orderStatusOptions.map((status) => (
+                                    <div key={status.value} className="flex items-center space-x-2 space-x-reverse">
+                                      <Checkbox
+                                        id={`edit-${status.value}`}
+                                        checked={editingWebhook?.order_statuses?.includes(status.value) || false}
+                                        onCheckedChange={(checked) => {
+                                          if (!editingWebhook) return;
+                                          const currentStatuses = editingWebhook.order_statuses || [];
+                                          if (checked) {
+                                            setEditingWebhook({
+                                              ...editingWebhook, 
+                                              order_statuses: [...currentStatuses, status.value]
+                                            });
+                                          } else {
+                                            setEditingWebhook({
+                                              ...editingWebhook,
+                                              order_statuses: currentStatuses.filter(s => s !== status.value)
+                                            });
+                                          }
+                                        }}
+                                      />
+                                      <Label htmlFor={`edit-${status.value}`} className="text-sm font-medium">
+                                        {status.label}
+                                      </Label>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            <div className="flex gap-2 justify-end">
+                              <Button variant="outline" onClick={handleEditCancel}>
+                                إلغاء
+                              </Button>
+                              <Button onClick={handleEditSave}>
+                                <Check className="h-4 w-4 mr-2" />
+                                حفظ التغييرات
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </TableCell>
+                    ) : (
+                      <>
+                        <TableCell>
+                          <span className="font-medium">{webhook.webhook_name}</span>
+                        </TableCell>
+                        <TableCell>
+                          <code className="text-xs bg-muted px-2 py-1 rounded">
+                            {webhook.webhook_url.length > 50 
+                              ? `${webhook.webhook_url.substring(0, 50)}...` 
+                              : webhook.webhook_url
+                            }
+                          </code>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">
+                            {webhook.webhook_type}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {webhook.webhook_type === 'outgoing' && webhook.order_statuses ? (
+                            webhook.order_statuses.length > 0 ? (
+                              <div className="flex flex-wrap gap-1">
+                                {webhook.order_statuses.map((status) => {
+                                  const statusLabel = orderStatusOptions.find(opt => opt.value === status)?.label;
+                                  return (
+                                    <Badge key={status} variant="outline" className="text-xs">
+                                      {statusLabel}
+                                    </Badge>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <Badge variant="outline" className="text-xs">جميع الحالات</Badge>
+                            )
                           ) : (
-                            <>
-                              <X className="w-3 h-3 mr-1" />
-                              متوقف
-                            </>
+                            <span className="text-muted-foreground text-sm">-</span>
                           )}
-                        </Badge>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setEditingId(webhook.id!)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleTest(webhook)}
-                        >
-                          <TestTube className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Switch
+                              checked={webhook.is_active}
+                              onCheckedChange={(checked) => 
+                                handleUpdate(webhook.id!, {is_active: checked})
+                              }
+                            />
+                            <Badge variant={webhook.is_active ? "default" : "secondary"}>
+                              {webhook.is_active ? (
+                                <>
+                                  <Check className="w-3 h-3 mr-1" />
+                                  نشط
+                                </>
+                              ) : (
+                                <>
+                                  <X className="w-3 h-3 mr-1" />
+                                  متوقف
+                                </>
+                              )}
+                            </Badge>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEditStart(webhook)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleTest(webhook)}
+                            >
+                              <TestTube className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
