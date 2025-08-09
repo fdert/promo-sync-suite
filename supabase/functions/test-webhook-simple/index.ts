@@ -7,120 +7,101 @@ const corsHeaders = {
 };
 
 Deno.serve(async (req) => {
-  console.log('Request received:', req.method);
+  console.log('🚀 Test Webhook Function started');
   
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    console.log('Processing webhook test request...');
-    
-    let body;
-    try {
-      body = await req.json();
-      console.log('Request body parsed:', body);
-    } catch (parseError) {
-      console.error('Error parsing request body:', parseError);
+    // Initialize Supabase client
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    );
+
+    // Get webhook settings for financial reports WhatsApp
+    console.log('Getting webhook settings...');
+    const { data: webhookSettings, error: webhookError } = await supabase
+      .from('webhook_settings')
+      .select('*')
+      .eq('webhook_type', 'account_summary')
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (webhookError) {
+      console.error('Webhook settings error:', webhookError);
       return new Response(
-        JSON.stringify({ success: false, error: 'خطأ في تحليل البيانات المرسلة' }),
+        JSON.stringify({ success: false, error: 'Failed to get webhook settings' }),
+        { headers: corsHeaders, status: 500 }
+      );
+    }
+
+    if (!webhookSettings?.webhook_url) {
+      console.error('No webhook found for account_summary');
+      return new Response(
+        JSON.stringify({ success: false, error: 'No webhook configured for account_summary' }),
         { headers: corsHeaders, status: 400 }
       );
     }
 
-    const { webhook_url, event, test_data } = body;
+    console.log('Using webhook URL:', webhookSettings.webhook_url);
 
-    if (!webhook_url) {
-      console.error('Missing webhook_url');
-      return new Response(
-        JSON.stringify({ success: false, error: 'مطلوب رابط الويب هوك' }),
-        { headers: corsHeaders, status: 400 }
-      );
-    }
-
-    console.log('إرسال طلب اختبار للويب هوك:', { webhook_url, event, test_data });
-
-    const payload = {
-      event: event,
-      data: test_data
+    // Test payload
+    const testPayload = {
+      phone: '+966535983261',
+      message: 'اختبار رسالة واتساب من النظام',
+      customer_name: 'عميل تجريبي'
     };
 
-    console.log('Payload to send:', JSON.stringify(payload));
+    console.log('Sending test message to webhook...');
+    console.log('Payload:', testPayload);
 
-    let response;
-    try {
-      response = await fetch(webhook_url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': 'Supabase-Webhook-Test/1.0',
-        },
-        body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(30000), // 30 second timeout
-      });
-    } catch (fetchError) {
-      console.error('Fetch error:', fetchError);
+    // Send to webhook with POST method
+    const webhookResponse = await fetch(webhookSettings.webhook_url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(testPayload)
+    });
+
+    const webhookResult = await webhookResponse.text();
+    console.log('Webhook response status:', webhookResponse.status);
+    console.log('Webhook response:', webhookResult);
+
+    if (webhookResponse.ok) {
+      console.log('✅ Test message sent successfully');
+      
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: 'تم إرسال الرسالة التجريبية بنجاح',
+          webhook_status: webhookResponse.status,
+          webhook_response: webhookResult
+        }),
+        { headers: corsHeaders }
+      );
+    } else {
+      console.error('❌ Webhook failed:', webhookResponse.status, webhookResult);
+      
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: 'خطأ في الاتصال بالويب هوك',
-          details: fetchError.message
+          error: 'Webhook failed',
+          status: webhookResponse.status,
+          details: webhookResult
         }),
         { headers: corsHeaders, status: 500 }
       );
     }
 
-    let responseText = '';
-    try {
-      responseText = await response.text();
-    } catch (textError) {
-      console.error('Error reading response text:', textError);
-      responseText = 'خطأ في قراءة الاستجابة';
-    }
-
-    console.log('استجابة الويب هوك:', {
-      status: response.status,
-      statusText: response.statusText,
-      headers: Object.fromEntries(response.headers.entries()),
-      body: responseText
-    });
-
-    if (response.ok) {
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: 'تم إرسال رسالة الاختبار بنجاح',
-          webhookResponse: {
-            status: response.status,
-            statusText: response.statusText,
-            body: responseText,
-            headers: Object.fromEntries(response.headers.entries())
-          }
-        }),
-        { headers: corsHeaders }
-      );
-    } else {
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: `فشل في الاتصال بالويب هوك - حالة HTTP: ${response.status}`,
-          webhookResponse: {
-            status: response.status,
-            statusText: response.statusText,
-            body: responseText,
-            headers: Object.fromEntries(response.headers.entries())
-          }
-        }),
-        { headers: corsHeaders, status: 200 } // Return 200 to avoid double error handling
-      );
-    }
-
   } catch (error) {
-    console.error('خطأ عام في اختبار الويب هوك:', error);
+    console.error('Function error:', error);
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: 'خطأ داخلي في الخادم', 
+        error: 'Function error', 
         details: error.message 
       }),
       { headers: corsHeaders, status: 500 }

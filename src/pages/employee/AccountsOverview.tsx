@@ -388,6 +388,32 @@ ${payments.slice(0, 5).map(payment =>
   // Handle direct WhatsApp send for each customer
   const handleDirectWhatsApp = async (customer: CustomerBalance) => {
     try {
+      // أولاً اختبر webhook للتأكد من أنه يعمل
+      console.log('Testing webhook first...');
+      const { data: testData, error: testError } = await supabase.functions.invoke('test-webhook-simple');
+      
+      if (testError) {
+        console.error('Webhook test failed:', testError);
+        toast({
+          title: "خطأ في الاتصال",
+          description: `فشل في اختبار webhook: ${testError.message}`,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (!testData?.success) {
+        console.error('Webhook test returned error:', testData);
+        toast({
+          title: "خطأ في webhook",
+          description: `خطأ في webhook: ${testData?.error || 'خطأ غير معروف'}`,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      console.log('✅ Webhook test successful, proceeding with actual message...');
+
       // Get customer WhatsApp number and name
       const { data: customerData } = await supabase
         .from('customers')
