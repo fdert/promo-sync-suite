@@ -388,79 +388,98 @@ ${payments.slice(0, 5).map(payment =>
   // Handle direct WhatsApp send for each customer
   const handleDirectWhatsApp = async (customer: CustomerBalance) => {
     try {
-      // اختبار الـ webhook أولاً
-      console.log('🧪 اختبار webhook مباشرة...');
-      const { data: testData, error: testError } = await supabase.functions.invoke('test-whatsapp-webhook-direct');
+      // اختبار webhook مباشرة من المتصفح
+      console.log('🧪 اختبار webhook مباشرة من المتصفح...');
       
-      if (testError) {
-        console.error('❌ فشل اختبار webhook:', testError);
+      const webhookUrl = 'https://n8n.srv894347.hstgr.cloud/webhook/ca719409-ac29-485a-99d4-3b602978eace';
+      const testPayload = {
+        phone: '+966535983261',
+        message: 'رسالة اختبار مباشرة من المتصفح\n\nهذه رسالة تجريبية للتأكد من عمل webhook WhatsApp.\n\nالتاريخ: ' + new Date().toLocaleString('ar-SA'),
+        customer_name: 'عميل تجريبي'
+      };
+
+      console.log('📤 إرسال بيانات إلى webhook:', webhookUrl);
+      console.log('📄 البيانات:', testPayload);
+
+      // اختبار webhook مباشرة
+      const webhookResponse = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(testPayload)
+      });
+
+      const responseText = await webhookResponse.text();
+      console.log('📥 استجابة webhook:');
+      console.log('Status:', webhookResponse.status);
+      console.log('Response:', responseText);
+
+      if (!webhookResponse.ok) {
         toast({
           title: "خطأ في webhook",
-          description: `فشل في اختبار webhook: ${testError.message}`,
+          description: `فشل webhook: ${webhookResponse.status} - ${responseText}. تحقق من إعدادات n8n.`,
           variant: "destructive"
         });
         return;
       }
 
-      console.log('📊 نتائج اختبار webhook:', testData);
-
-      if (!testData?.success) {
-        toast({
-          title: "خطأ في webhook",
-          description: `مشكلة في webhook: ${testData?.error || 'خطأ غير معروف'}. تحقق من إعدادات n8n.`,
-          variant: "destructive"
-        });
-        return;
-      }
+      console.log('✅ webhook يعمل! الآن سنرسل الرسالة الفعلية...');
 
       // إذا نجح الاختبار، أرسل الرسالة الفعلية
       const summary = generateSummary(customer);
       
-      const { error: insertError } = await supabase
-        .from('whatsapp_messages')
-        .insert({
-          from_number: 'system',
-          to_number: '+966535983261', // نفس الرقم المستخدم في الاختبار
-          message_type: 'text',
-          message_content: summary,
-          status: 'pending',
-          customer_id: customer.customer_id
-        });
+      // إرسال الرسالة الفعلية لـ webhook
+      const actualPayload = {
+        phone: '+966535983261',
+        message: summary,
+        customer_name: customer.customer_name
+      };
 
-      if (insertError) {
-        console.error('Error inserting WhatsApp message:', insertError);
+      const finalResponse = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(actualPayload)
+      });
+
+      const finalResponseText = await finalResponse.text();
+      console.log('📱 استجابة الرسالة الفعلية:');
+      console.log('Status:', finalResponse.status);
+      console.log('Response:', finalResponseText);
+
+      if (finalResponse.ok) {
+        // حفظ في قاعدة البيانات للسجلات
+        await supabase
+          .from('whatsapp_messages')
+          .insert({
+            from_number: 'system',
+            to_number: '+966535983261',
+            message_type: 'text',
+            message_content: summary,
+            status: 'sent',
+            customer_id: customer.customer_id
+          });
+
         toast({
-          title: "خطأ",
-          description: "فشل في حفظ الرسالة",
+          title: "تم الإرسال",
+          description: `تم إرسال ملخص العميل ${customer.customer_name} بنجاح. إذا لم تصل الرسالة، تحقق من رقم WhatsApp أو إعدادات WhatsApp Business API.`,
+        });
+      } else {
+        toast({
+          title: "خطأ في الإرسال",
+          description: `فشل في إرسال الرسالة: ${finalResponse.status} - ${finalResponseText}`,
           variant: "destructive"
         });
-        return;
       }
-
-      // استدعاء process-whatsapp-queue لمعالجة الرسائل المعلقة
-      const { data: functionData, error: functionError } = await supabase.functions.invoke('process-whatsapp-queue');
-      
-      if (functionError) {
-        console.error('خطأ في استدعاء edge function:', functionError);
-        toast({
-          title: "تحذير",
-          description: "تم حفظ الرسالة ولكن قد تكون هناك مشكلة في الإرسال. تحقق من إعدادات WhatsApp.",
-          variant: "default"
-        });
-        return;
-      }
-
-      toast({
-        title: "تم الإرسال",
-        description: `تم إرسال ملخص العميل ${customer.customer_name} بنجاح. إذا لم تصل الرسالة، تحقق من إعدادات WhatsApp Business API في n8n.`,
-      });
       
     } catch (error) {
-      console.error('Error sending WhatsApp message:', error);
+      console.error('❌ خطأ في الاتصال:', error);
       
       toast({
-        title: "خطأ",
-        description: "فشل في إرسال الرسالة",
+        title: "خطأ في الاتصال",
+        description: "فشل في الاتصال بـ webhook. تحقق من الاتصال بالإنترنت وإعدادات n8n.",
         variant: "destructive"
       });
     }
