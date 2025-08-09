@@ -283,11 +283,44 @@ async function sendToWhatsAppService(message: any): Promise<boolean> {
     if (response.ok) {
       const responseText = await response.text();
       console.log('✅ استجابة الـ webhook ناجحة:', responseText);
+      
+      // سجل في webhook_logs
+      try {
+        await supabase.from('webhook_logs').insert({
+          webhook_url: webhook.webhook_url,
+          payload: payload,
+          response_status: response.status,
+          response_body: responseText,
+          webhook_type: webhook.webhook_type,
+          created_at: new Date().toISOString()
+        });
+        console.log('📝 تم تسجيل الويب هوك في قاعدة البيانات');
+      } catch (logError) {
+        console.warn('⚠️ فشل في تسجيل الويب هوك:', logError);
+      }
+      
       return true;
     } else {
       const errorText = await response.text();
       console.error(`❌ فشل إرسال للـ webhook: ${response.status} - ${response.statusText}`);
       console.error('تفاصيل الخطأ:', errorText);
+      
+      // سجل الخطأ في webhook_logs
+      try {
+        await supabase.from('webhook_logs').insert({
+          webhook_url: webhook.webhook_url,
+          payload: payload,
+          response_status: response.status,
+          response_body: errorText,
+          webhook_type: webhook.webhook_type,
+          error_message: `${response.status} - ${response.statusText}`,
+          created_at: new Date().toISOString()
+        });
+        console.log('📝 تم تسجيل خطأ الويب هوك في قاعدة البيانات');
+      } catch (logError) {
+        console.warn('⚠️ فشل في تسجيل خطأ الويب هوك:', logError);
+      }
+      
       return false;
     }
     
