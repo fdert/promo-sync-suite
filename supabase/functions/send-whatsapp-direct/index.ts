@@ -1,178 +1,160 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS'
 }
 
-interface WhatsAppMessage {
-  id: string;
-  to_number: string;
-  message_content: string;
-  customer_id: string;
-  message_type: string;
-}
-
-Deno.serve(async (req) => {
+serve(async (req) => {
+  console.log('🚀 تم استدعاء edge function لإرسال الواتساب')
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders })
+  }
+
+  if (req.method !== 'POST') {
+    return new Response('Method not allowed', { 
+      status: 405, 
+      headers: corsHeaders 
+    })
   }
 
   try {
-    console.log('🚀 بدء معالجة طلب إرسال واتس آب مباشر');
-
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    // جلب الرسائل المعلقة
-    console.log('📥 جلب الرسائل المعلقة...');
-    const { data: messages, error: messagesError } = await supabase
-      .from('whatsapp_messages')
-      .select('*')
-      .eq('status', 'pending')
-      .limit(10)
-      .order('created_at', { ascending: true });
-
-    if (messagesError) {
-      console.error('❌ خطأ في جلب الرسائل:', messagesError);
-      throw messagesError;
-    }
-
-    if (!messages || messages.length === 0) {
-      console.log('📭 لا توجد رسائل معلقة');
-      return Response.json(
-        { message: 'لا توجد رسائل معلقة', processed: 0 },
-        { headers: corsHeaders }
-      );
-    }
-
-    console.log(`📨 تم العثور على ${messages.length} رسائل معلقة`);
-
-    const results = [];
+    const body = await req.json()
+    console.log('📨 البيانات المستلمة:', body)
     
-    for (const message of messages) {
-      console.log(`📱 معالجة رسالة إلى: ${message.to_number}`);
-      
-      try {
-        const success = await sendWhatsAppMessage(message);
-        
-        // تحديث حالة الرسالة
-        const newStatus = success ? 'sent' : 'failed';
-        await supabase
-          .from('whatsapp_messages')
-          .update({ 
-            status: newStatus,
-            sent_at: success ? new Date().toISOString() : null,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', message.id);
-
-        results.push({
-          message_id: message.id,
-          to_number: message.to_number,
-          status: newStatus
-        });
-
-        console.log(`✅ تم تحديث حالة الرسالة ${message.id} إلى: ${newStatus}`);
-        
-        // إضافة تأخير قصير بين الرسائل
-        if (messages.indexOf(message) < messages.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 2000));
+    const { phone, message, customer_name } = body
+    
+    if (!phone || !message) {
+      return new Response(JSON.stringify({ 
+        error: 'مطلوب: phone و message' 
+      }), {
+        status: 400,
+        headers: { 
+          ...corsHeaders,
+          'Content-Type': 'application/json'
         }
-        
-      } catch (error) {
-        console.error(`❌ خطأ في معالجة رسالة ${message.id}:`, error);
-        
-        // تحديث حالة الرسالة إلى فاشلة
-        await supabase
-          .from('whatsapp_messages')
-          .update({ 
-            status: 'failed',
-            error_message: error.message,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', message.id);
-
-        results.push({
-          message_id: message.id,
-          to_number: message.to_number,
-          status: 'failed',
-          error: error.message
-        });
-      }
+      })
     }
 
-    console.log('✅ اكتملت معالجة جميع الرسائل');
-    
-    return Response.json({
-      success: true,
-      processed: results.length,
-      results: results
-    }, { headers: corsHeaders });
+    // إنشاء عميل Supabase
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const supabase = createClient(supabaseUrl, supabaseKey)
 
-  } catch (error) {
-    console.error('❌ خطأ عام في المعالجة:', error);
-    return Response.json(
-      { error: error.message },
-      { headers: corsHeaders, status: 500 }
-    );
-  }
-});
-
-async function sendWhatsAppMessage(message: WhatsAppMessage): Promise<boolean> {
-  try {
-    console.log(`📞 إرسال رسالة واتس آب إلى: ${message.to_number}`);
-    console.log(`📝 النص: ${message.message_content.substring(0, 100)}...`);
-
-    // هنا يمكن إضافة منطق الإرسال المباشر للواتس آب
-    // حالياً سأحاكي الإرسال الناجح
+    console.log('💾 حفظ الرسالة في قاعدة البيانات...')
     
-    // مثال على استخدام WhatsApp Business API
-    const whatsappApiUrl = Deno.env.get('WHATSAPP_API_URL');
-    const whatsappToken = Deno.env.get('WHATSAPP_ACCESS_TOKEN');
-    
-    if (!whatsappApiUrl || !whatsappToken) {
-      console.warn('⚠️ لم يتم تعيين إعدادات WhatsApp API، سيتم المحاكاة');
-      
-      // محاكاة الإرسال الناجح
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      console.log('✅ تم إرسال الرسالة (محاكاة)');
-      return true;
+    // حفظ الرسالة في قاعدة البيانات أولاً
+    const { data: messageData, error: saveError } = await supabase
+      .from('whatsapp_messages')
+      .insert({
+        from_number: 'system',
+        to_number: phone,
+        message_type: 'text',
+        message_content: message,
+        status: 'pending'
+      })
+      .select()
+      .single()
+
+    if (saveError) {
+      console.error('❌ خطأ في حفظ الرسالة:', saveError)
+      return new Response(JSON.stringify({ 
+        error: 'فشل في حفظ الرسالة',
+        details: saveError.message 
+      }), {
+        status: 500,
+        headers: { 
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
+      })
     }
 
-    // إرسال فعلي للواتس آب
-    const payload = {
-      messaging_product: 'whatsapp',
-      to: message.to_number.replace('+', ''),
-      type: 'text',
-      text: {
-        body: message.message_content
-      }
-    };
+    console.log('✅ تم حفظ الرسالة بنجاح، ID:', messageData.id)
 
-    const response = await fetch(`${whatsappApiUrl}/messages`, {
+    // إرسال الرسالة عبر الويب هوك
+    console.log('📤 إرسال الرسالة للويب هوك...')
+    
+    const webhookUrl = 'https://n8n.srv894347.hstgr.cloud/webhook/ca719409-ac29-485a-99d4-3b602978eace'
+    
+    const webhookResponse = await fetch(webhookUrl, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${whatsappToken}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(payload)
-    });
+      body: JSON.stringify({
+        phone: phone,
+        message: message,
+        customer_name: customer_name || 'غير محدد',
+        message_id: messageData.id,
+        timestamp: new Date().toISOString()
+      })
+    })
 
-    if (response.ok) {
-      const result = await response.json();
-      console.log('✅ تم إرسال الرسالة بنجاح:', result);
-      return true;
-    } else {
-      const error = await response.text();
-      console.error('❌ فشل في إرسال الرسالة:', error);
-      return false;
+    const webhookResponseText = await webhookResponse.text()
+    console.log('📥 استجابة الويب هوك:', webhookResponse.status, webhookResponseText)
+
+    // تحديث حالة الرسالة حسب نتيجة الويب هوك
+    const newStatus = webhookResponse.ok ? 'sent' : 'failed'
+    
+    const { error: updateError } = await supabase
+      .from('whatsapp_messages')
+      .update({ 
+        status: newStatus,
+        error_message: webhookResponse.ok ? null : `Webhook error: ${webhookResponse.status} - ${webhookResponseText}`
+      })
+      .eq('id', messageData.id)
+
+    if (updateError) {
+      console.error('❌ خطأ في تحديث حالة الرسالة:', updateError)
     }
 
+    // في كل الأحوال، نرد بنجاح للمستخدم مع تفاصيل التشخيص
+    const response = {
+      success: true,
+      message_id: messageData.id,
+      phone: phone,
+      customer_name: customer_name,
+      webhook_status: webhookResponse.status,
+      webhook_response: webhookResponseText,
+      message_status: newStatus,
+      timestamp: new Date().toISOString(),
+      diagnostic_info: {
+        function_name: 'send-whatsapp-direct',
+        webhook_url: webhookUrl,
+        phone_clean: phone,
+        message_length: message.length,
+        environment: 'supabase-edge-function'
+      }
+    }
+
+    console.log('✅ العملية مكتملة:', response)
+
+    return new Response(JSON.stringify(response), {
+      status: 200,
+      headers: { 
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      }
+    })
+
   } catch (error) {
-    console.error('❌ خطأ في إرسال رسالة واتس آب:', error);
-    return false;
+    console.error('❌ خطأ في edge function:', error)
+    
+    return new Response(JSON.stringify({ 
+      error: 'خطأ في الخادم',
+      details: error.message,
+      timestamp: new Date().toISOString()
+    }), {
+      status: 500,
+      headers: { 
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      }
+    })
   }
-}
+})
