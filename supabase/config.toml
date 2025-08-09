@@ -53,3 +53,9 @@ verify_jwt = false
 
 [functions.send-whatsapp-direct]
 verify_jwt = false
+
+[functions.test-webhook]
+verify_jwt = false
+
+[functions.test-webhook-simple]
+verify_jwt = false
