@@ -407,42 +407,48 @@ ${payments.slice(0, 5).map(payment =>
       // Generate summary for this customer
       const summary = generateSummary(customer);
       
-      // استدعاء edge function المخصص لملخص العملاء المدينين مع البيانات المطلوبة
-      console.log('Calling send-customer-summary function...');
-      const { data: functionData, error: functionError } = await supabase.functions.invoke('send-customer-summary', {
-        body: {
-          customer_phone: customerData.whatsapp_number || customerData.phone,
-          customer_name: customerData.name,
-          message: summary
-        }
-      });
+      // حفظ الرسالة في قاعدة البيانات أولاً
+      const { error: insertError } = await supabase
+        .from('whatsapp_messages')
+        .insert({
+          from_number: 'system',
+          to_number: customerData.whatsapp_number || customerData.phone,
+          message_type: 'text',
+          message_content: summary,
+          status: 'pending',
+          customer_id: customer.customer_id
+        });
+
+      if (insertError) {
+        console.error('Error inserting WhatsApp message:', insertError);
+        toast({
+          title: "خطأ",
+          description: "فشل في حفظ الرسالة",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // الآن استدعاء process-whatsapp-queue لمعالجة الرسائل المعلقة
+      console.log('Calling process-whatsapp-queue function...');
+      const { data: functionData, error: functionError } = await supabase.functions.invoke('process-whatsapp-queue');
       
       console.log('Function response:', { functionData, functionError });
       
       if (functionError) {
         console.error('خطأ في استدعاء edge function:', functionError);
         toast({
-          title: "خطأ",
-          description: `فشل في إرسال الرسالة: ${functionError.message}`,
-          variant: "destructive"
+          title: "تحذير",
+          description: "تم حفظ الرسالة ولكن قد تكون هناك مشكلة في الإرسال",
+          variant: "default"
         });
         return;
       }
 
-      if (functionData?.success) {
-        console.log('✅ تم إرسال الملخص المالي بنجاح:', functionData);
-        toast({
-          title: "تم الإرسال",
-          description: `تم إرسال ملخص العميل ${customer.customer_name} بنجاح عبر واتساب`,
-        });
-      } else {
-        console.error('⚠️ فشل في الإرسال:', functionData);
-        toast({
-          title: "خطأ",
-          description: `فشل في إرسال الرسالة: ${functionData?.error || 'خطأ غير معروف'}`,
-          variant: "destructive"
-        });
-      }
+      toast({
+        title: "تم الإرسال",
+        description: `تم إرسال ملخص العميل ${customer.customer_name} بنجاح عبر واتساب`,
+      });
       
     } catch (error) {
       console.error('Error sending WhatsApp message:', error);
