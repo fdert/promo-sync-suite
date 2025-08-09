@@ -338,27 +338,85 @@ ${payments.slice(0, 5).map(payment =>
         return;
       }
       
-      // حفظ الرسالة مباشرة في قاعدة البيانات
-      const { error } = await supabase
+      // إرسال الرسالة مباشرة عبر webhook الإرسال الجماعي
+      const { data: webhookData, error: webhookError } = await supabase
+        .from('webhook_settings')
+        .select('*')
+        .eq('webhook_type', 'bulk_campaign')
+        .eq('is_active', true)
+        .single();
+
+      if (webhookError || !webhookData) {
+        // حفظ في قاعدة البيانات كبديل
+        const { error } = await supabase
+          .from('whatsapp_messages')
+          .insert({
+            from_number: 'system',
+            to_number: customer.whatsapp_number || customer.phone,
+            message_type: 'text',
+            message_content: summaryText,
+            status: 'pending',
+            is_reply: false,
+            customer_id: selectedCustomerData.customer_id
+          });
+
+        if (error) throw error;
+
+        toast({
+          title: "تم الحفظ",
+          description: "تم حفظ الرسالة. يجب تفعيل webhook الحملات الجماعية للإرسال المباشر",
+          variant: "default"
+        });
+        setShowSummaryDialog(false);
+        return;
+      }
+
+      // إرسال عبر webhook
+      const webhookPayload = {
+        event: 'whatsapp_message_send',
+        data: {
+          to: customer.whatsapp_number || customer.phone,
+          phone: customer.whatsapp_number || customer.phone,
+          message: summaryText,
+          messageText: summaryText,
+          text: summaryText,
+          type: 'text',
+          timestamp: Math.floor(Date.now() / 1000),
+          customer_id: selectedCustomerData.customer_id,
+          from_number: 'system',
+          test: false
+        }
+      };
+
+      const webhookResponse = await fetch(webhookData.webhook_url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(webhookData.secret_key ? { 'Authorization': `Bearer ${webhookData.secret_key}` } : {})
+        },
+        body: JSON.stringify(webhookPayload)
+      });
+
+      if (!webhookResponse.ok) {
+        throw new Error(`فشل في الإرسال عبر webhook: ${webhookResponse.status}`);
+      }
+
+      // حفظ الرسالة مع حالة الإرسال
+      await supabase
         .from('whatsapp_messages')
         .insert({
           from_number: 'system',
           to_number: customer.whatsapp_number || customer.phone,
           message_type: 'text',
           message_content: summaryText,
-          status: 'pending',
+          status: 'sent',
           is_reply: false,
           customer_id: selectedCustomerData.customer_id
         });
 
-      if (error) {
-        throw error;
-      }
-
       toast({
-        title: "تم الحفظ",
-        description: "تم حفظ الرسالة. ملاحظة: لإرسال الرسائل تلقائياً، يجب تكوين webhook الواتساب في الإعدادات",
-        variant: "default"
+        title: "تم الإرسال",
+        description: "تم إرسال رسالة ملخص الحساب بنجاح عبر webhook الحملات الجماعية",
       });
       
       setShowSummaryDialog(false);
