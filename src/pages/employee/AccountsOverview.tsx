@@ -338,13 +338,8 @@ ${payments.slice(0, 5).map(payment =>
         return;
       }
       
-      // Send WhatsApp message
-      console.log('Starting WhatsApp message send...');
-      console.log('Customer phone:', customer.whatsapp_number || customer.phone);
-      console.log('Message length:', summaryText.length);
-      
-      // إرسال الرسالة عبر حفظها في قاعدة البيانات
-      const { error: messageError } = await supabase
+      // حفظ الرسالة مباشرة في قاعدة البيانات
+      const { error } = await supabase
         .from('whatsapp_messages')
         .insert({
           from_number: 'system',
@@ -356,30 +351,22 @@ ${payments.slice(0, 5).map(payment =>
           customer_id: selectedCustomerData.customer_id
         });
 
-      if (messageError) {
-        throw new Error('فشل في حفظ الرسالة: ' + messageError.message);
+      if (error) {
+        throw error;
       }
 
       toast({
         title: "تم بنجاح",
-        description: "تم إرسال رسالة ملخص الحساب بنجاح",
+        description: "تم حفظ رسالة ملخص الحساب وسيتم إرسالها قريباً",
       });
       
       setShowSummaryDialog(false);
     } catch (error) {
-      console.error('Error sending WhatsApp:', error);
-      console.error('Error type:', typeof error);
-      console.error('Error details:', JSON.stringify(error, null, 2));
-      
-      let errorMessage = "فشل في إرسال الرسالة";
-      
-      if (error && typeof error === 'object' && 'message' in error) {
-        errorMessage += ": " + (error as any).message;
-      }
+      console.error('Error saving WhatsApp message:', error);
       
       toast({
         title: "خطأ",
-        description: errorMessage,
+        description: "فشل في حفظ الرسالة",
         variant: "destructive"
       });
     }
