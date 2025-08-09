@@ -50,3 +50,6 @@ verify_jwt = false
 
 [functions.simple-whatsapp]
 verify_jwt = false
+
+[functions.send-whatsapp-direct]
+verify_jwt = false
