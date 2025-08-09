@@ -248,7 +248,7 @@ const WebhookSettings = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'User-Agent': 'إبداع-واتساب-تست/1.0',
+          'User-Agent': 'Ibda-WhatsApp-Test/1.0',
           ...(outgoingWebhook.secret_key && {
             'Authorization': `Bearer ${outgoingWebhook.secret_key}`
           })
