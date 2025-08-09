@@ -92,26 +92,26 @@ Deno.serve(async (req) => {
 
     console.log('Message queued successfully:', messageData.id);
 
-    // البحث عن webhook settings مثلما يفعل send-pending-whatsapp
+    // البحث عن webhook settings مع الأولوية للتقارير المالية
     let webhookSettings;
     
-    console.log('🔍 البحث عن ويب هوك الحملات الجماعية...');
+    console.log('🔍 البحث عن ويب هوك التقارير المالية...');
     
-    // البحث عن ويب هوك الحملات الجماعية أولاً
-    const { data: bulkCampaignWebhook, error: bulkError } = await supabase
+    // البحث عن ويب هوك التقارير المالية أولاً
+    const { data: accountSummaryWebhook, error: summaryError } = await supabase
       .from('webhook_settings')
       .select('webhook_url, webhook_type, webhook_name, is_active')
-      .eq('webhook_type', 'bulk_campaign')
+      .eq('webhook_type', 'account_summary')
       .eq('is_active', true)
       .maybeSingle();
     
-    if (bulkCampaignWebhook?.webhook_url) {
-      webhookSettings = bulkCampaignWebhook;
-      console.log('✅ استخدام ويب هوك الحملات الجماعية:', webhookSettings.webhook_name);
+    if (accountSummaryWebhook?.webhook_url) {
+      webhookSettings = accountSummaryWebhook;
+      console.log('✅ استخدام ويب هوك التقارير المالية:', webhookSettings.webhook_name);
     } else {
-      console.log('⚠️ لا يوجد ويب هوك للحملات الجماعية، جاري البحث عن بديل...');
+      console.log('⚠️ لا يوجد ويب هوك للتقارير المالية، جاري البحث عن بديل...');
       
-      // إذا لم يوجد، ابحث عن ويب هوك عادي
+      // إذا لم يوجد، ابحث عن ويب هوك outgoing
       const { data: outgoingWebhook, error: outgoingError } = await supabase
         .from('webhook_settings')
         .select('webhook_url, webhook_type, webhook_name, is_active')
