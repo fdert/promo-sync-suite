@@ -346,7 +346,7 @@ ${payments.slice(0, 5).map(payment =>
       // إرسال عبر دالة إشعارات الطلبات مع نوع خاص
       const { data, error } = await supabase.functions.invoke('send-order-notifications', {
         body: {
-          notification_type: 'account_summary',
+          type: 'account_summary',
           customer_phone: customer.whatsapp_number || customer.phone,
           customer_name: customer.name,
           message: summaryText

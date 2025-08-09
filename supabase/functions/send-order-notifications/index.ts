@@ -179,6 +179,13 @@ Deno.serve(async (req) => {
         case 'order_on_hold':
           templateName = type;
           break;
+        case 'account_summary':
+          // للرسائل المباشرة (ملخص الحساب)، استخدم الرسالة الموجودة مباشرة
+          templateName = null;
+          message = requestBody.message || '';
+          customerPhone = requestBody.customer_phone || '';
+          customerName = requestBody.customer_name || '';
+          break;
         default:
           templateName = 'order_status_updated';
           break;
@@ -187,16 +194,17 @@ Deno.serve(async (req) => {
     
     console.log('Using template name:', templateName);
 
-    // محاولة الحصول على قالب الرسالة من قاعدة البيانات
-    const { data: templateData, error: templateError } = await supabase
-      .from('message_templates')
-      .select('template_content')
-      .eq('template_name', templateName)
-      .eq('is_active', true)
-      .maybeSingle();
+    // محاولة الحصول على قالب الرسالة من قاعدة البيانات (فقط إذا لم تكن رسالة مباشرة)
+    if (templateName) {
+      const { data: templateData, error: templateError } = await supabase
+        .from('message_templates')
+        .select('template_content')
+        .eq('template_name', templateName)
+        .eq('is_active', true)
+        .maybeSingle();
 
-    if (templateData?.template_content) {
-      console.log('Using template from database:', templateData.template_content);
+      if (templateData?.template_content) {
+        console.log('Using template from database:', templateData.template_content);
       
       // استخدام القالب من قاعدة البيانات
       message = templateData.template_content;
