@@ -45,6 +45,9 @@ verify_jwt = false
 [functions.send-account-summary]
 verify_jwt = false
 
+[functions.send-customer-summary]
+verify_jwt = false
+
 [functions.send-account-summary-simple]
 verify_jwt = false
 
@@ -67,7 +70,4 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.send-test-whatsapp]
-verify_jwt = false
-
-[functions.send-account-summary-simple]
 verify_jwt = false

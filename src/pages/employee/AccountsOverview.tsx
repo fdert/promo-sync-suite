@@ -408,13 +408,16 @@ ${payments.slice(0, 5).map(payment =>
       const summary = generateSummary(customer);
       
       // استدعاء edge function المخصص لملخص العملاء المدينين مع البيانات المطلوبة
-      const { data: functionData, error: functionError } = await supabase.functions.invoke('send-account-summary-simple', {
+      console.log('Calling send-customer-summary function...');
+      const { data: functionData, error: functionError } = await supabase.functions.invoke('send-customer-summary', {
         body: {
           customer_phone: customerData.whatsapp_number || customerData.phone,
           customer_name: customerData.name,
           message: summary
         }
       });
+      
+      console.log('Function response:', { functionData, functionError });
       
       if (functionError) {
         console.error('خطأ في استدعاء edge function:', functionError);

@@ -7,12 +7,32 @@ const corsHeaders = {
 };
 
 Deno.serve(async (req) => {
+  console.log('🚀 Edge Function started');
+  console.log('Request method:', req.method);
+  console.log('Request URL:', req.url);
+  
   if (req.method === 'OPTIONS') {
+    console.log('Handling CORS preflight request');
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { customer_phone, customer_name, message } = await req.json();
+    console.log('Reading request body...');
+    const requestBody = await req.text();
+    console.log('Raw request body:', requestBody);
+    
+    let parsedBody;
+    try {
+      parsedBody = JSON.parse(requestBody);
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError);
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        { headers: corsHeaders, status: 400 }
+      );
+    }
+    
+    const { customer_phone, customer_name, message } = parsedBody;
     
     console.log('Received account summary request:', { 
       customer_phone, 
