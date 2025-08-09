@@ -206,20 +206,12 @@ const WebhookSettings = () => {
     try {
       console.log('إرسال رسالة تجريبية مباشرة عبر ويب هوك...');
       
-      // إرسال الرسالة مباشرة عبر send-order-notifications (نفس طريقة رسائل الطلبات)
-      const { data, error } = await supabase.functions.invoke('send-order-notifications', {
+      // إرسال الرسالة مباشرة عبر Edge Function المخصص للرسائل التجريبية
+      const { data, error } = await supabase.functions.invoke('send-test-whatsapp', {
         body: {
-          type: 'test_message',
           customer_phone: '+966535983261',
           customer_name: 'مستخدم تجريبي',
-          message: `رسالة تجريبية للتأكد من عمل النظام - ${new Date().toLocaleString('ar-SA')}`,
-          order_number: 'TEST-001',
-          service_name: 'اختبار النظام',
-          amount: '0',
-          paid_amount: '0',
-          remaining_amount: '0',
-          status: 'اختبار',
-          company_name: 'وكالة الإبداع للدعاية والإعلان'
+          message: `رسالة تجريبية للتأكد من عمل النظام - ${new Date().toLocaleString('ar-SA')}`
         }
       });
 
@@ -243,7 +235,7 @@ const WebhookSettings = () => {
       } else {
         toast({
           title: "فشل الإرسال",
-          description: data?.message || "فشل في إرسال الرسالة التجريبية",
+          description: data?.error || "فشل في إرسال الرسالة التجريبية",
           variant: "destructive",
         });
       }
