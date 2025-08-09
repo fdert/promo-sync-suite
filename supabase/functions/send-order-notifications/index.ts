@@ -45,13 +45,24 @@ Deno.serve(async (req) => {
       );
     }
     
-    // order_id is optional for direct messages like account_summary
-    if (!order_id && !requestBody.customer_phone) {
-      console.error('Missing required fields:', { type, order_id });
-      return new Response(
-        JSON.stringify({ error: 'Missing required fields: type and order_id' }),
-        { headers: corsHeaders, status: 400 }
-      );
+    // For account_summary, we don't need order_id, just customer info
+    if (type === 'account_summary') {
+      if (!requestBody.customer_phone) {
+        console.error('Missing customer_phone for account_summary');
+        return new Response(
+          JSON.stringify({ error: 'Missing customer_phone for account_summary' }),
+          { headers: corsHeaders, status: 400 }
+        );
+      }
+    } else {
+      // For other notification types, we need order_id
+      if (!order_id) {
+        console.error('Missing required field: order_id');
+        return new Response(
+          JSON.stringify({ error: 'Missing required field: order_id' }),
+          { headers: corsHeaders, status: 400 }
+        );
+      }
     }
 
     let message = '';
