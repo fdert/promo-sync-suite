@@ -359,6 +359,53 @@ const WebhookSettings = () => {
     }
   };
 
+  const testFinancialReportWebhook = async () => {
+    try {
+      console.log('🧪 اختبار ويب هوك التقارير المالية...');
+      
+      toast({
+        title: "جاري الاختبار...",
+        description: "يتم اختبار ويب هوك التقارير المالية",
+      });
+
+      const { data, error } = await supabase.functions.invoke('test-financial-report-webhook');
+
+      if (error) {
+        console.error('❌ خطأ في Edge Function:', error);
+        toast({
+          title: "فشل الاختبار",
+          description: `خطأ في تشغيل اختبار التقارير المالية: ${error.message}`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log('📊 نتائج اختبار التقارير المالية:', data);
+
+      if (data?.success) {
+        const summary = data.summary || {};
+        toast({
+          title: "نجح الاختبار",
+          description: `تم اختبار ${summary.total_webhooks} ويب هوك. نجح: ${summary.successful}, فشل: ${summary.failed}`,
+        });
+      } else {
+        toast({
+          title: "فشل الاختبار",
+          description: data?.error || "فشل في اختبار ويب هوك التقارير المالية",
+          variant: "destructive",
+        });
+      }
+
+    } catch (error) {
+      console.error('❌ خطأ في اختبار التقارير المالية:', error);
+      toast({
+        title: "خطأ",
+        description: "فشل في تشغيل اختبار التقارير المالية",
+        variant: "destructive",
+      });
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "success":
@@ -441,6 +488,15 @@ const WebhookSettings = () => {
                   >
                     <Send className="w-4 h-4 mr-2" />
                     إنشاء ومعالجة رسالة تجريبية
+                  </Button>
+                  <Button 
+                    onClick={testFinancialReportWebhook}
+                    variant="outline"
+                    className="whitespace-nowrap"
+                    disabled={loading}
+                  >
+                    <TestTube className="w-4 h-4 mr-2" />
+                    اختبار التقارير المالية
                   </Button>
                 </div>
                 <div className="text-xs text-muted-foreground">

@@ -57,5 +57,8 @@ verify_jwt = false
 [functions.send-pending-whatsapp]
 verify_jwt = false
 
+[functions.test-financial-report-webhook]
+verify_jwt = false
+
 [functions.send-whatsapp-direct-improved]
 verify_jwt = false
