@@ -414,65 +414,38 @@ ${payments.slice(0, 5).map(payment =>
       console.log('📊 التقرير المالي جاهز للإرسال');
       console.log('📱 الرقم المستهدف:', phoneNumber);
       
-      // حفظ الرسالة في قاعدة البيانات أولاً
-      const { data: messageData, error: saveError } = await supabase
-        .from('whatsapp_messages')
-        .insert({
-          from_number: 'system',
-          to_number: phoneNumber,
-          message_type: 'text',
-          message_content: summary,
-          status: 'pending',
-          customer_id: customer.customer_id
-        })
-        .select()
-        .single();
-
-      if (saveError) {
-        console.error('❌ خطأ في حفظ الرسالة:', saveError);
-        throw new Error('فشل في حفظ الرسالة');
-      }
-
-      console.log('✅ تم حفظ الرسالة بنجاح، ID:', messageData.id);
-      
-      // إظهار رسالة نجاح حفظ الرسالة
-      toast({
-        title: "تم حفظ الرسالة",
-        description: "تم حفظ الرسالة وسيتم إرسالها تلقائياً",
-      });
-
-      // محاولة الإرسال المباشر عبر webhook
-      try {
-        const webhookResponse = await fetch('https://n8n.srv894347.hstgr.cloud/webhook/ca719409-ac29-485a-99d4-3b602978eace', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            phone: phoneNumber,
-            message: summary,
-            customer_name: customer.customer_name,
-            message_id: messageData.id
-          })
-        });
-
-        if (webhookResponse.ok) {
-          // تحديث حالة الرسالة إلى sent
-          await supabase
-            .from('whatsapp_messages')
-            .update({ status: 'sent' })
-            .eq('id', messageData.id);
-          
-          console.log('✅ تم إرسال الرسالة بنجاح!');
-          toast({
-            title: "تم الإرسال بنجاح",
-            description: `تم إرسال التقرير المالي للعميل ${customer.customer_name} بنجاح.`,
-          });
-        } else {
-          console.log('⚠️ فشل في الإرسال المباشر، الرسالة محفوظة للإرسال لاحقاً');
+      // استدعاء edge function لإرسال ملخص العميل مع البيانات المطلوبة
+      const { data: functionData, error: functionError } = await supabase.functions.invoke('send-account-summary-simple', {
+        body: {
+          customer_phone: phoneNumber,
+          customer_name: customerData.name || customer.customer_name,
+          message: summary
         }
-      } catch (webhookError) {
-        console.log('⚠️ فشل في الإرسال المباشر، الرسالة محفوظة للإرسال لاحقاً');
+      });
+      
+      if (functionError) {
+        console.error('خطأ في استدعاء edge function:', functionError);
+        toast({
+          title: "خطأ في الإرسال",
+          description: "فشل في إرسال الرسالة عبر الواتساب",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      if (functionData?.success) {
+        console.log('✅ تم إرسال الملخص المالي بنجاح:', functionData);
+        toast({
+          title: "تم الإرسال بنجاح",
+          description: `تم إرسال التقرير المالي للعميل ${customer.customer_name} بنجاح.`,
+        });
+      } else {
+        console.warn('⚠️ تحذير من edge function:', functionData);
+        toast({
+          title: "تحذير",
+          description: functionData?.error || "حدث خطأ في الإرسال",
+          variant: "destructive"
+        });
       }
 
     } catch (error) {
