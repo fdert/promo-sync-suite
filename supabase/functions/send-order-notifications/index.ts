@@ -45,11 +45,11 @@ Deno.serve(async (req) => {
       );
     }
     
-    // order_id is optional for direct messages
+    // order_id is optional for direct messages like account_summary
     if (!order_id && !requestBody.customer_phone) {
-      console.error('Missing required fields: either order_id or customer_phone must be provided');
+      console.error('Missing required fields:', { type, order_id });
       return new Response(
-        JSON.stringify({ error: 'Missing required fields: either order_id or customer_phone must be provided' }),
+        JSON.stringify({ error: 'Missing required fields: type and order_id' }),
         { headers: corsHeaders, status: 400 }
       );
     }
