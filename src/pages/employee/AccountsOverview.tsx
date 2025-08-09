@@ -338,93 +338,31 @@ ${payments.slice(0, 5).map(payment =>
         return;
       }
       
-      // البحث عن webhook نشط متاح
-      const { data: webhooks, error: webhooksError } = await supabase
-        .from('webhook_settings')
-        .select('*')
-        .eq('is_active', true)
-        .order('webhook_type', { ascending: true });
-
-      if (webhooksError) {
-        throw new Error('خطأ في جلب إعدادات webhook: ' + webhooksError.message);
-      }
-
-      if (!webhooks || webhooks.length === 0) {
-        // حفظ في قاعدة البيانات كبديل
-        const { error } = await supabase
-          .from('whatsapp_messages')
-          .insert({
-            from_number: 'system',
-            to_number: customer.whatsapp_number || customer.phone,
-            message_type: 'text',
-            message_content: summaryText,
-            status: 'pending',
-            is_reply: false,
-            customer_id: selectedCustomerData.customer_id
-          });
-
-        if (error) throw error;
-
-        toast({
-          title: "تم الحفظ",
-          description: "تم حفظ الرسالة. لا يوجد webhook نشط للإرسال المباشر",
-          variant: "default"
-        });
-        setShowSummaryDialog(false);
-        return;
-      }
-
-      // اختيار webhook مناسب (أولوية للحملات الجماعية ثم الصادرة)
-      let selectedWebhook = webhooks.find(w => w.webhook_type === 'bulk_campaign') ||
-                           webhooks.find(w => w.webhook_type === 'outgoing') ||
-                           webhooks[0];
-
-      // إرسال عبر webhook
-      const webhookPayload = {
-        event: 'whatsapp_message_send',
-        data: {
-          to: customer.whatsapp_number || customer.phone,
-          phone: customer.whatsapp_number || customer.phone,
-          message: summaryText,
-          messageText: summaryText,
-          text: summaryText,
-          type: 'text',
-          timestamp: Math.floor(Date.now() / 1000),
-          customer_id: selectedCustomerData.customer_id,
-          from_number: 'system',
-          test: false
-        }
-      };
-
-      const webhookResponse = await fetch(selectedWebhook.webhook_url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(selectedWebhook.secret_key ? { 'Authorization': `Bearer ${selectedWebhook.secret_key}` } : {})
-        },
-        body: JSON.stringify(webhookPayload)
-      });
-
-      if (!webhookResponse.ok) {
-        throw new Error(`فشل في الإرسال عبر webhook: ${webhookResponse.status} - ${await webhookResponse.text()}`);
-      }
-
-      // حفظ الرسالة مع حالة الإرسال
-      await supabase
+      // حفظ الرسالة في قاعدة البيانات مع حالة pending (نفس طريقة البروفة)
+      const { error } = await supabase
         .from('whatsapp_messages')
         .insert({
           from_number: 'system',
           to_number: customer.whatsapp_number || customer.phone,
           message_type: 'text',
           message_content: summaryText,
-          status: 'sent',
-          is_reply: false,
+          status: 'pending',
           customer_id: selectedCustomerData.customer_id
         });
 
+      if (error) throw error;
+
+      // استدعاء edge function لمعالجة رسائل الواتساب المعلقة (نفس طريقة البروفة)
+      try {
+        await supabase.functions.invoke('send-pending-whatsapp');
+      } catch (pendingError) {
+        console.warn('Error processing pending WhatsApp messages:', pendingError);
+        // لا نوقف العملية إذا فشل إرسال الرسائل المعلقة
+      }
+
       toast({
         title: "تم الإرسال",
-        description: `تم إرسال رسالة ملخص الحساب بنجاح عبر ${selectedWebhook.webhook_name}`,
+        description: "تم إرسال رسالة ملخص الحساب بنجاح",
       });
       
       setShowSummaryDialog(false);
