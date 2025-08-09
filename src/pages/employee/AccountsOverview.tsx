@@ -435,20 +435,32 @@ ${payments.slice(0, 5).map(payment =>
 
       console.log('✅ تم حفظ الرسالة بنجاح، ID:', messageData.id);
 
-      // استخدام Edge Function لمعالجة الرسائل المعلقة
-      console.log('📤 معالجة الرسالة عبر Edge Function...');
+      // استخدام Edge Function المحسن الجديد
+      console.log('📤 إرسال الرسالة عبر Edge Function المحسن...');
       
-      try {
-        // استدعاء Edge Function لمعالجة الرسائل المعلقة
-        const { data: processData, error: processError } = await supabase.functions.invoke('send-pending-whatsapp');
-        
-        if (processError) {
-          console.error('❌ خطأ في Edge Function:', processError);
-          throw new Error('فشل في معالجة الرسائل المعلقة');
+      const { data, error } = await supabase.functions.invoke('send-whatsapp-direct-improved', {
+        body: {
+          phone: phoneNumber,
+          message: summary,
+          customer_name: customer.customer_name,
+          message_id: messageData.id
         }
-        
-        console.log('✅ تم استدعاء Edge Function بنجاح:', processData);
-        
+      });
+
+      console.log('📥 استجابة Edge Function:', data);
+      
+      if (error) {
+        console.error('❌ خطأ في Edge Function:', error);
+        throw error;
+      }
+
+      if (data?.success) {
+        console.log('✅ تم إرسال الرسالة بنجاح!');
+        toast({
+          title: "تم الإرسال بنجاح",
+          description: `تم إرسال التقرير المالي للعميل ${customer.customer_name} بنجاح.`,
+        });
+      } else {
         // انتظار قليل للسماح للـ Edge Function بمعالجة الرسالة
         await new Promise(resolve => setTimeout(resolve, 2000));
         
@@ -472,72 +484,6 @@ ${payments.slice(0, 5).map(payment =>
           toast({
             title: "جاري المعالجة",
             description: `تم حفظ الرسالة وهي قيد المعالجة. سيتم إرسالها قريباً للعميل ${customer.customer_name}.`,
-          });
-        }
-        
-      } catch (edgeFunctionError) {
-        console.error('❌ خطأ في Edge Function:', edgeFunctionError);
-        
-        // إذا فشل Edge Function، استخدم الطريقة القديمة (الاتصال المباشر)
-        console.log('🔄 محاولة الاتصال المباشر بالويب هوك...');
-        
-        const webhookUrl = 'https://n8n.srv894347.hstgr.cloud/webhook/ca719409-ac29-485a-99d4-3b602978eace';
-        
-        try {
-          const webhookResponse = await fetch(webhookUrl, {
-            method: 'POST',
-            mode: 'cors',
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json'
-            },
-            body: JSON.stringify({
-              phone: phoneNumber,
-              message: summary,
-              customer_name: customer.customer_name,
-              message_id: messageData.id,
-              timestamp: new Date().toISOString(),
-              source: 'direct_fallback'
-            })
-          });
-
-          const webhookResponseText = await webhookResponse.text();
-          console.log('📥 استجابة الويب هوك:', webhookResponse.status, webhookResponseText);
-
-          const newStatus = webhookResponse.ok ? 'sent' : 'failed';
-          
-          await supabase
-            .from('whatsapp_messages')
-            .update({ 
-              status: newStatus,
-              error_message: webhookResponse.ok ? null : `Webhook error: ${webhookResponse.status} - ${webhookResponseText}`
-            })
-            .eq('id', messageData.id);
-
-          if (webhookResponse.ok) {
-            toast({
-              title: "تم الإرسال بنجاح",
-              description: `تم إرسال التقرير المالي للعميل ${customer.customer_name} عبر الاتصال المباشر.`,
-            });
-          } else {
-            throw new Error(`خطأ في الويب هوك: ${webhookResponse.status} - ${webhookResponseText}`);
-          }
-          
-        } catch (fetchError) {
-          console.error('❌ خطأ في الاتصال المباشر:', fetchError);
-          
-          await supabase
-            .from('whatsapp_messages')
-            .update({ 
-              status: 'pending',
-              error_message: `Both edge function and direct webhook failed: ${fetchError.message}`
-            })
-            .eq('id', messageData.id);
-          
-          toast({
-            title: "تم حفظ الرسالة",
-            description: `تم حفظ الرسالة وستُرسل تلقائياً عند توفر الاتصال. معرف الرسالة: ${messageData.id}`,
-            variant: "default"
           });
         }
       }
