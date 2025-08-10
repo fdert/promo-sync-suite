@@ -81,19 +81,37 @@ const Invoices = () => {
       console.error('Error fetching invoice items:', error);
     }
 
-    // جلب المدفوعات المرتبطة بالفاتورة
-    const { data: paymentsData, error: paymentsError } = await supabase
+    // جلب المدفوعات المرتبطة بالفاتورة والطلب
+    let totalPaid = 0;
+    
+    // جلب المدفوعات المرتبطة مباشرة بالفاتورة
+    const { data: invoicePayments, error: invoicePaymentsError } = await supabase
       .from('payments')
       .select('*')
       .eq('invoice_id', invoice.id);
 
-    if (paymentsError) {
-      console.error('Error fetching payments:', paymentsError);
+    if (invoicePaymentsError) {
+      console.error('Error fetching invoice payments:', invoicePaymentsError);
+    } else {
+      totalPaid += invoicePayments?.reduce((sum, payment) => sum + payment.amount, 0) || 0;
+    }
+
+    // إذا كانت الفاتورة مرتبطة بطلب، جلب مدفوعات الطلب أيضاً
+    if (invoice.order_id) {
+      const { data: orderPayments, error: orderPaymentsError } = await supabase
+        .from('payments')
+        .select('*')
+        .eq('order_id', invoice.order_id);
+
+      if (orderPaymentsError) {
+        console.error('Error fetching order payments:', orderPaymentsError);
+      } else {
+        totalPaid += orderPayments?.reduce((sum, payment) => sum + payment.amount, 0) || 0;
+      }
     }
 
     // حساب إجمالي المدفوعات والحالة الفعلية
-    const totalPaid = paymentsData?.reduce((sum, payment) => sum + payment.amount, 0) || 0;
-    const hasPayments = paymentsData && paymentsData.length > 0;
+    const hasPayments = totalPaid > 0;
     
     // تحديد الحالة الفعلية
     let actualStatus;
@@ -119,11 +137,23 @@ const Invoices = () => {
     let actualPaymentType = 'دفع آجل';
     
     // استخدام نوع الدفع من آخر دفعة إذا وجدت
-    if (hasPayments && paymentsData.length > 0) {
-      const latestPayment = paymentsData.sort((a, b) => 
-        new Date(b.payment_date).getTime() - new Date(a.payment_date).getTime()
-      )[0];
-      actualPaymentType = latestPayment.payment_type;
+    if (hasPayments) {
+      // جلب آخر دفعة من كلا المصدرين
+      const allPayments = [...(invoicePayments || [])];
+      if (invoice.order_id) {
+        const { data: orderPayments } = await supabase
+          .from('payments')
+          .select('*')
+          .eq('order_id', invoice.order_id);
+        allPayments.push(...(orderPayments || []));
+      }
+      
+      if (allPayments.length > 0) {
+        const latestPayment = allPayments.sort((a, b) => 
+          new Date(b.payment_date).getTime() - new Date(a.payment_date).getTime()
+        )[0];
+        actualPaymentType = latestPayment.payment_type;
+      }
     }
 
     // تحديث الفاتورة مع البيانات الصحيحة
@@ -153,21 +183,39 @@ const Invoices = () => {
       console.error('Error fetching invoice items:', error);
     }
 
-    // جلب المدفوعات المرتبطة بالفاتورة
-    const { data: paymentsData, error: paymentsError } = await supabase
+    // جلب المدفوعات المرتبطة بالفاتورة والطلب
+    let totalPaid = 0;
+    
+    // جلب المدفوعات المرتبطة مباشرة بالفاتورة
+    const { data: invoicePayments, error: invoicePaymentsError } = await supabase
       .from('payments')
       .select('*')
       .eq('invoice_id', invoice.id);
 
-    if (paymentsError) {
-      console.error('Error fetching payments:', paymentsError);
+    if (invoicePaymentsError) {
+      console.error('Error fetching invoice payments:', invoicePaymentsError);
+    } else {
+      totalPaid += invoicePayments?.reduce((sum, payment) => sum + payment.amount, 0) || 0;
     }
 
-    console.log('💰 المدفوعات المجلبة:', paymentsData);
+    // إذا كانت الفاتورة مرتبطة بطلب، جلب مدفوعات الطلب أيضاً
+    if (invoice.order_id) {
+      const { data: orderPayments, error: orderPaymentsError } = await supabase
+        .from('payments')
+        .select('*')
+        .eq('order_id', invoice.order_id);
+
+      if (orderPaymentsError) {
+        console.error('Error fetching order payments:', orderPaymentsError);
+      } else {
+        totalPaid += orderPayments?.reduce((sum, payment) => sum + payment.amount, 0) || 0;
+      }
+    }
+
+    console.log('💰 إجمالي المدفوعات:', totalPaid);
 
     // حساب إجمالي المدفوعات والحالة الفعلية
-    const totalPaid = paymentsData?.reduce((sum, payment) => sum + payment.amount, 0) || 0;
-    const hasPayments = paymentsData && paymentsData.length > 0;
+    const hasPayments = totalPaid > 0;
     
     console.log('💵 إجمالي المدفوعات:', totalPaid);
     console.log('💸 إجمالي الفاتورة:', invoice.total_amount);
@@ -202,11 +250,23 @@ const Invoices = () => {
     let actualPaymentType = 'دفع آجل';
     
     // استخدام نوع الدفع من آخر دفعة إذا وجدت
-    if (hasPayments && paymentsData.length > 0) {
-      const latestPayment = paymentsData.sort((a, b) => 
-        new Date(b.payment_date).getTime() - new Date(a.payment_date).getTime()
-      )[0];
-      actualPaymentType = latestPayment.payment_type;
+    if (hasPayments) {
+      // جلب آخر دفعة من كلا المصدرين
+      const allPayments = [...(invoicePayments || [])];
+      if (invoice.order_id) {
+        const { data: orderPayments } = await supabase
+          .from('payments')
+          .select('*')
+          .eq('order_id', invoice.order_id);
+        allPayments.push(...(orderPayments || []));
+      }
+      
+      if (allPayments.length > 0) {
+        const latestPayment = allPayments.sort((a, b) => 
+          new Date(b.payment_date).getTime() - new Date(a.payment_date).getTime()
+        )[0];
+        actualPaymentType = latestPayment.payment_type;
+      }
     }
 
     console.log('✅ الحالة المحسوبة:', actualStatus);
@@ -899,7 +959,49 @@ const Invoices = () => {
         .order('created_at', { ascending: false });
 
       if (!error) {
-        setInvoices(data || []);
+        // حساب المدفوعات لكل فاتورة
+        const invoicesWithPayments = await Promise.all(
+          (data || []).map(async (invoice) => {
+            let totalPaid = 0;
+            
+            // جلب المدفوعات المرتبطة مباشرة بالفاتورة
+            const { data: invoicePayments } = await supabase
+              .from('payments')
+              .select('amount')
+              .eq('invoice_id', invoice.id);
+            
+            totalPaid += invoicePayments?.reduce((sum, payment) => sum + payment.amount, 0) || 0;
+            
+            // إذا كانت الفاتورة مرتبطة بطلب، جلب مدفوعات الطلب أيضاً
+            if (invoice.order_id) {
+              const { data: orderPayments } = await supabase
+                .from('payments')
+                .select('amount')
+                .eq('order_id', invoice.order_id);
+              
+              totalPaid += orderPayments?.reduce((sum, payment) => sum + payment.amount, 0) || 0;
+            }
+            
+            // تحديد الحالة الفعلية
+            let actualStatus;
+            if (totalPaid >= invoice.total_amount) {
+              actualStatus = 'مدفوعة';
+            } else if (totalPaid > 0) {
+              actualStatus = 'مدفوعة جزئياً';
+            } else {
+              actualStatus = 'قيد الانتظار';
+            }
+            
+            return {
+              ...invoice,
+              total_paid: totalPaid,
+              remaining_amount: invoice.total_amount - totalPaid,
+              actual_status: actualStatus
+            };
+          })
+        );
+        
+        setInvoices(invoicesWithPayments);
       }
     } catch (error) {
       console.error('Error fetching invoices:', error);
@@ -996,7 +1098,7 @@ const Invoices = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {invoices.filter(invoice => invoice.status === 'مدفوع').length}
+              {invoices.filter(invoice => (invoice.actual_status || invoice.status) === 'مدفوعة').length}
             </div>
             <p className="text-xs text-muted-foreground">فواتير مدفوعة بالكامل</p>
           </CardContent>
@@ -1008,7 +1110,7 @@ const Invoices = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {invoices.filter(invoice => invoice.status === 'قيد الانتظار').length}
+              {invoices.filter(invoice => (invoice.actual_status || invoice.status) === 'قيد الانتظار').length}
             </div>
             <p className="text-xs text-muted-foreground">في انتظار الدفع</p>
           </CardContent>
@@ -1082,7 +1184,7 @@ const Invoices = () => {
                     invoice.invoice_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                     invoice.customers?.name?.toLowerCase().includes(searchTerm.toLowerCase());
                   
-                  const matchesStatus = statusFilter === "all" || invoice.status === statusFilter;
+                  const matchesStatus = statusFilter === "all" || (invoice.actual_status || invoice.status) === statusFilter;
                   
                   return matchesSearch && matchesStatus;
                 })
@@ -1095,13 +1197,22 @@ const Invoices = () => {
                             <h3 className="font-semibold">{invoice.invoice_number}</h3>
                             <Badge 
                               variant={
-                                invoice.status === 'مدفوع' ? 'default' :
-                                invoice.status === 'قيد الانتظار' ? 'secondary' :
-                                invoice.status === 'متأخر' ? 'destructive' : 'outline'
+                                (invoice.actual_status || invoice.status) === 'مدفوعة' ? 'default' :
+                                (invoice.actual_status || invoice.status) === 'مدفوعة جزئياً' ? 'outline' :
+                                (invoice.actual_status || invoice.status) === 'قيد الانتظار' ? 'secondary' :
+                                (invoice.actual_status || invoice.status) === 'متأخر' ? 'destructive' : 'outline'
                               }
                             >
-                              {invoice.status}
+                              {invoice.actual_status || invoice.status}
                             </Badge>
+                            {invoice.total_paid > 0 && (
+                              <div className="text-xs text-gray-600 mt-1">
+                                مدفوع: {invoice.total_paid.toFixed(2)} ر.س
+                                {invoice.remaining_amount > 0 && (
+                                  <span className="text-red-600"> | متبقي: {invoice.remaining_amount.toFixed(2)} ر.س</span>
+                                )}
+                              </div>
+                            )}
                           </div>
                           <p className="text-sm text-muted-foreground">
                             العميل: {invoice.customers?.name || 'غير محدد'}
