@@ -268,7 +268,7 @@ Deno.serve(async (req) => {
         'order_number': orderDetails?.order_number || data.order_number || '',
         'amount': orderDetails?.amount?.toString() || data.amount?.toString() || '',
         'paid_amount': orderDetails?.calculated_paid_amount?.toString() || data.paid_amount?.toString() || '0',
-        'remaining_amount': remainingAmount,
+        'remaining_amount': orderDetails?.remaining_amount?.toString() || remainingAmount,
         'payment_type': orderDetails?.payment_type || data.payment_type || 'غير محدد',
         'progress': orderDetails?.progress?.toString() || data.progress?.toString() || '0',
         'service_name': orderDetails?.service_name || data.service_name || '',

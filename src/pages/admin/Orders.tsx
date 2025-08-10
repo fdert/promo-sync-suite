@@ -787,6 +787,14 @@ ${companyName}`;
             notificationType = 'status_update'; // للحالات الأخرى
         }
 
+        // حساب المبلغ المدفوع من قاعدة البيانات
+        const { data: paymentsData } = await supabase
+          .from('payments')
+          .select('amount')
+          .eq('order_id', orderId);
+        
+        const paidAmount = paymentsData?.reduce((sum, payment) => sum + payment.amount, 0) || 0;
+        
         const notificationData = {
           type: notificationType,
           order_id: orderId,
@@ -804,6 +812,7 @@ ${companyName}`;
             progress: orderData.progress || 0,
             description: orderData.description || '',
             payment_type: orderData.payment_type || 'دفع آجل',
+            paid_amount: paidAmount, // المبلغ المدفوع الفعلي
             priority: orderData.priority || 'متوسطة',
             start_date: orderData.start_date || null
           }
