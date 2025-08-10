@@ -61,6 +61,7 @@ import EmployeeWebhookSettings from "./pages/employee/WebhookSettings";
 import AgencyManagement from "./pages/admin/AgencyManagement";
 import Subscription from "./pages/Subscription";
 import AgencyLogin from "./pages/AgencyLogin";
+import CustomerPortal from "./pages/CustomerPortal";
 
 import OrderPayments from "./pages/admin/OrderPayments";
 
@@ -197,6 +198,7 @@ const App = () => (
             <Route path="/evaluation/:token" element={<Evaluation />} />
             <Route path="/subscription" element={<Subscription />} />
             <Route path="/agency-login" element={<AgencyLogin />} />
+            <Route path="/customer-portal" element={<CustomerPortal />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

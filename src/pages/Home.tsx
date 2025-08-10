@@ -197,16 +197,16 @@ const Home = () => {
                 </Button>
               </form>
 
-              {/* Agency Website Link */}
+              {/* Customer Portal and Agency Links */}
               <div className="pt-4 border-t space-y-3">
                 <Button 
                   variant="outline" 
                   className="w-full font-cairo font-medium"
                   asChild
                 >
-                  <Link to="/subscription" className="flex items-center justify-center gap-2">
+                  <Link to="/customer-portal" className="flex items-center justify-center gap-2">
                     <Star className="w-4 h-4" />
-                    مشاهدة الباقات والاشتراك
+                    استكشف النظام والباقات
                   </Link>
                 </Button>
                 <Button 
@@ -214,15 +214,10 @@ const Home = () => {
                   className="w-full font-cairo font-medium text-sm"
                   asChild
                 >
-                  <a 
-                    href="https://creativity-agency.com" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2"
-                  >
-                    <Globe className="w-4 h-4" />
-                    زيارة موقع الوكالة
-                  </a>
+                  <Link to="/agency-login" className="flex items-center justify-center gap-2">
+                    <LogIn className="w-4 h-4" />
+                    دخول الوكالة
+                  </Link>
                 </Button>
               </div>
             </CardContent>
