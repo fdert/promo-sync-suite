@@ -133,6 +133,151 @@ export type Database = {
         }
         Relationships: []
       }
+      agencies: {
+        Row: {
+          address: string | null
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string | null
+          created_by: string | null
+          database_name: string | null
+          id: string
+          is_active: boolean | null
+          logo_url: string | null
+          max_customers: number | null
+          max_storage_gb: number | null
+          max_users: number | null
+          name: string
+          primary_color: string | null
+          secondary_color: string | null
+          slug: string
+          subscription_expires_at: string | null
+          subscription_plan: string | null
+          updated_at: string | null
+          website: string | null
+        }
+        Insert: {
+          address?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          database_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          max_customers?: number | null
+          max_storage_gb?: number | null
+          max_users?: number | null
+          name: string
+          primary_color?: string | null
+          secondary_color?: string | null
+          slug: string
+          subscription_expires_at?: string | null
+          subscription_plan?: string | null
+          updated_at?: string | null
+          website?: string | null
+        }
+        Update: {
+          address?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          database_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          max_customers?: number | null
+          max_storage_gb?: number | null
+          max_users?: number | null
+          name?: string
+          primary_color?: string | null
+          secondary_color?: string | null
+          slug?: string
+          subscription_expires_at?: string | null
+          subscription_plan?: string | null
+          updated_at?: string | null
+          website?: string | null
+        }
+        Relationships: []
+      }
+      agency_members: {
+        Row: {
+          agency_id: string
+          created_by: string | null
+          id: string
+          is_active: boolean | null
+          joined_at: string | null
+          permissions: Json | null
+          role: string
+          user_id: string
+        }
+        Insert: {
+          agency_id: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          joined_at?: string | null
+          permissions?: Json | null
+          role?: string
+          user_id: string
+        }
+        Update: {
+          agency_id?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          joined_at?: string | null
+          permissions?: Json | null
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agency_members_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agency_settings: {
+        Row: {
+          agency_id: string
+          created_at: string | null
+          id: string
+          setting_key: string
+          setting_value: Json
+          updated_at: string | null
+        }
+        Insert: {
+          agency_id: string
+          created_at?: string | null
+          id?: string
+          setting_key: string
+          setting_value: Json
+          updated_at?: string | null
+        }
+        Update: {
+          agency_id?: string
+          created_at?: string | null
+          id?: string
+          setting_key?: string
+          setting_value?: Json
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agency_settings_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       backups: {
         Row: {
           backup_name: string
@@ -2201,9 +2346,17 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_current_user_agency: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_group_member_count: {
         Args: { group_id_param: string }
         Returns: number
+      }
+      has_agency_role: {
+        Args: { user_id_param: string; role_param: string }
+        Returns: boolean
       }
       has_permission: {
         Args: { _user_id: string; _permission: string }
@@ -2214,6 +2367,10 @@ export type Database = {
           _user_id: string
           _role: Database["public"]["Enums"]["app_role"]
         }
+        Returns: boolean
+      }
+      is_agency_member: {
+        Args: { user_id_param: string; agency_id_param: string }
         Returns: boolean
       }
       log_activity: {
