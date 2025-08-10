@@ -86,21 +86,27 @@ const AgencyManagement = () => {
   };
 
   const handleAddMember = async () => {
-    if (!currentAgency) return;
+    if (!currentAgency || !memberForm.email.trim()) return;
 
     setLoading(true);
     try {
-      // هنا يجب البحث عن المستخدم بالإيميل أولاً
-      // ثم إضافته للوكالة
+      await addMember(currentAgency.id, memberForm.email.trim(), memberForm.role);
+      
       toast({
-        title: "قريباً",
-        description: "سيتم إضافة هذه الميزة قريباً"
+        title: "تم إضافة العضو بنجاح",
+        description: `تم إضافة ${memberForm.email} إلى الوكالة كـ ${getRoleLabel(memberForm.role)}`
       });
+      
+      // إعادة تحميل قائمة الأعضاء
+      await fetchMembers();
+      
+      // إعادة تعيين النموذج
+      setMemberForm({ email: '', role: 'employee' });
       setMemberDialogOpen(false);
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "خطأ في الإضافة",
-        description: "حدث خطأ أثناء إضافة العضو",
+        description: error.message || "حدث خطأ أثناء إضافة العضو",
         variant: "destructive"
       });
     } finally {
@@ -108,6 +114,28 @@ const AgencyManagement = () => {
     }
   };
 
+  const handleRemoveMember = async (memberId: string, memberEmail: string) => {
+    if (!currentAgency) return;
+
+    if (window.confirm(`هل أنت متأكد من إزالة ${memberEmail} من الوكالة؟`)) {
+      try {
+        await removeMember(memberId);
+        toast({
+          title: "تم إزالة العضو",
+          description: `تم إزالة ${memberEmail} من الوكالة بنجاح`
+        });
+        // إعادة تحميل قائمة الأعضاء
+        await fetchMembers();
+      } catch (error) {
+        toast({
+          title: "خطأ في الإزالة",
+          description: "حدث خطأ أثناء إزالة العضو",
+          variant: "destructive"
+        });
+      }
+    }
+  };
+  
   const getRoleIcon = (role: string) => {
     switch (role) {
       case 'owner':
@@ -333,7 +361,11 @@ const AgencyManagement = () => {
                         value={memberForm.email}
                         onChange={(e) => setMemberForm(prev => ({ ...prev, email: e.target.value }))}
                         placeholder="user@example.com"
+                        required
                       />
+                      <p className="text-xs text-muted-foreground">
+                        يجب أن يكون المستخدم مسجلاً في النظام مسبقاً
+                      </p>
                     </div>
                     <div className="grid gap-2">
                       <Label htmlFor="role">الدور</Label>
@@ -357,7 +389,7 @@ const AgencyManagement = () => {
                     <Button variant="outline" onClick={() => setMemberDialogOpen(false)}>
                       إلغاء
                     </Button>
-                    <Button onClick={handleAddMember} disabled={loading}>
+                    <Button onClick={handleAddMember} disabled={loading || !memberForm.email.trim()}>
                       {loading ? 'جاري الإضافة...' : 'إضافة العضو'}
                     </Button>
                   </div>
@@ -371,9 +403,9 @@ const AgencyManagement = () => {
                     <div className="flex items-center gap-3">
                       {getRoleIcon(member.role)}
                       <div>
-                        <p className="font-medium">عضو</p>
+                        <p className="font-medium">{(member as any).user_info?.full_name || 'مستخدم'}</p>
                         <p className="text-sm text-muted-foreground">
-                          {member.user_id}
+                          {(member as any).user_info?.email || 'بدون بريد إلكتروني'}
                         </p>
                       </div>
                     </div>
@@ -385,7 +417,7 @@ const AgencyManagement = () => {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => removeMember(member.id)}
+                          onClick={() => handleRemoveMember(member.id, (member as any).user_info?.email || 'مستخدم')}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

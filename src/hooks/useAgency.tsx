@@ -122,23 +122,25 @@ export const useAgency = () => {
     }
   };
 
-  const addMember = async (agencyId: string, userId: string, role: string) => {
+  const addMember = async (agencyId: string, userEmail: string, role: string) => {
     try {
-      const { data, error } = await supabase
-        .from('agency_members')
-        .insert([{
-          agency_id: agencyId,
-          user_id: userId,
-          role
-        }])
-        .select()
-        .single();
+      // استخدام RPC function للبحث عن المستخدم وإضافته
+      const { data, error } = await supabase.rpc('add_agency_member_by_email', {
+        p_agency_id: agencyId,
+        p_user_email: userEmail,
+        p_role: role
+      });
 
       if (error) throw error;
+      
+      if (!data) {
+        throw new Error('المستخدم غير موجود في النظام');
+      }
+
       return data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding member:', error);
-      throw error;
+      throw new Error(error.message || 'حدث خطأ أثناء إضافة العضو');
     }
   };
 
@@ -158,20 +160,13 @@ export const useAgency = () => {
 
   const getAgencyMembers = async (agencyId: string) => {
     try {
-      const { data, error } = await supabase
-        .from('agency_members')
-        .select(`
-          *,
-          user_profiles:user_id (
-            full_name,
-            email
-          )
-        `)
-        .eq('agency_id', agencyId)
-        .eq('is_active', true);
+      // استخدام RPC function للحصول على أعضاء الوكالة مع بيانات المستخدمين
+      const { data, error } = await supabase.rpc('get_agency_members_with_user_data', {
+        p_agency_id: agencyId
+      });
 
       if (error) throw error;
-      return data;
+      return data || [];
     } catch (error) {
       console.error('Error fetching agency members:', error);
       throw error;
