@@ -124,19 +124,41 @@ export const useAgency = () => {
 
   const addMember = async (agencyId: string, userEmail: string, role: string) => {
     try {
-      // استخدام RPC function للبحث عن المستخدم وإضافته
-      const { data, error } = await supabase.rpc('add_agency_member_by_email', {
-        p_agency_id: agencyId,
-        p_user_email: userEmail,
-        p_role: role
-      });
+      // البحث عن المستخدم بالإيميل في جدول العملاء أو المستخدمين المسجلين
+      const { data: userData, error: userError } = await supabase
+        .from('customers')
+        .select('id, name, email')
+        .eq('email', userEmail.trim())
+        .single();
 
-      if (error) throw error;
-      
-      if (!data) {
+      if (userError || !userData) {
         throw new Error('المستخدم غير موجود في النظام');
       }
 
+      // التحقق من عدم وجود العضو مسبقاً
+      const { data: existingMember } = await supabase
+        .from('agency_members')
+        .select('id')
+        .eq('agency_id', agencyId)
+        .eq('user_id', userData.id)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (existingMember) {
+        throw new Error('المستخدم عضو في الوكالة بالفعل');
+      }
+
+      const { data, error } = await supabase
+        .from('agency_members')
+        .insert([{
+          agency_id: agencyId,
+          user_id: userData.id,
+          role
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
       return data;
     } catch (error: any) {
       console.error('Error adding member:', error);
@@ -160,10 +182,17 @@ export const useAgency = () => {
 
   const getAgencyMembers = async (agencyId: string) => {
     try {
-      // استخدام RPC function للحصول على أعضاء الوكالة مع بيانات المستخدمين
-      const { data, error } = await supabase.rpc('get_agency_members_with_user_data', {
-        p_agency_id: agencyId
-      });
+      const { data, error } = await supabase
+        .from('agency_members')
+        .select(`
+          *,
+          customers:user_id (
+            name,
+            email
+          )
+        `)
+        .eq('agency_id', agencyId)
+        .eq('is_active', true);
 
       if (error) throw error;
       return data || [];

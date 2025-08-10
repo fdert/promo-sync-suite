@@ -2439,6 +2439,10 @@ export type Database = {
       }
     }
     Functions: {
+      add_agency_member_by_email: {
+        Args: { p_agency_id: string; p_user_email: string; p_role: string }
+        Returns: string
+      }
       assign_user_role: {
         Args: {
           target_user_id: string
@@ -2502,6 +2506,20 @@ export type Database = {
       generate_order_number: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_agency_members_with_user_data: {
+        Args: { p_agency_id: string }
+        Returns: {
+          id: string
+          agency_id: string
+          user_id: string
+          role: string
+          permissions: Json
+          is_active: boolean
+          joined_at: string
+          created_by: string
+          user_info: Json
+        }[]
       }
       get_current_user_agency: {
         Args: Record<PropertyKey, never>

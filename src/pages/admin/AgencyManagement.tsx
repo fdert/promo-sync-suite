@@ -57,7 +57,7 @@ const AgencyManagement = () => {
     
     try {
       const membersData = await getAgencyMembers(currentAgency.id);
-      setMembers(membersData || []);
+      setMembers(membersData as AgencyMember[]);
     } catch (error) {
       console.error('Error fetching members:', error);
     }
@@ -403,9 +403,9 @@ const AgencyManagement = () => {
                     <div className="flex items-center gap-3">
                       {getRoleIcon(member.role)}
                       <div>
-                        <p className="font-medium">{(member as any).user_info?.full_name || 'مستخدم'}</p>
+                        <p className="font-medium">{(member as any).customers?.name || 'مستخدم'}</p>
                         <p className="text-sm text-muted-foreground">
-                          {(member as any).user_info?.email || 'بدون بريد إلكتروني'}
+                          {(member as any).customers?.email || 'بدون بريد إلكتروني'}
                         </p>
                       </div>
                     </div>
@@ -417,7 +417,7 @@ const AgencyManagement = () => {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleRemoveMember(member.id, (member as any).user_info?.email || 'مستخدم')}
+                          onClick={() => handleRemoveMember(member.id, (member as any).customers?.email || 'مستخدم')}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
