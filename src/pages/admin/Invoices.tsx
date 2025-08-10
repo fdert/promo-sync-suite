@@ -1408,14 +1408,29 @@ const Invoices = () => {
                       <Badge 
                         className="mr-2"
                         variant={
-                          viewingInvoice.status === 'مدفوع' ? 'default' :
-                          viewingInvoice.status === 'قيد الانتظار' ? 'secondary' :
-                          viewingInvoice.status === 'متأخر' ? 'destructive' : 'outline'
+                          (viewingInvoice.actual_status || viewingInvoice.status) === 'مدفوعة' ? 'default' :
+                          (viewingInvoice.actual_status || viewingInvoice.status) === 'مدفوعة جزئياً' ? 'outline' :
+                          (viewingInvoice.actual_status || viewingInvoice.status) === 'قيد الانتظار' ? 'secondary' :
+                          (viewingInvoice.actual_status || viewingInvoice.status) === 'متأخر' ? 'destructive' : 'outline'
                         }
                       >
-                        {viewingInvoice.status}
+                        {viewingInvoice.actual_status || viewingInvoice.status}
                       </Badge>
                     </div>
+                    {viewingInvoice.total_paid !== undefined && viewingInvoice.total_paid > 0 && (
+                      <>
+                        <div>
+                          <span className="text-gray-600">المبلغ المدفوع:</span>
+                          <span className="font-bold mr-2 text-green-600">{viewingInvoice.total_paid.toFixed(2)} ر.س</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">المبلغ المتبقي:</span>
+                          <span className={`font-bold mr-2 ${viewingInvoice.remaining_amount > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                            {viewingInvoice.remaining_amount.toFixed(2)} ر.س
+                          </span>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
