@@ -11,6 +11,7 @@ interface InvoiceItem {
 interface InvoicePrintProps {
   invoice: {
     invoice_number: string;
+    order_id?: string;
     issue_date: string;
     due_date: string;
     amount: number;
@@ -18,6 +19,8 @@ interface InvoicePrintProps {
     total_amount: number;
     status: string;
     actual_status?: string;
+    total_paid?: number;
+    remaining_amount?: number;
     notes?: string;
     payment_type: string;
     customers?: {
@@ -291,18 +294,26 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
         </div>
       </div>
 
-      {/* Status Info */}
+      {/* Status and Payment Info */}
       <div style={{ 
         display: 'flex', 
-        justifyContent: 'center',
+        justifyContent: 'space-between',
         fontSize: '10px',
         marginBottom: '4px',
-        padding: '2px',
+        padding: '4px',
         backgroundColor: '#f9f9f9',
         border: '1px solid #ddd',
         pageBreakInside: 'avoid'
       }}>
-        <span><strong>الحالة:</strong> {invoice.actual_status || invoice.status}</span>
+        <div>
+          <span><strong>الحالة:</strong> {invoice.actual_status || invoice.status}</span>
+        </div>
+        {(invoice.total_paid !== undefined && invoice.total_paid > 0) && (
+          <div style={{ textAlign: 'left' }}>
+            <div><strong>المدفوع:</strong> {invoice.total_paid.toFixed(2)} ر.س</div>
+            <div><strong>المتبقي:</strong> {(invoice.remaining_amount || 0).toFixed(2)} ر.س</div>
+          </div>
+        )}
       </div>
 
       {/* Notes */}

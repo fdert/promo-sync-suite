@@ -16,6 +16,7 @@ interface InvoicePreviewProps {
   onClose: () => void;
   invoice: {
     invoice_number: string;
+    order_id?: string;
     issue_date: string;
     due_date: string;
     amount: number;

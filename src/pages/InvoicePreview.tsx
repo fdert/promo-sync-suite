@@ -73,18 +73,34 @@ const InvoicePreview = () => {
         return;
       }
 
-      // جلب المدفوعات المرتبطة بالفاتورة
-      const { data: paymentsData, error: paymentsError } = await supabase
+      // جلب المدفوعات المرتبطة بالفاتورة والطلب
+      let totalPaid = 0;
+      
+      // جلب المدفوعات المرتبطة مباشرة بالفاتورة
+      const { data: invoicePayments, error: invoicePaymentsError } = await supabase
         .from('payments')
         .select('*')
         .eq('invoice_id', invoiceId);
 
-      if (paymentsError) {
-        console.error('Error fetching payments:', paymentsError);
+      if (invoicePaymentsError) {
+        console.error('Error fetching invoice payments:', invoicePaymentsError);
+      } else {
+        totalPaid += invoicePayments?.reduce((sum, payment) => sum + payment.amount, 0) || 0;
       }
 
-      // حساب إجمالي المدفوعات الفعلية من قاعدة البيانات
-      const totalPaid = paymentsData?.reduce((sum, payment) => sum + payment.amount, 0) || 0;
+      // إذا كانت الفاتورة مرتبطة بطلب، جلب مدفوعات الطلب أيضاً
+      if (invoiceData.order_id) {
+        const { data: orderPayments, error: orderPaymentsError } = await supabase
+          .from('payments')
+          .select('*')
+          .eq('order_id', invoiceData.order_id);
+
+        if (orderPaymentsError) {
+          console.error('Error fetching order payments:', orderPaymentsError);
+        } else {
+          totalPaid += orderPayments?.reduce((sum, payment) => sum + payment.amount, 0) || 0;
+        }
+      }
       
       // تحديد الحالة الفعلية بناءً على المدفوعات الفعلية فقط
       let actualStatus;
