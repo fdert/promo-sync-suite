@@ -17,6 +17,8 @@ interface InvoicePreviewProps {
   invoice: {
     invoice_number: string;
     order_id?: string;
+    order_number?: string;
+    order_date?: string;
     issue_date: string;
     due_date: string;
     amount: number;
@@ -122,6 +124,12 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({
                 <div className="font-bold text-sm mb-1">{invoice.customers?.name || 'غير محدد'}</div>
                 {invoice.customers?.phone && <div>الهاتف: {invoice.customers.phone}</div>}
                 {invoice.customers?.address && <div>العنوان: {invoice.customers.address}</div>}
+                {invoice.order_number && (
+                  <div className="flex gap-4 mt-2 pt-2 border-t border-gray-200">
+                    <div><strong>رقم الطلب:</strong> {invoice.order_number}</div>
+                    {invoice.order_date && <div><strong>تاريخ الطلب:</strong> {new Date(invoice.order_date).toLocaleDateString('ar-SA')}</div>}
+                  </div>
+                )}
               </div>
             </div>
 

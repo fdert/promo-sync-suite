@@ -12,6 +12,8 @@ interface InvoicePrintProps {
   invoice: {
     invoice_number: string;
     order_id?: string;
+    order_number?: string;
+    order_date?: string;
     issue_date: string;
     due_date: string;
     amount: number;
@@ -153,6 +155,16 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
           <span style={{ marginLeft: '10px' }}>
             | هاتف: {invoice.customers.phone}
           </span>
+        )}
+        {invoice.order_number && (
+          <div style={{ marginTop: '4px', borderTop: '1px solid #ddd', paddingTop: '4px' }}>
+            <span style={{ fontWeight: 'bold' }}>رقم الطلب: </span>{invoice.order_number}
+            {invoice.order_date && (
+              <span style={{ marginLeft: '10px' }}>
+                | تاريخ الطلب: {new Date(invoice.order_date).toLocaleDateString('ar-SA')}
+              </span>
+            )}
+          </div>
         )}
       </div>
 
