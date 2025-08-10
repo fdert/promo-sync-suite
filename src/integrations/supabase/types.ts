@@ -1570,6 +1570,60 @@ export type Database = {
           },
         ]
       }
+      payment_transactions: {
+        Row: {
+          agency_id: string | null
+          amount: number
+          created_at: string | null
+          currency: string | null
+          id: string
+          payment_method: string | null
+          status: string
+          stripe_payment_intent_id: string | null
+          subscription_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          agency_id?: string | null
+          amount: number
+          created_at?: string | null
+          currency?: string | null
+          id?: string
+          payment_method?: string | null
+          status?: string
+          stripe_payment_intent_id?: string | null
+          subscription_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          agency_id?: string | null
+          amount?: number
+          created_at?: string | null
+          currency?: string | null
+          id?: string
+          payment_method?: string | null
+          status?: string
+          stripe_payment_intent_id?: string | null
+          subscription_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_transactions_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_transactions_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payments: {
         Row: {
           agency_id: string | null
@@ -2004,6 +2058,126 @@ export type Database = {
             columns: ["agency_id"]
             isOneToOne: false
             referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_plans: {
+        Row: {
+          billing_period: string
+          created_at: string | null
+          description: string | null
+          description_ar: string | null
+          features: Json | null
+          features_ar: Json | null
+          id: string
+          is_active: boolean | null
+          is_popular: boolean | null
+          max_agencies: number
+          max_customers_per_agency: number
+          max_orders_per_month: number
+          max_storage_gb: number
+          max_users_per_agency: number
+          name: string
+          name_ar: string
+          price: number
+          sort_order: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          billing_period?: string
+          created_at?: string | null
+          description?: string | null
+          description_ar?: string | null
+          features?: Json | null
+          features_ar?: Json | null
+          id?: string
+          is_active?: boolean | null
+          is_popular?: boolean | null
+          max_agencies?: number
+          max_customers_per_agency?: number
+          max_orders_per_month?: number
+          max_storage_gb?: number
+          max_users_per_agency?: number
+          name: string
+          name_ar: string
+          price: number
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          billing_period?: string
+          created_at?: string | null
+          description?: string | null
+          description_ar?: string | null
+          features?: Json | null
+          features_ar?: Json | null
+          id?: string
+          is_active?: boolean | null
+          is_popular?: boolean | null
+          max_agencies?: number
+          max_customers_per_agency?: number
+          max_orders_per_month?: number
+          max_storage_gb?: number
+          max_users_per_agency?: number
+          name?: string
+          name_ar?: string
+          price?: number
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          agency_id: string | null
+          created_at: string | null
+          ends_at: string
+          id: string
+          plan_id: string | null
+          starts_at: string
+          status: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          agency_id?: string | null
+          created_at?: string | null
+          ends_at: string
+          id?: string
+          plan_id?: string | null
+          starts_at?: string
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          agency_id?: string | null
+          created_at?: string | null
+          ends_at?: string
+          id?: string
+          plan_id?: string | null
+          starts_at?: string
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
             referencedColumns: ["id"]
           },
         ]

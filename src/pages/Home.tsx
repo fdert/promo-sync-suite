@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link, useNavigate } from "react-router-dom";
-import { Eye, EyeOff, Globe, LogIn } from "lucide-react";
+import { Eye, EyeOff, Globe, LogIn, Play, Star } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import logo from "@/assets/logo.png";
@@ -198,10 +198,20 @@ const Home = () => {
               </form>
 
               {/* Agency Website Link */}
-              <div className="pt-4 border-t">
+              <div className="pt-4 border-t space-y-3">
                 <Button 
                   variant="outline" 
                   className="w-full font-cairo font-medium"
+                  asChild
+                >
+                  <Link to="/subscription" className="flex items-center justify-center gap-2">
+                    <Star className="w-4 h-4" />
+                    مشاهدة الباقات والاشتراك
+                  </Link>
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  className="w-full font-cairo font-medium text-sm"
                   asChild
                 >
                   <a 

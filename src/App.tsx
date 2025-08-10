@@ -58,6 +58,7 @@ import CustomerGroups from "./pages/admin/CustomerGroups";
 import EmployeeBulkWhatsApp from "./pages/employee/BulkWhatsApp";
 import EmployeeWebhookSettings from "./pages/employee/WebhookSettings";
 import AgencyManagement from "./pages/admin/AgencyManagement";
+import Subscription from "./pages/Subscription";
 
 import OrderPayments from "./pages/admin/OrderPayments";
 
@@ -187,6 +188,7 @@ const App = () => (
                 } />
             </Route>
             <Route path="/evaluation/:token" element={<Evaluation />} />
+            <Route path="/subscription" element={<Subscription />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
