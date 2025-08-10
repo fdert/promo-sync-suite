@@ -8,10 +8,19 @@ import { AgencyProvider } from "@/contexts/AgencyContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import RoleProtectedRoute from "@/components/RoleProtectedRoute";
 import EmployeeProtectedRoute from "@/components/EmployeeProtectedRoute";
+import SuperAdminProtectedRoute from "@/components/SuperAdminProtectedRoute";
 import Home from "./pages/Home";
 import Auth from "./pages/Auth";
 import AdminLayout from "./components/layout/AdminLayout";
 import EmployeeLayout from "./components/layout/EmployeeLayout";
+import SystemLayout from "./components/layout/SystemLayout";
+
+// System Admin Pages
+import SystemDashboard from "./pages/system/SystemDashboard";
+import SystemAuth from "./pages/system/SystemAuth";
+import AgenciesManagement from "./pages/system/AgenciesManagement";
+import SubscriptionPlans from "./pages/system/SubscriptionPlans";
+import SystemSettings from "./pages/system/SystemSettings";
 import Dashboard from "./pages/admin/Dashboard";
 import Users from "./pages/admin/Users";
 import Customers from "./pages/admin/Customers";
@@ -200,6 +209,22 @@ const App = () => (
                     </RoleProtectedRoute>
                   } />
             </Route>
+
+            {/* System Admin Routes */}
+            <Route path="/system/auth" element={<SystemAuth />} />
+            <Route path="/system" element={
+              <ProtectedRoute>
+                <SuperAdminProtectedRoute>
+                  <SystemLayout />
+                </SuperAdminProtectedRoute>
+              </ProtectedRoute>
+            }>
+              <Route index element={<SystemDashboard />} />
+              <Route path="agencies" element={<AgenciesManagement />} />
+              <Route path="subscription-plans" element={<SubscriptionPlans />} />
+              <Route path="settings" element={<SystemSettings />} />
+            </Route>
+
             <Route path="/evaluation/:token" element={<Evaluation />} />
             <Route path="/subscription" element={<Subscription />} />
             <Route path="/agency-login" element={<AgencyLogin />} />

@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link, useNavigate } from "react-router-dom";
-import { Eye, EyeOff, Globe, LogIn, Play, Star } from "lucide-react";
+import { Eye, EyeOff, Globe, LogIn, Play, Star, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import logo from "@/assets/logo.png";
@@ -217,6 +217,17 @@ const Home = () => {
                   <Link to="/agency-login" className="flex items-center justify-center gap-2">
                     <LogIn className="w-4 h-4" />
                     دخول الوكالة
+                  </Link>
+                </Button>
+                <Button 
+                  variant="secondary" 
+                  size="sm"
+                  className="w-full font-cairo font-medium text-xs"
+                  asChild
+                >
+                  <Link to="/system/auth" className="flex items-center justify-center gap-2">
+                    <Shield className="w-3 h-3" />
+                    إدارة النظام
                   </Link>
                 </Button>
               </div>
