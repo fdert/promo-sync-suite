@@ -81,6 +81,23 @@ const Invoices = () => {
       console.error('Error fetching invoice items:', error);
     }
 
+    // جلب معلومات الطلب إذا كان مرتبطاً بالفاتورة
+    let orderInfo = null;
+    if (invoice.order_id) {
+      const { data: orderData, error: orderError } = await supabase
+        .from('orders')
+        .select('order_number, created_at')
+        .eq('id', invoice.order_id)
+        .maybeSingle();
+
+      if (!orderError && orderData) {
+        orderInfo = {
+          order_number: orderData.order_number,
+          order_date: orderData.created_at
+        };
+      }
+    }
+
     // جلب المدفوعات المرتبطة بالفاتورة والطلب
     let totalPaid = 0;
     
@@ -163,7 +180,9 @@ const Invoices = () => {
       actual_status: actualStatus,
       actual_payment_type: actualPaymentType,
       total_paid: totalPaid,
-      remaining_amount: invoice.total_amount - totalPaid
+      remaining_amount: invoice.total_amount - totalPaid,
+      order_number: orderInfo?.order_number,
+      order_date: orderInfo?.order_date
     };
 
     setViewingInvoice(updatedInvoice);
@@ -181,6 +200,23 @@ const Invoices = () => {
 
     if (error) {
       console.error('Error fetching invoice items:', error);
+    }
+
+    // جلب معلومات الطلب إذا كان مرتبطاً بالفاتورة
+    let orderInfo = null;
+    if (invoice.order_id) {
+      const { data: orderData, error: orderError } = await supabase
+        .from('orders')
+        .select('order_number, created_at')
+        .eq('id', invoice.order_id)
+        .maybeSingle();
+
+      if (!orderError && orderData) {
+        orderInfo = {
+          order_number: orderData.order_number,
+          order_date: orderData.created_at
+        };
+      }
     }
 
     // جلب المدفوعات المرتبطة بالفاتورة والطلب
@@ -275,557 +311,64 @@ const Invoices = () => {
     const items = invoiceItems || [];
     
     console.log('🎯 الحالة التي ستُستخدم في الطباعة:', actualStatus);
-    
-    // إنشاء محتوى HTML للطباعة
-    const printContent = `
-      <!DOCTYPE html>
-      <html dir="rtl" lang="ar">
-      <head>
-        <meta charset="UTF-8">
-        <title>فاتورة ${invoice.invoice_number}</title>
-        <style>
-          * { margin: 0; padding: 0; box-sizing: border-box; }
-          
-          body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            font-size: 12px;
-            line-height: 1.4;
-            color: #2d3748;
-            background: white;
-            padding: 15mm;
-            min-height: 100vh;
-          }
-          
-          .invoice-container {
-            max-width: 190mm;
-            margin: 0 auto;
-            background: white;
-            border-radius: 8px;
-            overflow: hidden;
-            border: 1px solid #e2e8f0;
-          }
-          
-          .header {
-            background: white !important;
-            color: #1f2937 !important;
-            padding: 20px 25px;
-            position: relative;
-            border-bottom: 2px solid #e5e7eb;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-          
-          .header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            position: relative;
-          }
-          
-          .company-info {
-            flex: 1;
-            text-align: right;
-          }
-          
-          .company-name {
-            font-size: 18px;
-            font-weight: 700;
-            margin-bottom: 8px;
-            color: #1f2937;
-          }
-          
-          .company-details {
-            font-size: 11px;
-            line-height: 1.6;
-            color: #6b7280;
-          }
-          
-          .logo-section {
-            flex: 0 0 60px;
-            margin: 0 20px;
-            text-align: center;
-          }
-          
-          .company-logo {
-            max-width: 60px;
-            max-height: 60px;
-            object-fit: contain;
-            border-radius: 4px;
-          }
-          
-          .logo-placeholder {
-            width: 60px;
-            height: 60px;
-            border: 2px dashed #d1d5db;
-            border-radius: 4px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 10px;
-            color: #6b7280;
-          }
-          
-          .invoice-info {
-            flex: 1;
-            text-align: left;
-          }
-          
-          .invoice-title {
-            font-size: 20px;
-            font-weight: 700;
-            margin-bottom: 8px;
-            color: #1f2937;
-          }
-          
-          .invoice-details {
-            font-size: 11px;
-            line-height: 1.6;
-            color: #6b7280;
-          }
-          
-          .customer-section {
-            background: #f3f4f6 !important;
-            color: #374151 !important;
-            padding: 15px 25px;
-            margin: 0;
-            border-bottom: 2px solid #2563eb;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-          
-          .customer-name {
-            font-weight: 700;
-            margin-bottom: 5px;
-            font-size: 14px;
-            color: #1f2937;
-          }
-          
-          .content-section {
-            padding: 20px 25px;
-          }
-          
-          .items-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 20px;
-            border: 1px solid #d1d5db;
-          }
-          
-          .items-table th {
-            background: #2563eb !important;
-            color: #ffffff !important;
-            padding: 12px 10px;
-            font-weight: 700;
-            text-align: center;
-            border: 1px solid #d1d5db;
-            font-size: 11px;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-          
-          .items-table td {
-            padding: 10px;
-            border: 1px solid #d1d5db;
-            background: #ffffff;
-            text-align: center;
-            font-size: 11px;
-          }
-          
-          .items-table tr:nth-child(even) td {
-            background: #f9fafb;
-          }
-          
-          .item-name {
-            font-weight: 600;
-            color: #2d3748;
-            margin-bottom: 3px;
-            text-align: right;
-          }
-          
-          .item-description {
-            font-size: 10px;
-            color: #718096;
-            font-style: italic;
-            text-align: right;
-          }
-          
-          .summary-section {
-            background: #e5e7eb !important;
-            color: #374151 !important;
-            border-radius: 8px;
-            padding: 18px;
-            margin: 20px 0;
-            float: right;
-            width: 45%;
-            border: 1px solid #d1d5db;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-          
-          .total-with-stamp {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-top: 2px solid #1e40af;
-            padding: 20px 0;
-            margin: 20px 0;
-            clear: both;
-          }
-          
-          .total-amount {
-            font-size: 18px;
-            font-weight: 700;
-            color: #1e40af;
-          }
-          
-          .stamp-section {
-            text-align: center;
-          }
-          
-          .company-stamp {
-            max-width: 80px;
-            max-height: 60px;
-            object-fit: contain;
-          }
-          
-          .summary-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 6px 0;
-            border-bottom: 1px solid #d1d5db;
-            font-size: 12px;
-            color: #374151;
-          }
-          
-          .summary-row:last-child {
-            border-bottom: none;
-            font-size: 14px;
-            font-weight: 700;
-            padding-top: 10px;
-            border-top: 2px solid #2563eb;
-            color: #1e40af;
-          }
-          
-          .payment-info {
-            clear: both;
-            background: #dbeafe !important;
-            color: #1e40af !important;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 15px;
-            border: 1px solid #93c5fd;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-          
-          .payment-grid {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            font-size: 12px;
-          }
-          
-          .payment-details {
-            display: flex;
-            justify-content: space-between;
-            gap: 15px;
-            margin-top: 8px;
-            padding-top: 8px;
-            border-top: 1px dashed #93c5fd;
-          }
-          
-          .status-badge {
-            padding: 4px 12px;
-            border-radius: 15px;
-            font-size: 10px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-          }
-          
-          .status-paid { 
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-          }
-          .status-pending { 
-            background: #fff3cd;
-            color: #856404;
-            border: 1px solid #ffeaa7;
-          }
-          .status-partial { 
-            background: #cce7ff;
-            color: #0066cc;
-            border: 1px solid #99d6ff;
-          }
-          .status-overdue { 
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-          }
-          
-          .notes-section {
-            background: #f7fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 15px;
-            font-size: 11px;
-            line-height: 1.6;
-          }
-          
-          .footer {
-            background: #2563eb !important;
-            color: white !important;
-            text-align: center;
-            padding: 15px;
-            font-size: 12px;
-            position: relative;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-          
-          .footer-content {
-            position: relative;
-          }
-          
-          @media print {
-            * {
-              -webkit-print-color-adjust: exact !important;
-              print-color-adjust: exact !important;
-            }
-            body { 
-              padding: 0 !important;
-              background: white !important;
-              font-size: 11px;
-            }
-            .invoice-container { 
-              border: none !important;
-              border-radius: 0 !important;
-              max-width: 100% !important;
-            }
-            @page { 
-              size: A4;
-              margin: 10mm;
-            }
-            .header { 
-              page-break-inside: avoid;
-              background: white !important;
-              color: #1f2937 !important;
-              border-bottom: 2px solid #e5e7eb !important;
-            }
-            .total-with-stamp {
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-              border-top: 2px solid #1e40af !important;
-              padding: 20px 0;
-              margin: 20px 0;
-              clear: both;
-              page-break-inside: avoid;
-            }
-            .total-amount {
-              font-size: 18px;
-              font-weight: 700;
-              color: #1e40af !important;
-            }
-            .company-stamp {
-              max-width: 80px;
-              max-height: 60px;
-              object-fit: contain;
-            }
-            .items-table th {
-              background: #2563eb !important;
-              color: white !important;
-            }
-            .summary-section {
-              background: #e5e7eb !important;
-              color: #374151 !important;
-            }
-            .payment-info {
-              background: #dbeafe !important;
-              color: #1e40af !important;
-            }
-            .footer {
-              background: #2563eb !important;
-              color: white !important;
-            }
-            .items-table { page-break-inside: avoid; }
-            .summary-section { page-break-inside: avoid; }
-            .content-section { padding: 15px 20px; }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="invoice-container">
-          
-          <!-- Header -->
-          <div class="header">
-            <div class="header-content">
-              <div class="company-info">
-                <div class="company-name">${companyInfo.name}</div>
-                <div class="company-details">
-                  <div>${companyInfo.address}</div>
-                  <div>هاتف: ${companyInfo.phone}</div>
-                  <div>البريد: ${companyInfo.email}</div>
-                </div>
-              </div>
-              
-              <div class="logo-section">
-                ${companyInfo.logo ? 
-                  `<img src="${companyInfo.logo}" alt="شعار الشركة" class="company-logo">` : 
-                  '<div class="logo-placeholder">الشعار</div>'
-                }
-              </div>
-              
-              <div class="invoice-info">
-                <div class="invoice-title">فاتورة</div>
-                <div class="invoice-details">
-                  <div><strong>رقم:</strong> ${invoice.invoice_number}</div>
-                  <div><strong>التاريخ:</strong> ${new Date(invoice.issue_date).toLocaleDateString('ar-SA')}</div>
-                  <div><strong>الاستحقاق:</strong> ${new Date(invoice.due_date).toLocaleDateString('ar-SA')}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Customer Info -->
-          <div class="customer-section">
-            <div class="customer-name">العميل: ${invoice.customers?.name || 'غير محدد'}</div>
-            ${invoice.customers?.phone ? `<div>الهاتف: ${invoice.customers.phone}</div>` : ''}
-            ${invoice.customers?.address ? `<div>العنوان: ${invoice.customers.address}</div>` : ''}
-          </div>
-          
-          <div class="content-section">
-          
-          <!-- Items Table -->
-          <table class="items-table">
-            <thead>
-              <tr>
-                <th style="width: 20%;">الإجمالي (ر.س)</th>
-                <th style="width: 17%;">السعر (ر.س)</th>
-                <th style="width: 15%;">الكمية</th>
-                <th style="width: 40%;">اسم البند / الخدمة</th>
-                <th style="width: 8%;">م</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${items && items.length > 0 ? 
-                items.map((item, index) => `
-                  <tr>
-                    <td>${item.total_amount?.toLocaleString('ar-SA')}</td>
-                    <td>${item.unit_price?.toLocaleString('ar-SA')}</td>
-                    <td>${item.quantity}</td>
-                    <td style="text-align: right;">
-                      <div class="item-name">${item.item_name}</div>
-                      ${item.description ? `<div class="item-description">${item.description}</div>` : ''}
-                    </td>
-                    <td>${index + 1}</td>
-                  </tr>
-                `).join('') :
-                `<tr>
-                  <td>${invoice.amount?.toLocaleString('ar-SA')}</td>
-                  <td>${invoice.amount?.toLocaleString('ar-SA')}</td>
-                  <td>1</td>
-                  <td style="text-align: right;">
-                    <div class="item-name">خدمات عامة</div>
-                    <div class="item-description">${invoice.notes || 'خدمات متنوعة'}</div>
-                  </td>
-                  <td>1</td>
-                </tr>`
-              }
-            </tbody>
-          </table>
-          
-          <!-- Summary -->
-          <div class="summary-section">
-            <div class="summary-row">
-              <span>المجموع الفرعي:</span>
-              <span>${invoice.amount?.toLocaleString('ar-SA')} ر.س</span>
-            </div>
-            <div class="summary-row">
-              <span>ضريبة القيمة المضافة (15%):</span>
-              <span>${invoice.tax_amount?.toLocaleString('ar-SA')} ر.س</span>
-            </div>
-            <div class="summary-row">
-              <span>إجمالي المبلغ المستحق:</span>
-              <span>${invoice.total_amount?.toLocaleString('ar-SA')} ر.س</span>
-            </div>
-          </div>
-          
-          <!-- Payment Info -->
-          <div class="payment-info">
-            <div class="payment-grid">
-              <div><strong>الحالة:</strong> 
-                <span class="status-badge ${
-                  actualStatus === 'مدفوعة' ? 'status-paid' : 
-                  actualStatus === 'مدفوعة جزئياً' ? 'status-partial' :
-                  actualStatus === 'قيد الانتظار' ? 'status-pending' : 
-                  'status-overdue'
-                }">${actualStatus}</span>
-              </div>
-              ${totalPaid > 0 ? `
-                <div class="payment-details">
-                  <div><strong>المبلغ المدفوع:</strong> ${totalPaid.toFixed(2)} ر.س</div>
-                  <div><strong>المبلغ المتبقي:</strong> ${(invoice.total_amount - totalPaid).toFixed(2)} ر.س</div>
-                </div>
-              ` : ''}
-            </div>
-          </div>
-          
-          <!-- Total with Stamp -->
-          <div class="total-with-stamp">
-            <div class="total-amount">
-              المجموع الكلي: ${invoice.total_amount?.toLocaleString('ar-SA')} ر.س
-            </div>
-            <div class="stamp-section">
-              ${companyInfo.stamp ? `<img src="${companyInfo.stamp}" alt="ختم الوكالة" class="company-stamp" />` : ''}
-            </div>
-          </div>
-          
-          <!-- Notes -->
-          ${invoice.notes ? `
-            <div class="notes-section">
-              <strong>ملاحظات:</strong><br>
-              ${invoice.notes}
-            </div>
-          ` : ''}
-          
-          </div>
-          
-          <!-- Footer -->
-          <div class="footer">
-            <div class="footer-content">
-              شكراً لثقتكم بنا
-              ${companyInfo.tagline ? `<br><em>"${companyInfo.tagline}"</em>` : ''}
-            </div>
-          </div>
-          
-        </div>
-        
-        <script>
-          window.onload = function() {
-            window.print();
-            setTimeout(function() {
-              window.close();
-            }, 1000);
-          }
-        </script>
-      </body>
-      </html>
+
+    // تحديث الفاتورة مع البيانات الصحيحة بما في ذلك معلومات الطلب
+    const updatedInvoice = {
+      ...invoice,
+      actual_status: actualStatus,
+      actual_payment_type: actualPaymentType,
+      total_paid: totalPaid,
+      remaining_amount: invoice.total_amount - totalPaid,
+      order_number: orderInfo?.order_number,
+      order_date: orderInfo?.order_date
+    };
+
+    // استخدام مكون InvoicePrint
+    const printElement = document.createElement('div');
+    printElement.innerHTML = `
+      <div class="print-invoice-wrapper">
+        <div id="invoice-print-container"></div>
+      </div>
     `;
     
-    // فتح نافذة جديدة للطباعة
-    const printWindow = window.open('', '_blank', 'width=800,height=600');
-    printWindow.document.write(printContent);
-    printWindow.document.close();
-    
-    console.log('🖼️ تم إنشاء محتوى الطباعة بالحالة:', actualStatus);
-    console.log('📋 HTML content includes status:', printContent.includes(actualStatus));
-    
-    // إغلاق نافذة الطباعة
-    setPrintingInvoice(null);
-    
+    // تحديث مرجع الطباعة مع البيانات الكاملة
+    setPrintingInvoice({
+      ...updatedInvoice,
+      invoiceItems: items
+    });
+
+    // تنفيذ الطباعة
+    setTimeout(() => {
+      const printContent = document.querySelector('.print-invoice');
+      if (printContent) {
+        const printWindow = window.open('', '_blank', 'width=800,height=600');
+        printWindow.document.write(`
+          <!DOCTYPE html>
+          <html dir="rtl" lang="ar">
+          <head>
+            <meta charset="UTF-8">
+            <title>فاتورة ${invoice.invoice_number}</title>
+            <style>
+              @media print {
+                body { margin: 0; padding: 0; }
+                .print-invoice { display: block !important; }
+              }
+              body { font-family: Arial, sans-serif; }
+            </style>
+          </head>
+          <body>
+            ${printContent.outerHTML}
+          </body>
+          </html>
+        `);
+        printWindow.document.close();
+        printWindow.focus();
+        printWindow.print();
+        printWindow.close();
+      }
+      setPrintingInvoice(null);
+    }, 100);
+
     toast({
       title: "تم إعداد الطباعة",
       description: `تم إعداد طباعة الفاتورة ${invoice.invoice_number} بالحالة: ${actualStatus}`,
@@ -1668,6 +1211,15 @@ const Invoices = () => {
             </div>
           </DialogContent>
         </Dialog>
+      )}
+
+      {/* مكون الطباعة المخفي */}
+      {printingInvoice && (
+        <InvoicePrint
+          invoice={printingInvoice}
+          items={printingInvoice.invoiceItems || []}
+          companyInfo={companyInfo}
+        />
       )}
     </div>
   );
