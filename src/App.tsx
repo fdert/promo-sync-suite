@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { AgencyProvider } from "@/contexts/AgencyContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import RoleProtectedRoute from "@/components/RoleProtectedRoute";
 import EmployeeProtectedRoute from "@/components/EmployeeProtectedRoute";
@@ -56,6 +57,7 @@ import BulkWhatsApp from "./pages/admin/BulkWhatsApp";
 import CustomerGroups from "./pages/admin/CustomerGroups";
 import EmployeeBulkWhatsApp from "./pages/employee/BulkWhatsApp";
 import EmployeeWebhookSettings from "./pages/employee/WebhookSettings";
+import AgencyManagement from "./pages/admin/AgencyManagement";
 
 import OrderPayments from "./pages/admin/OrderPayments";
 
@@ -64,7 +66,8 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <TooltipProvider>
+      <AgencyProvider>
+        <TooltipProvider>
         <Toaster />
         <Sonner />
         <BrowserRouter>
@@ -141,6 +144,11 @@ const App = () => (
                   <WebsiteContent />
                 </RoleProtectedRoute>
               } />
+              <Route path="agency" element={
+                <RoleProtectedRoute allowedRoles={['admin']}>
+                  <AgencyManagement />
+                </RoleProtectedRoute>
+              } />
               <Route path="settings" element={
                 <RoleProtectedRoute allowedRoles={['admin']}>
                   <Settings />
@@ -184,6 +192,7 @@ const App = () => (
           </Routes>
         </BrowserRouter>
       </TooltipProvider>
+      </AgencyProvider>
     </AuthProvider>
   </QueryClientProvider>
 );

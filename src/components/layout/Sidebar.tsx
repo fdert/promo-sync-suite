@@ -163,6 +163,12 @@ const menuItems = [
     allowedRoles: ['admin'] as UserRole[],
   },
   {
+    title: "إدارة الوكالة",
+    icon: Building2,
+    href: "/admin/agency",
+    allowedRoles: ['admin'] as UserRole[],
+  },
+  {
     title: "إدارة الواتساب",
     icon: MessageSquare,
     href: "/admin/whatsapp",

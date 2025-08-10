@@ -6,7 +6,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>;
-  signUpAdmin: (email: string, password: string, fullName: string, role: string) => Promise<{ error: any }>;
+  signUpAdmin: (email: string, password: string, fullName: string, role: string, agencyId?: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   loading: boolean;
@@ -64,7 +64,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { error };
   };
 
-  const signUpAdmin = async (email: string, password: string, fullName: string, role: string) => {
+  const signUpAdmin = async (email: string, password: string, fullName: string, role: string, agencyId?: string) => {
     const redirectUrl = `${window.location.origin}/`;
     
     const { data, error } = await supabase.auth.signUp({
@@ -90,6 +90,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (roleError) {
         console.error('Error adding role:', roleError);
+      }
+
+      // إضافة المستخدم للوكالة إذا تم تحديد معرف الوكالة
+      if (agencyId) {
+        const { error: memberError } = await supabase
+          .from('agency_members')
+          .insert({
+            agency_id: agencyId,
+            user_id: data.user.id,
+            role: role
+          });
+        
+        if (memberError) {
+          console.error('Error adding to agency:', memberError);
+        }
       }
     }
     
