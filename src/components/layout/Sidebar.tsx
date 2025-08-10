@@ -204,6 +204,12 @@ const menuItems = [
     href: "/admin/barcode-settings",
     allowedRoles: ['admin', 'manager'] as UserRole[],
   },
+  {
+    title: "إدارة الاشتراكات",
+    icon: CreditCard,
+    href: "/admin/subscription-management",
+    allowedRoles: ['admin'] as UserRole[],
+  },
 ];
 
 const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {

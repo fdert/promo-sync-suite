@@ -271,9 +271,14 @@ const Subscription = () => {
             <p className="text-muted-foreground mb-4">
               تحتاج مساعدة في اختيار الباقة المناسبة؟
             </p>
-            <Button variant="outline" asChild>
-              <Link to="/contact">تواصل معنا</Link>
-            </Button>
+            <div className="flex gap-4 justify-center">
+              <Button variant="outline" asChild>
+                <Link to="/agency-login">دخول الوكالة</Link>
+              </Button>
+              <Button asChild>
+                <Link to="/auth">إنشاء حساب جديد</Link>
+              </Button>
+            </div>
           </div>
         </div>
       </section>

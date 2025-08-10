@@ -49,6 +49,7 @@ import FinancialReports from "./pages/employee/FinancialReports";
 import ReviewsManagement from "./pages/admin/ReviewsManagement";
 import GoogleMapsIntegration from "./pages/admin/GoogleMapsIntegration";
 import BarcodeSettings from "./pages/admin/BarcodeSettings";
+import SubscriptionManagement from "./pages/admin/SubscriptionManagement";
 import FollowUpSettings from "./pages/admin/FollowUpSettings";
 import FinancialMovements from "./pages/admin/FinancialMovements";
 import EmployeeFinancialMovements from "./pages/employee/FinancialMovements";
@@ -59,6 +60,7 @@ import EmployeeBulkWhatsApp from "./pages/employee/BulkWhatsApp";
 import EmployeeWebhookSettings from "./pages/employee/WebhookSettings";
 import AgencyManagement from "./pages/admin/AgencyManagement";
 import Subscription from "./pages/Subscription";
+import AgencyLogin from "./pages/AgencyLogin";
 
 import OrderPayments from "./pages/admin/OrderPayments";
 
@@ -181,14 +183,20 @@ const App = () => (
                     <BulkWhatsApp />
                   </RoleProtectedRoute>
                 } />
-                <Route path="customer-groups" element={
-                  <RoleProtectedRoute allowedRoles={['admin', 'manager']}>
-                    <CustomerGroups />
-                  </RoleProtectedRoute>
-                } />
+                 <Route path="customer-groups" element={
+                   <RoleProtectedRoute allowedRoles={['admin', 'manager']}>
+                     <CustomerGroups />
+                   </RoleProtectedRoute>
+                 } />
+                 <Route path="subscription-management" element={
+                   <RoleProtectedRoute allowedRoles={['admin']}>
+                     <SubscriptionManagement />
+                   </RoleProtectedRoute>
+                 } />
             </Route>
             <Route path="/evaluation/:token" element={<Evaluation />} />
             <Route path="/subscription" element={<Subscription />} />
+            <Route path="/agency-login" element={<AgencyLogin />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
