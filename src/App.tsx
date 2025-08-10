@@ -189,11 +189,16 @@ const App = () => (
                      <CustomerGroups />
                    </RoleProtectedRoute>
                  } />
-                 <Route path="subscription-management" element={
-                   <RoleProtectedRoute allowedRoles={['admin']}>
-                     <SubscriptionManagement />
-                   </RoleProtectedRoute>
-                 } />
+                  <Route path="subscription-management" element={
+                    <RoleProtectedRoute allowedRoles={['admin']}>
+                      <SubscriptionManagement />
+                    </RoleProtectedRoute>
+                  } />
+                  <Route path="website-content" element={
+                    <RoleProtectedRoute allowedRoles={['admin', 'manager']}>
+                      <WebsiteContent />
+                    </RoleProtectedRoute>
+                  } />
             </Route>
             <Route path="/evaluation/:token" element={<Evaluation />} />
             <Route path="/subscription" element={<Subscription />} />

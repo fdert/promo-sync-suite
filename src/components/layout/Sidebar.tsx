@@ -210,6 +210,12 @@ const menuItems = [
     href: "/admin/subscription-management",
     allowedRoles: ['admin'] as UserRole[],
   },
+  {
+    title: "محتوى الموقع",
+    icon: FileText,
+    href: "/admin/website-content",
+    allowedRoles: ['admin', 'manager'] as UserRole[],
+  },
 ];
 
 const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {

@@ -69,6 +69,7 @@ const CustomerPortal = () => {
   const [loginDialogOpen, setLoginDialogOpen] = useState(false);
   const [signupDialogOpen, setSignupDialogOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+  const [websiteSettings, setWebsiteSettings] = useState<any>({});
   
   const { signIn, signUp, user } = useAuth();
   const { toast } = useToast();
@@ -76,6 +77,7 @@ const CustomerPortal = () => {
 
   useEffect(() => {
     fetchPlans();
+    fetchWebsiteSettings();
   }, []);
 
   useEffect(() => {
@@ -103,6 +105,25 @@ const CustomerPortal = () => {
       console.error('Error fetching plans:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchWebsiteSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('website_settings')
+        .select('setting_key, setting_value');
+
+      if (error) throw error;
+      
+      const settingsMap = data?.reduce((acc: any, setting: any) => {
+        acc[setting.setting_key] = setting.setting_value;
+        return acc;
+      }, {}) || {};
+      
+      setWebsiteSettings(settingsMap);
+    } catch (error) {
+      console.error('Error fetching website settings:', error);
     }
   };
 
