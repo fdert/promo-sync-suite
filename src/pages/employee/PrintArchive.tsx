@@ -729,15 +729,26 @@ const PrintArchive = () => {
                                 </Badge>
                               )}
                             </div>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => downloadFile(file.file_path, file.file_name)}
-                              className="gap-2"
-                            >
-                              <Download className="h-4 w-4" />
-                              تحميل
-                            </Button>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => window.open(`https://gcuqfxacnbxdldsbmgvf.supabase.co/storage/v1/object/public/print-files/${file.file_path}`, '_blank')}
+                                className="gap-2"
+                              >
+                                <Eye className="h-4 w-4" />
+                                عرض
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => downloadFile(file.file_path, file.file_name)}
+                                className="gap-2"
+                              >
+                                <Download className="h-4 w-4" />
+                                تحميل
+                              </Button>
+                            </div>
                           </div>
                         ))}
                     </div>
@@ -781,15 +792,26 @@ const PrintArchive = () => {
                                 </Badge>
                               )}
                             </div>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => downloadFile(file.file_path, file.file_name)}
-                              className="gap-2"
-                            >
-                              <Download className="h-4 w-4" />
-                              تحميل
-                            </Button>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => window.open(`https://gcuqfxacnbxdldsbmgvf.supabase.co/storage/v1/object/public/print-files/${file.file_path}`, '_blank')}
+                                className="gap-2"
+                              >
+                                <Eye className="h-4 w-4" />
+                                عرض
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => downloadFile(file.file_path, file.file_name)}
+                                className="gap-2"
+                              >
+                                <Download className="h-4 w-4" />
+                                تحميل
+                              </Button>
+                            </div>
                           </div>
                         ))}
                     </div>
