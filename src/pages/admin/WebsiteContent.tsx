@@ -309,6 +309,443 @@ export default function WebsiteContent() {
     );
   };
 
+  const StepsEditor = () => {
+    const stepsData = getSetting('steps_section');
+    const [formData, setFormData] = useState(stepsData);
+
+    const addStep = () => {
+      const newSteps = [...(formData.steps || []), {
+        number: (formData.steps?.length + 1 || 1).toString(),
+        title: "خطوة جديدة",
+        description: "وصف الخطوة"
+      }];
+      setFormData({...formData, steps: newSteps});
+    };
+
+    const removeStep = (index: number) => {
+      const newSteps = formData.steps.filter((_: any, i: number) => i !== index);
+      setFormData({...formData, steps: newSteps});
+    };
+
+    const updateStep = (index: number, field: string, value: string) => {
+      const newSteps = [...formData.steps];
+      newSteps[index] = {...newSteps[index], [field]: value};
+      setFormData({...formData, steps: newSteps});
+    };
+
+    const handleSave = () => {
+      updateSetting('steps_section', formData);
+    };
+
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            خطوات الاشتراك
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setEditingSection(editingSection === 'steps' ? null : 'steps')}
+            >
+              <Edit3 className="h-4 w-4" />
+            </Button>
+          </CardTitle>
+          <CardDescription>الخطوات التي توضح للعملاء كيفية الاشتراك</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {editingSection === 'steps' ? (
+            <div className="space-y-4">
+              <div>
+                <Label>عنوان القسم</Label>
+                <Input
+                  value={formData.title || ''}
+                  onChange={(e) => setFormData({...formData, title: e.target.value})}
+                  placeholder="كيفية الاشتراك"
+                />
+              </div>
+              <div>
+                <Label>العنوان الفرعي</Label>
+                <Input
+                  value={formData.subtitle || ''}
+                  onChange={(e) => setFormData({...formData, subtitle: e.target.value})}
+                  placeholder="خطوات بسيطة للبدء"
+                />
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <Label>قائمة الخطوات</Label>
+                  <Button onClick={addStep} size="sm" variant="outline">
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+                {formData.steps?.map((step: any, index: number) => (
+                  <Card key={index} className="p-4 mb-2">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label>الخطوة {index + 1}</Label>
+                        <Button 
+                          onClick={() => removeStep(index)}
+                          size="sm"
+                          variant="outline"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <Input
+                        placeholder="رقم الخطوة"
+                        value={step.number || ''}
+                        onChange={(e) => updateStep(index, 'number', e.target.value)}
+                      />
+                      <Input
+                        placeholder="عنوان الخطوة"
+                        value={step.title || ''}
+                        onChange={(e) => updateStep(index, 'title', e.target.value)}
+                      />
+                      <Textarea
+                        placeholder="وصف الخطوة"
+                        value={step.description || ''}
+                        onChange={(e) => updateStep(index, 'description', e.target.value)}
+                        rows={2}
+                      />
+                    </div>
+                  </Card>
+                ))}
+              </div>
+              <Button onClick={handleSave} disabled={saving}>
+                <Save className="h-4 w-4 ml-2" />
+                {saving ? "جاري الحفظ..." : "حفظ التغييرات"}
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <div><strong>العنوان:</strong> {stepsData.title}</div>
+              <div><strong>العنوان الفرعي:</strong> {stepsData.subtitle}</div>
+              <div><strong>عدد الخطوات:</strong> {stepsData.steps?.length || 0}</div>
+              <div className="flex flex-wrap gap-1">
+                {stepsData.steps?.map((step: any, index: number) => (
+                  <Badge key={index} variant="secondary">{step.title}</Badge>
+                ))}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const FaqEditor = () => {
+    const faqData = getSetting('faq_section');
+    const [formData, setFormData] = useState(faqData);
+
+    const addFaq = () => {
+      const newFaqs = [...(formData.faqs || []), {
+        question: "سؤال جديد؟",
+        answer: "إجابة السؤال"
+      }];
+      setFormData({...formData, faqs: newFaqs});
+    };
+
+    const removeFaq = (index: number) => {
+      const newFaqs = formData.faqs.filter((_: any, i: number) => i !== index);
+      setFormData({...formData, faqs: newFaqs});
+    };
+
+    const updateFaq = (index: number, field: string, value: string) => {
+      const newFaqs = [...formData.faqs];
+      newFaqs[index] = {...newFaqs[index], [field]: value};
+      setFormData({...formData, faqs: newFaqs});
+    };
+
+    const handleSave = () => {
+      updateSetting('faq_section', formData);
+    };
+
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            الأسئلة الشائعة
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setEditingSection(editingSection === 'faq' ? null : 'faq')}
+            >
+              <Edit3 className="h-4 w-4" />
+            </Button>
+          </CardTitle>
+          <CardDescription>الأسئلة والأجوبة التي تظهر للعملاء</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {editingSection === 'faq' ? (
+            <div className="space-y-4">
+              <div>
+                <Label>عنوان القسم</Label>
+                <Input
+                  value={formData.title || ''}
+                  onChange={(e) => setFormData({...formData, title: e.target.value})}
+                  placeholder="الأسئلة الشائعة"
+                />
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <Label>قائمة الأسئلة</Label>
+                  <Button onClick={addFaq} size="sm" variant="outline">
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+                {formData.faqs?.map((faq: any, index: number) => (
+                  <Card key={index} className="p-4 mb-2">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label>السؤال {index + 1}</Label>
+                        <Button 
+                          onClick={() => removeFaq(index)}
+                          size="sm"
+                          variant="outline"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <Input
+                        placeholder="السؤال"
+                        value={faq.question || ''}
+                        onChange={(e) => updateFaq(index, 'question', e.target.value)}
+                      />
+                      <Textarea
+                        placeholder="الإجابة"
+                        value={faq.answer || ''}
+                        onChange={(e) => updateFaq(index, 'answer', e.target.value)}
+                        rows={3}
+                      />
+                    </div>
+                  </Card>
+                ))}
+              </div>
+              <Button onClick={handleSave} disabled={saving}>
+                <Save className="h-4 w-4 ml-2" />
+                {saving ? "جاري الحفظ..." : "حفظ التغييرات"}
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <div><strong>العنوان:</strong> {faqData.title}</div>
+              <div><strong>عدد الأسئلة:</strong> {faqData.faqs?.length || 0}</div>
+              <div className="flex flex-wrap gap-1">
+                {faqData.faqs?.map((faq: any, index: number) => (
+                  <Badge key={index} variant="secondary">{faq.question}</Badge>
+                ))}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const ContactEditor = () => {
+    const contactData = getSetting('contact_section');
+    const [formData, setFormData] = useState(contactData);
+
+    const handleSave = () => {
+      updateSetting('contact_section', formData);
+    };
+
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            معلومات التواصل
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setEditingSection(editingSection === 'contact' ? null : 'contact')}
+            >
+              <Edit3 className="h-4 w-4" />
+            </Button>
+          </CardTitle>
+          <CardDescription>بيانات التواصل مع الشركة</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {editingSection === 'contact' ? (
+            <div className="space-y-4">
+              <div>
+                <Label>عنوان القسم</Label>
+                <Input
+                  value={formData.title || ''}
+                  onChange={(e) => setFormData({...formData, title: e.target.value})}
+                  placeholder="تواصل معنا"
+                />
+              </div>
+              <div>
+                <Label>العنوان الفرعي</Label>
+                <Input
+                  value={formData.subtitle || ''}
+                  onChange={(e) => setFormData({...formData, subtitle: e.target.value})}
+                  placeholder="نحن هنا لمساعدتك"
+                />
+              </div>
+              <div>
+                <Label>رقم الهاتف</Label>
+                <Input
+                  value={formData.phone || ''}
+                  onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                  placeholder="+966 50 123 4567"
+                />
+              </div>
+              <div>
+                <Label>البريد الإلكتروني</Label>
+                <Input
+                  value={formData.email || ''}
+                  onChange={(e) => setFormData({...formData, email: e.target.value})}
+                  placeholder="info@company.com"
+                />
+              </div>
+              <div>
+                <Label>العنوان</Label>
+                <Textarea
+                  value={formData.address || ''}
+                  onChange={(e) => setFormData({...formData, address: e.target.value})}
+                  placeholder="العنوان الكامل"
+                  rows={2}
+                />
+              </div>
+              <Button onClick={handleSave} disabled={saving}>
+                <Save className="h-4 w-4 ml-2" />
+                {saving ? "جاري الحفظ..." : "حفظ التغييرات"}
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <div><strong>العنوان:</strong> {contactData.title}</div>
+              <div><strong>العنوان الفرعي:</strong> {contactData.subtitle}</div>
+              <div><strong>الهاتف:</strong> {contactData.phone}</div>
+              <div><strong>البريد الإلكتروني:</strong> {contactData.email}</div>
+              <div><strong>العنوان:</strong> {contactData.address}</div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const CompanyEditor = () => {
+    const companyData = getSetting('company_info');
+    const [formData, setFormData] = useState(companyData);
+
+    const handleSave = () => {
+      updateSetting('company_info', formData);
+    };
+
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            معلومات الشركة
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setEditingSection(editingSection === 'company' ? null : 'company')}
+            >
+              <Edit3 className="h-4 w-4" />
+            </Button>
+          </CardTitle>
+          <CardDescription>بيانات الشركة والشعار</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {editingSection === 'company' ? (
+            <div className="space-y-4">
+              <div>
+                <Label>اسم الشركة</Label>
+                <Input
+                  value={formData.name || ''}
+                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  placeholder="نظام إدارة الوكالات"
+                />
+              </div>
+              <div>
+                <Label>رابط الشعار</Label>
+                <Input
+                  value={formData.logo_url || ''}
+                  onChange={(e) => setFormData({...formData, logo_url: e.target.value})}
+                  placeholder="/logo.png"
+                />
+              </div>
+              <div>
+                <Label>وصف الشركة</Label>
+                <Textarea
+                  value={formData.description || ''}
+                  onChange={(e) => setFormData({...formData, description: e.target.value})}
+                  placeholder="وصف مختصر عن الشركة"
+                  rows={3}
+                />
+              </div>
+              <div>
+                <Label>روابط التواصل الاجتماعي</Label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>فيسبوك</Label>
+                    <Input
+                      value={formData.social_links?.facebook || ''}
+                      onChange={(e) => setFormData({
+                        ...formData, 
+                        social_links: {...formData.social_links, facebook: e.target.value}
+                      })}
+                      placeholder="https://facebook.com/company"
+                    />
+                  </div>
+                  <div>
+                    <Label>تويتر</Label>
+                    <Input
+                      value={formData.social_links?.twitter || ''}
+                      onChange={(e) => setFormData({
+                        ...formData, 
+                        social_links: {...formData.social_links, twitter: e.target.value}
+                      })}
+                      placeholder="https://twitter.com/company"
+                    />
+                  </div>
+                  <div>
+                    <Label>لينكد إن</Label>
+                    <Input
+                      value={formData.social_links?.linkedin || ''}
+                      onChange={(e) => setFormData({
+                        ...formData, 
+                        social_links: {...formData.social_links, linkedin: e.target.value}
+                      })}
+                      placeholder="https://linkedin.com/company"
+                    />
+                  </div>
+                  <div>
+                    <Label>إنستغرام</Label>
+                    <Input
+                      value={formData.social_links?.instagram || ''}
+                      onChange={(e) => setFormData({
+                        ...formData, 
+                        social_links: {...formData.social_links, instagram: e.target.value}
+                      })}
+                      placeholder="https://instagram.com/company"
+                    />
+                  </div>
+                </div>
+              </div>
+              <Button onClick={handleSave} disabled={saving}>
+                <Save className="h-4 w-4 ml-2" />
+                {saving ? "جاري الحفظ..." : "حفظ التغييرات"}
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <div><strong>اسم الشركة:</strong> {companyData.name}</div>
+              <div><strong>الشعار:</strong> {companyData.logo_url}</div>
+              <div><strong>الوصف:</strong> {companyData.description}</div>
+              <div><strong>روابط التواصل:</strong> {Object.keys(companyData.social_links || {}).length} روابط</div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
+
   if (loading) {
     return (
       <div className="container mx-auto p-6">
@@ -347,59 +784,19 @@ export default function WebsiteContent() {
         </TabsContent>
 
         <TabsContent value="steps">
-          <Card>
-            <CardHeader>
-              <CardTitle>خطوات الاشتراك</CardTitle>
-              <CardDescription>الخطوات التي توضح للعملاء كيفية الاشتراك</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center text-muted-foreground">
-                محرر خطوات الاشتراك - قيد التطوير
-              </div>
-            </CardContent>
-          </Card>
+          <StepsEditor />
         </TabsContent>
 
         <TabsContent value="faq">
-          <Card>
-            <CardHeader>
-              <CardTitle>الأسئلة الشائعة</CardTitle>
-              <CardDescription>الأسئلة والأجوبة التي تظهر للعملاء</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center text-muted-foreground">
-                محرر الأسئلة الشائعة - قيد التطوير
-              </div>
-            </CardContent>
-          </Card>
+          <FaqEditor />
         </TabsContent>
 
         <TabsContent value="contact">
-          <Card>
-            <CardHeader>
-              <CardTitle>معلومات التواصل</CardTitle>
-              <CardDescription>بيانات التواصل مع الشركة</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center text-muted-foreground">
-                محرر معلومات التواصل - قيد التطوير
-              </div>
-            </CardContent>
-          </Card>
+          <ContactEditor />
         </TabsContent>
 
         <TabsContent value="company">
-          <Card>
-            <CardHeader>
-              <CardTitle>معلومات الشركة</CardTitle>
-              <CardDescription>بيانات الشركة والشعار</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center text-muted-foreground">
-                محرر معلومات الشركة - قيد التطوير
-              </div>
-            </CardContent>
-          </Card>
+          <CompanyEditor />
         </TabsContent>
       </Tabs>
     </div>

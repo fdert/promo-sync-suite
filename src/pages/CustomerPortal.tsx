@@ -654,12 +654,14 @@ const CustomerPortal = () => {
       <section className="py-20 px-6">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-6">الأسئلة الشائعة</h2>
+            <h2 className="text-4xl font-bold mb-6">
+              {websiteSettings.faq_section?.title || "الأسئلة الشائعة"}
+            </h2>
             <p className="text-xl text-muted-foreground">إجابات سريعة على أهم الأسئلة</p>
           </div>
           
           <div className="grid gap-6">
-            {[
+            {(websiteSettings.faq_section?.faqs || [
               {
                 question: "هل يمكنني تغيير الباقة لاحقاً؟",
                 answer: "نعم، يمكنك ترقية أو تخفيض باقتك في أي وقت. سيتم احتساب الفرق في التكلفة تلقائياً وتطبيق التغييرات فوراً."
@@ -680,7 +682,7 @@ const CustomerPortal = () => {
                 question: "ما نوع الدعم الفني المتاح؟",
                 answer: "نقدم دعم فني متخصص عبر الهاتف والبريد الإلكتروني والدردشة المباشرة، بالإضافة إلى مكتبة شاملة من الفيديوهات التعليمية."
               }
-            ].map((faq, index) => (
+            ]).map((faq: any, index: number) => (
               <Card key={index} className="hover-scale animate-fade-in" style={{ animationDelay: `${index * 0.1}s` }}>
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-3">
@@ -691,7 +693,9 @@ const CustomerPortal = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-muted-foreground leading-relaxed mr-11">{faq.answer}</p>
+                  <p className="text-muted-foreground leading-relaxed">
+                    {faq.answer}
+                  </p>
                 </CardContent>
               </Card>
             ))}
@@ -702,9 +706,11 @@ const CustomerPortal = () => {
       {/* Contact Section */}
       <section className="py-20 px-6 bg-gradient-to-br from-primary/5 to-accent/5">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-4xl font-bold mb-6">تحتاج مساعدة؟</h2>
+          <h2 className="text-4xl font-bold mb-6">
+            {websiteSettings.contact_section?.title || "تحتاج مساعدة؟"}
+          </h2>
           <p className="text-xl text-muted-foreground mb-8">
-            فريقنا المتخصص جاهز لمساعدتك في أي استفسار
+            {websiteSettings.contact_section?.subtitle || "فريقنا المتخصص جاهز لمساعدتك في أي استفسار"}
           </p>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -712,7 +718,9 @@ const CustomerPortal = () => {
               <CardContent className="p-6 text-center">
                 <Phone className="h-10 w-10 text-primary mx-auto mb-4" />
                 <h3 className="font-semibold mb-2">اتصل بنا</h3>
-                <p className="text-muted-foreground">920000000</p>
+                <p className="text-muted-foreground">
+                  {websiteSettings.contact_section?.phone || "+966 50 123 4567"}
+                </p>
               </CardContent>
             </Card>
             
@@ -720,7 +728,9 @@ const CustomerPortal = () => {
               <CardContent className="p-6 text-center">
                 <Mail className="h-10 w-10 text-primary mx-auto mb-4" />
                 <h3 className="font-semibold mb-2">راسلنا</h3>
-                <p className="text-muted-foreground">support@agency-system.com</p>
+                <p className="text-muted-foreground">
+                  {websiteSettings.contact_section?.email || "info@agency-system.com"}
+                </p>
               </CardContent>
             </Card>
             
@@ -753,12 +763,14 @@ const CustomerPortal = () => {
                   <Building2 className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold">نظام إدارة الوكالات</h3>
+                  <h3 className="text-lg font-bold">
+                    {websiteSettings.company_info?.name || "نظام إدارة الوكالات"}
+                  </h3>
                   <p className="text-sm text-muted-foreground">للدعاية والإعلان</p>
                 </div>
               </div>
               <p className="text-muted-foreground leading-relaxed mb-4">
-                الحل الشامل والمتطور لإدارة وكالات الدعاية والإعلان بكفاءة عالية ونتائج مضمونة.
+                {websiteSettings.company_info?.description || "الحل الشامل والمتطور لإدارة وكالات الدعاية والإعلان بكفاءة عالية ونتائج مضمونة."}
               </p>
               <div className="flex gap-4">
                 <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center hover:bg-primary hover:text-white transition-colors cursor-pointer">
@@ -795,7 +807,7 @@ const CustomerPortal = () => {
           </div>
           
           <div className="border-t mt-8 pt-8 text-center text-muted-foreground">
-            <p>© 2024 نظام إدارة الوكالات. جميع الحقوق محفوظة.</p>
+            <p>© 2024 {websiteSettings.company_info?.name || "نظام إدارة الوكالات"}. جميع الحقوق محفوظة.</p>
           </div>
         </div>
       </footer>
