@@ -187,10 +187,15 @@ const CreateAgencyForm = () => {
 
     setLoading(true);
     try {
+      console.log('🚀 بدء إنشاء الوكالة...');
+      
       const currentUser = (await supabase.auth.getUser()).data.user;
       if (!currentUser) throw new Error('المستخدم غير مصرح له');
+      
+      console.log('✅ تم التحقق من المستخدم:', currentUser.id);
 
       // إنشاء الوكالة
+      console.log('📝 إنشاء الوكالة مع البيانات:', formData);
       const { data: agencyData, error: agencyError } = await supabase
         .from('agencies')
         .insert({
@@ -202,16 +207,23 @@ const CreateAgencyForm = () => {
         .select()
         .single();
 
-      if (agencyError) throw agencyError;
+      if (agencyError) {
+        console.error('❌ خطأ في إنشاء الوكالة:', agencyError);
+        throw agencyError;
+      }
+      
+      console.log('✅ تم إنشاء الوكالة بنجاح:', agencyData);
 
       // إنشاء اشتراك نشط للوكالة
       const selectedPlanData = plans.find(p => p.id === selectedPlan);
       if (selectedPlanData) {
+        console.log('📋 إنشاء الاشتراك للباقة:', selectedPlanData.name_ar);
+        
         const subscriptionEndDate = new Date();
         subscriptionEndDate.setMonth(subscriptionEndDate.getMonth() + 
           (selectedPlanData.billing_period === 'yearly' ? 12 : 1));
 
-        await supabase
+        const { error: subscriptionError } = await supabase
           .from('subscriptions')
           .insert({
             agency_id: agencyData.id,
@@ -220,10 +232,18 @@ const CreateAgencyForm = () => {
             starts_at: new Date().toISOString(),
             ends_at: subscriptionEndDate.toISOString()
           });
+          
+        if (subscriptionError) {
+          console.error('❌ خطأ في إنشاء الاشتراك:', subscriptionError);
+          throw subscriptionError;
+        }
+        
+        console.log('✅ تم إنشاء الاشتراك بنجاح');
       }
 
       // إضافة المستخدم الحالي كمالك للوكالة
-      await supabase
+      console.log('👤 إضافة المستخدم كمالك للوكالة');
+      const { error: memberError } = await supabase
         .from('agency_members')
         .insert({
           agency_id: agencyData.id,
@@ -232,20 +252,49 @@ const CreateAgencyForm = () => {
           created_by: currentUser.id
         });
 
+      if (memberError) {
+        console.error('❌ خطأ في إضافة العضوية:', memberError);
+        throw memberError;
+      }
+      
+      console.log('✅ تم إضافة المستخدم كمالك بنجاح');
+
       // إنشاء الحسابات المحاسبية الأساسية
-      await createBasicAccounts(agencyData.id, currentUser.id);
+      console.log('💰 إنشاء الحسابات المحاسبية الأساسية');
+      try {
+        await createBasicAccounts(agencyData.id, currentUser.id);
+        console.log('✅ تم إنشاء الحسابات المحاسبية بنجاح');
+      } catch (accountsError) {
+        console.error('⚠️ خطأ في إنشاء الحسابات المحاسبية:', accountsError);
+        // لا نوقف العملية هنا، فقط تحذير
+      }
 
       // إنشاء الإعدادات الافتراضية للوكالة
-      await createAgencySettings(agencyData.id);
+      console.log('⚙️ إنشاء الإعدادات الافتراضية');
+      try {
+        await createAgencySettings(agencyData.id);
+        console.log('✅ تم إنشاء الإعدادات الافتراضية بنجاح');
+      } catch (settingsError) {
+        console.error('⚠️ خطأ في إنشاء الإعدادات:', settingsError);
+        // لا نوقف العملية هنا، فقط تحذير
+      }
 
       // إضافة دور super_admin للمستخدم الحالي إذا لم يكن لديه
-      await supabase
-        .from('user_roles')
-        .upsert({
-          user_id: currentUser.id,
-          role: 'super_admin'
-        });
+      console.log('👑 إضافة دور المسؤول');
+      try {
+        await supabase
+          .from('user_roles')
+          .upsert({
+            user_id: currentUser.id,
+            role: 'super_admin'
+          });
+        console.log('✅ تم إضافة دور المسؤول بنجاح');
+      } catch (roleError) {
+        console.error('⚠️ خطأ في إضافة الدور:', roleError);
+        // لا نوقف العملية هنا
+      }
 
+      console.log('🎉 تم إنشاء الوكالة بنجاح!');
       toast.success('تم إنشاء الوكالة وتفعيل الاشتراك بنجاح! سيتم توجيهك للوحة تحكم الوكالة...');
       
       // توجيه المستخدم للوحة تحكم الوكالة الجديدة بعد 2 ثانية
@@ -255,8 +304,22 @@ const CreateAgencyForm = () => {
       }, 2000);
       
     } catch (error: any) {
-      console.error('Error creating agency:', error);
-      toast.error(error.message || 'حدث خطأ في إنشاء الوكالة');
+      console.error('💥 خطأ عام في إنشاء الوكالة:', error);
+      
+      // عرض رسالة خطأ مفصلة
+      let errorMessage = 'حدث خطأ في إنشاء الوكالة';
+      
+      if (error.message?.includes('duplicate key')) {
+        errorMessage = 'اسم الوكالة أو الرابط المخصص موجود مسبقاً';
+      } else if (error.message?.includes('permission')) {
+        errorMessage = 'ليس لديك صلاحية لإنشاء وكالة جديدة';
+      } else if (error.message?.includes('violates')) {
+        errorMessage = 'خطأ في البيانات المدخلة، يرجى المراجعة';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
