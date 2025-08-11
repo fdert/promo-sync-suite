@@ -70,7 +70,7 @@ const Home = () => {
         .eq('user_id', user.id);
 
       if (!userRoles || userRoles.length === 0) {
-        navigate('/user');
+        navigate('/auth');
         return;
       }
 
@@ -82,11 +82,11 @@ const Home = () => {
       } else if (roles.includes('employee')) {
         navigate('/employee');
       } else {
-        navigate('/user');
+        navigate('/auth');
       }
     } catch (error) {
-      // إذا لم يكن للمستخدم دور محدد، توجيهه إلى لوحة المستخدم العادي
-      navigate('/user');
+      // إذا لم يكن للمستخدم دور محدد، توجيهه إلى صفحة تسجيل الدخول
+      navigate('/auth');
     }
   };
 

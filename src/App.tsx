@@ -34,10 +34,8 @@ import Settings from "./pages/admin/Settings";
 import ServiceTypes from "./pages/admin/ServiceTypes";
 import EmployeeServiceTypes from "./pages/employee/ServiceTypes";
 import MessageTemplates from "./pages/admin/MessageTemplates";
-import UserDashboard from "./pages/user/UserDashboard";
 import EmployeeDashboard from "./pages/employee/EmployeeDashboard";
 import PrintManagement from "./pages/admin/PrintManagement";
-import PrintOrders from "./pages/user/PrintOrders";
 import InvoicePreview from "./pages/InvoicePreview";
 import NotFound from "./pages/NotFound";
 import Evaluations from "./pages/admin/Evaluations";
@@ -72,16 +70,6 @@ const App = () => (
             <Route path="/" element={<Home />} />
           <Route path="/invoice/:invoiceId" element={<InvoicePreview />} />
           <Route path="/auth" element={<Auth />} />
-            <Route path="/user" element={
-              <ProtectedRoute>
-                <UserDashboard />
-              </ProtectedRoute>
-            } />
-            <Route path="/user/print-orders" element={
-              <ProtectedRoute>
-                <PrintOrders />
-              </ProtectedRoute>
-            } />
             <Route path="/employee" element={
               <ProtectedRoute>
                 <EmployeeProtectedRoute>

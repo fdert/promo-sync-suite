@@ -70,7 +70,7 @@ const EmployeeProtectedRoute: React.FC<EmployeeProtectedRouteProps> = ({ childre
   }
 
   if (hasEmployeeAccess === false) {
-    return <Navigate to="/user" replace />;
+    return <Navigate to="/auth" replace />;
   }
 
   return <>{children}</>;
