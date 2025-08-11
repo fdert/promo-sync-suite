@@ -63,6 +63,79 @@ const CreateAgencyForm = () => {
     }
   };
 
+  // إنشاء الحسابات المحاسبية الأساسية للوكالة
+  const createBasicAccounts = async (agencyId: string, userId: string) => {
+    const basicAccounts = [
+      { name: 'النقدية', type: 'أصول', description: 'النقدية في الصندوق' },
+      { name: 'البنك', type: 'أصول', description: 'الحسابات البنكية' },
+      { name: 'الشبكة', type: 'أصول', description: 'مدفوعات الشبكة والبطاقات الائتمانية' },
+      { name: 'العملاء المدينون', type: 'أصول', description: 'مستحقات العملاء' },
+      { name: 'الخدمات المقدمة', type: 'إيرادات', description: 'إيرادات الخدمات' },
+      { name: 'مصروفات التشغيل', type: 'مصروفات', description: 'مصروفات التشغيل العامة' },
+      { name: 'رأس المال', type: 'حقوق ملكية', description: 'رأس مال الوكالة' }
+    ];
+
+    for (const account of basicAccounts) {
+      await supabase
+        .from('accounts')
+        .insert({
+          agency_id: agencyId,
+          account_name: account.name,
+          account_type: account.type,
+          description: account.description,
+          balance: 0,
+          is_active: true,
+          created_by: userId
+        });
+    }
+  };
+
+  // إنشاء الإعدادات الافتراضية للوكالة
+  const createAgencySettings = async (agencyId: string) => {
+    const defaultSettings = [
+      {
+        setting_key: 'company_info',
+        setting_value: {
+          name: formData.name,
+          email: formData.contact_email,
+          phone: formData.contact_phone,
+          address: formData.address,
+          website: formData.website,
+          primary_color: formData.primary_color,
+          secondary_color: formData.secondary_color
+        }
+      },
+      {
+        setting_key: 'notification_settings',
+        setting_value: {
+          whatsapp_notifications: true,
+          email_notifications: true,
+          order_updates: true,
+          payment_reminders: true
+        }
+      },
+      {
+        setting_key: 'print_settings',
+        setting_value: {
+          auto_print_invoices: false,
+          print_barcode_labels: true,
+          default_printer: '',
+          label_format: 'thermal-80mm'
+        }
+      }
+    ];
+
+    for (const setting of defaultSettings) {
+      await supabase
+        .from('agency_settings')
+        .insert({
+          agency_id: agencyId,
+          setting_key: setting.setting_key,
+          setting_value: setting.setting_value
+        });
+    }
+  };
+
   const generateSlug = (name: string) => {
     return name
       .toLowerCase()
@@ -114,19 +187,24 @@ const CreateAgencyForm = () => {
 
     setLoading(true);
     try {
+      const currentUser = (await supabase.auth.getUser()).data.user;
+      if (!currentUser) throw new Error('المستخدم غير مصرح له');
+
+      // إنشاء الوكالة
       const { data: agencyData, error: agencyError } = await supabase
         .from('agencies')
         .insert({
           ...formData,
           is_active: true,
           subscription_plan: selectedPlan,
-          created_by: (await supabase.auth.getUser()).data.user?.id
+          created_by: currentUser.id
         })
         .select()
         .single();
 
       if (agencyError) throw agencyError;
 
+      // إنشاء اشتراك نشط للوكالة
       const selectedPlanData = plans.find(p => p.id === selectedPlan);
       if (selectedPlanData) {
         const subscriptionEndDate = new Date();
@@ -144,16 +222,37 @@ const CreateAgencyForm = () => {
           });
       }
 
+      // إضافة المستخدم الحالي كمالك للوكالة
       await supabase
         .from('agency_members')
         .insert({
           agency_id: agencyData.id,
-          user_id: (await supabase.auth.getUser()).data.user?.id,
-          role: 'owner'
+          user_id: currentUser.id,
+          role: 'owner',
+          created_by: currentUser.id
         });
 
-      toast.success('تم إنشاء الوكالة وتفعيل الاشتراك بنجاح');
-      window.location.reload();
+      // إنشاء الحسابات المحاسبية الأساسية
+      await createBasicAccounts(agencyData.id, currentUser.id);
+
+      // إنشاء الإعدادات الافتراضية للوكالة
+      await createAgencySettings(agencyData.id);
+
+      // إضافة دور super_admin للمستخدم الحالي إذا لم يكن لديه
+      await supabase
+        .from('user_roles')
+        .upsert({
+          user_id: currentUser.id,
+          role: 'super_admin'
+        });
+
+      toast.success('تم إنشاء الوكالة وتفعيل الاشتراك بنجاح! سيتم توجيهك للوحة تحكم الوكالة...');
+      
+      // توجيه المستخدم للوحة تحكم الوكالة الجديدة بعد 2 ثانية
+      setTimeout(() => {
+        window.open(`/admin/dashboard?agency=${agencyData.id}`, '_blank');
+        window.location.reload();
+      }, 2000);
       
     } catch (error: any) {
       console.error('Error creating agency:', error);
@@ -492,9 +591,19 @@ const CreateAgencyForm = () => {
               <Button
                 onClick={createAgencyWithSubscription}
                 disabled={loading}
-                className="min-w-[200px]"
+                className="min-w-[200px] bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
               >
-                {loading ? 'جاري الإنشاء...' : 'إنشاء الوكالة وتفعيل الاشتراك'}
+                {loading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    جاري إنشاء الوكالة...
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Building2 className="h-4 w-4" />
+                    إنشاء الوكالة وتفعيل الاشتراك
+                  </div>
+                )}
               </Button>
             </div>
           </TabsContent>
