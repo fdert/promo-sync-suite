@@ -77,7 +77,9 @@ const Home = () => {
       // فحص الأدوار بترتيب الأولوية
       const roles = userRoles.map(r => r.role);
       
-      if (roles.includes('admin') || roles.includes('manager')) {
+      if (roles.includes('super_admin')) {
+        navigate('/system');
+      } else if (roles.includes('admin') || roles.includes('manager')) {
         navigate('/admin');
       } else if (roles.includes('employee')) {
         navigate('/employee');
