@@ -168,6 +168,8 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
             flex: 1 !important;
             text-align: left !important;
             direction: ltr !important;
+            margin-left: auto !important;
+            padding-left: 0 !important;
           }
           
           .print-invoice-title {
