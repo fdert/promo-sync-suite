@@ -18,6 +18,7 @@ import SystemLayout from "./components/layout/SystemLayout";
 // System Admin Pages
 import SystemDashboard from "./pages/system/SystemDashboard";
 import SystemAuth from "./pages/system/SystemAuth";
+import SystemUsers from "./pages/system/SystemUsers";
 import AgenciesManagement from "./pages/system/AgenciesManagement";
 import SubscriptionPlans from "./pages/system/SubscriptionPlans";
 import SystemSettings from "./pages/system/SystemSettings";
@@ -220,6 +221,7 @@ const App = () => (
               </ProtectedRoute>
             }>
               <Route index element={<SystemDashboard />} />
+              <Route path="users" element={<SystemUsers />} />
               <Route path="agencies" element={<AgenciesManagement />} />
               <Route path="subscription-plans" element={<SubscriptionPlans />} />
               <Route path="settings" element={<SystemSettings />} />
