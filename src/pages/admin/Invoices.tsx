@@ -898,8 +898,44 @@ const Invoices = () => {
         `)
         .order('created_at', { ascending: false });
 
-      if (!error) {
-        setInvoices(data || []);
+      if (!error && data) {
+        // جلب معلومات المدفوعات لكل فاتورة
+        const invoicesWithPayments = await Promise.all(
+          data.map(async (invoice: any) => {
+            const { data: payments, error: paymentsError } = await supabase
+              .from('payments')
+              .select('amount')
+              .eq('invoice_id', invoice.id);
+
+            if (!paymentsError && payments) {
+              const totalPaid = payments.reduce((sum: number, payment: any) => sum + payment.amount, 0);
+              const remainingAmount = invoice.total_amount - totalPaid;
+              
+              let paymentStatus = 'غير مدفوعة';
+              if (totalPaid >= invoice.total_amount) {
+                paymentStatus = 'مدفوعة';
+              } else if (totalPaid > 0) {
+                paymentStatus = 'مدفوعة جزئياً';
+              }
+
+              return {
+                ...invoice,
+                total_paid: totalPaid,
+                remaining_amount: remainingAmount,
+                payment_status: paymentStatus
+              };
+            }
+            
+            return {
+              ...invoice,
+              total_paid: 0,
+              remaining_amount: invoice.total_amount,
+              payment_status: 'غير مدفوعة'
+            };
+          })
+        );
+        
+        setInvoices(invoicesWithPayments);
       }
     } catch (error) {
       console.error('Error fetching invoices:', error);
