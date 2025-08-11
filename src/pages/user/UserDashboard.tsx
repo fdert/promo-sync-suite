@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -19,13 +19,35 @@ import {
   CheckCircle,
   Clock,
   AlertCircle,
-  Printer
+  Printer,
+  Settings
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { BarChart3 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const UserDashboard = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const checkAdminRole = async () => {
+      if (user) {
+        const { data } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .in('role', ['admin', 'manager']);
+        
+        setIsAdmin(data && data.length > 0);
+      }
+    };
+
+    checkAdminRole();
+  }, [user]);
   const [orders, setOrders] = useState([
     {
       id: 1,
@@ -128,6 +150,16 @@ const UserDashboard = () => {
             <p className="text-muted-foreground">إدارة الطلبات والعملاء والمصروفات</p>
           </div>
           <div className="flex gap-2">
+            {isAdmin && (
+              <Button 
+                variant="outline" 
+                onClick={() => navigate('/admin')}
+                className="gap-2"
+              >
+                <Settings className="h-4 w-4" />
+                لوحة الإدارة
+              </Button>
+            )}
             <Dialog open={isAddOrderOpen} onOpenChange={setIsAddOrderOpen}>
               <DialogTrigger asChild>
                 <Button className="gap-2">
