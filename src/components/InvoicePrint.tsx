@@ -57,12 +57,27 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
     <>
       <style type="text/css" media="print">
         {`
+          /* إخفاء جميع العناصر الأخرى عند الطباعة */
+          body * {
+            visibility: hidden !important;
+          }
+          
+          .print-invoice, .print-invoice * {
+            visibility: visible !important;
+          }
+          
+          .print-invoice {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+          }
+          
           @page {
-            size: A4;
-            margin: 8mm;
-            padding: 0;
+            size: A4 !important;
+            margin: 8mm !important;
+            padding: 0 !important;
             @bottom-center {
-              content: "";
+              content: "" !important;
             }
           }
           
