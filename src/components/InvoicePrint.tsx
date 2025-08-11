@@ -19,6 +19,8 @@ interface InvoicePrintProps {
     total_amount: number;
     status: string;
     actual_status?: string;
+    payment_status?: string;
+    actual_payment_type?: string;
     total_paid?: number;
     remaining_amount?: number;
     notes?: string;
@@ -296,22 +298,101 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
 
       {/* Status and Payment Info */}
       <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between',
+        backgroundColor: '#f0f8ff',
+        border: '1px solid #cce7ff',
+        borderRadius: '4px',
+        padding: '8px',
+        margin: '8px 0',
         fontSize: '10px',
-        marginBottom: '4px',
-        padding: '4px',
-        backgroundColor: '#f9f9f9',
-        border: '1px solid #ddd',
         pageBreakInside: 'avoid'
       }}>
-        <div>
-          <span><strong>الحالة:</strong> {invoice.actual_status || invoice.status}</span>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '8px',
+          paddingBottom: '6px',
+          borderBottom: '1px dashed #93c5fd'
+        }}>
+          <div>
+            <span style={{ fontWeight: 'bold', color: '#1e40af' }}>حالة الفاتورة: </span>
+            <span style={{
+              padding: '2px 8px',
+              borderRadius: '12px',
+              fontSize: '9px',
+              fontWeight: 'bold',
+              backgroundColor: (invoice.actual_status || invoice.payment_status || invoice.status) === 'مدفوعة' ? '#d4edda' : 
+                            (invoice.actual_status || invoice.payment_status || invoice.status) === 'مدفوعة جزئياً' ? '#cce7ff' : '#fff3cd',
+              color: (invoice.actual_status || invoice.payment_status || invoice.status) === 'مدفوعة' ? '#155724' : 
+                     (invoice.actual_status || invoice.payment_status || invoice.status) === 'مدفوعة جزئياً' ? '#0066cc' : '#856404'
+            }}>
+              {invoice.actual_status || invoice.payment_status || invoice.status}
+            </span>
+          </div>
+          <div>
+            <span style={{ fontWeight: 'bold', color: '#1e40af' }}>نوع الدفع: </span>
+            <span style={{ fontWeight: 'bold' }}>
+              {invoice.actual_payment_type || invoice.payment_type || 'دفع آجل'}
+            </span>
+          </div>
         </div>
-        {(invoice.total_paid !== undefined && invoice.total_paid > 0) && (
-          <div style={{ textAlign: 'left' }}>
-            <div><strong>المدفوع:</strong> {invoice.total_paid.toFixed(2)} ر.س</div>
-            <div><strong>المتبقي:</strong> {(invoice.remaining_amount || 0).toFixed(2)} ر.س</div>
+        
+        {/* تفاصيل المدفوعات */}
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between',
+          gap: '15px'
+        }}>
+          <div style={{ textAlign: 'center', flex: 1 }}>
+            <div style={{ color: '#6b7280', marginBottom: '2px' }}>إجمالي الفاتورة</div>
+            <div style={{ fontWeight: 'bold', color: '#1e40af' }}>
+              {invoice.total_amount.toFixed(2)} ر.س
+            </div>
+          </div>
+          <div style={{ textAlign: 'center', flex: 1 }}>
+            <div style={{ color: '#6b7280', marginBottom: '2px' }}>المبلغ المدفوع</div>
+            <div style={{ fontWeight: 'bold', color: '#059669' }}>
+              {(invoice.total_paid || 0).toFixed(2)} ر.س
+            </div>
+          </div>
+          <div style={{ textAlign: 'center', flex: 1 }}>
+            <div style={{ color: '#6b7280', marginBottom: '2px' }}>المبلغ المتبقي</div>
+            <div style={{ 
+              fontWeight: 'bold', 
+              color: ((invoice.remaining_amount !== undefined ? invoice.remaining_amount : (invoice.total_amount - (invoice.total_paid || 0)))) > 0 ? '#dc2626' : '#059669'
+            }}>
+              {((invoice.remaining_amount !== undefined ? invoice.remaining_amount : (invoice.total_amount - (invoice.total_paid || 0)))).toFixed(2)} ر.س
+            </div>
+          </div>
+        </div>
+        
+        {/* شريط تقدم الدفع */}
+        {invoice.total_amount > 0 && (
+          <div style={{ marginTop: '8px' }}>
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              fontSize: '9px',
+              marginBottom: '3px',
+              color: '#6b7280'
+            }}>
+              <span>نسبة المدفوع</span>
+              <span>{Math.round(((invoice.total_paid || 0) / invoice.total_amount) * 100)}%</span>
+            </div>
+            <div style={{ 
+              width: '100%', 
+              height: '6px', 
+              backgroundColor: '#e5e7eb', 
+              borderRadius: '3px',
+              overflow: 'hidden'
+            }}>
+              <div style={{ 
+                width: `${Math.min(((invoice.total_paid || 0) / invoice.total_amount) * 100, 100)}%`,
+                height: '100%', 
+                backgroundColor: '#10b981',
+                borderRadius: '3px'
+              }} />
+            </div>
           </div>
         )}
       </div>

@@ -25,6 +25,7 @@ interface InvoicePreviewProps {
     status: string;
     payment_type: string;
     actual_status?: string;
+    payment_status?: string;
     actual_payment_type?: string;
     total_paid?: number;
     remaining_amount?: number;
@@ -210,39 +211,73 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({
               </div>
             </div>
 
-             {/* Payment Info */}
-             <div className="mb-4">
-               <div className="bg-blue-50 p-2 rounded text-xs">
-                 <strong className="text-blue-600 block mb-1">معلومات الحالة:</strong>
-                 <div className="grid grid-cols-1 gap-2">
-                   <div>
-                     <span className="text-gray-600">حالة الفاتورة:</span>
-                     <span className={`font-bold mr-1 px-1 rounded text-xs ${
-                       (invoice.actual_status || invoice.status) === 'مدفوعة' ? 'bg-green-100 text-green-700' : 
-                       (invoice.actual_status || invoice.status) === 'مدفوعة جزئياً' ? 'bg-blue-100 text-blue-700' :
-                       (invoice.actual_status || invoice.status) === 'قيد الانتظار' ? 'bg-yellow-100 text-yellow-700' :
-                       'bg-red-100 text-red-700'
-                     }`}>
-                       {invoice.actual_status || invoice.status}
-                     </span>
-                   </div>
-                 </div>
-                {(invoice.total_paid !== undefined && invoice.total_paid > 0) && (
-                  <div className="mt-2 pt-2 border-t border-blue-200">
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div>
-                        <span className="text-gray-600">المبلغ المدفوع:</span>
-                        <span className="font-bold mr-1 text-green-600">{invoice.total_paid.toFixed(2)} ر.س</span>
+            {/* Payment Info */}
+            <div className="mb-4">
+              <div className="bg-blue-50 p-3 rounded text-xs">
+                <strong className="text-blue-600 block mb-2">معلومات الدفع والحالة:</strong>
+                
+                {/* معلومات الحالة */}
+                <div className="grid grid-cols-1 gap-2 mb-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">حالة الفاتورة:</span>
+                    <span className={`font-bold px-2 py-1 rounded text-xs ${
+                      (invoice.actual_status || invoice.payment_status || invoice.status) === 'مدفوعة' ? 'bg-green-100 text-green-700' : 
+                      (invoice.actual_status || invoice.payment_status || invoice.status) === 'مدفوعة جزئياً' ? 'bg-blue-100 text-blue-700' :
+                      (invoice.actual_status || invoice.payment_status || invoice.status) === 'قيد الانتظار' ? 'bg-yellow-100 text-yellow-700' :
+                      'bg-red-100 text-red-700'
+                    }`}>
+                      {invoice.actual_status || invoice.payment_status || invoice.status}
+                    </span>
+                  </div>
+                  
+                  {/* نوع الدفع */}
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">نوع الدفع:</span>
+                    <span className="font-bold text-blue-600">
+                      {invoice.actual_payment_type || invoice.payment_type || 'دفع آجل'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* تفاصيل المدفوعات */}
+                <div className="border-t border-blue-200 pt-3">
+                  <div className="grid grid-cols-3 gap-3 text-xs">
+                    <div className="text-center">
+                      <div className="text-gray-600 mb-1">إجمالي الفاتورة</div>
+                      <div className="font-bold text-blue-600">
+                        {invoice.total_amount?.toLocaleString('ar-SA')} ر.س
                       </div>
-                      <div>
-                        <span className="text-gray-600">المبلغ المتبقي:</span>
-                        <span className={`font-bold mr-1 ${invoice.remaining_amount! > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                          {invoice.remaining_amount!.toFixed(2)} ر.س
-                        </span>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-gray-600 mb-1">المبلغ المدفوع</div>
+                      <div className="font-bold text-green-600">
+                        {(invoice.total_paid || 0).toLocaleString('ar-SA')} ر.س
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-gray-600 mb-1">المبلغ المتبقي</div>
+                      <div className={`font-bold ${(invoice.remaining_amount || (invoice.total_amount - (invoice.total_paid || 0))) > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                        {((invoice.remaining_amount !== undefined ? invoice.remaining_amount : (invoice.total_amount - (invoice.total_paid || 0)))).toLocaleString('ar-SA')} ر.س
                       </div>
                     </div>
                   </div>
-                )}
+                  
+                  {/* شريط تقدم الدفع */}
+                  {invoice.total_amount > 0 && (
+                    <div className="mt-3">
+                      <div className="flex justify-between text-xs mb-1">
+                        <span>نسبة المدفوع</span>
+                        <span>{Math.round(((invoice.total_paid || 0) / invoice.total_amount) * 100)}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className="bg-green-500 h-2 rounded-full transition-all duration-300" 
+                          style={{ width: `${Math.min(((invoice.total_paid || 0) / invoice.total_amount) * 100, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
