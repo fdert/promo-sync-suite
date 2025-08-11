@@ -20,8 +20,16 @@ const EmailTest = () => {
     try {
       console.log('🧪 اختبار إرسال بريد إلى:', email);
 
-      const { data, error } = await supabase.functions.invoke('test-email', {
-        body: { to: email }
+      const { data, error } = await supabase.functions.invoke('send-email', {
+        body: { 
+          to: email,
+          subject: '🧪 اختبار إرسال البريد الإلكتروني',
+          type: 'welcome',
+          data: {
+            fullName: 'عزيزنا العميل',
+            loginUrl: window.location.origin
+          }
+        }
       });
 
       if (error) {
@@ -33,8 +41,15 @@ const EmailTest = () => {
 
       if (data?.success) {
         toast.success(`تم إرسال بريد اختبار بنجاح إلى ${email}`);
+        console.log('✅ تفاصيل الإرسال:', data.details);
       } else {
+        console.error('❌ فشل الإرسال:', data);
         toast.error(data?.error || 'فشل في إرسال البريد');
+        
+        // عرض تفاصيل إضافية للمطور
+        if (data?.details) {
+          console.error('📋 تفاصيل الخطأ:', data.details);
+        }
       }
 
     } catch (error: any) {

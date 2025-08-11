@@ -199,6 +199,9 @@ const handler = async (req: Request): Promise<Response> => {
         throw new Error('نوع البريد الإلكتروني غير مدعوم');
     }
 
+    console.log("📤 محاولة إرسال البريد إلى:", to);
+    console.log("📧 نوع الرسالة:", type);
+
     const emailResponse = await resend.emails.send({
       from: "نظام إدارة الوكالات <onboarding@resend.dev>",
       to: [to],
@@ -206,12 +209,18 @@ const handler = async (req: Request): Promise<Response> => {
       html: htmlContent,
     });
 
-    console.log("تم إرسال البريد الإلكتروني بنجاح:", emailResponse);
+    console.log("✅ استجابة Resend:", emailResponse);
+
+    if (emailResponse.error) {
+      console.error("❌ خطأ من Resend:", emailResponse.error);
+      throw new Error(`Resend Error: ${emailResponse.error.message}`);
+    }
 
     return new Response(JSON.stringify({
       success: true,
       messageId: emailResponse.data?.id,
-      message: "تم إرسال البريد الإلكتروني بنجاح"
+      message: "تم إرسال البريد الإلكتروني بنجاح",
+      details: emailResponse.data
     }), {
       status: 200,
       headers: {
@@ -220,11 +229,25 @@ const handler = async (req: Request): Promise<Response> => {
       },
     });
   } catch (error: any) {
-    console.error("خطأ في إرسال البريد الإلكتروني:", error);
+    console.error("💥 خطأ شامل في إرسال البريد الإلكتروني:", error);
+    
+    // تفاصيل أكثر عن الخطأ
+    let errorDetails = {
+      message: error.message || "فشل في إرسال البريد الإلكتروني",
+      name: error.name,
+      stack: error.stack
+    };
+
+    // إذا كان خطأ من Resend
+    if (error.message?.includes('Resend')) {
+      errorDetails.resendError = true;
+    }
+
     return new Response(
       JSON.stringify({ 
         success: false,
-        error: error.message || "فشل في إرسال البريد الإلكتروني"
+        error: errorDetails.message,
+        details: errorDetails
       }),
       {
         status: 500,
