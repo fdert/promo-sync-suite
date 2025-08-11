@@ -155,9 +155,12 @@ const CreateAgencyForm = () => {
   const validateStep = (step: string) => {
     switch (step) {
       case "basic":
-        return formData.name && formData.contact_email;
+        // التحقق من صحة البيانات الأساسية
+        const isValidEmail = formData.contact_email && /\S+@\S+\.\S+/.test(formData.contact_email);
+        const isValidName = formData.name && formData.name.trim().length > 0;
+        return isValidName && isValidEmail;
       case "subscription":
-        return selectedPlan;
+        return selectedPlan && selectedPlan.length > 0;
       default:
         return true;
     }
@@ -168,6 +171,26 @@ const CreateAgencyForm = () => {
       setCurrentStep("subscription");
     } else if (currentStep === "subscription" && validateStep("subscription")) {
       setCurrentStep("summary");
+    } else {
+      // عرض رسالة خطأ للبيانات المطلوبة
+      if (currentStep === "basic") {
+        if (!formData.name.trim()) {
+          toast.error('يرجى إدخال اسم الوكالة');
+          return;
+        }
+        if (!formData.contact_email.trim()) {
+          toast.error('يرجى إدخال البريد الإلكتروني');
+          return;
+        }
+        if (!/\S+@\S+\.\S+/.test(formData.contact_email)) {
+          toast.error('يرجى إدخال بريد إلكتروني صحيح');
+          return;
+        }
+      }
+      if (currentStep === "subscription" && !selectedPlan) {
+        toast.error('يرجى اختيار خطة اشتراك');
+        return;
+      }
     }
   };
 
