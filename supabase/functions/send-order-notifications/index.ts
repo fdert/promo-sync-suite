@@ -221,10 +221,15 @@ Deno.serve(async (req) => {
       let description = 'غير محدد';
       if (orderDetails) {
         
-        // حساب المبلغ المتبقي
+        // حساب المبلغ المدفوع الفعلي من جدول المدفوعات
+        const { data: paymentsData } = await supabase
+          .from('payments')
+          .select('amount')
+          .eq('order_id', order_id);
+        
+        const actualPaidAmount = paymentsData?.reduce((sum, payment) => sum + parseFloat(payment.amount?.toString() || '0'), 0) || 0;
         const totalAmount = parseFloat(orderDetails.amount?.toString() || '0');
-        const paidAmount = parseFloat(orderDetails.paid_amount?.toString() || '0');
-        remainingAmount = (totalAmount - paidAmount).toString();
+        remainingAmount = (totalAmount - actualPaidAmount).toString();
         
         // تنسيق التواريخ
         if (orderDetails.start_date) {
@@ -244,10 +249,15 @@ Deno.serve(async (req) => {
         customerPhone = data.customer_phone;
         customerName = data.customer_name;
         
-        // حساب المبلغ المتبقي من البيانات المرسلة
+        // حساب المبلغ المدفوع الفعلي من جدول المدفوعات
+        const { data: paymentsData } = await supabase
+          .from('payments')
+          .select('amount')
+          .eq('order_id', order_id);
+        
+        const actualPaidAmount = paymentsData?.reduce((sum, payment) => sum + parseFloat(payment.amount?.toString() || '0'), 0) || 0;
         const totalAmount = parseFloat(data.amount?.toString() || '0');
-        const paidAmount = parseFloat(data.paid_amount?.toString() || '0');
-        remainingAmount = (totalAmount - paidAmount).toString();
+        remainingAmount = (totalAmount - actualPaidAmount).toString();
       }
       
       // استبدال المتغيرات
@@ -255,7 +265,7 @@ Deno.serve(async (req) => {
         'customer_name': customerName || '',
         'order_number': data.order_number || '',
         'amount': data.amount?.toString() || '',
-        'paid_amount': data.paid_amount?.toString() || '0',
+        'paid_amount': (parseFloat(remainingAmount) > 0 ? (parseFloat(data.amount?.toString() || '0') - parseFloat(remainingAmount)).toString() : data.amount?.toString() || '0'),
         'remaining_amount': remainingAmount,
         'payment_type': data.payment_type || 'غير محدد',
         'progress': data.progress?.toString() || '0',
@@ -534,7 +544,7 @@ ${data.file_url}
       service_name: data.service_name || '',
       description: orderDetails?.description || data.description || 'غير محدد',
       amount: data.amount?.toString() || '0',
-      paid_amount: data.paid_amount?.toString() || '0',
+      paid_amount: (parseFloat(remainingAmount) > 0 ? (parseFloat(data.amount?.toString() || '0') - parseFloat(remainingAmount)).toString() : data.amount?.toString() || '0'),
       remaining_amount: remainingAmount,
       payment_type: data.payment_type || 'غير محدد',
       status: data.new_status || data.status || orderDetails?.status || currentStatus || '',
