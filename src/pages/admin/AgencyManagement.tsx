@@ -199,15 +199,58 @@ const AgencyManagement = () => {
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('reset-user-password', {
-        body: {
-          userEmail: passwordResetForm.userEmail,
-          newPassword: passwordResetForm.newPassword,
-          adminUserId: user.id
-        }
-      });
+      // التحقق من صلاحيات المستخدم الحالي
+      const { data: userRoles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .in('role', ['admin', 'super_admin', 'manager']);
 
-      if (error) throw error;
+      if (rolesError) {
+        throw new Error('خطأ في التحقق من الصلاحيات');
+      }
+
+      if (!userRoles || userRoles.length === 0) {
+        throw new Error('ليس لديك صلاحية لإعادة تعيين كلمات المرور');
+      }
+
+      // البحث عن المستخدم بالبريد الإلكتروني
+      const { data: userData, error: userError } = await supabase.auth.admin.listUsers();
+      
+      if (userError) {
+        throw new Error('خطأ في البحث عن المستخدم');
+      }
+
+      const targetUser = userData.users.find(u => u.email === passwordResetForm.userEmail);
+      
+      if (!targetUser) {
+        throw new Error('المستخدم غير موجود');
+      }
+
+      // إعادة تعيين كلمة المرور
+      const { error: updateError } = await supabase.auth.admin.updateUserById(
+        targetUser.id,
+        { password: passwordResetForm.newPassword }
+      );
+
+      if (updateError) {
+        throw new Error('خطأ في تحديث كلمة المرور: ' + updateError.message);
+      }
+
+      // تسجيل النشاط
+      await supabase
+        .from('activity_logs')
+        .insert({
+          user_id: user.id,
+          action: 'password_reset',
+          resource_type: 'user',
+          resource_id: targetUser.id,
+          details: {
+            target_user_email: passwordResetForm.userEmail,
+            target_user_id: targetUser.id,
+            admin_user_id: user.id
+          }
+        });
 
       toast({
         title: "تم إعادة تعيين كلمة المرور",
