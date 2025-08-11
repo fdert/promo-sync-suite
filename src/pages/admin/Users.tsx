@@ -343,8 +343,58 @@ const Users = () => {
         return;
       }
 
-      // تحديث الدور والصلاحيات
-      await updateUserRoleAndPermissions(authData.user.id, newUser.role, newUser.permissions);
+      // إنشاء البروفايل في جدول profiles
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: authData.user.id,
+          full_name: newUser.name,
+          status: 'active'
+        });
+
+      if (profileError) {
+        console.error('Error creating profile:', profileError);
+        toast({
+          title: "خطأ", 
+          description: `خطأ في إنشاء البروفايل: ${profileError.message}`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // إنشاء الدور في جدول user_roles
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .insert({
+          user_id: authData.user.id,
+          role: newUser.role as 'admin' | 'manager' | 'employee' | 'accountant' | 'user' | 'super_admin'
+        });
+
+      if (roleError) {
+        console.error('Error creating role:', roleError);
+        toast({
+          title: "خطأ",
+          description: `خطأ في تعيين الدور: ${roleError.message}`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // إضافة الصلاحيات
+      if (newUser.permissions.length > 0) {
+        const permissionsData = newUser.permissions.map(permission => ({
+          user_id: authData.user.id,
+          permission
+        }));
+
+        const { error: permissionsError } = await supabase
+          .from('user_permissions')
+          .insert(permissionsData);
+
+        if (permissionsError) {
+          console.error('Error creating permissions:', permissionsError);
+        }
+      }
       
       // إعادة جلب البيانات
       await fetchUsers();
