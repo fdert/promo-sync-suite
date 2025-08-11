@@ -54,15 +54,28 @@ const handler = async (req: Request): Promise<Response> => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // التحقق من أن المدير لديه صلاحية
+    // التحقق من أن المدير لديه صلاحية باستخدام دالة has_role
     console.log("Checking admin permissions for user:", adminUserId);
-    const { data: adminRoles, error: rolesError } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', adminUserId);
+    const { data: hasPermission, error: permissionError } = await supabase
+      .rpc('has_role', { 
+        _user_id: adminUserId, 
+        _role: 'admin' 
+      });
 
-    if (rolesError) {
-      console.error("Error checking admin roles:", rolesError);
+    const { data: hasSuperAdminPermission, error: superAdminError } = await supabase
+      .rpc('has_role', { 
+        _user_id: adminUserId, 
+        _role: 'super_admin' 
+      });
+
+    const { data: hasManagerPermission, error: managerError } = await supabase
+      .rpc('has_role', { 
+        _user_id: adminUserId, 
+        _role: 'manager' 
+      });
+
+    if (permissionError || superAdminError || managerError) {
+      console.error("Error checking permissions:", { permissionError, superAdminError, managerError });
       return new Response(
         JSON.stringify({ error: "خطأ في التحقق من الصلاحيات" }),
         {
@@ -72,12 +85,10 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const hasPermission = adminRoles?.some(role => 
-      ['admin', 'super_admin', 'manager'].includes(role.role)
-    );
+    const hasAnyPermission = hasPermission || hasSuperAdminPermission || hasManagerPermission;
 
-    if (!hasPermission) {
-      console.log("User does not have permission:", adminRoles);
+    if (!hasAnyPermission) {
+      console.log("User does not have permission");
       return new Response(
         JSON.stringify({ error: "ليس لديك صلاحية لإعادة تعيين كلمات المرور" }),
         {
