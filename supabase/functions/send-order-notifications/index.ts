@@ -501,12 +501,6 @@ ${data.file_url}
           continue;
         }
         
-        // تجاهل الـ webhook إذا كان نفس المفضل لتجنب التكرار
-        if (webhook_preference && webhook.webhook_name === webhook_preference) {
-          console.log('Skipping webhook', webhook.webhook_name, ', preference is', webhook_preference);
-          continue;
-        }
-        
         // تحقق من order_statuses
         if (!webhook.order_statuses || webhook.order_statuses.length === 0) {
           // webhook لجميع الحالات
