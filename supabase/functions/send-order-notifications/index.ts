@@ -224,22 +224,12 @@ Deno.serve(async (req) => {
       
       // حساب المبلغ المدفوع الفعلي من جدول المدفوعات
       if (order_id) {
-        const { data: paymentsData, error: paymentsError } = await supabase
+        const { data: paymentsData } = await supabase
           .from('payments')
           .select('amount')
           .eq('order_id', order_id);
         
-        console.log('Payments query result:', { paymentsData, paymentsError, order_id });
-        
-        if (!paymentsError && paymentsData) {
-          actualPaidAmount = paymentsData.reduce((sum: number, payment: any) => {
-            const amount = parseFloat(payment.amount?.toString() || '0');
-            console.log('Processing payment amount:', amount);
-            return sum + amount;
-          }, 0);
-        }
-        
-        console.log('Final calculated paid amount:', actualPaidAmount);
+        actualPaidAmount = paymentsData?.reduce((sum, payment) => sum + parseFloat(payment.amount?.toString() || '0'), 0) || 0;
       }
       
       if (orderDetails) {
@@ -545,28 +535,16 @@ ${data.file_url}
     }
 
     // إعداد بيانات الرسالة للإرسال عبر n8n كمتغيرات منفصلة في الجذر
-    // استخدام نفس القيم المحسوبة مسبقاً
+    // حساب المبلغ المدفوع الفعلي للـ payload
     let actualPaidForPayload = 0;
-    let totalAmountForPayload = 0;
-    
     if (order_id) {
-      const { data: paymentsData, error: paymentsError } = await supabase
+      const { data: paymentsData } = await supabase
         .from('payments')
         .select('amount')
         .eq('order_id', order_id);
       
-      console.log('Payload payments query result:', { paymentsData, paymentsError, order_id });
-      
-      if (!paymentsError && paymentsData) {
-        actualPaidForPayload = paymentsData.reduce((sum: number, payment: any) => {
-          const amount = parseFloat(payment.amount?.toString() || '0');
-          return sum + amount;
-        }, 0);
-      }
+      actualPaidForPayload = paymentsData?.reduce((sum, payment) => sum + parseFloat(payment.amount?.toString() || '0'), 0) || 0;
     }
-    
-    totalAmountForPayload = parseFloat(data.amount?.toString() || '0');
-    const remainingAmountForPayload = (totalAmountForPayload - actualPaidForPayload).toString();
 
     const messagePayload = {
       // متغيرات قوالب الرسائل - يمكن الوصول إليها مباشرة في n8n
@@ -574,9 +552,9 @@ ${data.file_url}
       order_number: data.order_number || '',
       service_name: data.service_name || '',
       description: orderDetails?.description || data.description || 'غير محدد',
-      amount: totalAmountForPayload.toString(),
+      amount: data.amount?.toString() || '0',
       paid_amount: actualPaidForPayload.toString(),
-      remaining_amount: remainingAmountForPayload,
+      remaining_amount: remainingAmount,
       payment_type: data.payment_type || 'غير محدد',
       status: data.new_status || data.status || orderDetails?.status || currentStatus || '',
       priority: data.priority || 'متوسطة',
