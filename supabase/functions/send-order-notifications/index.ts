@@ -478,36 +478,34 @@ ${data.file_url}
       if (webhook_preference) {
         console.log('Looking for preferred webhook:', webhook_preference);
         
-        for (const webhook of webhookSettings) {
-          console.log('Checking webhook:', {
-            name: webhook.webhook_name,
-            type: webhook.webhook_type,
-            active: webhook.is_active,
-            statuses: webhook.order_statuses
-          });
+        selectedWebhook = webhookSettings.find(w => 
+          w.webhook_name === webhook_preference && 
+          w.is_active && 
+          w.webhook_type === 'outgoing'
+        );
+        
+        if (selectedWebhook) {
+          console.log('Found preferred webhook:', selectedWebhook.webhook_name);
+          console.log('Webhook URL:', selectedWebhook.webhook_url);
+          console.log('Webhook statuses:', selectedWebhook.order_statuses);
           
-          // تحقق من اسم الويب هوك المفضل
-          if (webhook.webhook_name === webhook_preference && 
-              webhook.is_active && 
-              webhook.webhook_type === 'outgoing') {
-            
-            // تحقق من دعم نوع الإشعار
-            if (!webhook.order_statuses || 
-                webhook.order_statuses.length === 0 || 
-                webhook.order_statuses.includes(type)) {
-              selectedWebhook = webhook;
-              console.log('Found and using preferred webhook:', webhook_preference);
-              break;
-            } else {
-              console.log('Preferred webhook does not support notification type:', type);
-            }
+          // تحقق من دعم نوع الإشعار
+          if (!selectedWebhook.order_statuses || 
+              selectedWebhook.order_statuses.length === 0 || 
+              selectedWebhook.order_statuses.includes(type)) {
+            console.log('Preferred webhook supports this notification type');
+          } else {
+            console.log('Preferred webhook does not support notification type:', type);
+            selectedWebhook = null;
           }
+        } else {
+          console.log('Preferred webhook not found:', webhook_preference);
         }
       }
       
       // إذا لم نجد الويب هوك المفضل، ابحث عن أي webhook مناسب
       if (!selectedWebhook) {
-        console.log('Preferred webhook not found, searching for suitable webhook');
+        console.log('Searching for alternative webhook for type:', type);
         
         // البحث عن webhook نشط يحتوي على هذا النوع من الإشعارات
         for (const webhook of webhookSettings) {
@@ -518,15 +516,13 @@ ${data.file_url}
             statuses: webhook.order_statuses
           });
           
-          // تأكد من أن الـ webhook نشط أولاً
+          // تأكد من أن الـ webhook نشط
           if (!webhook.is_active) {
-            console.log('Webhook not active, skipping');
             continue;
           }
           
-          // تحقق من webhook_type أولاً - نريد 'outgoing' للإشعارات
+          // تحقق من webhook_type - نريد 'outgoing' للإشعارات
           if (webhook.webhook_type !== 'outgoing') {
-            console.log('Webhook type is not outgoing:', webhook.webhook_type);
             continue;
           }
           
@@ -534,16 +530,13 @@ ${data.file_url}
           if (!webhook.order_statuses || webhook.order_statuses.length === 0) {
             // webhook لجميع الحالات
             selectedWebhook = webhook;
-            console.log('Using webhook for all statuses');
+            console.log('Using webhook for all statuses:', webhook.webhook_name);
             break;
-          } else {
-            console.log('Checking if webhook contains status:', type, 'in:', webhook.order_statuses);
-            if (Array.isArray(webhook.order_statuses) && webhook.order_statuses.includes(type)) {
-              // webhook مخصص لهذا النوع
-              selectedWebhook = webhook;
-              console.log('Found matching webhook for type:', type);
-              break;
-            }
+          } else if (Array.isArray(webhook.order_statuses) && webhook.order_statuses.includes(type)) {
+            // webhook مخصص لهذا النوع
+            selectedWebhook = webhook;
+            console.log('Found matching webhook for type:', type, '- webhook:', webhook.webhook_name);
+            break;
           }
         }
       }
