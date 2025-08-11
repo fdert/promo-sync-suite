@@ -288,7 +288,7 @@ const AgenciesManagement = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => window.open(`/agency/${agency.slug}`, '_blank')}
+                        onClick={() => navigate('/admin/agency')}
                         className="flex items-center gap-1"
                       >
                         <Settings className="h-4 w-4" />
