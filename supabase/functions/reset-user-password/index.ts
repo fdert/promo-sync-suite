@@ -54,28 +54,18 @@ const handler = async (req: Request): Promise<Response> => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // التحقق من أن المدير لديه صلاحية باستخدام دالة has_role
+    // التحقق من أن المدير لديه صلاحية
     console.log("Checking admin permissions for user:", adminUserId);
-    const { data: hasPermission, error: permissionError } = await supabase
-      .rpc('has_role', { 
-        _user_id: adminUserId, 
-        _role: 'admin' 
-      });
+    
+    // التحقق من الأذونات باستخدام استعلام مباشر للتأكد من وجود الدور
+    const { data: userRoles, error: rolesError } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', adminUserId)
+      .in('role', ['admin', 'super_admin', 'manager']);
 
-    const { data: hasSuperAdminPermission, error: superAdminError } = await supabase
-      .rpc('has_role', { 
-        _user_id: adminUserId, 
-        _role: 'super_admin' 
-      });
-
-    const { data: hasManagerPermission, error: managerError } = await supabase
-      .rpc('has_role', { 
-        _user_id: adminUserId, 
-        _role: 'manager' 
-      });
-
-    if (permissionError || superAdminError || managerError) {
-      console.error("Error checking permissions:", { permissionError, superAdminError, managerError });
+    if (rolesError) {
+      console.error("Error checking user roles:", rolesError);
       return new Response(
         JSON.stringify({ error: "خطأ في التحقق من الصلاحيات" }),
         {
@@ -85,10 +75,8 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const hasAnyPermission = hasPermission || hasSuperAdminPermission || hasManagerPermission;
-
-    if (!hasAnyPermission) {
-      console.log("User does not have permission");
+    if (!userRoles || userRoles.length === 0) {
+      console.log("User does not have required permissions");
       return new Response(
         JSON.stringify({ error: "ليس لديك صلاحية لإعادة تعيين كلمات المرور" }),
         {
@@ -97,6 +85,8 @@ const handler = async (req: Request): Promise<Response> => {
         }
       );
     }
+
+    console.log("User has valid permissions:", userRoles);
 
     // البحث عن المستخدم بالبريد الإلكتروني
     console.log("Looking for user with email:", userEmail);
