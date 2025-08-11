@@ -222,20 +222,28 @@ Deno.serve(async (req) => {
       let actualPaidAmount = 0;
       let totalAmount = 0;
       
-      // حساب المبلغ المدفوع الفعلي من جدول المدفوعات باستخدام SUM
+      // حساب المبلغ المدفوع الفعلي من جدول المدفوعات
       if (order_id) {
-        const { data: paymentSumData, error: paymentSumError } = await supabase
+        const { data: paymentsData, error: paymentsError } = await supabase
           .from('payments')
-          .select('amount.sum()')
+          .select('amount')
           .eq('order_id', order_id);
         
-        console.log('Payment sum query result:', { paymentSumData, paymentSumError, order_id });
+        console.log('=== Payment Calculation Debug ===');
+        console.log('Order ID:', order_id);
+        console.log('Payments Data:', paymentsData);
+        console.log('Payments Error:', paymentsError);
         
-        if (!paymentSumError && paymentSumData && paymentSumData.length > 0) {
-          actualPaidAmount = parseFloat(paymentSumData[0].sum?.toString() || '0');
+        if (!paymentsError && paymentsData && paymentsData.length > 0) {
+          actualPaidAmount = paymentsData.reduce((sum: number, payment: any) => {
+            const amount = parseFloat(payment.amount?.toString() || '0');
+            console.log('Adding payment amount:', amount);
+            return sum + amount;
+          }, 0);
         }
         
-        console.log('Final calculated paid amount using SUM:', actualPaidAmount);
+        console.log('=== Final Calculated Amount ===');
+        console.log('Total Paid Amount:', actualPaidAmount);
       }
       
       if (orderDetails) {
@@ -541,21 +549,29 @@ ${data.file_url}
     }
 
     // إعداد بيانات الرسالة للإرسال عبر n8n كمتغيرات منفصلة في الجذر
-    // استخدام نفس القيم المحسوبة مسبقاً - استخدام SUM للدقة
+    // حساب المبلغ المدفوع للاستخدام في payload
     let actualPaidForPayload = 0;
     let totalAmountForPayload = 0;
     
     if (order_id) {
-      const { data: paymentSumData, error: paymentSumError } = await supabase
+      const { data: paymentsData, error: paymentsError } = await supabase
         .from('payments')
-        .select('amount.sum()')
+        .select('amount')
         .eq('order_id', order_id);
       
-      console.log('Payload payment sum query result:', { paymentSumData, paymentSumError, order_id });
+      console.log('=== Payload Payment Calculation ===');
+      console.log('Order ID for payload:', order_id);
+      console.log('Payments for payload:', paymentsData);
       
-      if (!paymentSumError && paymentSumData && paymentSumData.length > 0) {
-        actualPaidForPayload = parseFloat(paymentSumData[0].sum?.toString() || '0');
+      if (!paymentsError && paymentsData && paymentsData.length > 0) {
+        actualPaidForPayload = paymentsData.reduce((sum: number, payment: any) => {
+          const amount = parseFloat(payment.amount?.toString() || '0');
+          console.log('Adding payment for payload:', amount);
+          return sum + amount;
+        }, 0);
       }
+      
+      console.log('Final payload paid amount:', actualPaidForPayload);
     }
     
     totalAmountForPayload = parseFloat(data.amount?.toString() || '0');
