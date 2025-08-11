@@ -35,7 +35,7 @@ interface InvoicePreviewProps {
       phone?: string;
       address?: string;
     };
-  } | null;
+  };
   items: InvoiceItem[];
   onPrint?: () => void;
   companyInfo?: {
@@ -62,11 +62,6 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({
     email: "البريد الإلكتروني"
   }
 }) => {
-  // التحقق من وجود الفاتورة
-  if (!invoice) {
-    return null;
-  }
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
