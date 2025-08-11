@@ -161,7 +161,9 @@ const PrintOrders = () => {
           file_type: "design",
           file_size: file.size,
           mime_type: file.type,
-          uploaded_by: user.id
+          uploaded_by: user.id,
+          upload_date: new Date().toISOString(),
+          is_approved: false
         });
 
       if (dbError) throw dbError;
