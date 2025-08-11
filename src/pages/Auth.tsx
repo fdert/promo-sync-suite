@@ -70,12 +70,36 @@ const Auth = () => {
     loadCompanyData();
   }, []);
 
-  // إعادة توجيه المستخدمين المسجلين إلى لوحة الإدارة
+  // إعادة توجيه المستخدمين المسجلين حسب أدوارهم
   useEffect(() => {
     if (user) {
-      navigate("/admin");
+      getUserRole();
     }
   }, [user, navigate]);
+
+  const getUserRole = async () => {
+    if (!user) return;
+    
+    try {
+      const { data: userRoles } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id);
+
+      const roles = userRoles?.map(r => r.role) || [];
+      
+      if (roles.includes('admin') || roles.includes('manager')) {
+        navigate('/admin');
+      } else if (roles.includes('employee')) {
+        navigate('/employee');
+      } else {
+        // المستخدم ليس له دور محدد - يبقى في صفحة Auth
+        console.log('المستخدم ليس له دور محدد');
+      }
+    } catch (error) {
+      console.error('خطأ في جلب أدوار المستخدم:', error);
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,7 +121,7 @@ const Auth = () => {
         title: "تم تسجيل الدخول بنجاح",
         description: "مرحباً بك في النظام"
       });
-      navigate("/admin");
+      // التوجيه سيتم تلقائياً من خلال useEffect
     }
     
     setLoading(false);
