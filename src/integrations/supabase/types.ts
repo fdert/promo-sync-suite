@@ -229,6 +229,7 @@ export type Database = {
       agency_members: {
         Row: {
           agency_id: string
+          created_at: string | null
           created_by: string | null
           id: string
           is_active: boolean | null
@@ -239,6 +240,7 @@ export type Database = {
         }
         Insert: {
           agency_id: string
+          created_at?: string | null
           created_by?: string | null
           id?: string
           is_active?: boolean | null
@@ -249,6 +251,7 @@ export type Database = {
         }
         Update: {
           agency_id?: string
+          created_at?: string | null
           created_by?: string | null
           id?: string
           is_active?: boolean | null
