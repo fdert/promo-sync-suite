@@ -73,8 +73,6 @@ Deno.serve(async (req) => {
     let startDate = 'سيتم تحديده';
     let dueDate = 'سيتم تحديده';
     let companyName = 'وكالة الإبداع للدعاية والإعلان';
-    let actualPaidAmount = 0;
-    let totalAmount = 0;
 
     // جلب اسم الشركة من قاعدة البيانات
     try {
@@ -221,6 +219,8 @@ Deno.serve(async (req) => {
       
       // إذا كانت هناك تفاصيل طلب، استخدمها
       let description = 'غير محدد';
+      let actualPaidAmount = 0;
+      let totalAmount = 0;
       
       // حساب المبلغ المدفوع الفعلي من جدول المدفوعات
       if (order_id) {
@@ -229,21 +229,17 @@ Deno.serve(async (req) => {
           .select('amount')
           .eq('order_id', order_id);
         
-        console.log('=== Payment Calculation Debug ===');
-        console.log('Order ID:', order_id);
-        console.log('Payments Data:', paymentsData);
-        console.log('Payments Error:', paymentsError);
+        console.log('Payments query result:', { paymentsData, paymentsError, order_id });
         
-        if (!paymentsError && paymentsData && paymentsData.length > 0) {
+        if (!paymentsError && paymentsData) {
           actualPaidAmount = paymentsData.reduce((sum: number, payment: any) => {
             const amount = parseFloat(payment.amount?.toString() || '0');
-            console.log('Adding payment amount:', amount);
+            console.log('Processing payment amount:', amount);
             return sum + amount;
           }, 0);
         }
         
-        console.log('=== Final Calculated Amount ===');
-        console.log('Total Paid Amount:', actualPaidAmount);
+        console.log('Final calculated paid amount:', actualPaidAmount);
       }
       
       if (orderDetails) {
@@ -549,15 +545,28 @@ ${data.file_url}
     }
 
     // إعداد بيانات الرسالة للإرسال عبر n8n كمتغيرات منفصلة في الجذر
-    // استخدام نفس القيم المحسوبة مسبقاً للـ payload  
-    const actualPaidForPayload = actualPaidAmount; // استخدام نفس القيمة المحسوبة
-    const totalAmountForPayload = totalAmount; // استخدام نفس القيمة المحسوبة
-    const remainingAmountForPayload = remainingAmount; // استخدام نفس القيمة المحسوبة
+    // استخدام نفس القيم المحسوبة مسبقاً
+    let actualPaidForPayload = 0;
+    let totalAmountForPayload = 0;
     
-    console.log('=== Using Pre-calculated Values for Payload ===');
-    console.log('Paid Amount for Payload:', actualPaidForPayload);
-    console.log('Total Amount for Payload:', totalAmountForPayload);
-    console.log('Remaining Amount for Payload:', remainingAmountForPayload);
+    if (order_id) {
+      const { data: paymentsData, error: paymentsError } = await supabase
+        .from('payments')
+        .select('amount')
+        .eq('order_id', order_id);
+      
+      console.log('Payload payments query result:', { paymentsData, paymentsError, order_id });
+      
+      if (!paymentsError && paymentsData) {
+        actualPaidForPayload = paymentsData.reduce((sum: number, payment: any) => {
+          const amount = parseFloat(payment.amount?.toString() || '0');
+          return sum + amount;
+        }, 0);
+      }
+    }
+    
+    totalAmountForPayload = parseFloat(data.amount?.toString() || '0');
+    const remainingAmountForPayload = (totalAmountForPayload - actualPaidForPayload).toString();
 
     const messagePayload = {
       // متغيرات قوالب الرسائل - يمكن الوصول إليها مباشرة في n8n
