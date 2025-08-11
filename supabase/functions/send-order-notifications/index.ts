@@ -453,6 +453,7 @@ ${data.file_url}
       
       // إذا كان هناك webhook مفضل محدد، ابحث عنه أولاً
       if (webhook_preference) {
+        console.log('Looking for preferred webhook:', webhook_preference);
         const preferredWebhook = webhookSettings.find(w => 
           w.is_active && 
           w.webhook_type === 'outgoing' && 
@@ -460,13 +461,18 @@ ${data.file_url}
         );
         
         if (preferredWebhook) {
+          console.log('Found preferred webhook:', preferredWebhook.webhook_name);
           // تحقق من دعم نوع الإشعار
           if (!preferredWebhook.order_statuses || 
               preferredWebhook.order_statuses.length === 0 || 
               preferredWebhook.order_statuses.includes(type)) {
             selectedWebhook = preferredWebhook;
             console.log('Using preferred webhook:', webhook_preference);
+          } else {
+            console.log('Preferred webhook does not support this notification type:', type);
           }
+        } else {
+          console.log('Preferred webhook not found:', webhook_preference);
         }
       }
       
@@ -492,6 +498,12 @@ ${data.file_url}
         // تحقق من webhook_type أولاً - نريد 'outgoing' للإشعارات
         if (webhook.webhook_type !== 'outgoing') {
           console.log('Webhook type is not outgoing:', webhook.webhook_type);
+          continue;
+        }
+        
+        // تجاهل الـ webhook إذا كان نفس المفضل لتجنب التكرار
+        if (webhook_preference && webhook.webhook_name === webhook_preference) {
+          console.log('Skipping webhook', webhook.webhook_name, ', preference is', webhook_preference);
           continue;
         }
         
