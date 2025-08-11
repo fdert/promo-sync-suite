@@ -18,10 +18,17 @@ export const SendAgencyLoginButton = ({ agencyId, agencyName, userEmail }: SendA
     try {
       console.log('🚀 إرسال بيانات دخول الوكالة:', { agencyId, agencyName, userEmail });
 
-      const { data, error } = await supabase.functions.invoke('send-agency-login-details', {
+      // استخدام edge function موجود
+      const { data, error } = await supabase.functions.invoke('send-email', {
         body: {
-          agencyId,
-          userEmail
+          to: userEmail,
+          subject: `🎉 مرحباً بك! تم إنشاء وكالة "${agencyName}" بنجاح`,
+          type: 'agency_login_details',
+          data: {
+            agencyId,
+            agencyName,
+            userEmail
+          }
         }
       });
 
