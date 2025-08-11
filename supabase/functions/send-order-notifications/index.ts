@@ -219,21 +219,12 @@ Deno.serve(async (req) => {
       
       // إذا كانت هناك تفاصيل طلب، استخدمها
       let description = 'غير محدد';
-      let actualPaidAmount = 0;
-      let totalAmount = 0;
-      
-      // حساب المبلغ المدفوع الفعلي من جدول المدفوعات
-      if (order_id) {
-        const { data: paymentsData } = await supabase
-          .from('payments')
-          .select('amount')
-          .eq('order_id', order_id);
-        
-        actualPaidAmount = paymentsData?.reduce((sum, payment) => sum + parseFloat(payment.amount?.toString() || '0'), 0) || 0;
-      }
-      
       if (orderDetails) {
-        totalAmount = parseFloat(orderDetails.amount?.toString() || '0');
+        
+        // حساب المبلغ المتبقي
+        const totalAmount = parseFloat(orderDetails.amount?.toString() || '0');
+        const paidAmount = parseFloat(orderDetails.paid_amount?.toString() || '0');
+        remainingAmount = (totalAmount - paidAmount).toString();
         
         // تنسيق التواريخ
         if (orderDetails.start_date) {
@@ -252,18 +243,19 @@ Deno.serve(async (req) => {
         // استخدام البيانات المرسلة مباشرة
         customerPhone = data.customer_phone;
         customerName = data.customer_name;
-        totalAmount = parseFloat(data.amount?.toString() || '0');
+        
+        // حساب المبلغ المتبقي من البيانات المرسلة
+        const totalAmount = parseFloat(data.amount?.toString() || '0');
+        const paidAmount = parseFloat(data.paid_amount?.toString() || '0');
+        remainingAmount = (totalAmount - paidAmount).toString();
       }
-      
-      // حساب المبلغ المتبقي
-      remainingAmount = (totalAmount - actualPaidAmount).toString();
       
       // استبدال المتغيرات
       const replacements: Record<string, string> = {
         'customer_name': customerName || '',
         'order_number': data.order_number || '',
-        'amount': totalAmount.toString(),
-        'paid_amount': actualPaidAmount.toString(),
+        'amount': data.amount?.toString() || '',
+        'paid_amount': data.paid_amount?.toString() || '0',
         'remaining_amount': remainingAmount,
         'payment_type': data.payment_type || 'غير محدد',
         'progress': data.progress?.toString() || '0',
@@ -451,80 +443,90 @@ ${data.file_url}
         statuses: w.order_statuses
       })));
       
-      // أولاً: البحث عن الـ webhook المفضل "لوحة الموظف" إذا تم تحديده
-      if (webhook_preference === 'لوحة الموظف') {
-        const employeeWebhook = webhookSettings.find(w => 
+      // إذا كان هناك webhook مفضل محدد، ابحث عنه أولاً
+      if (webhook_preference) {
+        const preferredWebhook = webhookSettings.find(w => 
           w.is_active && 
           w.webhook_type === 'outgoing' && 
-          w.webhook_name === 'لوحة الموظف'
+          w.webhook_name === webhook_preference
         );
         
-        if (employeeWebhook) {
-          console.log('Found employee dashboard webhook');
-          selectedWebhook = employeeWebhook;
+        if (preferredWebhook) {
+          // تحقق من دعم نوع الإشعار
+          if (!preferredWebhook.order_statuses || 
+              preferredWebhook.order_statuses.length === 0 || 
+              preferredWebhook.order_statuses.includes(type)) {
+            selectedWebhook = preferredWebhook;
+            console.log('Using preferred webhook:', webhook_preference);
+          }
         }
       }
       
-      // ثانياً: إذا لم نجد webhook "لوحة الموظف"، ابحث عن أي webhook مناسب
+      // إذا لم نجد الويب هوك المفضل، ابحث عن أي webhook مناسب
       if (!selectedWebhook) {
-        console.log('Searching for alternative webhook');
+        console.log('Preferred webhook not found or not suitable, searching for alternative');
         
-        // البحث عن webhook نشط يدعم هذا النوع من الإشعارات
+        // البحث عن webhook نشط يحتوي على هذا النوع من الإشعارات
         for (const webhook of webhookSettings) {
-          console.log('Checking webhook:', {
-            name: webhook.webhook_name,
-            type: webhook.webhook_type,
-            active: webhook.is_active,
-            statuses: webhook.order_statuses
-          });
-          
-          // تأكد من أن الـ webhook نشط ومن نوع outgoing
-          if (!webhook.is_active || webhook.webhook_type !== 'outgoing') {
-            console.log('Webhook not suitable:', webhook.webhook_name);
-            continue;
-          }
-          
-          // تحقق من دعم نوع الإشعار
-          if (!webhook.order_statuses || 
-              webhook.order_statuses.length === 0 || 
-              webhook.order_statuses.includes(type)) {
+        console.log('Checking webhook:', {
+          name: webhook.webhook_name,
+          type: webhook.webhook_type,
+          active: webhook.is_active,
+          statuses: webhook.order_statuses
+        });
+        
+        // تأكد من أن الـ webhook نشط أولاً
+        if (!webhook.is_active) {
+          console.log('Webhook not active, skipping');
+          continue;
+        }
+        
+        // تحقق من webhook_type أولاً - نريد 'outgoing' للإشعارات
+        if (webhook.webhook_type !== 'outgoing') {
+          console.log('Webhook type is not outgoing:', webhook.webhook_type);
+          continue;
+        }
+        
+        // تحقق من order_statuses
+        if (!webhook.order_statuses || webhook.order_statuses.length === 0) {
+          // webhook لجميع الحالات
+          selectedWebhook = webhook;
+          console.log('Using webhook for all statuses');
+          break;
+        } else {
+          console.log('Checking if webhook contains status:', type, 'in:', webhook.order_statuses);
+          if (Array.isArray(webhook.order_statuses) && webhook.order_statuses.includes(type)) {
+            // webhook مخصص لهذا النوع
             selectedWebhook = webhook;
-            console.log('Using webhook:', webhook.webhook_name);
+            console.log('Found matching webhook for type:', type);
             break;
           }
         }
       }
       
-      // ثالثاً: إذا لم نجد أي webhook مناسب، استخدم أول webhook نشط
+      // إذا لم نجد webhook مخصص، نستخدم أول webhook نشط من نوع outgoing
       if (!selectedWebhook) {
-        console.log('No specific webhook found, using first active outgoing webhook');
-        const fallbackWebhook = webhookSettings.find(w => w.is_active && w.webhook_type === 'outgoing');
-        if (fallbackWebhook) {
-          selectedWebhook = fallbackWebhook;
-          console.log('Using fallback webhook:', fallbackWebhook.webhook_name);
+        console.log('No specific webhook found, looking for fallback');
+        const activeWebhook = webhookSettings.find(w => w.is_active && w.webhook_type === 'outgoing');
+        if (activeWebhook) {
+          selectedWebhook = activeWebhook;
+          console.log('Using first active outgoing webhook as fallback');
         }
       }
     }
 
     if (!selectedWebhook?.webhook_url) {
-      console.log('No webhook found for notification type:', type);
-      throw new Error(`No active webhook configured for notification type: ${type}`);
+      console.log('No matching webhook found for notification type:', type);
+      // بدلاً من رمي خطأ، سنحاول الإرسال مع webhook افتراضي إذا وجد
+      if (webhookSettings && webhookSettings.length > 0) {
+        selectedWebhook = webhookSettings[0];
+        console.log('Using first available webhook as last resort');
+      } else {
+        throw new Error(`No active webhook configured for notification type: ${type}`);
+      }
     }
-
-    console.log('Final selected webhook:', selectedWebhook.webhook_name, 'URL:', selectedWebhook.webhook_url);
 
     // إعداد بيانات الرسالة للإرسال عبر n8n كمتغيرات منفصلة في الجذر
-    // حساب المبلغ المدفوع الفعلي للـ payload
-    let actualPaidForPayload = 0;
-    if (order_id) {
-      const { data: paymentsData } = await supabase
-        .from('payments')
-        .select('amount')
-        .eq('order_id', order_id);
-      
-      actualPaidForPayload = paymentsData?.reduce((sum, payment) => sum + parseFloat(payment.amount?.toString() || '0'), 0) || 0;
-    }
-
     const messagePayload = {
       // متغيرات قوالب الرسائل - يمكن الوصول إليها مباشرة في n8n
       customer_name: customerName,
@@ -532,7 +534,7 @@ ${data.file_url}
       service_name: data.service_name || '',
       description: orderDetails?.description || data.description || 'غير محدد',
       amount: data.amount?.toString() || '0',
-      paid_amount: actualPaidForPayload.toString(),
+      paid_amount: data.paid_amount?.toString() || '0',
       remaining_amount: remainingAmount,
       payment_type: data.payment_type || 'غير محدد',
       status: data.new_status || data.status || orderDetails?.status || currentStatus || '',
