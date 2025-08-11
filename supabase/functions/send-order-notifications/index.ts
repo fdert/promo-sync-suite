@@ -222,24 +222,20 @@ Deno.serve(async (req) => {
       let actualPaidAmount = 0;
       let totalAmount = 0;
       
-      // حساب المبلغ المدفوع الفعلي من جدول المدفوعات
+      // حساب المبلغ المدفوع الفعلي من جدول المدفوعات باستخدام SUM
       if (order_id) {
-        const { data: paymentsData, error: paymentsError } = await supabase
+        const { data: paymentSumData, error: paymentSumError } = await supabase
           .from('payments')
-          .select('amount')
+          .select('amount.sum()')
           .eq('order_id', order_id);
         
-        console.log('Payments query result:', { paymentsData, paymentsError, order_id });
+        console.log('Payment sum query result:', { paymentSumData, paymentSumError, order_id });
         
-        if (!paymentsError && paymentsData) {
-          actualPaidAmount = paymentsData.reduce((sum: number, payment: any) => {
-            const amount = parseFloat(payment.amount?.toString() || '0');
-            console.log('Processing payment amount:', amount);
-            return sum + amount;
-          }, 0);
+        if (!paymentSumError && paymentSumData && paymentSumData.length > 0) {
+          actualPaidAmount = parseFloat(paymentSumData[0].sum?.toString() || '0');
         }
         
-        console.log('Final calculated paid amount:', actualPaidAmount);
+        console.log('Final calculated paid amount using SUM:', actualPaidAmount);
       }
       
       if (orderDetails) {
@@ -545,23 +541,20 @@ ${data.file_url}
     }
 
     // إعداد بيانات الرسالة للإرسال عبر n8n كمتغيرات منفصلة في الجذر
-    // استخدام نفس القيم المحسوبة مسبقاً
+    // استخدام نفس القيم المحسوبة مسبقاً - استخدام SUM للدقة
     let actualPaidForPayload = 0;
     let totalAmountForPayload = 0;
     
     if (order_id) {
-      const { data: paymentsData, error: paymentsError } = await supabase
+      const { data: paymentSumData, error: paymentSumError } = await supabase
         .from('payments')
-        .select('amount')
+        .select('amount.sum()')
         .eq('order_id', order_id);
       
-      console.log('Payload payments query result:', { paymentsData, paymentsError, order_id });
+      console.log('Payload payment sum query result:', { paymentSumData, paymentSumError, order_id });
       
-      if (!paymentsError && paymentsData) {
-        actualPaidForPayload = paymentsData.reduce((sum: number, payment: any) => {
-          const amount = parseFloat(payment.amount?.toString() || '0');
-          return sum + amount;
-        }, 0);
+      if (!paymentSumError && paymentSumData && paymentSumData.length > 0) {
+        actualPaidForPayload = parseFloat(paymentSumData[0].sum?.toString() || '0');
       }
     }
     
