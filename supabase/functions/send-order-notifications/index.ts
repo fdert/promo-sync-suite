@@ -111,10 +111,14 @@ Deno.serve(async (req) => {
           
         const calculatedPaidAmount = paymentsData?.reduce((sum, payment) => sum + payment.amount, 0) || 0;
         
+        // حساب إجمالي مبلغ بنود الطلب
+        const orderItemsTotal = orderData.order_items?.reduce((sum: number, item: any) => sum + (item.total_amount || 0), 0) || orderData.amount || 0;
+        
         orderDetails = {
           ...orderData,
           calculated_paid_amount: calculatedPaidAmount,
-          remaining_amount: orderData.amount - calculatedPaidAmount
+          order_items_total: orderItemsTotal,
+          remaining_amount: orderItemsTotal - calculatedPaidAmount
         };
         console.log('Order details loaded with financial info:', orderDetails);
       }
@@ -233,8 +237,8 @@ Deno.serve(async (req) => {
       let description = 'غير محدد';
       if (orderDetails) {
         
-        // حساب المبلغ المتبقي باستخدام البيانات المحسوبة
-        const totalAmount = parseFloat(orderDetails.amount?.toString() || '0');
+        // حساب المبلغ المتبقي باستخدام البيانات المحسوبة من بنود الطلب
+        const totalAmount = parseFloat(orderDetails.order_items_total?.toString() || orderDetails.amount?.toString() || '0');
         const paidAmount = parseFloat(orderDetails.calculated_paid_amount?.toString() || '0');
         remainingAmount = (totalAmount - paidAmount).toString();
         
@@ -266,7 +270,7 @@ Deno.serve(async (req) => {
       const replacements: Record<string, string> = {
         'customer_name': customerName || '',
         'order_number': orderDetails?.order_number || data.order_number || '',
-        'amount': orderDetails?.amount?.toString() || data.amount?.toString() || '',
+        'amount': orderDetails?.order_items_total?.toString() || orderDetails?.amount?.toString() || data.amount?.toString() || '',
         'paid_amount': orderDetails?.calculated_paid_amount?.toString() || data.paid_amount?.toString() || '0',
         'remaining_amount': orderDetails?.remaining_amount?.toString() || remainingAmount,
         'payment_type': orderDetails?.payment_type || data.payment_type || 'غير محدد',
