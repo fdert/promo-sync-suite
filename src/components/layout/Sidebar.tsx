@@ -163,12 +163,6 @@ const menuItems = [
     allowedRoles: ['admin'] as UserRole[],
   },
   {
-    title: "إدارة الوكالة",
-    icon: Building2,
-    href: "/admin/agency",
-    allowedRoles: ['admin'] as UserRole[],
-  },
-  {
     title: "إدارة الواتساب",
     icon: MessageSquare,
     href: "/admin/whatsapp",
@@ -202,18 +196,6 @@ const menuItems = [
     title: "إعدادات الملصق",
     icon: Tags,
     href: "/admin/barcode-settings",
-    allowedRoles: ['admin', 'manager'] as UserRole[],
-  },
-  {
-    title: "إدارة الاشتراكات",
-    icon: CreditCard,
-    href: "/admin/subscription-management",
-    allowedRoles: ['admin'] as UserRole[],
-  },
-  {
-    title: "محتوى الموقع",
-    icon: FileText,
-    href: "/admin/website-content",
     allowedRoles: ['admin', 'manager'] as UserRole[],
   },
 ];

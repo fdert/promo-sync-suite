@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link, useNavigate } from "react-router-dom";
-import { Eye, EyeOff, Globe, LogIn, Play, Star, Shield } from "lucide-react";
+import { Eye, EyeOff, Globe, LogIn } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import logo from "@/assets/logo.png";
@@ -77,9 +77,7 @@ const Home = () => {
       // فحص الأدوار بترتيب الأولوية
       const roles = userRoles.map(r => r.role);
       
-      if (roles.includes('super_admin')) {
-        navigate('/system');
-      } else if (roles.includes('admin') || roles.includes('manager')) {
+      if (roles.includes('admin') || roles.includes('manager')) {
         navigate('/admin');
       } else if (roles.includes('employee')) {
         navigate('/employee');
@@ -199,38 +197,22 @@ const Home = () => {
                 </Button>
               </form>
 
-              {/* Customer Portal and Agency Links */}
-              <div className="pt-4 border-t space-y-3">
+              {/* Agency Website Link */}
+              <div className="pt-4 border-t">
                 <Button 
                   variant="outline" 
                   className="w-full font-cairo font-medium"
                   asChild
                 >
-                  <Link to="/customer-portal" className="flex items-center justify-center gap-2">
-                    <Star className="w-4 h-4" />
-                    استكشف النظام والباقات
-                  </Link>
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  className="w-full font-cairo font-medium text-sm"
-                  asChild
-                >
-                  <Link to="/agency-login" className="flex items-center justify-center gap-2">
-                    <LogIn className="w-4 h-4" />
-                    دخول الوكالة
-                  </Link>
-                </Button>
-                <Button 
-                  variant="secondary" 
-                  size="sm"
-                  className="w-full font-cairo font-medium text-xs"
-                  asChild
-                >
-                  <Link to="/system/auth" className="flex items-center justify-center gap-2">
-                    <Shield className="w-3 h-3" />
-                    إدارة النظام
-                  </Link>
+                  <a 
+                    href="https://creativity-agency.com" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2"
+                  >
+                    <Globe className="w-4 h-4" />
+                    زيارة موقع الوكالة
+                  </a>
                 </Button>
               </div>
             </CardContent>

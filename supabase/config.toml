@@ -1,8 +1,5 @@
 project_id = "gcuqfxacnbxdldsbmgvf"
 
-[functions.send-email]
-verify_jwt = false
-
 [functions.send-order-notifications]
 verify_jwt = false
 
@@ -68,12 +65,3 @@ verify_jwt = false
 
 [functions.send-whatsapp-direct-improved]
 verify_jwt = false
-
-[functions.send-agency-login-details]
-verify_jwt = false
-
-[functions.test-email]
-verify_jwt = false
-
-[functions.reset-user-password]
-verify_jwt = true

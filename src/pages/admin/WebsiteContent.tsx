@@ -1,804 +1,902 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/hooks/use-toast';
-import { Save, Plus, Trash2, Edit3 } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Save,
+  Eye,
+  Plus,
+  Trash2,
+  Edit3,
+  Globe,
+  Users,
+  MessageCircle,
+  Phone,
+  Mail,
+  MapPin,
+  Star,
+  Palette,
+} from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
-interface WebsiteSetting {
-  id: string;
-  setting_key: string;
-  setting_value: any;
-  created_at: string;
-  updated_at: string;
-}
-
-export default function WebsiteContent() {
+const WebsiteContent = () => {
   const { toast } = useToast();
-  const [settings, setSettings] = useState<WebsiteSetting[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [editingSection, setEditingSection] = useState<string | null>(null);
 
-  const fetchSettings = async () => {
+  // بيانات الصفحة الرئيسية
+  const [companyInfo, setCompanyInfo] = useState({
+    name: "وكالة الإبداع",
+    subtitle: "للدعاية والإعلان",
+    tagline: "نبني الأحلام بالإبداع والتميز",
+    logo: "", // رابط الشعار
+    stamp: "", // رابط الختم
+  });
+
+  const [heroSection, setHeroSection] = useState({
+    badge: "وكالة متخصصة في الدعاية والإعلان",
+    title: "نبني علامتك التجارية\nبإبداع وتميز",
+    description: "نقدم حلول إبداعية متكاملة في التصميم والتسويق الرقمي لنساعدك في الوصول لأهدافك التجارية",
+    primaryButton: "احجز استشارة مجانية",
+    secondaryButton: "تصفح أعمالنا",
+  });
+
+  const [stats, setStats] = useState([
+    { number: "500+", label: "عميل راضي" },
+    { number: "1200+", label: "مشروع مكتمل" },
+    { number: "5+", label: "سنوات خبرة" },
+    { number: "24/7", label: "دعم فني" },
+  ]);
+
+  const [services, setServices] = useState([
+    {
+      title: "تصميم الشعارات والهوية البصرية",
+      description: "تصميم شعارات احترافية وهويات بصرية متكاملة تعكس شخصية علامتك التجارية",
+      features: ["تصميم شعار احترافي", "دليل الهوية البصرية", "تطبيقات الهوية", "ملفات قابلة للطباعة"],
+    },
+    {
+      title: "تطوير المواقع الإلكترونية",
+      description: "تطوير مواقع إلكترونية حديثة ومتجاوبة مع جميع الأجهزة",
+      features: ["تصميم متجاوب", "سهولة الإدارة", "سرعة في التحميل", "محرك بحث محسن"],
+    },
+    {
+      title: "إدارة الحملات الإعلانية",
+      description: "إنشاء وإدارة حملات إعلانية فعالة على منصات التواصل الاجتماعي",
+      features: ["تحليل الجمهور المستهدف", "إنشاء محتوى إبداعي", "متابعة الأداء", "تقارير تفصيلية"],
+    },
+    {
+      title: "التسويق الرقمي",
+      description: "استراتيجيات تسويق رقمي متطورة لزيادة المبيعات والوصول",
+      features: ["تحسين محركات البحث", "إدارة وسائل التواصل", "التسويق بالمحتوى", "الإعلانات المدفوعة"],
+    },
+  ]);
+
+  const [testimonials, setTestimonials] = useState([
+    {
+      name: "أحمد محمد",
+      company: "شركة النجاح التجارية",
+      text: "خدمة ممتازة وتصميمات إبداعية فاقت توقعاتي. فريق محترف ومتعاون.",
+      rating: 5,
+    },
+    {
+      name: "فاطمة علي",
+      company: "مؤسسة الأمل الخيرية",
+      text: "تعامل راقي وجودة عالية في التنفيذ. أنصح بالتعامل معهم بكل ثقة.",
+      rating: 5,
+    },
+    {
+      name: "محمد عبدالله",
+      company: "متجر الإلكترونيات الحديثة",
+      text: "ساعدونا في بناء هويتنا البصرية بشكل احترافي ومميز.",
+      rating: 5,
+    },
+  ]);
+
+  const [contactInfo, setContactInfo] = useState({
+    phone: "+966 50 123 4567",
+    email: "info@creative-agency.com",
+    address: "الرياض، المملكة العربية السعودية",
+  });
+
+  const [sections, setSections] = useState({
+    servicesTitle: "خدماتنا المتميزة",
+    servicesDescription: "نقدم مجموعة شاملة من الخدمات الإبداعية والتسويقية لتحقيق أهدافك التجارية",
+    testimonialsTitle: "آراء عملائنا",
+    testimonialsDescription: "ثقة عملائنا هي أغلى ما نملك",
+    contactTitle: "تواصل معنا",
+    contactDescription: "نحن هنا لمساعدتك في تحقيق أهدافك",
+  });
+
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string>("");
+
+  const handleLogoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setLogoFile(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        setLogoPreview(result);
+        setCompanyInfo({ ...companyInfo, logo: result });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      let logoUrl = companyInfo.logo;
+
+      // رفع الشعار إذا تم اختيار ملف جديد
+      if (logoFile) {
+        const fileExt = logoFile.name.split('.').pop();
+        const fileName = `logo-${Date.now()}.${fileExt}`;
+        
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('logos')
+          .upload(fileName, logoFile);
+
+        if (uploadError) {
+          console.error('Error uploading logo:', uploadError);
+          toast({
+            title: "خطأ في رفع الشعار",
+            description: "حدث خطأ أثناء رفع الشعار: " + uploadError.message,
+            variant: "destructive",
+          });
+          return;
+        }
+
+        // الحصول على رابط الشعار
+        const { data: { publicUrl } } = supabase.storage
+          .from('logos')
+          .getPublicUrl(fileName);
+
+        logoUrl = publicUrl;
+        setCompanyInfo({ ...companyInfo, logo: logoUrl });
+      }
+
+      const websiteData = {
+        companyInfo: { ...companyInfo, logo: logoUrl },
+        heroSection,
+        stats,
+        services,
+        testimonials,
+        contactInfo,
+        sections
+      };
+
+      // حفظ البيانات في قاعدة البيانات
+      const user = await supabase.auth.getUser();
+      
+      // التحقق من وجود السجل أولاً
+      const { data: existingData } = await supabase
+        .from('website_settings')
+        .select('id')
+        .eq('setting_key', 'website_content')
+        .maybeSingle();
+
+      let error;
+      if (existingData) {
+        // تحديث السجل الموجود
+        const { error: updateError } = await supabase
+          .from('website_settings')
+          .update({
+            setting_value: websiteData,
+            updated_at: new Date().toISOString()
+          })
+          .eq('setting_key', 'website_content');
+        error = updateError;
+      } else {
+        // إدراج سجل جديد
+        const { error: insertError } = await supabase
+          .from('website_settings')
+          .insert({
+            setting_key: 'website_content',
+            setting_value: websiteData,
+            created_by: user.data.user?.id
+          });
+        error = insertError;
+      }
+
+      if (error) {
+        console.error('Error saving website settings:', error);
+        toast({
+          title: "خطأ في الحفظ",
+          description: "حدث خطأ أثناء حفظ الإعدادات: " + error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "تم الحفظ بنجاح",
+        description: "تم حفظ تغييرات محتوى الموقع في قاعدة البيانات",
+      });
+    } catch (error) {
+      console.error('Error:', error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ غير متوقع",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // جلب البيانات المحفوظة عند تحميل الصفحة
+  const loadSavedData = async () => {
     try {
       const { data, error } = await supabase
         .from('website_settings')
-        .select('*')
-        .order('setting_key');
+        .select('setting_value')
+        .eq('setting_key', 'website_content')
+        .maybeSingle();
 
-      if (error) throw error;
-      setSettings(data || []);
+      if (error) {
+        console.error('Error loading website settings:', error);
+        return;
+      }
+
+      if (data?.setting_value) {
+        const savedData = data.setting_value as any;
+        if (savedData.companyInfo) {
+          setCompanyInfo(savedData.companyInfo);
+          if (savedData.companyInfo.logo) {
+            setLogoPreview(savedData.companyInfo.logo);
+          }
+        }
+        if (savedData.heroSection) setHeroSection(savedData.heroSection);
+        if (savedData.stats) setStats(savedData.stats);
+        if (savedData.services) setServices(savedData.services);
+        if (savedData.testimonials) setTestimonials(savedData.testimonials);
+        if (savedData.contactInfo) setContactInfo(savedData.contactInfo);
+        if (savedData.sections) setSections(savedData.sections);
+      }
     } catch (error) {
-      console.error('Error fetching settings:', error);
-      toast({
-        title: "خطأ",
-        description: "فشل في تحميل إعدادات الموقع",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+      console.error('Error loading data:', error);
     }
   };
 
   useEffect(() => {
-    fetchSettings();
+    loadSavedData();
   }, []);
 
-  const updateSetting = async (settingKey: string, newValue: any) => {
-    setSaving(true);
-    try {
-      const { error } = await supabase
-        .from('website_settings')
-        .update({
-          setting_value: newValue,
-          updated_at: new Date().toISOString()
-        })
-        .eq('setting_key', settingKey);
-
-      if (error) throw error;
-
-      setSettings(prev => prev.map(setting => 
-        setting.setting_key === settingKey 
-          ? { ...setting, setting_value: newValue, updated_at: new Date().toISOString() }
-          : setting
-      ));
-
-      toast({
-        title: "تم الحفظ",
-        description: "تم تحديث إعدادات الموقع بنجاح",
-      });
-      setEditingSection(null);
-    } catch (error) {
-      console.error('Error updating setting:', error);
-      toast({
-        title: "خطأ",
-        description: "فشل في حفظ التغييرات",
-        variant: "destructive",
-      });
-    } finally {
-      setSaving(false);
-    }
+  const addService = () => {
+    setServices([
+      ...services,
+      {
+        title: "خدمة جديدة",
+        description: "وصف الخدمة الجديدة",
+        features: ["ميزة 1", "ميزة 2"],
+      },
+    ]);
   };
 
-  const getSetting = (key: string) => {
-    return settings.find(s => s.setting_key === key)?.setting_value || {};
+  const addTestimonial = () => {
+    setTestimonials([
+      ...testimonials,
+      {
+        name: "اسم العميل",
+        company: "اسم الشركة",
+        text: "رأي العميل",
+        rating: 5,
+      },
+    ]);
   };
 
-  const HeroSectionEditor = () => {
-    const heroData = getSetting('hero_section');
-    const [formData, setFormData] = useState(heroData);
-
-    const handleSave = () => {
-      updateSetting('hero_section', formData);
-    };
-
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            قسم البطل الرئيسي
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setEditingSection(editingSection === 'hero' ? null : 'hero')}
-            >
-              <Edit3 className="h-4 w-4" />
-            </Button>
-          </CardTitle>
-          <CardDescription>
-            المحتوى الرئيسي الذي يظهر في أعلى صفحة العملاء
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {editingSection === 'hero' ? (
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="title">العنوان الرئيسي</Label>
-                <Input
-                  id="title"
-                  value={formData.title || ''}
-                  onChange={(e) => setFormData({...formData, title: e.target.value})}
-                  placeholder="عنوان الصفحة الرئيسي"
-                />
-              </div>
-              <div>
-                <Label htmlFor="subtitle">العنوان الفرعي</Label>
-                <Input
-                  id="subtitle"
-                  value={formData.subtitle || ''}
-                  onChange={(e) => setFormData({...formData, subtitle: e.target.value})}
-                  placeholder="العنوان الفرعي"
-                />
-              </div>
-              <div>
-                <Label htmlFor="description">الوصف</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description || ''}
-                  onChange={(e) => setFormData({...formData, description: e.target.value})}
-                  placeholder="وصف النظام"
-                  rows={3}
-                />
-              </div>
-              <div>
-                <Label htmlFor="cta_text">نص زر الإجراء</Label>
-                <Input
-                  id="cta_text"
-                  value={formData.cta_text || ''}
-                  onChange={(e) => setFormData({...formData, cta_text: e.target.value})}
-                  placeholder="ابدأ تجربتك المجانية"
-                />
-              </div>
-              <div>
-                <Label htmlFor="video_url">رابط الفيديو التوضيحي</Label>
-                <Input
-                  id="video_url"
-                  value={formData.video_url || ''}
-                  onChange={(e) => setFormData({...formData, video_url: e.target.value})}
-                  placeholder="https://www.youtube.com/embed/..."
-                />
-              </div>
-              <Button onClick={handleSave} disabled={saving}>
-                <Save className="h-4 w-4 ml-2" />
-                {saving ? "جاري الحفظ..." : "حفظ التغييرات"}
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <div><strong>العنوان:</strong> {heroData.title}</div>
-              <div><strong>العنوان الفرعي:</strong> {heroData.subtitle}</div>
-              <div><strong>الوصف:</strong> {heroData.description}</div>
-              <div><strong>زر الإجراء:</strong> {heroData.cta_text}</div>
-              <div><strong>رابط الفيديو:</strong> {heroData.video_url}</div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    );
+  const addStat = () => {
+    setStats([...stats, { number: "0", label: "إحصائية جديدة" }]);
   };
-
-  const FeaturesEditor = () => {
-    const featuresData = getSetting('features_section');
-    const [formData, setFormData] = useState(featuresData);
-
-    const addFeature = () => {
-      const newFeatures = [...(formData.features || []), {
-        icon: "Star",
-        title: "ميزة جديدة",
-        description: "وصف الميزة"
-      }];
-      setFormData({...formData, features: newFeatures});
-    };
-
-    const removeFeature = (index: number) => {
-      const newFeatures = formData.features.filter((_: any, i: number) => i !== index);
-      setFormData({...formData, features: newFeatures});
-    };
-
-    const updateFeature = (index: number, field: string, value: string) => {
-      const newFeatures = [...formData.features];
-      newFeatures[index] = {...newFeatures[index], [field]: value};
-      setFormData({...formData, features: newFeatures});
-    };
-
-    const handleSave = () => {
-      updateSetting('features_section', formData);
-    };
-
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            قسم المميزات
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setEditingSection(editingSection === 'features' ? null : 'features')}
-            >
-              <Edit3 className="h-4 w-4" />
-            </Button>
-          </CardTitle>
-          <CardDescription>
-            مميزات النظام التي تظهر للعملاء
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {editingSection === 'features' ? (
-            <div className="space-y-4">
-              <div>
-                <Label>عنوان القسم</Label>
-                <Input
-                  value={formData.title || ''}
-                  onChange={(e) => setFormData({...formData, title: e.target.value})}
-                  placeholder="مميزات النظام"
-                />
-              </div>
-              <div>
-                <Label>العنوان الفرعي</Label>
-                <Input
-                  value={formData.subtitle || ''}
-                  onChange={(e) => setFormData({...formData, subtitle: e.target.value})}
-                  placeholder="وصف المميزات"
-                />
-              </div>
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <Label>قائمة المميزات</Label>
-                  <Button onClick={addFeature} size="sm" variant="outline">
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-                {formData.features?.map((feature: any, index: number) => (
-                  <Card key={index} className="p-4 mb-2">
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label>الميزة {index + 1}</Label>
-                        <Button 
-                          onClick={() => removeFeature(index)}
-                          size="sm"
-                          variant="outline"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <Input
-                        placeholder="اسم الأيقونة"
-                        value={feature.icon || ''}
-                        onChange={(e) => updateFeature(index, 'icon', e.target.value)}
-                      />
-                      <Input
-                        placeholder="عنوان الميزة"
-                        value={feature.title || ''}
-                        onChange={(e) => updateFeature(index, 'title', e.target.value)}
-                      />
-                      <Textarea
-                        placeholder="وصف الميزة"
-                        value={feature.description || ''}
-                        onChange={(e) => updateFeature(index, 'description', e.target.value)}
-                        rows={2}
-                      />
-                    </div>
-                  </Card>
-                ))}
-              </div>
-              <Button onClick={handleSave} disabled={saving}>
-                <Save className="h-4 w-4 ml-2" />
-                {saving ? "جاري الحفظ..." : "حفظ التغييرات"}
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <div><strong>العنوان:</strong> {featuresData.title}</div>
-              <div><strong>العنوان الفرعي:</strong> {featuresData.subtitle}</div>
-              <div><strong>عدد المميزات:</strong> {featuresData.features?.length || 0}</div>
-              <div className="flex flex-wrap gap-1">
-                {featuresData.features?.map((feature: any, index: number) => (
-                  <Badge key={index} variant="secondary">{feature.title}</Badge>
-                ))}
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    );
-  };
-
-  const StepsEditor = () => {
-    const stepsData = getSetting('steps_section');
-    const [formData, setFormData] = useState(stepsData);
-
-    const addStep = () => {
-      const newSteps = [...(formData.steps || []), {
-        number: (formData.steps?.length + 1 || 1).toString(),
-        title: "خطوة جديدة",
-        description: "وصف الخطوة"
-      }];
-      setFormData({...formData, steps: newSteps});
-    };
-
-    const removeStep = (index: number) => {
-      const newSteps = formData.steps.filter((_: any, i: number) => i !== index);
-      setFormData({...formData, steps: newSteps});
-    };
-
-    const updateStep = (index: number, field: string, value: string) => {
-      const newSteps = [...formData.steps];
-      newSteps[index] = {...newSteps[index], [field]: value};
-      setFormData({...formData, steps: newSteps});
-    };
-
-    const handleSave = () => {
-      updateSetting('steps_section', formData);
-    };
-
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            خطوات الاشتراك
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setEditingSection(editingSection === 'steps' ? null : 'steps')}
-            >
-              <Edit3 className="h-4 w-4" />
-            </Button>
-          </CardTitle>
-          <CardDescription>الخطوات التي توضح للعملاء كيفية الاشتراك</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {editingSection === 'steps' ? (
-            <div className="space-y-4">
-              <div>
-                <Label>عنوان القسم</Label>
-                <Input
-                  value={formData.title || ''}
-                  onChange={(e) => setFormData({...formData, title: e.target.value})}
-                  placeholder="كيفية الاشتراك"
-                />
-              </div>
-              <div>
-                <Label>العنوان الفرعي</Label>
-                <Input
-                  value={formData.subtitle || ''}
-                  onChange={(e) => setFormData({...formData, subtitle: e.target.value})}
-                  placeholder="خطوات بسيطة للبدء"
-                />
-              </div>
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <Label>قائمة الخطوات</Label>
-                  <Button onClick={addStep} size="sm" variant="outline">
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-                {formData.steps?.map((step: any, index: number) => (
-                  <Card key={index} className="p-4 mb-2">
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label>الخطوة {index + 1}</Label>
-                        <Button 
-                          onClick={() => removeStep(index)}
-                          size="sm"
-                          variant="outline"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <Input
-                        placeholder="رقم الخطوة"
-                        value={step.number || ''}
-                        onChange={(e) => updateStep(index, 'number', e.target.value)}
-                      />
-                      <Input
-                        placeholder="عنوان الخطوة"
-                        value={step.title || ''}
-                        onChange={(e) => updateStep(index, 'title', e.target.value)}
-                      />
-                      <Textarea
-                        placeholder="وصف الخطوة"
-                        value={step.description || ''}
-                        onChange={(e) => updateStep(index, 'description', e.target.value)}
-                        rows={2}
-                      />
-                    </div>
-                  </Card>
-                ))}
-              </div>
-              <Button onClick={handleSave} disabled={saving}>
-                <Save className="h-4 w-4 ml-2" />
-                {saving ? "جاري الحفظ..." : "حفظ التغييرات"}
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <div><strong>العنوان:</strong> {stepsData.title}</div>
-              <div><strong>العنوان الفرعي:</strong> {stepsData.subtitle}</div>
-              <div><strong>عدد الخطوات:</strong> {stepsData.steps?.length || 0}</div>
-              <div className="flex flex-wrap gap-1">
-                {stepsData.steps?.map((step: any, index: number) => (
-                  <Badge key={index} variant="secondary">{step.title}</Badge>
-                ))}
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    );
-  };
-
-  const FaqEditor = () => {
-    const faqData = getSetting('faq_section');
-    const [formData, setFormData] = useState(faqData);
-
-    const addFaq = () => {
-      const newFaqs = [...(formData.faqs || []), {
-        question: "سؤال جديد؟",
-        answer: "إجابة السؤال"
-      }];
-      setFormData({...formData, faqs: newFaqs});
-    };
-
-    const removeFaq = (index: number) => {
-      const newFaqs = formData.faqs.filter((_: any, i: number) => i !== index);
-      setFormData({...formData, faqs: newFaqs});
-    };
-
-    const updateFaq = (index: number, field: string, value: string) => {
-      const newFaqs = [...formData.faqs];
-      newFaqs[index] = {...newFaqs[index], [field]: value};
-      setFormData({...formData, faqs: newFaqs});
-    };
-
-    const handleSave = () => {
-      updateSetting('faq_section', formData);
-    };
-
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            الأسئلة الشائعة
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setEditingSection(editingSection === 'faq' ? null : 'faq')}
-            >
-              <Edit3 className="h-4 w-4" />
-            </Button>
-          </CardTitle>
-          <CardDescription>الأسئلة والأجوبة التي تظهر للعملاء</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {editingSection === 'faq' ? (
-            <div className="space-y-4">
-              <div>
-                <Label>عنوان القسم</Label>
-                <Input
-                  value={formData.title || ''}
-                  onChange={(e) => setFormData({...formData, title: e.target.value})}
-                  placeholder="الأسئلة الشائعة"
-                />
-              </div>
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <Label>قائمة الأسئلة</Label>
-                  <Button onClick={addFaq} size="sm" variant="outline">
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-                {formData.faqs?.map((faq: any, index: number) => (
-                  <Card key={index} className="p-4 mb-2">
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label>السؤال {index + 1}</Label>
-                        <Button 
-                          onClick={() => removeFaq(index)}
-                          size="sm"
-                          variant="outline"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <Input
-                        placeholder="السؤال"
-                        value={faq.question || ''}
-                        onChange={(e) => updateFaq(index, 'question', e.target.value)}
-                      />
-                      <Textarea
-                        placeholder="الإجابة"
-                        value={faq.answer || ''}
-                        onChange={(e) => updateFaq(index, 'answer', e.target.value)}
-                        rows={3}
-                      />
-                    </div>
-                  </Card>
-                ))}
-              </div>
-              <Button onClick={handleSave} disabled={saving}>
-                <Save className="h-4 w-4 ml-2" />
-                {saving ? "جاري الحفظ..." : "حفظ التغييرات"}
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <div><strong>العنوان:</strong> {faqData.title}</div>
-              <div><strong>عدد الأسئلة:</strong> {faqData.faqs?.length || 0}</div>
-              <div className="flex flex-wrap gap-1">
-                {faqData.faqs?.map((faq: any, index: number) => (
-                  <Badge key={index} variant="secondary">{faq.question}</Badge>
-                ))}
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    );
-  };
-
-  const ContactEditor = () => {
-    const contactData = getSetting('contact_section');
-    const [formData, setFormData] = useState(contactData);
-
-    const handleSave = () => {
-      updateSetting('contact_section', formData);
-    };
-
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            معلومات التواصل
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setEditingSection(editingSection === 'contact' ? null : 'contact')}
-            >
-              <Edit3 className="h-4 w-4" />
-            </Button>
-          </CardTitle>
-          <CardDescription>بيانات التواصل مع الشركة</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {editingSection === 'contact' ? (
-            <div className="space-y-4">
-              <div>
-                <Label>عنوان القسم</Label>
-                <Input
-                  value={formData.title || ''}
-                  onChange={(e) => setFormData({...formData, title: e.target.value})}
-                  placeholder="تواصل معنا"
-                />
-              </div>
-              <div>
-                <Label>العنوان الفرعي</Label>
-                <Input
-                  value={formData.subtitle || ''}
-                  onChange={(e) => setFormData({...formData, subtitle: e.target.value})}
-                  placeholder="نحن هنا لمساعدتك"
-                />
-              </div>
-              <div>
-                <Label>رقم الهاتف</Label>
-                <Input
-                  value={formData.phone || ''}
-                  onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                  placeholder="+966 50 123 4567"
-                />
-              </div>
-              <div>
-                <Label>البريد الإلكتروني</Label>
-                <Input
-                  value={formData.email || ''}
-                  onChange={(e) => setFormData({...formData, email: e.target.value})}
-                  placeholder="info@company.com"
-                />
-              </div>
-              <div>
-                <Label>العنوان</Label>
-                <Textarea
-                  value={formData.address || ''}
-                  onChange={(e) => setFormData({...formData, address: e.target.value})}
-                  placeholder="العنوان الكامل"
-                  rows={2}
-                />
-              </div>
-              <Button onClick={handleSave} disabled={saving}>
-                <Save className="h-4 w-4 ml-2" />
-                {saving ? "جاري الحفظ..." : "حفظ التغييرات"}
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <div><strong>العنوان:</strong> {contactData.title}</div>
-              <div><strong>العنوان الفرعي:</strong> {contactData.subtitle}</div>
-              <div><strong>الهاتف:</strong> {contactData.phone}</div>
-              <div><strong>البريد الإلكتروني:</strong> {contactData.email}</div>
-              <div><strong>العنوان:</strong> {contactData.address}</div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    );
-  };
-
-  const CompanyEditor = () => {
-    const companyData = getSetting('company_info');
-    const [formData, setFormData] = useState(companyData);
-
-    const handleSave = () => {
-      updateSetting('company_info', formData);
-    };
-
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            معلومات الشركة
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setEditingSection(editingSection === 'company' ? null : 'company')}
-            >
-              <Edit3 className="h-4 w-4" />
-            </Button>
-          </CardTitle>
-          <CardDescription>بيانات الشركة والشعار</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {editingSection === 'company' ? (
-            <div className="space-y-4">
-              <div>
-                <Label>اسم الشركة</Label>
-                <Input
-                  value={formData.name || ''}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  placeholder="نظام إدارة الوكالات"
-                />
-              </div>
-              <div>
-                <Label>رابط الشعار</Label>
-                <Input
-                  value={formData.logo_url || ''}
-                  onChange={(e) => setFormData({...formData, logo_url: e.target.value})}
-                  placeholder="/logo.png"
-                />
-              </div>
-              <div>
-                <Label>وصف الشركة</Label>
-                <Textarea
-                  value={formData.description || ''}
-                  onChange={(e) => setFormData({...formData, description: e.target.value})}
-                  placeholder="وصف مختصر عن الشركة"
-                  rows={3}
-                />
-              </div>
-              <div>
-                <Label>روابط التواصل الاجتماعي</Label>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>فيسبوك</Label>
-                    <Input
-                      value={formData.social_links?.facebook || ''}
-                      onChange={(e) => setFormData({
-                        ...formData, 
-                        social_links: {...formData.social_links, facebook: e.target.value}
-                      })}
-                      placeholder="https://facebook.com/company"
-                    />
-                  </div>
-                  <div>
-                    <Label>تويتر</Label>
-                    <Input
-                      value={formData.social_links?.twitter || ''}
-                      onChange={(e) => setFormData({
-                        ...formData, 
-                        social_links: {...formData.social_links, twitter: e.target.value}
-                      })}
-                      placeholder="https://twitter.com/company"
-                    />
-                  </div>
-                  <div>
-                    <Label>لينكد إن</Label>
-                    <Input
-                      value={formData.social_links?.linkedin || ''}
-                      onChange={(e) => setFormData({
-                        ...formData, 
-                        social_links: {...formData.social_links, linkedin: e.target.value}
-                      })}
-                      placeholder="https://linkedin.com/company"
-                    />
-                  </div>
-                  <div>
-                    <Label>إنستغرام</Label>
-                    <Input
-                      value={formData.social_links?.instagram || ''}
-                      onChange={(e) => setFormData({
-                        ...formData, 
-                        social_links: {...formData.social_links, instagram: e.target.value}
-                      })}
-                      placeholder="https://instagram.com/company"
-                    />
-                  </div>
-                </div>
-              </div>
-              <Button onClick={handleSave} disabled={saving}>
-                <Save className="h-4 w-4 ml-2" />
-                {saving ? "جاري الحفظ..." : "حفظ التغييرات"}
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <div><strong>اسم الشركة:</strong> {companyData.name}</div>
-              <div><strong>الشعار:</strong> {companyData.logo_url}</div>
-              <div><strong>الوصف:</strong> {companyData.description}</div>
-              <div><strong>روابط التواصل:</strong> {Object.keys(companyData.social_links || {}).length} روابط</div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    );
-  };
-
-  if (loading) {
-    return (
-      <div className="container mx-auto p-6">
-        <div className="flex items-center justify-center h-32">
-          <div className="text-lg">جاري تحميل إعدادات الموقع...</div>
-        </div>
-      </div>
-    );
-  }
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">إدارة محتوى الموقع</h1>
-        <p className="text-muted-foreground">
-          تحكم في المحتوى الذي يظهر للعملاء في صفحة الاشتراك
-        </p>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">إدارة محتوى الموقع</h1>
+          <p className="text-muted-foreground">
+            تعديل وإدارة محتوى الصفحة الرئيسية للموقع
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" className="gap-2">
+            <Eye className="h-4 w-4" />
+            معاينة
+          </Button>
+          <Button onClick={handleSave} className="gap-2">
+            <Save className="h-4 w-4" />
+            حفظ التغييرات
+          </Button>
+        </div>
       </div>
 
-      <Tabs defaultValue="hero" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="hero">القسم الرئيسي</TabsTrigger>
-          <TabsTrigger value="features">المميزات</TabsTrigger>
-          <TabsTrigger value="steps">خطوات الاشتراك</TabsTrigger>
-          <TabsTrigger value="faq">الأسئلة الشائعة</TabsTrigger>
-          <TabsTrigger value="contact">التواصل</TabsTrigger>
+      <Tabs defaultValue="company" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="company">معلومات الشركة</TabsTrigger>
+          <TabsTrigger value="logo">الشعار</TabsTrigger>
+          <TabsTrigger value="hero">القسم الرئيسي</TabsTrigger>
+          <TabsTrigger value="stats">الإحصائيات</TabsTrigger>
+          <TabsTrigger value="services">الخدمات</TabsTrigger>
+          <TabsTrigger value="testimonials">آراء العملاء</TabsTrigger>
+          <TabsTrigger value="contact">معلومات التواصل</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="hero">
-          <HeroSectionEditor />
-        </TabsContent>
-
-        <TabsContent value="features">
-          <FeaturesEditor />
-        </TabsContent>
-
-        <TabsContent value="steps">
-          <StepsEditor />
-        </TabsContent>
-
-        <TabsContent value="faq">
-          <FaqEditor />
-        </TabsContent>
-
-        <TabsContent value="contact">
-          <ContactEditor />
-        </TabsContent>
-
+        {/* معلومات الشركة */}
         <TabsContent value="company">
-          <CompanyEditor />
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Globe className="h-5 w-5" />
+                معلومات الشركة الأساسية
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="company-name">اسم الشركة</Label>
+                  <Input
+                    id="company-name"
+                    value={companyInfo.name}
+                    onChange={(e) =>
+                      setCompanyInfo({ ...companyInfo, name: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="company-subtitle">الوصف الفرعي</Label>
+                  <Input
+                    id="company-subtitle"
+                    value={companyInfo.subtitle}
+                    onChange={(e) =>
+                      setCompanyInfo({ ...companyInfo, subtitle: e.target.value })
+                    }
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="company-tagline">الشعار</Label>
+                <Input
+                  id="company-tagline"
+                  value={companyInfo.tagline}
+                  onChange={(e) =>
+                    setCompanyInfo({ ...companyInfo, tagline: e.target.value })
+                  }
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* إدارة الشعار */}
+        <TabsContent value="logo">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Palette className="h-5 w-5" />
+                إدارة شعار الشركة
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* عرض الشعار الحالي */}
+              {logoPreview && (
+                <div className="space-y-2">
+                  <Label>الشعار الحالي</Label>
+                  <div className="flex items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg">
+                    <img 
+                      src={logoPreview} 
+                      alt="شعار الشركة" 
+                      className="max-h-32 max-w-32 object-contain"
+                    />
+                  </div>
+                </div>
+              )}
+              
+              {/* رفع شعار جديد */}
+              <div className="space-y-2">
+                <Label htmlFor="logo-upload">تحديث الشعار</Label>
+                <div className="flex items-center gap-4">
+                  <input
+                    id="logo-upload"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleLogoChange}
+                    className="hidden"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => document.getElementById('logo-upload')?.click()}
+                  >
+                    اختيار ملف
+                  </Button>
+                  {logoFile && (
+                    <span className="text-sm text-muted-foreground">
+                      {logoFile.name}
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  يُفضل استخدام صور بصيغة PNG أو JPG بحجم لا يزيد عن 2MB
+                </p>
+              </div>
+
+              <Separator />
+
+              {/* إعدادات الختم */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="company-stamp">رابط ختم الوكالة</Label>
+                  <Input
+                    id="company-stamp"
+                    type="url"
+                    value={companyInfo.stamp}
+                    onChange={(e) => setCompanyInfo({ ...companyInfo, stamp: e.target.value })}
+                    placeholder="أدخل رابط صورة الختم"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    سيظهر الختم في الفواتير أسفل المجموع الكلي
+                  </p>
+                </div>
+
+                {/* معاينة الختم */}
+                {companyInfo.stamp && (
+                  <div className="space-y-2">
+                    <Label>معاينة الختم</Label>
+                    <div className="flex justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg bg-muted">
+                      <img 
+                        src={companyInfo.stamp} 
+                        alt="معاينة الختم" 
+                        className="w-20 h-20 object-contain"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* معاينة مباشرة */}
+              {logoPreview && (
+                <div className="space-y-2">
+                  <Label>معاينة في الموقع</Label>
+                  <div className="p-4 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <img 
+                        src={logoPreview} 
+                        alt="معاينة الشعار" 
+                        className="h-10 w-10 object-contain"
+                      />
+                      <div>
+                        <h3 className="font-semibold text-lg">{companyInfo.name}</h3>
+                        <p className="text-sm text-gray-600">{companyInfo.subtitle}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* القسم الرئيسي */}
+        <TabsContent value="hero">
+          <Card>
+            <CardHeader>
+              <CardTitle>القسم الرئيسي (Hero Section)</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="hero-badge">الشارة</Label>
+                <Input
+                  id="hero-badge"
+                  value={heroSection.badge}
+                  onChange={(e) =>
+                    setHeroSection({ ...heroSection, badge: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="hero-title">العنوان الرئيسي</Label>
+                <Textarea
+                  id="hero-title"
+                  value={heroSection.title}
+                  onChange={(e) =>
+                    setHeroSection({ ...heroSection, title: e.target.value })
+                  }
+                  rows={3}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="hero-description">الوصف</Label>
+                <Textarea
+                  id="hero-description"
+                  value={heroSection.description}
+                  onChange={(e) =>
+                    setHeroSection({ ...heroSection, description: e.target.value })
+                  }
+                  rows={3}
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="hero-primary-btn">الزر الأساسي</Label>
+                  <Input
+                    id="hero-primary-btn"
+                    value={heroSection.primaryButton}
+                    onChange={(e) =>
+                      setHeroSection({ ...heroSection, primaryButton: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="hero-secondary-btn">الزر الثانوي</Label>
+                  <Input
+                    id="hero-secondary-btn"
+                    value={heroSection.secondaryButton}
+                    onChange={(e) =>
+                      setHeroSection({ ...heroSection, secondaryButton: e.target.value })
+                    }
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* الإحصائيات */}
+        <TabsContent value="stats">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span>الإحصائيات</span>
+                <Button onClick={addStat} variant="outline" size="sm" className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  إضافة إحصائية
+                </Button>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {stats.map((stat, index) => (
+                  <div key={index} className="p-4 border rounded-lg space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Badge variant="outline">إحصائية {index + 1}</Badge>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setStats(stats.filter((_, i) => i !== index))}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label>الرقم</Label>
+                        <Input
+                          value={stat.number}
+                          onChange={(e) => {
+                            const newStats = [...stats];
+                            newStats[index].number = e.target.value;
+                            setStats(newStats);
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <Label>التسمية</Label>
+                        <Input
+                          value={stat.label}
+                          onChange={(e) => {
+                            const newStats = [...stats];
+                            newStats[index].label = e.target.value;
+                            setStats(newStats);
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* الخدمات */}
+        <TabsContent value="services">
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>عناوين قسم الخدمات</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>عنوان القسم</Label>
+                  <Input
+                    value={sections.servicesTitle}
+                    onChange={(e) =>
+                      setSections({ ...sections, servicesTitle: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>وصف القسم</Label>
+                  <Textarea
+                    value={sections.servicesDescription}
+                    onChange={(e) =>
+                      setSections({ ...sections, servicesDescription: e.target.value })
+                    }
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span>الخدمات</span>
+                  <Button onClick={addService} variant="outline" size="sm" className="gap-2">
+                    <Plus className="h-4 w-4" />
+                    إضافة خدمة
+                  </Button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  {services.map((service, index) => (
+                    <div key={index} className="p-4 border rounded-lg space-y-4">
+                      <div className="flex items-center justify-between">
+                        <Badge variant="outline">خدمة {index + 1}</Badge>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setServices(services.filter((_, i) => i !== index))}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>عنوان الخدمة</Label>
+                        <Input
+                          value={service.title}
+                          onChange={(e) => {
+                            const newServices = [...services];
+                            newServices[index].title = e.target.value;
+                            setServices(newServices);
+                          }}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>وصف الخدمة</Label>
+                        <Textarea
+                          value={service.description}
+                          onChange={(e) => {
+                            const newServices = [...services];
+                            newServices[index].description = e.target.value;
+                            setServices(newServices);
+                          }}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>المميزات (سطر لكل ميزة)</Label>
+                        <Textarea
+                          value={service.features.join('\n')}
+                          onChange={(e) => {
+                            const newServices = [...services];
+                            newServices[index].features = e.target.value.split('\n');
+                            setServices(newServices);
+                          }}
+                          rows={4}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* آراء العملاء */}
+        <TabsContent value="testimonials">
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>عناوين قسم آراء العملاء</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>عنوان القسم</Label>
+                  <Input
+                    value={sections.testimonialsTitle}
+                    onChange={(e) =>
+                      setSections({ ...sections, testimonialsTitle: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>وصف القسم</Label>
+                  <Input
+                    value={sections.testimonialsDescription}
+                    onChange={(e) =>
+                      setSections({ ...sections, testimonialsDescription: e.target.value })
+                    }
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <MessageCircle className="h-5 w-5" />
+                    آراء العملاء
+                  </span>
+                  <Button onClick={addTestimonial} variant="outline" size="sm" className="gap-2">
+                    <Plus className="h-4 w-4" />
+                    إضافة رأي
+                  </Button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  {testimonials.map((testimonial, index) => (
+                    <div key={index} className="p-4 border rounded-lg space-y-4">
+                      <div className="flex items-center justify-between">
+                        <Badge variant="outline">رأي {index + 1}</Badge>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setTestimonials(testimonials.filter((_, i) => i !== index))}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>اسم العميل</Label>
+                          <Input
+                            value={testimonial.name}
+                            onChange={(e) => {
+                              const newTestimonials = [...testimonials];
+                              newTestimonials[index].name = e.target.value;
+                              setTestimonials(newTestimonials);
+                            }}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>اسم الشركة</Label>
+                          <Input
+                            value={testimonial.company}
+                            onChange={(e) => {
+                              const newTestimonials = [...testimonials];
+                              newTestimonials[index].company = e.target.value;
+                              setTestimonials(newTestimonials);
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>نص الرأي</Label>
+                        <Textarea
+                          value={testimonial.text}
+                          onChange={(e) => {
+                            const newTestimonials = [...testimonials];
+                            newTestimonials[index].text = e.target.value;
+                            setTestimonials(newTestimonials);
+                          }}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>التقييم</Label>
+                        <div className="flex items-center gap-1">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Button
+                              key={star}
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                const newTestimonials = [...testimonials];
+                                newTestimonials[index].rating = star;
+                                setTestimonials(newTestimonials);
+                              }}
+                            >
+                              <Star
+                                className={`h-4 w-4 ${
+                                  star <= testimonial.rating
+                                    ? "fill-accent text-accent"
+                                    : "text-muted-foreground"
+                                }`}
+                              />
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* معلومات التواصل */}
+        <TabsContent value="contact">
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>عناوين قسم التواصل</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>عنوان القسم</Label>
+                  <Input
+                    value={sections.contactTitle}
+                    onChange={(e) =>
+                      setSections({ ...sections, contactTitle: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>وصف القسم</Label>
+                  <Input
+                    value={sections.contactDescription}
+                    onChange={(e) =>
+                      setSections({ ...sections, contactDescription: e.target.value })
+                    }
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Phone className="h-5 w-5" />
+                  معلومات التواصل
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="contact-phone">رقم الهاتف</Label>
+                  <Input
+                    id="contact-phone"
+                    value={contactInfo.phone}
+                    onChange={(e) =>
+                      setContactInfo({ ...contactInfo, phone: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="contact-email">البريد الإلكتروني</Label>
+                  <Input
+                    id="contact-email"
+                    value={contactInfo.email}
+                    onChange={(e) =>
+                      setContactInfo({ ...contactInfo, email: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="contact-address">العنوان</Label>
+                  <Input
+                    id="contact-address"
+                    value={contactInfo.address}
+                    onChange={(e) =>
+                      setContactInfo({ ...contactInfo, address: e.target.value })
+                    }
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
   );
-}
+};
+
+export default WebsiteContent;

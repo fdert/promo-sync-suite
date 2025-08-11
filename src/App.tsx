@@ -2,26 +2,15 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { AgencyProvider } from "@/contexts/AgencyContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import RoleProtectedRoute from "@/components/RoleProtectedRoute";
 import EmployeeProtectedRoute from "@/components/EmployeeProtectedRoute";
-import SuperAdminProtectedRoute from "@/components/SuperAdminProtectedRoute";
 import Home from "./pages/Home";
 import Auth from "./pages/Auth";
 import AdminLayout from "./components/layout/AdminLayout";
 import EmployeeLayout from "./components/layout/EmployeeLayout";
-import SystemLayout from "./components/layout/SystemLayout";
-
-// System Admin Pages
-import SystemDashboard from "./pages/system/SystemDashboard";
-import SystemAuth from "./pages/system/SystemAuth";
-import SystemUsers from "./pages/system/SystemUsers";
-import AgenciesManagement from "./pages/system/AgenciesManagement";
-import SubscriptionPlans from "./pages/system/SubscriptionPlans";
-import SystemSettings from "./pages/system/SystemSettings";
 import Dashboard from "./pages/admin/Dashboard";
 import Users from "./pages/admin/Users";
 import Customers from "./pages/admin/Customers";
@@ -59,7 +48,6 @@ import FinancialReports from "./pages/employee/FinancialReports";
 import ReviewsManagement from "./pages/admin/ReviewsManagement";
 import GoogleMapsIntegration from "./pages/admin/GoogleMapsIntegration";
 import BarcodeSettings from "./pages/admin/BarcodeSettings";
-import SubscriptionManagement from "./pages/admin/SubscriptionManagement";
 import FollowUpSettings from "./pages/admin/FollowUpSettings";
 import FinancialMovements from "./pages/admin/FinancialMovements";
 import EmployeeFinancialMovements from "./pages/employee/FinancialMovements";
@@ -68,13 +56,6 @@ import BulkWhatsApp from "./pages/admin/BulkWhatsApp";
 import CustomerGroups from "./pages/admin/CustomerGroups";
 import EmployeeBulkWhatsApp from "./pages/employee/BulkWhatsApp";
 import EmployeeWebhookSettings from "./pages/employee/WebhookSettings";
-import AgencyManagement from "./pages/admin/AgencyManagement";
-import Subscription from "./pages/Subscription";
-import AgencyLogin from "./pages/AgencyLogin";
-import CustomerPortal from "./pages/CustomerPortal";
-import ResetPassword from "./pages/ResetPassword";
-import EmailTest from "./pages/EmailTest";
-import ChangePassword from "./pages/ChangePassword";
 
 import OrderPayments from "./pages/admin/OrderPayments";
 
@@ -83,8 +64,7 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <AgencyProvider>
-        <TooltipProvider>
+      <TooltipProvider>
         <Toaster />
         <Sonner />
         <BrowserRouter>
@@ -127,7 +107,7 @@ const App = () => (
             </Route>
             <Route path="/admin" element={
               <ProtectedRoute>
-                <RoleProtectedRoute allowedRoles={['admin', 'manager', 'super_admin']}>
+                <RoleProtectedRoute allowedRoles={['admin', 'manager']}>
                   <AdminLayout />
                 </RoleProtectedRoute>
               </ProtectedRoute>
@@ -161,11 +141,6 @@ const App = () => (
                   <WebsiteContent />
                 </RoleProtectedRoute>
               } />
-              <Route path="agency" element={
-                <RoleProtectedRoute allowedRoles={['admin', 'super_admin']}>
-                  <AgencyManagement />
-                </RoleProtectedRoute>
-              } />
               <Route path="settings" element={
                 <RoleProtectedRoute allowedRoles={['admin']}>
                   <Settings />
@@ -197,53 +172,18 @@ const App = () => (
                     <BulkWhatsApp />
                   </RoleProtectedRoute>
                 } />
-                 <Route path="customer-groups" element={
-                   <RoleProtectedRoute allowedRoles={['admin', 'manager']}>
-                     <CustomerGroups />
-                   </RoleProtectedRoute>
-                 } />
-                  <Route path="subscription-management" element={
-                    <RoleProtectedRoute allowedRoles={['admin']}>
-                      <SubscriptionManagement />
-                    </RoleProtectedRoute>
-                  } />
-                  <Route path="website-content" element={
-                    <RoleProtectedRoute allowedRoles={['admin', 'manager']}>
-                      <WebsiteContent />
-                    </RoleProtectedRoute>
-                  } />
+                <Route path="customer-groups" element={
+                  <RoleProtectedRoute allowedRoles={['admin', 'manager']}>
+                    <CustomerGroups />
+                  </RoleProtectedRoute>
+                } />
             </Route>
-
-            {/* System Admin Routes */}
-            <Route path="/system/auth" element={<SystemAuth />} />
-            <Route path="/system" element={
-              <ProtectedRoute>
-                <SuperAdminProtectedRoute>
-                  <SystemLayout />
-                </SuperAdminProtectedRoute>
-              </ProtectedRoute>
-            }>
-              <Route index element={<SystemDashboard />} />
-              <Route path="users" element={<SystemUsers />} />
-              <Route path="agencies" element={<AgenciesManagement />} />
-              <Route path="subscription-plans" element={<SubscriptionPlans />} />
-              <Route path="settings" element={<SystemSettings />} />
-            </Route>
-
             <Route path="/evaluation/:token" element={<Evaluation />} />
-            <Route path="/subscription" element={<Subscription />} />
-            <Route path="/change-password" element={<ChangePassword />} />
-            <Route path="/email-test" element={<EmailTest />} />
-            <Route path="/agency-login" element={<AgencyLogin />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/customer-portal" element={<CustomerPortal />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="/super_admin" element={<Navigate to="/system" replace />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
       </TooltipProvider>
-      </AgencyProvider>
     </AuthProvider>
   </QueryClientProvider>
 );
