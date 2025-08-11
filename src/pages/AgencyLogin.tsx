@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import { ForgotPasswordDialog } from "@/components/ForgotPasswordDialog";
 
 const AgencyLogin = () => {
   const [loginForm, setLoginForm] = useState({ email: "", password: "" });
@@ -133,6 +134,10 @@ const AgencyLogin = () => {
                   {loading ? "جاري تسجيل الدخول..." : "دخول"}
                 </Button>
               </form>
+              
+              <div className="text-center">
+                <ForgotPasswordDialog />
+              </div>
               
               <div className="text-center space-y-3">
                 <p className="text-sm text-muted-foreground">
