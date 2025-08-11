@@ -217,6 +217,31 @@ const CreateAgencyForm = () => {
       
       console.log('✅ تم التحقق من المستخدم:', currentUser.id);
 
+      // التحقق من عدم وجود وكالة بنفس الاسم أو الرابط
+      console.log('🔍 التحقق من عدم وجود وكالة مكررة...');
+      const { data: existingAgency, error: checkError } = await supabase
+        .from('agencies')
+        .select('id, name, slug')
+        .or(`name.eq.${formData.name},slug.eq.${formData.slug}`)
+        .limit(1);
+
+      if (checkError) {
+        console.error('❌ خطأ في التحقق من الوكالة:', checkError);
+        throw checkError;
+      }
+
+      if (existingAgency && existingAgency.length > 0) {
+        const existing = existingAgency[0];
+        if (existing.name === formData.name) {
+          throw new Error('يوجد وكالة أخرى بنفس الاسم');
+        }
+        if (existing.slug === formData.slug) {
+          throw new Error('الرابط المخصص مستخدم من قبل وكالة أخرى');
+        }
+      }
+
+      console.log('✅ لا توجد وكالة مكررة');
+
       // إنشاء الوكالة
       console.log('📝 إنشاء الوكالة مع البيانات:', formData);
       const { data: agencyData, error: agencyError } = await supabase

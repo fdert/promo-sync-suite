@@ -57,7 +57,9 @@ export const useAgency = () => {
         `)
         .eq('user_id', user?.id)
         .eq('is_active', true)
-        .single();
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
       if (memberError) {
         console.error('Error fetching agency:', memberError);
