@@ -236,7 +236,7 @@ Deno.serve(async (req) => {
         // حساب المبلغ المتبقي باستخدام البيانات المحسوبة
         const totalAmount = parseFloat(orderDetails.amount?.toString() || '0');
         const paidAmount = parseFloat(orderDetails.calculated_paid_amount?.toString() || '0');
-        remainingAmount = (totalAmount - paidAmount).toString();
+        remainingAmount = Math.max(0, totalAmount - paidAmount).toString(); // التأكد من عدم وجود قيم سالبة
         
         // تنسيق التواريخ
         if (orderDetails.start_date) {
