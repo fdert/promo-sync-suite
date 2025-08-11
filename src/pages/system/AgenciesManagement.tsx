@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Building2, Users, CreditCard, Settings, Search, Eye, UserCheck, UserX, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import CreateAgencyForm from "@/components/CreateAgencyForm";
 
 interface Agency {
   id: string;
@@ -148,6 +149,20 @@ const AgenciesManagement = () => {
             <p className="text-muted-foreground">إدارة جميع الوكالات المسجلة في النظام</p>
           </div>
         </div>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button>
+              <Building2 className="h-4 w-4 mr-2" />
+              إنشاء وكالة جديدة
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>إنشاء وكالة جديدة</DialogTitle>
+            </DialogHeader>
+            <CreateAgencyForm />
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* إحصائيات سريعة */}
@@ -267,6 +282,16 @@ const AgenciesManagement = () => {
                         onClick={() => toggleAgencyStatus(agency.id, agency.is_active)}
                       >
                         {agency.is_active ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
+                      </Button>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open(`/agency/${agency.slug}`, '_blank')}
+                        className="flex items-center gap-1"
+                      >
+                        <Settings className="h-4 w-4" />
+                        لوحة التحكم
                       </Button>
                     </div>
                   </TableCell>
