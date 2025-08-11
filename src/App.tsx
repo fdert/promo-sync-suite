@@ -73,6 +73,7 @@ import Subscription from "./pages/Subscription";
 import AgencyLogin from "./pages/AgencyLogin";
 import CustomerPortal from "./pages/CustomerPortal";
 import ResetPassword from "./pages/ResetPassword";
+import EmailTest from "./pages/EmailTest";
 
 import OrderPayments from "./pages/admin/OrderPayments";
 
@@ -230,6 +231,7 @@ const App = () => (
 
             <Route path="/evaluation/:token" element={<Evaluation />} />
             <Route path="/subscription" element={<Subscription />} />
+            <Route path="/email-test" element={<EmailTest />} />
             <Route path="/agency-login" element={<AgencyLogin />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/customer-portal" element={<CustomerPortal />} />
