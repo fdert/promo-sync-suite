@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Building2, Users, CreditCard, Settings, BarChart3, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 interface SystemStats {
@@ -16,6 +17,7 @@ interface SystemStats {
 
 const SystemDashboard = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [stats, setStats] = useState<SystemStats>({
     totalAgencies: 0,
     totalUsers: 0,
@@ -141,7 +143,10 @@ const SystemDashboard = () => {
 
       {/* قائمة الوصول السريع */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+        <Card 
+          className="cursor-pointer hover:shadow-lg transition-shadow"
+          onClick={() => navigate('/system/agencies')}
+        >
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Building2 className="h-5 w-5 text-blue-600" />
@@ -153,7 +158,10 @@ const SystemDashboard = () => {
           </CardHeader>
         </Card>
 
-        <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+        <Card 
+          className="cursor-pointer hover:shadow-lg transition-shadow"
+          onClick={() => navigate('/system/users')}
+        >
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5 text-green-600" />
@@ -165,7 +173,10 @@ const SystemDashboard = () => {
           </CardHeader>
         </Card>
 
-        <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+        <Card 
+          className="cursor-pointer hover:shadow-lg transition-shadow"
+          onClick={() => navigate('/system/subscription-plans')}
+        >
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CreditCard className="h-5 w-5 text-purple-600" />
@@ -177,19 +188,22 @@ const SystemDashboard = () => {
           </CardHeader>
         </Card>
 
-        <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+        <Card className="cursor-pointer hover:shadow-lg transition-shadow opacity-50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <BarChart3 className="h-5 w-5 text-orange-600" />
               التقارير والإحصائيات
             </CardTitle>
             <CardDescription>
-              تقارير مفصلة عن أداء النظام والإيرادات
+              تقارير مفصلة عن أداء النظام والإيرادات (قريباً)
             </CardDescription>
           </CardHeader>
         </Card>
 
-        <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+        <Card 
+          className="cursor-pointer hover:shadow-lg transition-shadow"
+          onClick={() => navigate('/system/settings')}
+        >
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Settings className="h-5 w-5 text-gray-600" />
