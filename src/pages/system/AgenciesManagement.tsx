@@ -48,23 +48,24 @@ const AgenciesManagement = () => {
 
   const fetchAgencies = async () => {
     try {
+      // جلب الوكالات فقط بدون البيانات الإضافية مؤقتاً
       const { data: agenciesData, error } = await supabase
         .from('agencies')
-        .select(`
-          *,
-          agency_members(count),
-          orders(count),
-          subscriptions(status)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+
+      console.log('Fetched agencies:', agenciesData);
 
       const processedAgencies = agenciesData?.map(agency => ({
         ...agency,
-        members_count: agency.agency_members?.[0]?.count || 0,
-        orders_count: agency.orders?.[0]?.count || 0,
-        subscription_status: agency.subscriptions?.[0]?.status || 'inactive'
+        members_count: 0, // سيتم جلبها لاحقاً
+        orders_count: 0, // سيتم جلبها لاحقاً
+        subscription_status: 'inactive' // افتراضي مؤقتاً
       })) || [];
 
       setAgencies(processedAgencies);
