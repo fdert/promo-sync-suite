@@ -59,256 +59,301 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
         {`
           @page {
             size: A4;
-            margin: 15mm;
+            margin: 8mm;
+            padding: 0;
             @bottom-center {
               content: "";
             }
           }
           
+          body {
+            font-family: 'Arial', sans-serif !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            color: #000 !important;
+          }
+          
           .print-invoice {
             display: block !important;
-            font-family: 'Arial', sans-serif;
-            font-size: 11px;
-            line-height: 1.3;
-            color: #000;
-            background: white;
-            max-width: 100%;
-            height: auto;
-            margin: 0;
-            padding: 0;
+            font-family: 'Arial', sans-serif !important;
+            font-size: 9px !important;
+            line-height: 1.15 !important;
+            color: #000 !important;
+            background: white !important;
+            width: 100% !important;
+            max-width: 194mm !important;
+            margin: 0 auto !important;
+            padding: 0 !important;
+            page-break-after: avoid !important;
+            overflow: hidden !important;
           }
           
           .print-invoice * {
-            box-sizing: border-box;
+            box-sizing: border-box !important;
+            margin: 0 !important;
+            padding: 0 !important;
           }
           
           .print-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 4mm;
-            border-bottom: 2px solid #2563eb;
-            padding-bottom: 3mm;
-            page-break-inside: avoid;
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: flex-start !important;
+            margin-bottom: 2.5mm !important;
+            border-bottom: 2px solid #2563eb !important;
+            padding-bottom: 2mm !important;
+            page-break-inside: avoid !important;
           }
           
           .print-company-info {
-            flex: 1;
-            text-align: right;
+            flex: 1 !important;
+            text-align: right !important;
           }
           
           .print-company-name {
-            font-size: 16px;
-            font-weight: bold;
-            margin: 0 0 2mm 0;
-            color: #2563eb;
+            font-size: 13px !important;
+            font-weight: bold !important;
+            margin-bottom: 1mm !important;
+            color: #2563eb !important;
           }
           
           .print-company-details {
-            font-size: 9px;
-            color: #6b7280;
-            line-height: 1.4;
+            font-size: 8px !important;
+            color: #6b7280 !important;
+            line-height: 1.3 !important;
+          }
+          
+          .print-company-details div {
+            margin-bottom: 0.4mm !important;
           }
           
           .print-logo {
-            flex-shrink: 0;
-            margin: 0 6mm;
-            text-align: center;
+            flex-shrink: 0 !important;
+            margin: 0 3mm !important;
+            text-align: center !important;
           }
           
           .print-logo img {
-            width: 12mm;
-            height: 12mm;
-            object-fit: contain;
+            width: 10mm !important;
+            height: 10mm !important;
+            object-fit: contain !important;
           }
           
           .print-invoice-info {
-            flex: 1;
-            text-align: left;
+            flex: 1 !important;
+            text-align: left !important;
           }
           
           .print-invoice-title {
-            font-size: 16px;
-            font-weight: bold;
-            margin: 0 0 2mm 0;
-            color: #2563eb;
+            font-size: 13px !important;
+            font-weight: bold !important;
+            margin-bottom: 1mm !important;
+            color: #2563eb !important;
           }
           
           .print-invoice-details {
-            font-size: 9px;
-            color: #6b7280;
-            line-height: 1.4;
+            font-size: 8px !important;
+            color: #6b7280 !important;
+            line-height: 1.3 !important;
+          }
+          
+          .print-invoice-details div {
+            margin-bottom: 0.4mm !important;
           }
           
           .print-customer-section {
-            margin-bottom: 3mm;
+            margin-bottom: 2mm !important;
           }
           
           .print-section-header {
-            background-color: #f3f4f6;
-            padding: 1.5mm;
-            border-right: 3px solid #2563eb;
-            margin-bottom: 1.5mm;
-            font-size: 10px;
-            font-weight: bold;
-            color: #374151;
+            background-color: #f3f4f6 !important;
+            padding: 1mm !important;
+            border-right: 3px solid #2563eb !important;
+            margin-bottom: 1mm !important;
+            font-size: 8px !important;
+            font-weight: bold !important;
+            color: #374151 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
           
           .print-customer-details {
-            padding-right: 2mm;
-            font-size: 9px;
+            padding-right: 2mm !important;
+            font-size: 8px !important;
           }
           
           .print-customer-name {
-            font-weight: bold;
-            font-size: 10px;
-            margin-bottom: 1mm;
+            font-weight: bold !important;
+            font-size: 8.5px !important;
+            margin-bottom: 0.5mm !important;
+          }
+          
+          .print-customer-details div {
+            margin-bottom: 0.3mm !important;
           }
           
           .print-items-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 9px;
-            margin-bottom: 3mm;
+            width: 100% !important;
+            border-collapse: collapse !important;
+            font-size: 7.5px !important;
+            margin-bottom: 2mm !important;
+            border: 1px solid #d1d5db !important;
           }
           
           .print-items-table th,
           .print-items-table td {
-            border: 1px solid #d1d5db;
-            padding: 1.5mm;
-            text-align: center;
+            border: 1px solid #d1d5db !important;
+            padding: 0.8mm !important;
+            text-align: center !important;
+            vertical-align: middle !important;
           }
           
           .print-items-table th {
-            background-color: #2563eb;
-            color: white;
-            font-weight: bold;
-            font-size: 9px;
+            background-color: #2563eb !important;
+            color: white !important;
+            font-weight: bold !important;
+            font-size: 7.5px !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
           
-          .print-items-table td:last-child {
-            text-align: right;
+          .print-items-table td:nth-child(4) {
+            text-align: right !important;
+          }
+          
+          .print-item-name {
+            font-weight: bold !important;
+            margin-bottom: 0.3mm !important;
+          }
+          
+          .print-item-desc {
+            font-size: 6.5px !important;
+            color: #6b7280 !important;
           }
           
           .print-totals {
-            margin-bottom: 3mm;
-            text-align: left;
+            margin-bottom: 2mm !important;
+            text-align: left !important;
           }
           
           .print-totals-box {
-            display: inline-block;
-            width: 35mm;
-            font-size: 9px;
+            display: inline-block !important;
+            width: 28mm !important;
+            font-size: 7.5px !important;
+            margin-left: auto !important;
           }
           
           .print-total-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 0.5mm 0;
-            border-bottom: 0.5px solid #d1d5db;
+            display: flex !important;
+            justify-content: space-between !important;
+            padding: 0.4mm 0 !important;
+            border-bottom: 0.3px solid #d1d5db !important;
           }
           
           .print-final-total {
-            display: flex;
-            justify-content: space-between;
-            padding: 1mm 0;
-            font-weight: bold;
-            font-size: 10px;
-            border-top: 1px solid #2563eb;
-            margin-top: 1mm;
+            display: flex !important;
+            justify-content: space-between !important;
+            padding: 0.7mm 0 !important;
+            font-weight: bold !important;
+            font-size: 8.5px !important;
+            border-top: 1px solid #2563eb !important;
+            margin-top: 0.5mm !important;
           }
           
           .print-payment-info {
-            background-color: #f0f9ff;
-            border: 1px solid #bfdbfe;
-            border-radius: 2mm;
-            padding: 2.5mm;
-            font-size: 8px;
-            margin-bottom: 3mm;
+            background-color: #f0f9ff !important;
+            border: 1px solid #bfdbfe !important;
+            border-radius: 1mm !important;
+            padding: 1.8mm !important;
+            font-size: 7px !important;
+            margin-bottom: 2mm !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
           
           .print-payment-header {
-            color: #2563eb;
-            font-weight: bold;
-            margin-bottom: 1.5mm;
-            font-size: 9px;
+            color: #2563eb !important;
+            font-weight: bold !important;
+            margin-bottom: 1mm !important;
+            font-size: 7.5px !important;
           }
           
           .print-payment-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 1mm;
+            display: flex !important;
+            justify-content: space-between !important;
+            margin-bottom: 0.7mm !important;
           }
           
           .print-payment-amounts {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 1.5mm;
-            padding-top: 1.5mm;
-            border-top: 1px solid #93c5fd;
+            display: flex !important;
+            justify-content: space-between !important;
+            margin-top: 1mm !important;
+            padding-top: 1mm !important;
+            border-top: 1px solid #93c5fd !important;
           }
           
           .print-payment-amount {
-            text-align: center;
-            flex: 1;
+            text-align: center !important;
+            flex: 1 !important;
           }
           
           .print-payment-label {
-            color: #6b7280;
-            font-size: 7px;
-            margin-bottom: 0.5mm;
+            color: #6b7280 !important;
+            font-size: 6px !important;
+            margin-bottom: 0.3mm !important;
           }
           
           .print-payment-value {
-            font-weight: bold;
-            font-size: 8px;
+            font-weight: bold !important;
+            font-size: 6.5px !important;
           }
           
           .print-notes {
-            font-size: 8px;
-            margin-bottom: 2mm;
-            background-color: #f9fafb;
-            padding: 1.5mm;
-            border-radius: 1mm;
-            color: #6b7280;
+            font-size: 7px !important;
+            margin-bottom: 1.5mm !important;
+            background-color: #f9fafb !important;
+            padding: 1mm !important;
+            border-radius: 0.5mm !important;
+            color: #6b7280 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
           
           .print-footer {
-            text-align: center;
-            font-size: 8px;
-            color: #6b7280;
-            border-top: 0.5px solid #d1d5db;
-            padding-top: 2mm;
-            margin-top: 3mm;
+            text-align: center !important;
+            font-size: 6.5px !important;
+            color: #6b7280 !important;
+            border-top: 0.3px solid #d1d5db !important;
+            padding-top: 1mm !important;
+            margin-top: 1.5mm !important;
           }
           
           .print-footer-title {
-            font-size: 10px;
-            font-weight: bold;
-            margin-bottom: 1mm;
+            font-size: 7.5px !important;
+            font-weight: bold !important;
+            margin-bottom: 0.5mm !important;
           }
           
           .print-footer-tagline {
-            font-size: 8px;
-            color: #2563eb;
-            font-style: italic;
-            margin-bottom: 1mm;
+            font-size: 6.5px !important;
+            color: #2563eb !important;
+            font-style: italic !important;
+            margin-bottom: 0.5mm !important;
           }
           
           .print-stamp {
-            text-align: center;
-            margin: 3mm 0;
+            text-align: center !important;
+            margin: 1mm 0 !important;
           }
           
           .print-stamp img {
-            width: 15mm;
-            height: 12mm;
-            object-fit: contain;
+            width: 10mm !important;
+            height: 8mm !important;
+            object-fit: contain !important;
           }
           
           @media screen {
             .print-invoice {
-              display: none;
+              display: none !important;
             }
           }
         `}
@@ -369,7 +414,7 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
             <tbody>
               {items && items.length > 0 ? (
                 items.map((item, index) => (
-                  <tr key={index}>
+                  <tr key={index} style={{ backgroundColor: index % 2 === 0 ? '#f9fafb' : 'white' }}>
                     <td style={{ fontWeight: 'bold', color: '#2563eb' }}>
                       {item.total_amount?.toLocaleString('ar-SA')}
                     </td>
@@ -377,17 +422,17 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
                       {item.unit_price?.toLocaleString('ar-SA')}
                     </td>
                     <td>{item.quantity}</td>
-                    <td style={{ textAlign: 'right' }}>
-                      <div style={{ fontWeight: 'bold', marginBottom: '0.5mm' }}>{item.item_name}</div>
+                    <td>
+                      <div className="print-item-name">{item.item_name}</div>
                       {item.description && (
-                        <div style={{ fontSize: '8px', color: '#6b7280' }}>{item.description}</div>
+                        <div className="print-item-desc">{item.description}</div>
                       )}
                     </td>
                     <td style={{ fontWeight: 'bold' }}>{index + 1}</td>
                   </tr>
                 ))
               ) : (
-                <tr>
+                <tr style={{ backgroundColor: '#f9fafb' }}>
                   <td style={{ fontWeight: 'bold', color: '#2563eb' }}>
                     {invoice.amount?.toLocaleString('ar-SA')}
                   </td>
@@ -395,9 +440,9 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
                     {invoice.amount?.toLocaleString('ar-SA')}
                   </td>
                   <td>1</td>
-                  <td style={{ textAlign: 'right' }}>
-                    <div style={{ fontWeight: 'bold', marginBottom: '0.5mm' }}>خدمات عامة</div>
-                    <div style={{ fontSize: '8px', color: '#6b7280' }}>{invoice.notes || 'خدمات متنوعة'}</div>
+                  <td>
+                    <div className="print-item-name">خدمات عامة</div>
+                    <div className="print-item-desc">{invoice.notes || 'خدمات متنوعة'}</div>
                   </td>
                   <td style={{ fontWeight: 'bold' }}>1</td>
                 </tr>
@@ -413,9 +458,9 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
               <span>المجموع الفرعي:</span>
               <span>{invoice.amount?.toLocaleString('ar-SA')} ر.س</span>
             </div>
-            <div className="print-total-row">
+            <div className="print-total-row" style={{ backgroundColor: '#fef3c7', padding: '0.4mm' }}>
               <span>ضريبة القيمة المضافة (15%):</span>
-              <span>{invoice.tax_amount?.toLocaleString('ar-SA')} ر.س</span>
+              <span style={{ color: '#d97706', fontWeight: 'bold' }}>{invoice.tax_amount?.toLocaleString('ar-SA')} ر.س</span>
             </div>
             <div className="print-final-total">
               <span>إجمالي المبلغ المستحق:</span>
@@ -430,12 +475,28 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
           
           <div className="print-payment-row">
             <span>حالة الفاتورة:</span>
-            <strong>{invoice.actual_status || invoice.payment_status || invoice.status}</strong>
+            <strong style={{
+              backgroundColor: (invoice.actual_status || invoice.payment_status || invoice.status) === 'مدفوعة' ? '#d1fae5' : 
+                            (invoice.actual_status || invoice.payment_status || invoice.status) === 'مدفوعة جزئياً' ? '#dbeafe' :
+                            (invoice.actual_status || invoice.payment_status || invoice.status) === 'قيد الانتظار' ? '#fef3c7' : '#fee2e2',
+              color: (invoice.actual_status || invoice.payment_status || invoice.status) === 'مدفوعة' ? '#065f46' : 
+                     (invoice.actual_status || invoice.payment_status || invoice.status) === 'مدفوعة جزئياً' ? '#1e40af' :
+                     (invoice.actual_status || invoice.payment_status || invoice.status) === 'قيد الانتظار' ? '#92400e' : '#991b1b',
+              padding: '0.4mm 0.8mm',
+              borderRadius: '0.8mm',
+              fontSize: '6.5px',
+              WebkitPrintColorAdjust: 'exact',
+              printColorAdjust: 'exact'
+            }}>
+              {invoice.actual_status || invoice.payment_status || invoice.status}
+            </strong>
           </div>
           
           <div className="print-payment-row">
             <span>نوع الدفع:</span>
-            <strong>{invoice.actual_payment_type || invoice.payment_type || 'دفع آجل'}</strong>
+            <strong style={{ color: '#2563eb' }}>
+              {invoice.actual_payment_type || invoice.payment_type || 'دفع آجل'}
+            </strong>
           </div>
 
           <div className="print-payment-amounts">
