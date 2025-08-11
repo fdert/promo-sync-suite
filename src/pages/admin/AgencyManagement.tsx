@@ -12,7 +12,7 @@ import { useAgency, Agency, AgencyMember } from '@/hooks/useAgency';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Building2, Users, Settings, Plus, Edit, Trash2, Crown, Shield, User } from 'lucide-react';
+import { Building2, Users, Settings, Plus, Edit, Trash2, Crown, Shield, User, Key } from 'lucide-react';
 
 const AgencyManagement = () => {
   const { user } = useAuth();
@@ -41,6 +41,15 @@ const AgencyManagement = () => {
     email: '',
     role: 'employee'
   });
+
+  // بيانات إعادة تعيين كلمة المرور
+  const [passwordResetForm, setPasswordResetForm] = useState({
+    userEmail: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  
+  const [passwordResetDialogOpen, setPasswordResetDialogOpen] = useState(false);
 
   useEffect(() => {
     const checkSuperAdmin = async () => {
@@ -164,6 +173,57 @@ const AgencyManagement = () => {
           variant: "destructive"
         });
       }
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!user || !passwordResetForm.userEmail || !passwordResetForm.newPassword) return;
+
+    if (passwordResetForm.newPassword !== passwordResetForm.confirmPassword) {
+      toast({
+        title: "خطأ في كلمة المرور",
+        description: "كلمات المرور غير متطابقة",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (passwordResetForm.newPassword.length < 6) {
+      toast({
+        title: "خطأ في كلمة المرور",
+        description: "كلمة المرور يجب أن تكون 6 أحرف على الأقل",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('reset-user-password', {
+        body: {
+          userEmail: passwordResetForm.userEmail,
+          newPassword: passwordResetForm.newPassword,
+          adminUserId: user.id
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "تم إعادة تعيين كلمة المرور",
+        description: `تم إعادة تعيين كلمة المرور للمستخدم ${passwordResetForm.userEmail} بنجاح`
+      });
+
+      setPasswordResetForm({ userEmail: '', newPassword: '', confirmPassword: '' });
+      setPasswordResetDialogOpen(false);
+    } catch (error: any) {
+      toast({
+        title: "خطأ في إعادة التعيين",
+        description: error.message || "حدث خطأ أثناء إعادة تعيين كلمة المرور",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
     }
   };
   
@@ -429,7 +489,76 @@ const AgencyManagement = () => {
                   إدارة أعضاء الوكالة وصلاحياتهم
                 </CardDescription>
               </div>
-              <Dialog open={memberDialogOpen} onOpenChange={setMemberDialogOpen}>
+              <div className="flex gap-2">
+                <Dialog open={passwordResetDialogOpen} onOpenChange={setPasswordResetDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline">
+                      <Key className="h-4 w-4 mr-2" />
+                      إعادة تعيين كلمة المرور
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>إعادة تعيين كلمة المرور</DialogTitle>
+                      <DialogDescription>
+                        قم بإعادة تعيين كلمة مرور أحد أعضاء الوكالة
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="userEmail">البريد الإلكتروني للمستخدم</Label>
+                        <Input
+                          id="userEmail"
+                          type="email"
+                          value={passwordResetForm.userEmail}
+                          onChange={(e) => setPasswordResetForm(prev => ({ ...prev, userEmail: e.target.value }))}
+                          placeholder="user@example.com"
+                          required
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="newPassword">كلمة المرور الجديدة</Label>
+                        <Input
+                          id="newPassword"
+                          type="password"
+                          value={passwordResetForm.newPassword}
+                          onChange={(e) => setPasswordResetForm(prev => ({ ...prev, newPassword: e.target.value }))}
+                          placeholder="أدخل كلمة المرور الجديدة"
+                          required
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="confirmPassword">تأكيد كلمة المرور</Label>
+                        <Input
+                          id="confirmPassword"
+                          type="password"
+                          value={passwordResetForm.confirmPassword}
+                          onChange={(e) => setPasswordResetForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                          placeholder="أعد إدخال كلمة المرور"
+                          required
+                        />
+                      </div>
+                      <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg">
+                        <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                          ⚠️ تنبيه: سيتم إعادة تعيين كلمة المرور فوراً بدون الحاجة لكلمة المرور السابقة
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button variant="outline" onClick={() => setPasswordResetDialogOpen(false)}>
+                        إلغاء
+                      </Button>
+                      <Button 
+                        onClick={handleResetPassword} 
+                        disabled={loading || !passwordResetForm.userEmail.trim() || !passwordResetForm.newPassword.trim()}
+                        variant="destructive"
+                      >
+                        {loading ? 'جاري إعادة التعيين...' : 'إعادة تعيين كلمة المرور'}
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+                <Dialog open={memberDialogOpen} onOpenChange={setMemberDialogOpen}>
                 <DialogTrigger asChild>
                   <Button>
                     <Plus className="h-4 w-4 mr-2" />
@@ -486,6 +615,7 @@ const AgencyManagement = () => {
                   </div>
                 </DialogContent>
               </Dialog>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
