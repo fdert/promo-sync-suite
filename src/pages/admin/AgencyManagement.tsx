@@ -9,16 +9,21 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAgency, Agency, AgencyMember } from '@/hooks/useAgency';
+import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import { Building2, Users, Settings, Plus, Edit, Trash2, Crown, Shield, User } from 'lucide-react';
 
 const AgencyManagement = () => {
+  const { user } = useAuth();
   const { currentAgency, updateAgency, addMember, removeMember, getAgencyMembers } = useAgency();
   const { toast } = useToast();
   const [members, setMembers] = useState<AgencyMember[]>([]);
   const [loading, setLoading] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [memberDialogOpen, setMemberDialogOpen] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [availableAgencies, setAvailableAgencies] = useState<Agency[]>([]);
 
   // بيانات تحديث الوكالة
   const [agencyForm, setAgencyForm] = useState({
@@ -36,6 +41,32 @@ const AgencyManagement = () => {
     email: '',
     role: 'employee'
   });
+
+  useEffect(() => {
+    const checkSuperAdmin = async () => {
+      if (!user) return;
+      
+      const { data: roles } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('role', 'super_admin');
+      
+      setIsSuperAdmin(!!roles && roles.length > 0);
+      
+      // إذا كان super admin، جلب جميع الوكالات
+      if (roles && roles.length > 0) {
+        const { data: agencies } = await supabase
+          .from('agencies')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        setAvailableAgencies(agencies || []);
+      }
+    };
+
+    checkSuperAdmin();
+  }, [user]);
 
   useEffect(() => {
     if (currentAgency) {
@@ -162,7 +193,67 @@ const AgencyManagement = () => {
     }
   };
 
-  if (!currentAgency) {
+  // للـ super admin، إظهار قائمة بجميع الوكالات
+  if (isSuperAdmin && !currentAgency) {
+    return (
+      <div className="p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">إدارة الوكالات</h1>
+            <p className="text-muted-foreground">
+              جميع الوكالات المسجلة في النظام
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {availableAgencies.map((agency) => (
+            <Card key={agency.id} className="cursor-pointer hover:shadow-lg transition-shadow">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5" />
+                  {agency.name}
+                </CardTitle>
+                <CardDescription>
+                  {agency.contact_email}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">الحالة:</span>
+                    <Badge variant={agency.is_active ? "default" : "secondary"}>
+                      {agency.is_active ? "نشط" : "غير نشط"}
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">خطة الاشتراك:</span>
+                    <span className="text-sm">{agency.subscription_plan}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {availableAgencies.length === 0 && (
+          <Card>
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">لا توجد وكالات</h3>
+                <p className="text-muted-foreground">
+                  لم يتم إنشاء أي وكالات في النظام بعد
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    );
+  }
+
+  if (!currentAgency && !isSuperAdmin) {
     return (
       <div className="p-6">
         <Card>
