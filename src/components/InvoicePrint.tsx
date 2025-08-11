@@ -70,10 +70,12 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
             position: absolute !important;
             left: 0 !important;
             top: 0 !important;
-            transform: scale(1.3) !important;
+            transform: scale(1.6) !important;
             transform-origin: top left !important;
             width: 210mm !important;
             max-width: 210mm !important;
+            direction: rtl !important;
+            text-align: right !important;
           }
           
           @page {
@@ -113,6 +115,8 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
             box-sizing: border-box !important;
             margin: 0 !important;
             padding: 0 !important;
+            direction: rtl !important;
+            text-align: right !important;
           }
           
           .print-header {
@@ -253,14 +257,16 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
           
           .print-totals {
             margin-bottom: 2mm !important;
-            text-align: left !important;
+            text-align: right !important;
+            direction: rtl !important;
           }
           
           .print-totals-box {
             display: inline-block !important;
-            width: 28mm !important;
-            font-size: 7.5px !important;
-            margin-left: auto !important;
+            width: 35mm !important;
+            font-size: 8px !important;
+            margin-right: auto !important;
+            text-align: right !important;
           }
           
           .print-total-row {
@@ -425,47 +431,47 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
           <table className="print-items-table">
             <thead>
               <tr>
-                <th style={{ width: '20%' }}>الإجمالي (ر.س)</th>
-                <th style={{ width: '18%' }}>السعر (ر.س)</th>
-                <th style={{ width: '12%' }}>الكمية</th>
-                <th style={{ width: '42%' }}>اسم البند / الخدمة</th>
                 <th style={{ width: '8%' }}>#</th>
+                <th style={{ width: '42%' }}>اسم البند / الخدمة</th>
+                <th style={{ width: '12%' }}>الكمية</th>
+                <th style={{ width: '18%' }}>السعر (ر.س)</th>
+                <th style={{ width: '20%' }}>الإجمالي (ر.س)</th>
               </tr>
             </thead>
             <tbody>
               {items && items.length > 0 ? (
                 items.map((item, index) => (
                   <tr key={index} style={{ backgroundColor: index % 2 === 0 ? '#f9fafb' : 'white' }}>
-                    <td style={{ fontWeight: 'bold', color: '#2563eb' }}>
-                      {item.total_amount?.toLocaleString('ar-SA')}
-                    </td>
-                    <td style={{ fontWeight: 'bold' }}>
-                      {item.unit_price?.toLocaleString('ar-SA')}
-                    </td>
-                    <td>{item.quantity}</td>
+                    <td style={{ fontWeight: 'bold' }}>{index + 1}</td>
                     <td>
                       <div className="print-item-name">{item.item_name}</div>
                       {item.description && (
                         <div className="print-item-desc">{item.description}</div>
                       )}
                     </td>
-                    <td style={{ fontWeight: 'bold' }}>{index + 1}</td>
+                    <td>{item.quantity}</td>
+                    <td style={{ fontWeight: 'bold' }}>
+                      {item.unit_price?.toLocaleString('ar-SA')}
+                    </td>
+                    <td style={{ fontWeight: 'bold', color: '#2563eb' }}>
+                      {item.total_amount?.toLocaleString('ar-SA')}
+                    </td>
                   </tr>
                 ))
               ) : (
                 <tr style={{ backgroundColor: '#f9fafb' }}>
-                  <td style={{ fontWeight: 'bold', color: '#2563eb' }}>
-                    {invoice.amount?.toLocaleString('ar-SA')}
-                  </td>
-                  <td style={{ fontWeight: 'bold' }}>
-                    {invoice.amount?.toLocaleString('ar-SA')}
-                  </td>
-                  <td>1</td>
+                  <td style={{ fontWeight: 'bold' }}>1</td>
                   <td>
                     <div className="print-item-name">خدمات عامة</div>
                     <div className="print-item-desc">{invoice.notes || 'خدمات متنوعة'}</div>
                   </td>
-                  <td style={{ fontWeight: 'bold' }}>1</td>
+                  <td>1</td>
+                  <td style={{ fontWeight: 'bold' }}>
+                    {invoice.amount?.toLocaleString('ar-SA')}
+                  </td>
+                  <td style={{ fontWeight: 'bold', color: '#2563eb' }}>
+                    {invoice.amount?.toLocaleString('ar-SA')}
+                  </td>
                 </tr>
               )}
             </tbody>
