@@ -157,8 +157,13 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
           
           .print-logo {
             flex-shrink: 0 !important;
-            margin: 0 3mm !important;
+            flex: 0 0 auto !important;
+            margin: 0 auto !important;
             text-align: center !important;
+            position: absolute !important;
+            left: 50% !important;
+            top: 0 !important;
+            transform: translateX(-50%) !important;
           }
           
           .print-logo img {
