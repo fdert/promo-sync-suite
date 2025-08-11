@@ -1,14 +1,13 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Building2, User, Mail, Phone, MapPin, Globe, Star, Check } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Building2, User, Mail, Phone, MapPin, Globe, Star, Check, ArrowRight, ArrowLeft, Palette } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -28,7 +27,7 @@ interface SubscriptionPlan {
 }
 
 const CreateAgencyForm = () => {
-  const navigate = useNavigate();
+  const [currentStep, setCurrentStep] = useState("basic");
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -80,8 +79,34 @@ const CreateAgencyForm = () => {
     }));
   };
 
-  const createAgencyWithSubscription = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const validateStep = (step: string) => {
+    switch (step) {
+      case "basic":
+        return formData.name && formData.contact_email;
+      case "subscription":
+        return selectedPlan;
+      default:
+        return true;
+    }
+  };
+
+  const nextStep = () => {
+    if (currentStep === "basic" && validateStep("basic")) {
+      setCurrentStep("subscription");
+    } else if (currentStep === "subscription" && validateStep("subscription")) {
+      setCurrentStep("summary");
+    }
+  };
+
+  const prevStep = () => {
+    if (currentStep === "subscription") {
+      setCurrentStep("basic");
+    } else if (currentStep === "summary") {
+      setCurrentStep("subscription");
+    }
+  };
+
+  const createAgencyWithSubscription = async () => {
     if (!selectedPlan) {
       toast.error('يرجى اختيار خطة اشتراك');
       return;
@@ -89,7 +114,6 @@ const CreateAgencyForm = () => {
 
     setLoading(true);
     try {
-      // إنشاء الوكالة
       const { data: agencyData, error: agencyError } = await supabase
         .from('agencies')
         .insert({
@@ -103,7 +127,6 @@ const CreateAgencyForm = () => {
 
       if (agencyError) throw agencyError;
 
-      // إنشاء اشتراك نشط للوكالة
       const selectedPlanData = plans.find(p => p.id === selectedPlan);
       if (selectedPlanData) {
         const subscriptionEndDate = new Date();
@@ -121,7 +144,6 @@ const CreateAgencyForm = () => {
           });
       }
 
-      // إضافة المستخدم الحالي كمالك للوكالة
       await supabase
         .from('agency_members')
         .insert({
@@ -131,8 +153,6 @@ const CreateAgencyForm = () => {
         });
 
       toast.success('تم إنشاء الوكالة وتفعيل الاشتراك بنجاح');
-      
-      // إعادة تحميل الصفحة لتحديث قائمة الوكالات
       window.location.reload();
       
     } catch (error: any) {
@@ -146,198 +166,341 @@ const CreateAgencyForm = () => {
   const selectedPlanData = plans.find(p => p.id === selectedPlan);
 
   return (
-    <form onSubmit={createAgencyWithSubscription} className="space-y-6">
-      {/* معلومات الوكالة الأساسية */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Building2 className="h-5 w-5" />
-          <h3 className="text-lg font-semibold">معلومات الوكالة</h3>
-        </div>
-        
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="name">اسم الوكالة *</Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => handleNameChange(e.target.value)}
-              required
-              placeholder="مثال: وكالة الإبداع"
-            />
-          </div>
-          <div>
-            <Label htmlFor="slug">الرابط المخصص</Label>
-            <Input
-              id="slug"
-              value={formData.slug}
-              onChange={(e) => setFormData({...formData, slug: e.target.value})}
-              placeholder="agency-name"
-              dir="ltr"
-            />
-          </div>
-        </div>
+    <div className="w-full max-w-4xl mx-auto">
+      <Tabs value={currentStep} onValueChange={setCurrentStep} className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="basic" disabled={false}>
+            <Building2 className="h-4 w-4 mr-2" />
+            معلومات الوكالة
+          </TabsTrigger>
+          <TabsTrigger value="subscription" disabled={!validateStep("basic")}>
+            <Star className="h-4 w-4 mr-2" />
+            خطة الاشتراك
+          </TabsTrigger>
+          <TabsTrigger value="summary" disabled={!validateStep("subscription")}>
+            <Check className="h-4 w-4 mr-2" />
+            مراجعة الطلب
+          </TabsTrigger>
+        </TabsList>
 
-        <div>
-          <Label htmlFor="description">وصف الوكالة</Label>
-          <Textarea
-            id="description"
-            value={formData.description}
-            onChange={(e) => setFormData({...formData, description: e.target.value})}
-            placeholder="وصف مختصر عن خدمات الوكالة"
-            rows={3}
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="contact_email">البريد الإلكتروني *</Label>
-            <div className="relative">
-              <Mail className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
-              <Input
-                id="contact_email"
-                type="email"
-                value={formData.contact_email}
-                onChange={(e) => setFormData({...formData, contact_email: e.target.value})}
-                required
-                className="pl-10"
-                placeholder="info@agency.com"
-              />
-            </div>
-          </div>
-          <div>
-            <Label htmlFor="contact_phone">رقم الهاتف</Label>
-            <div className="relative">
-              <Phone className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
-              <Input
-                id="contact_phone"
-                value={formData.contact_phone}
-                onChange={(e) => setFormData({...formData, contact_phone: e.target.value})}
-                className="pl-10"
-                placeholder="+966xxxxxxxxx"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="address">العنوان</Label>
-            <div className="relative">
-              <MapPin className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
-              <Input
-                id="address"
-                value={formData.address}
-                onChange={(e) => setFormData({...formData, address: e.target.value})}
-                className="pl-10"
-                placeholder="الرياض، المملكة العربية السعودية"
-              />
-            </div>
-          </div>
-          <div>
-            <Label htmlFor="website">الموقع الإلكتروني</Label>
-            <div className="relative">
-              <Globe className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
-              <Input
-                id="website"
-                value={formData.website}
-                onChange={(e) => setFormData({...formData, website: e.target.value})}
-                className="pl-10"
-                placeholder="https://agency.com"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <Separator />
-
-      {/* اختيار خطة الاشتراك */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Star className="h-5 w-5" />
-          <h3 className="text-lg font-semibold">اختيار خطة الاشتراك</h3>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {plans.map((plan) => (
-            <Card
-              key={plan.id}
-              className={`cursor-pointer transition-all ${
-                selectedPlan === plan.id
-                  ? 'ring-2 ring-primary border-primary'
-                  : 'hover:border-primary/50'
-              } ${plan.is_popular ? 'border-yellow-500' : ''}`}
-              onClick={() => setSelectedPlan(plan.id)}
-            >
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">{plan.name_ar}</CardTitle>
-                  {plan.is_popular && (
-                    <Badge variant="outline" className="bg-yellow-50 text-yellow-600 border-yellow-200">
-                      <Star className="h-3 w-3 mr-1" />
-                      الأكثر شعبية
-                    </Badge>
-                  )}
-                </div>
-                <div className="text-2xl font-bold">
-                  {plan.price} ر.س
-                  <span className="text-sm font-normal text-muted-foreground">
-                    /{plan.billing_period === 'monthly' ? 'شهر' : 'سنة'}
-                  </span>
-                </div>
+        <ScrollArea className="h-[70vh] mt-4">
+          <TabsContent value="basic" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5" />
+                  المعلومات الأساسية
+                </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="flex items-center gap-2 text-sm">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                  {plan.max_users_per_agency} مستخدم
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="name">اسم الوكالة *</Label>
+                    <Input
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) => handleNameChange(e.target.value)}
+                      required
+                      placeholder="مثال: وكالة الإبداع"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="slug">الرابط المخصص</Label>
+                    <Input
+                      id="slug"
+                      value={formData.slug}
+                      onChange={(e) => setFormData({...formData, slug: e.target.value})}
+                      placeholder="agency-name"
+                      dir="ltr"
+                    />
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <Check className="h-4 w-4 text-muted-foreground" />
-                  {plan.max_orders_per_month} طلب/شهر
+
+                <div>
+                  <Label htmlFor="description">وصف الوكالة</Label>
+                  <Textarea
+                    id="description"
+                    value={formData.description}
+                    onChange={(e) => setFormData({...formData, description: e.target.value})}
+                    placeholder="وصف مختصر عن خدمات الوكالة"
+                    rows={3}
+                  />
                 </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <Check className="h-4 w-4 text-muted-foreground" />
-                  {plan.max_storage_gb} GB تخزين
-                </div>
-                {plan.description && (
-                  <p className="text-xs text-muted-foreground mt-2">
-                    {plan.description}
-                  </p>
-                )}
               </CardContent>
             </Card>
-          ))}
-        </div>
 
-        {selectedPlanData && (
-          <Card className="bg-muted/50">
-            <CardContent className="pt-4">
-              <div className="flex items-center justify-between">
-                <span>الخطة المختارة:</span>
-                <Badge variant="default">{selectedPlanData.name_ar}</Badge>
-              </div>
-              <div className="flex items-center justify-between mt-2">
-                <span>التكلفة الإجمالية:</span>
-                <span className="font-bold text-lg">
-                  {selectedPlanData.price} ر.س
-                  /{selectedPlanData.billing_period === 'monthly' ? 'شهر' : 'سنة'}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="h-5 w-5" />
+                  معلومات التواصل
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="contact_email">البريد الإلكتروني *</Label>
+                    <div className="relative">
+                      <Mail className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
+                      <Input
+                        id="contact_email"
+                        type="email"
+                        value={formData.contact_email}
+                        onChange={(e) => setFormData({...formData, contact_email: e.target.value})}
+                        required
+                        className="pl-10"
+                        placeholder="info@agency.com"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="contact_phone">رقم الهاتف</Label>
+                    <div className="relative">
+                      <Phone className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
+                      <Input
+                        id="contact_phone"
+                        value={formData.contact_phone}
+                        onChange={(e) => setFormData({...formData, contact_phone: e.target.value})}
+                        className="pl-10"
+                        placeholder="+966xxxxxxxxx"
+                      />
+                    </div>
+                  </div>
+                </div>
 
-      <div className="flex justify-end gap-2 pt-4">
-        <Button
-          type="submit"
-          disabled={loading || !selectedPlan}
-          className="min-w-[200px]"
-        >
-          {loading ? 'جاري الإنشاء...' : 'إنشاء الوكالة وتفعيل الاشتراك'}
-        </Button>
-      </div>
-    </form>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="address">العنوان</Label>
+                    <div className="relative">
+                      <MapPin className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
+                      <Input
+                        id="address"
+                        value={formData.address}
+                        onChange={(e) => setFormData({...formData, address: e.target.value})}
+                        className="pl-10"
+                        placeholder="الرياض، المملكة العربية السعودية"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="website">الموقع الإلكتروني</Label>
+                    <div className="relative">
+                      <Globe className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
+                      <Input
+                        id="website"
+                        value={formData.website}
+                        onChange={(e) => setFormData({...formData, website: e.target.value})}
+                        className="pl-10"
+                        placeholder="https://agency.com"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Palette className="h-5 w-5" />
+                  الألوان والهوية
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="primary_color">اللون الأساسي</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="primary_color"
+                        type="color"
+                        value={formData.primary_color}
+                        onChange={(e) => setFormData({...formData, primary_color: e.target.value})}
+                        className="w-16 h-10 p-1 border rounded"
+                      />
+                      <Input
+                        value={formData.primary_color}
+                        onChange={(e) => setFormData({...formData, primary_color: e.target.value})}
+                        placeholder="#2563eb"
+                        className="flex-1"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="secondary_color">اللون الثانوي</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="secondary_color"
+                        type="color"
+                        value={formData.secondary_color}
+                        onChange={(e) => setFormData({...formData, secondary_color: e.target.value})}
+                        className="w-16 h-10 p-1 border rounded"
+                      />
+                      <Input
+                        value={formData.secondary_color}
+                        onChange={(e) => setFormData({...formData, secondary_color: e.target.value})}
+                        placeholder="#64748b"
+                        className="flex-1"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="flex justify-end">
+              <Button onClick={nextStep} disabled={!validateStep("basic")}>
+                التالي
+                <ArrowRight className="h-4 w-4 mr-2" />
+              </Button>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="subscription" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Star className="h-5 w-5" />
+                  اختيار خطة الاشتراك
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {plans.map((plan) => (
+                    <Card
+                      key={plan.id}
+                      className={`cursor-pointer transition-all ${
+                        selectedPlan === plan.id
+                          ? 'ring-2 ring-primary border-primary'
+                          : 'hover:border-primary/50'
+                      } ${plan.is_popular ? 'border-yellow-500' : ''}`}
+                      onClick={() => setSelectedPlan(plan.id)}
+                    >
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-lg">{plan.name_ar}</CardTitle>
+                          {plan.is_popular && (
+                            <Badge variant="outline" className="bg-yellow-50 text-yellow-600 border-yellow-200">
+                              <Star className="h-3 w-3 mr-1" />
+                              الأكثر شعبية
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="text-2xl font-bold">
+                          {plan.price} ر.س
+                          <span className="text-sm font-normal text-muted-foreground">
+                            /{plan.billing_period === 'monthly' ? 'شهر' : 'سنة'}
+                          </span>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm">
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          {plan.max_users_per_agency} مستخدم
+                        </div>
+                        <div className="flex items-center gap-2 text-sm">
+                          <Check className="h-4 w-4 text-muted-foreground" />
+                          {plan.max_orders_per_month} طلب/شهر
+                        </div>
+                        <div className="flex items-center gap-2 text-sm">
+                          <Check className="h-4 w-4 text-muted-foreground" />
+                          {plan.max_storage_gb} GB تخزين
+                        </div>
+                        {plan.description && (
+                          <p className="text-xs text-muted-foreground mt-2">
+                            {plan.description}
+                          </p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="flex justify-between">
+              <Button variant="outline" onClick={prevStep}>
+                <ArrowLeft className="h-4 w-4 ml-2" />
+                السابق
+              </Button>
+              <Button onClick={nextStep} disabled={!validateStep("subscription")}>
+                التالي
+                <ArrowRight className="h-4 w-4 mr-2" />
+              </Button>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="summary" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Check className="h-5 w-5" />
+                  مراجعة الطلب
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <h4 className="font-semibold">معلومات الوكالة</h4>
+                    <div className="space-y-2 text-sm">
+                      <div><span className="font-medium">الاسم:</span> {formData.name}</div>
+                      <div><span className="font-medium">البريد الإلكتروني:</span> {formData.contact_email}</div>
+                      {formData.contact_phone && (
+                        <div><span className="font-medium">الهاتف:</span> {formData.contact_phone}</div>
+                      )}
+                      {formData.address && (
+                        <div><span className="font-medium">العنوان:</span> {formData.address}</div>
+                      )}
+                      {formData.website && (
+                        <div><span className="font-medium">الموقع:</span> {formData.website}</div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <h4 className="font-semibold">خطة الاشتراك</h4>
+                    {selectedPlanData && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span>الخطة:</span>
+                          <Badge variant="default">{selectedPlanData.name_ar}</Badge>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>السعر:</span>
+                          <span className="font-bold">
+                            {selectedPlanData.price} ر.س
+                            /{selectedPlanData.billing_period === 'monthly' ? 'شهر' : 'سنة'}
+                          </span>
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          <div>• {selectedPlanData.max_users_per_agency} مستخدم</div>
+                          <div>• {selectedPlanData.max_orders_per_month} طلب/شهر</div>
+                          <div>• {selectedPlanData.max_storage_gb} GB تخزين</div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="flex justify-between">
+              <Button variant="outline" onClick={prevStep}>
+                <ArrowLeft className="h-4 w-4 ml-2" />
+                السابق
+              </Button>
+              <Button
+                onClick={createAgencyWithSubscription}
+                disabled={loading}
+                className="min-w-[200px]"
+              >
+                {loading ? 'جاري الإنشاء...' : 'إنشاء الوكالة وتفعيل الاشتراك'}
+              </Button>
+            </div>
+          </TabsContent>
+        </ScrollArea>
+      </Tabs>
+    </div>
   );
 };
 
