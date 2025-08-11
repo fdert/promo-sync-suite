@@ -70,7 +70,7 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
             position: absolute !important;
             left: 0 !important;
             top: 0 !important;
-            transform: scale(1.5) !important;
+            transform: scale(1.7) !important;
             transform-origin: top left !important;
             width: 210mm !important;
             max-width: 210mm !important;
@@ -136,7 +136,7 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
           }
           
           .print-company-name {
-            font-size: 13px !important;
+            font-size: 15px !important;
             font-weight: bold !important;
             margin-bottom: 1mm !important;
             color: #2563eb !important;
@@ -167,23 +167,24 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
           .print-invoice-info {
             flex: 1 !important;
             text-align: left !important;
+            direction: ltr !important;
           }
           
           .print-invoice-title {
-            font-size: 13px !important;
+            font-size: 16px !important;
             font-weight: bold !important;
-            margin-bottom: 1mm !important;
+            margin-bottom: 1.2mm !important;
             color: #2563eb !important;
           }
           
           .print-invoice-details {
-            font-size: 8px !important;
+            font-size: 10px !important;
             color: #6b7280 !important;
             line-height: 1.3 !important;
           }
           
           .print-invoice-details div {
-            margin-bottom: 0.4mm !important;
+            margin-bottom: 0.5mm !important;
           }
           
           .print-customer-section {
@@ -348,11 +349,13 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
           
           .print-footer {
             text-align: center !important;
-            font-size: 6.5px !important;
+            font-size: 8px !important;
             color: #6b7280 !important;
             border-top: 0.3px solid #d1d5db !important;
-            padding-top: 1mm !important;
-            margin-top: 1.5mm !important;
+            padding-top: 1.5mm !important;
+            margin-top: 2mm !important;
+            direction: rtl !important;
+            width: 100% !important;
           }
           
           .print-footer-title {
