@@ -1,112 +1,70 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.52.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-// Handle CORS preflight requests
-serve(async (req) => {
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders, status: 200 });
+  }
+
+  if (req.method !== 'POST') {
+    return new Response('Method not allowed', { headers: corsHeaders, status: 405 });
   }
 
   try {
     console.log('Function started successfully');
-
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-
-    const requestBody = await req.json();
-    console.log('Request body parsed:', requestBody);
-
-    const { type, order_id, data, source = 'unknown', webhook_preference = null } = requestBody;
     
-    console.log('Notification request:', { type, order_id, data });
-
-    // إذا لم يكن هناك order_id، استخدم البيانات المرسلة مباشرة
-    if (!order_id && !data) {
-      throw new Error('Missing order_id or data');
+    let requestBody;
+    try {
+      requestBody = await req.json();
+      console.log('Request body parsed:', requestBody);
+    } catch (parseError) {
+      console.error('Error parsing request body:', parseError);
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON in request body', details: parseError.message }),
+        { headers: corsHeaders, status: 400 }
+      );
     }
 
-    const orderId = order_id || data?.order_id;
-    
-    // الحصول على قالب الرسالة من قاعدة البيانات
-    const { data: templateData } = await supabase
-      .from('message_templates')
-      .select('template_content')
-      .eq('template_name', type)
-      .eq('is_active', true)
-      .single();
+    const { type, order_id, data, source, webhook_preference } = requestBody;
+    console.log('Notification request:', { type, order_id, data, source, webhook_preference });
 
-    let messageTemplate = '';
+    if (!type) {
+      console.error('Missing required field: type');
+      return new Response(
+        JSON.stringify({ error: 'Missing required field: type' }),
+        { headers: corsHeaders, status: 400 }
+      );
+    }
     
-    if (templateData?.template_content) {
-      messageTemplate = templateData.template_content;
-      console.log('Using template from database:', messageTemplate);
+    // For account_summary, we don't need order_id, just customer info
+    if (type === 'account_summary') {
+      if (!requestBody.customer_phone) {
+        console.error('Missing customer_phone for account_summary');
+        return new Response(
+          JSON.stringify({ error: 'Missing customer_phone for account_summary' }),
+          { headers: corsHeaders, status: 400 }
+        );
+      }
     } else {
-      // قالب افتراضي للرسائل
-      switch (type) {
-        case 'order_completed':
-          messageTemplate = `مرحباً {{customer_name}}! 🎉
-
-✅ *طلبك تم تسليمه واكتماله !*
-
-📋 *تفاصيل الطلب:*
-رقم الطلب: {{order_number}}
-الخدمة: {{service_name}}
-الوصف: {{description}}
-الحالة: {{status}}
-
-💰 *المعلومات المالية:*
-إجمالي المبلغ: {{amount}} ر.س
-المبلغ المدفوع: {{paid_amount}} ر.س
-المبلغ المتبقي: {{remaining_amount}} ر.س
-
-📦 *بنود الطلب:*
-{{order_items}}
-
-📅 تاريخ التسليم: {{due_date}}
-
-نشكرك لثقتك الغالية بخدماتنا ونتطلع لخدمتك مرة أخرى! 💕
-
-🌟 *نرجو تقييم خدمتنا:*
-{{evaluation_link}}
-
-شكراً لاختيارك خدماتنا! 🙏`;
-          break;
-        case 'order_ready_for_delivery':
-          messageTemplate = `مرحباً {{customer_name}}! 🎉
-
-✅ *طلبك جاهز للتسليم!*
-
-📋 *تفاصيل الطلب:*
-رقم الطلب: {{order_number}}
-الخدمة: {{service_name}}
-الوصف: {{description}}
-
-💰 *المعلومات المالية:*
-إجمالي المبلغ: {{amount}} ر.س
-المبلغ المدفوع: {{paid_amount}} ر.س
-المبلغ المتبقي: {{remaining_amount}} ر.س
-
-يمكنكم استلام طلبكم من مقرنا أو سيتم توصيله إليكم قريباً.
-
-شكراً لاختيارك خدماتنا! 🙏`;
-          break;
-        default:
-          messageTemplate = `مرحباً {{customer_name}}!
-
-تم تحديث حالة طلبكم رقم {{order_number}} إلى: {{status}}
-
-شكراً لاختيارك خدماتنا! 🙏`;
+      // For other notification types, we need order_id
+      if (!order_id) {
+        console.error('Missing required field: order_id');
+        return new Response(
+          JSON.stringify({ error: 'Missing required field: order_id' }),
+          { headers: corsHeaders, status: 400 }
+        );
       }
     }
 
-    // تهيئة المتغيرات
     let message = '';
     let customerPhone = '';
     let customerName = '';
@@ -117,33 +75,162 @@ serve(async (req) => {
     let companyName = 'وكالة الإبداع للدعاية والإعلان';
     let actualPaidAmount = 0;
     let totalAmount = 0;
-    let description = 'غير محدد';
 
-    // إذا كان هناك order_id، جلب تفاصيل الطلب من قاعدة البيانات
-    if (orderId) {
-      const { data: orderDetails } = await supabase
+    // جلب اسم الشركة من قاعدة البيانات
+    try {
+      const { data: companyData } = await supabase
+        .from('website_settings')
+        .select('setting_value')
+        .eq('setting_key', 'company_info')
+        .maybeSingle();
+
+      if (companyData?.setting_value?.companyName) {
+        companyName = companyData.setting_value.companyName;
+      }
+    } catch (error) {
+      console.log('Could not fetch company name, using default');
+    }
+
+    // جلب بيانات الطلب الكاملة مع بنود الطلب لجميع أنواع الإشعارات
+    let orderDetails = null;
+    if (order_id) {
+      const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .select(`
-          id, order_number, customer_id, service_name, description, 
-          status, priority, amount, progress, start_date, due_date,
-          payment_type, created_at, updated_at,
-          customers!inner (name, whatsapp_number),
-          order_items (quantity, item_name, unit_price, description, total_amount)
+          *,
+          customers(name, whatsapp_number),
+          order_items(item_name, quantity, unit_price, total_amount, description)
         `)
-        .eq('id', orderId)
+        .eq('id', order_id)
         .single();
+      
+      if (!orderError && orderData) {
+        orderDetails = orderData;
+        console.log('Order details loaded:', orderDetails);
+      }
+    }
 
-      console.log('Order details loaded:', orderDetails);
+    // تنسيق بنود الطلب أولاً (سواء كان هناك template أم لا)
+    if (orderDetails) {
+      if (orderDetails.order_items && orderDetails.order_items.length > 0) {
+        orderItemsText = orderDetails.order_items.map((item: any, index: number) => 
+          `${index + 1}. ${item.item_name} \n   الكمية: ${item.quantity}\n   السعر: ${item.unit_price} ر.س\n   المجموع: ${item.total_amount} ر.س`
+        ).join('\n\n');
+        console.log('Order items formatted:', orderItemsText);
+      } else {
+        orderItemsText = 'لا توجد بنود محددة';
+        console.log('No order items found');
+      }
+    }
 
-      if (orderDetails) {
-        // حساب المبلغ المدفوع الفعلي من جدول المدفوعات
+    // تحديد اسم القالب المناسب حسب نوع الإشعار وحالة الطلب
+    let templateName = type;
+    
+    // ربط أنواع الإشعارات وحالات الطلب بأسماء القوالب
+    // استخدام الحالة الجديدة من البيانات المرسلة أولاً، ثم الحالة من قاعدة البيانات
+    const currentStatus = data.new_status || orderDetails?.status || data.status;
+    if (currentStatus) {
+      switch (currentStatus) {
+        case 'جديد':
+          templateName = 'order_created';
+          break;
+        case 'مؤكد':
+          templateName = 'order_confirmed';
+          break;
+        case 'قيد التنفيذ':
+          templateName = 'order_in_progress';
+          break;
+        case 'قيد المراجعة':
+          templateName = 'order_under_review';
+          break;
+        case 'جاهز للتسليم':
+          templateName = 'order_ready_for_delivery';
+          break;
+        case 'مكتمل':
+          templateName = 'order_completed';
+          break;
+        case 'ملغي':
+          templateName = 'order_cancelled';
+          break;
+        case 'قيد الانتظار':
+          templateName = 'order_on_hold';
+          break;
+        default:
+          // استخدام نوع الإشعار إذا لم تطابق أي حالة
+          switch (type) {
+            case 'order_created':
+            case 'order_confirmed':
+            case 'order_in_progress':
+            case 'order_under_review':
+            case 'order_ready_for_delivery':
+            case 'order_completed':
+            case 'order_cancelled':
+            case 'order_on_hold':
+              templateName = type;
+              break;
+            case 'design_proof_sent':
+              templateName = 'design_proof_ready';
+              break;
+            default:
+              templateName = 'order_status_updated';
+              break;
+          }
+      }
+    } else {
+      // إذا لم توجد بيانات الطلب، استخدم نوع الإشعار مباشرة
+      switch (type) {
+        case 'design_proof_sent':
+          templateName = 'design_proof_ready';
+          break;
+        case 'order_created':
+        case 'order_confirmed':
+        case 'order_in_progress':
+        case 'order_under_review':
+        case 'order_ready_for_delivery':
+        case 'order_completed':
+        case 'order_cancelled':
+        case 'order_on_hold':
+          templateName = type;
+          break;
+        case 'account_summary':
+          // للرسائل المباشرة (ملخص الحساب)، لا نحتاج قالب
+          templateName = null;
+          break;
+        default:
+          templateName = 'order_status_updated';
+          break;
+      }
+    }
+    
+    console.log('Using template name:', templateName);
+
+    // محاولة الحصول على قالب الرسالة من قاعدة البيانات (فقط إذا لم تكن رسالة مباشرة)
+    if (templateName) {
+      const { data: templateData, error: templateError } = await supabase
+        .from('message_templates')
+        .select('template_content')
+        .eq('template_name', templateName)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (templateData?.template_content) {
+        console.log('Using template from database:', templateData.template_content);
+      
+      // استخدام القالب من قاعدة البيانات
+      message = templateData.template_content;
+      
+      // إذا كانت هناك تفاصيل طلب، استخدمها
+      let description = 'غير محدد';
+      
+      // حساب المبلغ المدفوع الفعلي من جدول المدفوعات
+      if (order_id) {
         const { data: paymentsData, error: paymentsError } = await supabase
           .from('payments')
           .select('amount')
-          .eq('order_id', orderId);
+          .eq('order_id', order_id);
         
         console.log('=== Payment Calculation Debug ===');
-        console.log('Order ID:', orderId);
+        console.log('Order ID:', order_id);
         console.log('Payments Data:', paymentsData);
         console.log('Payments Error:', paymentsError);
         
@@ -157,12 +244,10 @@ serve(async (req) => {
         
         console.log('=== Final Calculated Amount ===');
         console.log('Total Paid Amount:', actualPaidAmount);
-
-        // إعداد البيانات من تفاصيل الطلب
+      }
+      
+      if (orderDetails) {
         totalAmount = parseFloat(orderDetails.amount?.toString() || '0');
-        
-        // حساب المبلغ المتبقي
-        remainingAmount = (totalAmount - actualPaidAmount).toString();
         
         // تنسيق التواريخ
         if (orderDetails.start_date) {
@@ -173,175 +258,404 @@ serve(async (req) => {
         }
         
         description = orderDetails.description || 'غير محدد';
-        customerPhone = orderDetails.customers?.whatsapp_number || data?.customer_phone || '';
-        customerName = orderDetails.customers?.name || data?.customer_name || '';
-
-        // تنسيق بنود الطلب
-        if (orderDetails.order_items && orderDetails.order_items.length > 0) {
-          orderItemsText = orderDetails.order_items.map((item: any, index: number) => {
-            return `${index + 1}. ${item.item_name} 
-   الكمية: ${item.quantity}
-   السعر: ${item.unit_price} ر.س
-   المجموع: ${item.total_amount} ر.س`;
-          }).join('\n\n');
-        }
         
-        console.log('Order items formatted:', orderItemsText);
+        // استخدام بيانات من orderDetails
+        customerPhone = orderDetails.customers?.whatsapp_number || data.customer_phone;
+        customerName = orderDetails.customers?.name || data.customer_name;
+      } else {
+        // استخدام البيانات المرسلة مباشرة
+        customerPhone = data.customer_phone;
+        customerName = data.customer_name;
+        totalAmount = parseFloat(data.amount?.toString() || '0');
+      }
+      
+      // حساب المبلغ المتبقي
+      remainingAmount = (totalAmount - actualPaidAmount).toString();
+      
+      // استبدال المتغيرات
+      const replacements: Record<string, string> = {
+        'customer_name': customerName || '',
+        'order_number': data.order_number || '',
+        'amount': totalAmount.toString(),
+        'paid_amount': actualPaidAmount.toString(),
+        'remaining_amount': remainingAmount,
+        'payment_type': data.payment_type || 'غير محدد',
+        'progress': data.progress?.toString() || '0',
+        'service_name': data.service_name || '',
+        'description': description,
+        'order_items': orderItemsText,
+        'start_date': startDate,
+        'due_date': dueDate,
+        'status': data.new_status || data.status || orderDetails?.status || currentStatus || 'جديد',
+        'priority': data.priority || 'متوسطة',
+         'estimated_time': data.estimated_days || 'قريباً',
+         'company_name': companyName,
+         'evaluation_link': `https://e5a7747a-0935-46df-9ea9-1308e76636dc.lovableproject.com/evaluation/token-${order_id}`
+      };
+
+      // استبدال جميع المتغيرات في الرسالة
+      Object.keys(replacements).forEach(key => {
+        const regex = new RegExp(`{{${key}}}`, 'g');
+        message = message.replace(regex, replacements[key]);
+      });
+    } else {
+      console.log('No template found, using fallback messages');
+      
+      // الرسائل الافتراضية إذا لم توجد قوالب
+      switch (type) {
+        case 'order_created':
+          message = `مرحباً ${data.customer_name}! تم إنشاء طلبك رقم ${data.order_number} بنجاح. 
+
+📋 تفاصيل الطلب:
+الخدمة: ${data.service_name}
+الوصف: ${data.description || 'غير محدد'}
+قيمة الطلب: ${data.amount} ر.س
+
+📦 بنود الطلب:
+${orderItemsText || 'لا توجد بنود محددة'}
+
+سيتم التواصل معك قريباً لتأكيد التفاصيل. شكراً لثقتك بخدماتنا!`;
+          customerPhone = data.customer_phone;
+          customerName = data.customer_name;
+          break;
+
+        case 'order_confirmed':
+          message = `${data.customer_name}، تم تأكيد طلبك رقم ${data.order_number}. بدأ العمل على مشروعك وسيتم إنجازه خلال ${data.estimated_days || 'قريباً'}.`;
+          customerPhone = data.customer_phone;
+          customerName = data.customer_name;
+          break;
+
+        case 'order_in_progress':
+          message = `${data.customer_name}، طلبك رقم ${data.order_number} قيد التنفيذ حالياً. التقدم: ${data.progress || 0}%. سنبقيك على اطلاع بآخر التطورات.`;
+          customerPhone = data.customer_phone;
+          customerName = data.customer_name;
+          break;
+
+        case 'order_completed':
+          message = `تهانينا ${data.customer_name}! تم إنجاز طلبك رقم ${data.order_number} بنجاح. يمكنك الآن مراجعة النتائج. نشكرك لثقتك بخدماتنا!`;
+          customerPhone = data.customer_phone;
+          customerName = data.customer_name;
+          break;
+
+        case 'order_updated':
+          message = `${data.customer_name}، تم تحديث طلبك رقم ${data.order_number}. الحالة الحالية: ${data.status}. سنبقيك على اطلاع بأي تطورات جديدة.`;
+          customerPhone = data.customer_phone;
+          customerName = data.customer_name;
+          break;
+
+        case 'order_cancelled':
+          message = `عزيزي ${data.customer_name}، تم إلغاء طلبك رقم ${data.order_number}. للاستفسار يرجى التواصل معنا.`;
+          customerPhone = data.customer_phone;
+          customerName = data.customer_name;
+          break;
+
+        case 'order_ready_for_delivery':
+          message = `${data.customer_name}، طلبك رقم ${data.order_number} جاهز للتسليم! لتقييم الخدمة يرجى الضغط هنا: ${data.evaluation_link}`;
+          customerPhone = data.customer_phone;
+          customerName = data.customer_name;
+          break;
+
+        case 'status_update':
+          message = `${data.customer_name}، تم تحديث حالة طلبك رقم ${data.order_number} من "${data.old_status}" إلى "${data.new_status}". سنبقيك على اطلاع بأي تطورات جديدة.`;
+          customerPhone = data.customer_phone;
+          customerName = data.customer_name;
+          break;
+
+        case 'order_under_review':
+          message = `${data.customer_name}، طلبك رقم ${data.order_number} قيد المراجعة حالياً. سيتم التواصل معك قريباً لتأكيد التفاصيل.`;
+          customerPhone = data.customer_phone;
+          customerName = data.customer_name;
+          break;
+
+        case 'design_proof':
+          message = `🎨 *بروفة التصميم جاهزة للمراجعة*
+
+📋 *تفاصيل الطلب:*
+• رقم الطلب: ${data.order_number}
+• العميل: ${data.customer_name}
+• الخدمة: ${data.service_name}
+${data.order_items_text || ''}
+
+📸 *لاستعراض البروفة:*
+👇 اضغط على الرابط التالي لعرض التصميم:
+${data.file_url}
+
+*بعد مراجعة البروفة:*
+
+✅ *للموافقة:* أرسل "موافق"
+📝 *للتعديل:* اكتب التعديلات المطلوبة
+
+شكراً لكم،
+فريق *${data.company_name || 'وكالة الإبداع للدعاية والإعلان'}*`;
+          customerPhone = data.customer_phone;
+          customerName = data.customer_name;
+          break;
+
+        case 'account_summary':
+          message = requestBody.message || 'ملخص الحساب';
+          customerPhone = requestBody.customer_phone;
+          customerName = requestBody.customer_name;
+          break;
+
+        default:
+          // للحصول على بيانات الطلب إذا كان متوفراً
+          if (orderDetails) {
+            customerPhone = orderDetails.customers?.whatsapp_number || '';
+            customerName = orderDetails.customers?.name || 'عزيزنا العميل';
+          }
+          break;
       }
     } else {
-      // استخدام البيانات المرسلة مباشرة
-      customerPhone = data?.customer_phone || '';
-      customerName = data?.customer_name || '';
-      totalAmount = parseFloat(data?.amount?.toString() || '0');
-      actualPaidAmount = parseFloat(data?.paid_amount?.toString() || '0');
-      remainingAmount = (totalAmount - actualPaidAmount).toString();
+      // معالجة الحالات الخاصة عندما لا يوجد قالب
+      switch (type) {
+        case 'account_summary':
+          message = requestBody.message || 'ملخص الحساب';
+          customerPhone = requestBody.customer_phone;
+          customerName = requestBody.customer_name;
+          break;
+          
+        default:
+          throw new Error(`Unknown notification type: ${type}`);
+      }
     }
-
-    console.log('=== Final Values for Message ===');
-    console.log('Total Amount:', totalAmount);
-    console.log('Actual Paid Amount:', actualPaidAmount);
-    console.log('Remaining Amount:', remainingAmount);
-
-    // استبدال المتغيرات في قالب الرسالة
-    const replacements: Record<string, string> = {
-      'customer_name': customerName || '',
-      'order_number': data?.order_number || '',
-      'amount': totalAmount.toString(),
-      'paid_amount': actualPaidAmount.toString(),
-      'remaining_amount': remainingAmount,
-      'payment_type': data?.payment_type || 'غير محدد',
-      'service_name': data?.service_name || '',
-      'description': description,
-      'status': data?.new_status || data?.status || '',
-      'priority': data?.priority || 'متوسطة',
-      'start_date': startDate,
-      'due_date': dueDate,
-      'order_items': orderItemsText,
-      'evaluation_link': `https://e5a7747a-0935-46df-9ea9-1308e76636dc.lovableproject.com/evaluation/token-${orderId}`,
-      'company_name': companyName,
-      'estimated_time': data?.estimated_days || 'قريباً',
-      'progress': data?.progress?.toString() || '0',
-      'date': new Date().toLocaleDateString('ar-SA')
-    };
-
-    // استبدال جميع المتغيرات في النص
-    message = messageTemplate;
-    Object.entries(replacements).forEach(([key, value]) => {
-      const regex = new RegExp(`{{${key}}}`, 'g');
-      message = message.replace(regex, value);
+    
+    // التحقق من أن البيانات مكتملة
+    console.log('Final values before sending:', { 
+      customerPhone, 
+      customerName, 
+      messageLength: message.length,
+      type 
     });
 
-    // التحقق من وجود webhooks نشطة
-    const { data: webhooks } = await supabase
+    if (!customerPhone || !message) {
+      console.error('Missing data:', { 
+        hasCustomerPhone: !!customerPhone, 
+        hasMessage: !!message,
+        customerPhone,
+        messagePreview: message.substring(0, 100)
+      });
+      return new Response(
+        JSON.stringify({ 
+          error: 'Missing customer phone or message content',
+          details: { hasCustomerPhone: !!customerPhone, hasMessage: !!message }
+        }),
+        { headers: corsHeaders, status: 400 }
+      );
+    }
+
+    // البحث عن إعدادات الويب هوك للإرسال
+    const { data: webhookSettings } = await supabase
       .from('webhook_settings')
       .select('webhook_url, order_statuses, webhook_name, webhook_type, is_active')
       .eq('is_active', true);
 
-    console.log('Found webhooks:', webhooks);
+    console.log('Found webhooks:', webhookSettings);
 
-    if (webhooks && webhooks.length > 0) {
-      console.log('Available webhooks:', webhooks.map(w => ({
+    // البحث عن webhook مناسب لهذا النوع من الإشعارات
+    let selectedWebhook = null;
+    
+    if (webhookSettings && webhookSettings.length > 0) {
+      console.log('Looking for webhook with type:', type);
+      console.log('Webhook preference:', webhook_preference);
+      console.log('Source:', source);
+      console.log('Available webhooks:', webhookSettings.map(w => ({
         name: w.webhook_name,
         type: w.webhook_type,
         active: w.is_active,
         statuses: w.order_statuses
       })));
-
-      // البحث عن webhook مناسب لنوع الإشعار
-      console.log('Looking for webhook with type:', type);
-
-      // إعداد بيانات الرسالة
-      const messagePayload = {
-        customer_name: customerName,
-        order_number: data?.order_number || '',
-        service_name: data?.service_name || '',
-        description: description,
-        amount: totalAmount.toString(),
-        paid_amount: actualPaidAmount.toString(),
-        remaining_amount: remainingAmount,
-        payment_type: data?.payment_type || 'غير محدد',
-        status: data?.new_status || data?.status || '',
-        priority: data?.priority || 'متوسطة',
-        start_date: startDate,
-        due_date: dueDate,
-        order_items: orderItemsText,
-        evaluation_link: `https://e5a7747a-0935-46df-9ea9-1308e76636dc.lovableproject.com/evaluation/token-${orderId}`,
-        company_name: companyName,
-        estimated_time: data?.estimated_days || 'قريباً',
-        progress: data?.progress?.toString() || '0',
-        date: new Date().toLocaleDateString('ar-SA'),
+      
+      // إذا كان هناك webhook مفضل محدد، ابحث عنه أولاً
+      if (webhook_preference) {
+        const preferredWebhook = webhookSettings.find(w => 
+          w.is_active && 
+          w.webhook_type === 'outgoing' && 
+          w.webhook_name === webhook_preference
+        );
         
-        // بيانات الواتساب للإرسال المباشر
-        to: customerPhone,
-        phone: customerPhone,
-        phoneNumber: customerPhone,
-        message: message,
-        messageText: message,
-        text: message,
+        if (preferredWebhook) {
+          // تحقق من دعم نوع الإشعار
+          if (!preferredWebhook.order_statuses || 
+              preferredWebhook.order_statuses.length === 0 || 
+              preferredWebhook.order_statuses.includes(type)) {
+            selectedWebhook = preferredWebhook;
+            console.log('Using preferred webhook:', webhook_preference);
+          }
+        }
+      }
+      
+      // إذا لم نجد الويب هوك المفضل، ابحث عن أي webhook مناسب
+      if (!selectedWebhook) {
+        console.log('Preferred webhook not found or not suitable, searching for alternative');
         
-        // معلومات نوع الإشعار
-        notification_type: type,
-        type: type,
-        timestamp: Math.floor(Date.now() / 1000),
-        order_id: orderId
-      };
-
-      // إرسال إلى webhooks المناسبة
-      for (const webhook of webhooks) {
+        // البحث عن webhook نشط يحتوي على هذا النوع من الإشعارات
+        for (const webhook of webhookSettings) {
         console.log('Checking webhook:', {
           name: webhook.webhook_name,
           type: webhook.webhook_type,
           active: webhook.is_active,
           statuses: webhook.order_statuses
         });
-
-        // فلترة الـ webhooks حسب النوع
+        
+        // تأكد من أن الـ webhook نشط أولاً
+        if (!webhook.is_active) {
+          console.log('Webhook not active, skipping');
+          continue;
+        }
+        
+        // تحقق من webhook_type أولاً - نريد 'outgoing' للإشعارات
         if (webhook.webhook_type !== 'outgoing') {
           console.log('Webhook type is not outgoing:', webhook.webhook_type);
           continue;
         }
-
-        // فلترة حسب webhook_preference إذا كان محدد
-        if (webhook_preference && webhook.webhook_name !== webhook_preference) {
-          console.log(`Skipping webhook ${webhook.webhook_name}, preference is ${webhook_preference}`);
-          continue;
-        }
-
-        // التحقق من الحالات المدعومة
-        if (webhook.order_statuses && webhook.order_statuses.length > 0) {
-          console.log(`Checking if webhook contains status: ${type} in:`, webhook.order_statuses);
-          if (!webhook.order_statuses.includes(type)) {
-            console.log(`Webhook ${webhook.webhook_name} does not support status ${type}`);
-            continue;
+        
+        // تحقق من order_statuses
+        if (!webhook.order_statuses || webhook.order_statuses.length === 0) {
+          // webhook لجميع الحالات
+          selectedWebhook = webhook;
+          console.log('Using webhook for all statuses');
+          break;
+        } else {
+          console.log('Checking if webhook contains status:', type, 'in:', webhook.order_statuses);
+          if (Array.isArray(webhook.order_statuses) && webhook.order_statuses.includes(type)) {
+            // webhook مخصص لهذا النوع
+            selectedWebhook = webhook;
+            console.log('Found matching webhook for type:', type);
+            break;
           }
-        }
-
-        console.log('Found matching webhook for type:', type);
-
-        try {
-          console.log('Sending notification via webhook:', messagePayload);
-          
-          const webhookResponse = await fetch(webhook.webhook_url, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(messagePayload)
-          });
-
-          console.log('Webhook response status:', webhookResponse.status);
-          
-          if (webhookResponse.ok) {
-            const responseData = await webhookResponse.text();
-            console.log('Webhook response data:', responseData);
-            console.log('Webhook sent successfully');
-          } else {
-            console.error('Webhook failed with status:', webhookResponse.status);
-          }
-        } catch (error) {
-          console.error('Error sending webhook:', error);
         }
       }
+      
+      // إذا لم نجد webhook مخصص، نستخدم أول webhook نشط من نوع outgoing
+      if (!selectedWebhook) {
+        console.log('No specific webhook found, looking for fallback');
+        const activeWebhook = webhookSettings.find(w => w.is_active && w.webhook_type === 'outgoing');
+        if (activeWebhook) {
+          selectedWebhook = activeWebhook;
+          console.log('Using first active outgoing webhook as fallback');
+        }
+      }
+    }
+
+    if (!selectedWebhook?.webhook_url) {
+      console.log('No matching webhook found for notification type:', type);
+      // بدلاً من رمي خطأ، سنحاول الإرسال مع webhook افتراضي إذا وجد
+      if (webhookSettings && webhookSettings.length > 0) {
+        selectedWebhook = webhookSettings[0];
+        console.log('Using first available webhook as last resort');
+      } else {
+        throw new Error(`No active webhook configured for notification type: ${type}`);
+      }
+    }
+
+    // إعداد بيانات الرسالة للإرسال عبر n8n كمتغيرات منفصلة في الجذر
+    // استخدام نفس القيم المحسوبة مسبقاً للـ payload  
+    const actualPaidForPayload = actualPaidAmount; // استخدام نفس القيمة المحسوبة
+    const totalAmountForPayload = totalAmount; // استخدام نفس القيمة المحسوبة
+    const remainingAmountForPayload = remainingAmount; // استخدام نفس القيمة المحسوبة
+    
+    console.log('=== Using Pre-calculated Values for Payload ===');
+    console.log('Paid Amount for Payload:', actualPaidForPayload);
+    console.log('Total Amount for Payload:', totalAmountForPayload);
+    console.log('Remaining Amount for Payload:', remainingAmountForPayload);
+
+    const messagePayload = {
+      // متغيرات قوالب الرسائل - يمكن الوصول إليها مباشرة في n8n
+      customer_name: customerName,
+      order_number: data.order_number || '',
+      service_name: data.service_name || '',
+      description: orderDetails?.description || data.description || 'غير محدد',
+      amount: totalAmountForPayload.toString(),
+      paid_amount: actualPaidForPayload.toString(),
+      remaining_amount: remainingAmountForPayload,
+      payment_type: data.payment_type || 'غير محدد',
+      status: data.new_status || data.status || orderDetails?.status || currentStatus || '',
+      priority: data.priority || 'متوسطة',
+      start_date: startDate,
+      due_date: dueDate,
+      order_items: orderItemsText,
+      evaluation_link: `https://e5a7747a-0935-46df-9ea9-1308e76636dc.lovableproject.com/evaluation/token-${order_id}`,
+      company_name: companyName,
+      estimated_time: data.estimated_days || 'قريباً',
+      progress: data.progress?.toString() || '0',
+      date: new Date().toLocaleDateString('ar-SA'),
+      
+      // بيانات الواتساب للإرسال المباشر
+      to: customerPhone,
+      phone: customerPhone,
+      phoneNumber: customerPhone,
+      message: message,
+      messageText: message,
+      text: message,
+      
+      // معلومات نوع الإشعار
+      notification_type: type,
+      type: type,
+      
+      // البيانات الإضافية
+      timestamp: Math.floor(Date.now() / 1000),
+      order_id: order_id
+    };
+
+    console.log('Sending notification via webhook:', JSON.stringify(messagePayload, null, 2));
+
+    // إرسال الرسالة عبر webhook إلى n8n مع headers صحيحة وإعادة المحاولة
+    let response;
+    let responseData;
+    let messageStatus = 'failed';
+    
+    try {
+      response = await fetch(selectedWebhook.webhook_url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'User-Agent': 'Supabase-Functions'
+        },
+        body: JSON.stringify(messagePayload),
+        // إضافة timeout لتجنب انتظار طويل
+        signal: AbortSignal.timeout(30000) // 30 ثانية
+      });
+
+      try {
+        responseData = await response.text();
+        console.log('Webhook response status:', response.status);
+        console.log('Webhook response data:', responseData);
+      } catch (e) {
+        responseData = 'Failed to read response';
+        console.log('Failed to read webhook response:', e);
+      }
+
+      // تحديد حالة الرسالة حسب نجاح أو فشل الويب هوك
+      if (response.ok && response.status >= 200 && response.status < 300) {
+        console.log('Webhook sent successfully');
+        messageStatus = 'sent';
+      } else {
+        console.error(`Webhook failed with status: ${response.status}`);
+        console.error(`Webhook response: ${responseData}`);
+        messageStatus = 'failed';
+      }
+    } catch (fetchError) {
+      console.error('Fetch error:', fetchError);
+      messageStatus = 'failed';
+      responseData = `Fetch error: ${fetchError.message}`;
+    }
+
+    // حفظ الرسالة المرسلة في قاعدة البيانات
+    const { data: sentMessage, error: messageError } = await supabase
+      .from('whatsapp_messages')
+      .insert({
+        from_number: 'system',
+        to_number: customerPhone,
+        message_type: 'text',
+        message_content: message,
+        status: messageStatus, // سيكون sent أو failed حسب استجابة الويب هوك
+        is_reply: false,
+        customer_id: orderDetails?.customers?.id || null
+      });
+
+    if (messageError) {
+      console.error('Error saving sent message:', messageError);
     }
 
     return new Response(
@@ -351,21 +665,22 @@ serve(async (req) => {
         type: type,
         customer_phone: customerPhone
       }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200
       }
     );
 
   } catch (error) {
-    console.error('Error in send-order-notifications:', error);
+    console.error('Notification error:', error);
     return new Response(
       JSON.stringify({ 
-        error: error.message,
-        success: false 
+        error: 'Failed to send notification', 
+        details: error.message 
       }),
-      { 
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500
       }
     );
   }
