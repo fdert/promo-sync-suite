@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Building2, User, Mail, Phone, MapPin, Globe, Star, Check, ArrowRight, ArrowLeft, Palette } from "lucide-react";
+import { Building2, User, Mail, Phone, MapPin, Globe, Star, Check, ArrowRight, ArrowLeft, Palette, CheckCircle, Copy, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -31,6 +31,13 @@ const CreateAgencyForm = () => {
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<string>("");
   const [loading, setLoading] = useState(false);
+  const [createdAgency, setCreatedAgency] = useState<any>(null);
+  const [loginCredentials, setLoginCredentials] = useState<{
+    email: string;
+    password: string;
+    agencyName: string;
+  } | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     slug: "",
@@ -202,6 +209,15 @@ const CreateAgencyForm = () => {
     }
   };
 
+  const generatePassword = () => {
+    const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+    let password = '';
+    for (let i = 0; i < 8; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
+  };
+
   const createAgencyWithSubscription = async () => {
     if (!selectedPlan) {
       toast.error('يرجى اختيار خطة اشتراك');
@@ -212,10 +228,33 @@ const CreateAgencyForm = () => {
     try {
       console.log('🚀 بدء إنشاء الوكالة...');
       
-      const currentUser = (await supabase.auth.getUser()).data.user;
-      if (!currentUser) throw new Error('المستخدم غير مصرح له');
+      // إنشاء كلمة مرور مؤقتة
+      const tempPassword = generatePassword();
+      console.log('🔐 كلمة المرور المؤقتة تم إنشاؤها');
       
-      console.log('✅ تم التحقق من المستخدم:', currentUser.id);
+      // إنشاء مستخدم جديد للوكالة
+      console.log('👤 إنشاء مستخدم جديد للوكالة...');
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: formData.contact_email,
+        password: tempPassword,
+        options: {
+          data: {
+            full_name: `مدير وكالة ${formData.name}`,
+            agency_name: formData.name
+          }
+        }
+      });
+
+      if (authError) {
+        console.error('❌ خطأ في إنشاء المستخدم:', authError);
+        throw new Error(`فشل إنشاء المستخدم: ${authError.message}`);
+      }
+
+      if (!authData.user) {
+        throw new Error('فشل في إنشاء المستخدم');
+      }
+
+      console.log('✅ تم إنشاء المستخدم بنجاح:', authData.user.id);
 
       // التحقق من عدم وجود وكالة بنفس الاسم أو الرابط
       console.log('🔍 التحقق من عدم وجود وكالة مكررة...');
@@ -250,7 +289,7 @@ const CreateAgencyForm = () => {
           ...formData,
           is_active: true,
           subscription_plan: selectedPlan,
-          created_by: currentUser.id
+          created_by: authData.user.id
         })
         .select()
         .single();
@@ -289,15 +328,15 @@ const CreateAgencyForm = () => {
         console.log('✅ تم إنشاء الاشتراك بنجاح');
       }
 
-      // إضافة المستخدم الحالي كمالك للوكالة
+      // إضافة المستخدم الجديد كمالك للوكالة
       console.log('👤 إضافة المستخدم كمالك للوكالة');
       const { error: memberError } = await supabase
         .from('agency_members')
         .insert({
           agency_id: agencyData.id,
-          user_id: currentUser.id,
+          user_id: authData.user.id,
           role: 'owner',
-          created_by: currentUser.id
+          created_by: authData.user.id
         });
 
       if (memberError) {
@@ -310,7 +349,7 @@ const CreateAgencyForm = () => {
       // إنشاء الحسابات المحاسبية الأساسية
       console.log('💰 إنشاء الحسابات المحاسبية الأساسية');
       try {
-        await createBasicAccounts(agencyData.id, currentUser.id);
+        await createBasicAccounts(agencyData.id, authData.user.id);
         console.log('✅ تم إنشاء الحسابات المحاسبية بنجاح');
       } catch (accountsError) {
         console.error('⚠️ خطأ في إنشاء الحسابات المحاسبية:', accountsError);
@@ -327,13 +366,13 @@ const CreateAgencyForm = () => {
         // لا نوقف العملية هنا، فقط تحذير
       }
 
-      // إضافة دور super_admin للمستخدم الحالي إذا لم يكن لديه
+      // إضافة دور super_admin للمستخدم الجديد
       console.log('👑 إضافة دور المسؤول');
       try {
         await supabase
           .from('user_roles')
           .upsert({
-            user_id: currentUser.id,
+            user_id: authData.user.id,
             role: 'super_admin'
           });
         console.log('✅ تم إضافة دور المسؤول بنجاح');
@@ -342,42 +381,20 @@ const CreateAgencyForm = () => {
         // لا نوقف العملية هنا
       }
 
-      // إرسال بريد إلكتروني ببيانات الدخول
-      console.log('📧 إرسال بريد إلكتروني ببيانات الوكالة');
-      try {
-        const { error: emailError } = await supabase.functions.invoke('send-email', {
-          body: {
-            to: formData.contact_email,
-            subject: `🎉 تم إنشاء وكالة ${formData.name} بنجاح!`,
-            type: 'agency_login_details',
-            data: {
-              agencyName: formData.name,
-              agencyId: agencyData.id,
-              userEmail: formData.contact_email,
-            }
-          }
-        });
-
-        if (emailError) {
-          console.error('⚠️ خطأ في إرسال البريد الإلكتروني:', emailError);
-          toast.error('تم إنشاء الوكالة بنجاح ولكن فشل إرسال البريد الإلكتروني');
-        } else {
-          console.log('✅ تم إرسال البريد الإلكتروني بنجاح');
-          toast.success('تم إنشاء الوكالة وإرسال بيانات الدخول للبريد الإلكتروني بنجاح!');
-        }
-      } catch (emailError) {
-        console.error('⚠️ خطأ في إرسال البريد الإلكتروني:', emailError);
-        toast.error('تم إنشاء الوكالة بنجاح ولكن فشل إرسال البريد الإلكتروني');
-      }
+      // حفظ بيانات الدخول للعرض
+      setLoginCredentials({
+        email: formData.contact_email,
+        password: tempPassword,
+        agencyName: formData.name
+      });
+      
+      setCreatedAgency(agencyData);
 
       console.log('🎉 تم إنشاء الوكالة بنجاح!');
-      toast.success('تم إنشاء الوكالة وتفعيل الاشتراك بنجاح! سيتم توجيهك للوحة تحكم الوكالة...');
+      toast.success('تم إنشاء الوكالة وتفعيل الاشتراك بنجاح!');
       
-      // توجيه المستخدم للوحة تحكم الوكالة الجديدة بعد 3 ثواني
-      setTimeout(() => {
-        window.open(`/admin/dashboard?agency=${agencyData.id}`, '_blank');
-        window.location.reload();
-      }, 3000);
+      // انتقال إلى مرحلة عرض بيانات الدخول
+      setCurrentStep("success");
       
     } catch (error: any) {
       console.error('💥 خطأ عام في إنشاء الوكالة:', error);
@@ -406,20 +423,154 @@ const CreateAgencyForm = () => {
   return (
     <div className="w-full max-w-4xl mx-auto">
       <Tabs value={currentStep} onValueChange={setCurrentStep} className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="basic" disabled={false}>
-            <Building2 className="h-4 w-4 mr-2" />
-            معلومات الوكالة
-          </TabsTrigger>
-          <TabsTrigger value="subscription" disabled={!validateStep("basic")}>
-            <Star className="h-4 w-4 mr-2" />
-            خطة الاشتراك
-          </TabsTrigger>
-          <TabsTrigger value="summary" disabled={!validateStep("subscription")}>
-            <Check className="h-4 w-4 mr-2" />
-            مراجعة الطلب
-          </TabsTrigger>
-        </TabsList>
+        {loginCredentials ? (
+          // عرض بيانات الدخول بعد إنشاء الوكالة
+          <div className="space-y-6">
+            <Card className="border-green-200 bg-green-50">
+              <CardHeader className="text-center">
+                <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                  <CheckCircle className="h-8 w-8 text-green-600" />
+                </div>
+                <CardTitle className="text-2xl text-green-800">
+                  🎉 تم إنشاء الوكالة بنجاح!
+                </CardTitle>
+                <p className="text-green-700">
+                  تم إنشاء وكالة "{loginCredentials.agencyName}" وتفعيل الاشتراك بنجاح
+                </p>
+              </CardHeader>
+            </Card>
+
+            <Card className="border-blue-200">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-blue-800">
+                  <Mail className="h-5 w-5" />
+                  بيانات تسجيل الدخول
+                </CardTitle>
+                <p className="text-sm text-blue-600">
+                  احفظ هذه البيانات في مكان آمن. ستحتاجها لتسجيل الدخول للوكالة.
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">البريد الإلكتروني:</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={loginCredentials.email}
+                        readOnly
+                        className="bg-gray-50"
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigator.clipboard.writeText(loginCredentials.email)}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">كلمة المرور المؤقتة:</Label>
+                    <div className="flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <Input
+                          type={showPassword ? "text" : "password"}
+                          value={loginCredentials.password}
+                          readOnly
+                          className="bg-gray-50 pr-10"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="absolute right-0 top-0 h-full px-3"
+                          onClick={() => setShowPassword(!showPassword)}
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigator.clipboard.writeText(loginCredentials.password)}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <div className="flex items-start gap-2">
+                    <div className="text-yellow-600 mt-0.5">⚠️</div>
+                    <div className="text-sm text-yellow-800">
+                      <strong>هام جداً:</strong>
+                      <ul className="mt-2 space-y-1">
+                        <li>• يرجى تغيير كلمة المرور فور تسجيل الدخول الأول</li>
+                        <li>• احفظ هذه البيانات في مكان آمن قبل إغلاق هذه الصفحة</li>
+                        <li>• لن تتمكن من رؤية كلمة المرور مرة أخرى</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button
+                onClick={() => window.open('/agency-login', '_blank')}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <Mail className="h-4 w-4 mr-2" />
+                تسجيل الدخول الآن
+              </Button>
+              
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setLoginCredentials(null);
+                  setCreatedAgency(null);
+                  setCurrentStep("basic");
+                  setFormData({
+                    name: "",
+                    slug: "",
+                    contact_email: "",
+                    contact_phone: "",
+                    address: "",
+                    website: "",
+                    description: "",
+                    primary_color: "#2563eb",
+                    secondary_color: "#64748b"
+                  });
+                  setSelectedPlan("");
+                }}
+              >
+                <Building2 className="h-4 w-4 mr-2" />
+                إنشاء وكالة أخرى
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="basic" disabled={false}>
+              <Building2 className="h-4 w-4 mr-2" />
+              معلومات الوكالة
+            </TabsTrigger>
+            <TabsTrigger value="subscription" disabled={!validateStep("basic")}>
+              <Star className="h-4 w-4 mr-2" />
+              خطة الاشتراك
+            </TabsTrigger>
+            <TabsTrigger value="summary" disabled={!validateStep("subscription")}>
+              <Check className="h-4 w-4 mr-2" />
+              مراجعة الطلب
+            </TabsTrigger>
+          </TabsList>
+        )}
 
         <ScrollArea className="h-[70vh] mt-4">
           <TabsContent value="basic" className="space-y-6">

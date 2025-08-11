@@ -74,6 +74,7 @@ import AgencyLogin from "./pages/AgencyLogin";
 import CustomerPortal from "./pages/CustomerPortal";
 import ResetPassword from "./pages/ResetPassword";
 import EmailTest from "./pages/EmailTest";
+import ChangePassword from "./pages/ChangePassword";
 
 import OrderPayments from "./pages/admin/OrderPayments";
 
@@ -231,6 +232,7 @@ const App = () => (
 
             <Route path="/evaluation/:token" element={<Evaluation />} />
             <Route path="/subscription" element={<Subscription />} />
+            <Route path="/change-password" element={<ChangePassword />} />
             <Route path="/email-test" element={<EmailTest />} />
             <Route path="/agency-login" element={<AgencyLogin />} />
             <Route path="/reset-password" element={<ResetPassword />} />
