@@ -14,30 +14,70 @@ interface ResetPasswordRequest {
 }
 
 const handler = async (req: Request): Promise<Response> => {
+  console.log("Reset password function called");
+  
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { userEmail, newPassword, adminUserId }: ResetPasswordRequest = await req.json();
+    const requestData = await req.json();
+    console.log("Request data received:", { ...requestData, newPassword: "[HIDDEN]" });
+    
+    const { userEmail, newPassword, adminUserId }: ResetPasswordRequest = requestData;
 
-    // التحقق من الصلاحيات - يجب أن يكون المستخدم مدير في الوكالة أو super_admin
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    if (!userEmail || !newPassword || !adminUserId) {
+      console.error("Missing required fields");
+      return new Response(
+        JSON.stringify({ error: "البيانات المطلوبة ناقصة" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    // إنشاء عميل Supabase
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error("Missing Supabase configuration");
+      return new Response(
+        JSON.stringify({ error: "خطأ في إعدادات الخادم" }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // التحقق من أن المدير لديه صلاحية
-    const { data: adminRoles } = await supabase
+    console.log("Checking admin permissions for user:", adminUserId);
+    const { data: adminRoles, error: rolesError } = await supabase
       .from('user_roles')
       .select('role')
       .eq('user_id', adminUserId);
+
+    if (rolesError) {
+      console.error("Error checking admin roles:", rolesError);
+      return new Response(
+        JSON.stringify({ error: "خطأ في التحقق من الصلاحيات" }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
 
     const hasPermission = adminRoles?.some(role => 
       ['admin', 'super_admin', 'manager'].includes(role.role)
     );
 
     if (!hasPermission) {
+      console.log("User does not have permission:", adminRoles);
       return new Response(
         JSON.stringify({ error: "ليس لديك صلاحية لإعادة تعيين كلمات المرور" }),
         {
@@ -48,6 +88,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // البحث عن المستخدم بالبريد الإلكتروني
+    console.log("Looking for user with email:", userEmail);
     const { data: userData, error: userError } = await supabase.auth.admin.listUsers();
     
     if (userError) {
@@ -64,6 +105,7 @@ const handler = async (req: Request): Promise<Response> => {
     const targetUser = userData.users.find(user => user.email === userEmail);
     
     if (!targetUser) {
+      console.log("User not found:", userEmail);
       return new Response(
         JSON.stringify({ error: "المستخدم غير موجود" }),
         {
@@ -74,6 +116,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // إعادة تعيين كلمة المرور
+    console.log("Updating password for user:", targetUser.id);
     const { error: updateError } = await supabase.auth.admin.updateUserById(
       targetUser.id,
       { password: newPassword }
@@ -82,7 +125,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (updateError) {
       console.error("Error updating password:", updateError);
       return new Response(
-        JSON.stringify({ error: "خطأ في تحديث كلمة المرور" }),
+        JSON.stringify({ error: "خطأ في تحديث كلمة المرور: " + updateError.message }),
         {
           status: 500,
           headers: { "Content-Type": "application/json", ...corsHeaders },
@@ -91,7 +134,8 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // تسجيل النشاط في activity_logs
-    await supabase
+    console.log("Logging activity");
+    const { error: logError } = await supabase
       .from('activity_logs')
       .insert({
         user_id: adminUserId,
@@ -105,6 +149,12 @@ const handler = async (req: Request): Promise<Response> => {
         }
       });
 
+    if (logError) {
+      console.error("Error logging activity:", logError);
+      // لا نفشل العملية بسبب خطأ في السجل
+    }
+
+    console.log("Password reset successful");
     return new Response(
       JSON.stringify({ 
         success: true, 
@@ -119,7 +169,7 @@ const handler = async (req: Request): Promise<Response> => {
   } catch (error) {
     console.error("Error in reset-user-password function:", error);
     return new Response(
-      JSON.stringify({ error: "حدث خطأ غير متوقع" }),
+      JSON.stringify({ error: "حدث خطأ غير متوقع: " + error.message }),
       {
         status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders },
