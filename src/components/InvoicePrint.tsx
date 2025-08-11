@@ -121,13 +121,13 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
           }
           
           .print-header {
-            display: flex !important;
-            justify-content: space-between !important;
-            align-items: flex-start !important;
+            position: relative !important;
+            display: block !important;
             margin-bottom: 2.5mm !important;
             border-bottom: 2px solid #2563eb !important;
             padding-bottom: 2mm !important;
             page-break-inside: avoid !important;
+            height: 15mm !important;
           }
           
           .print-company-info {
@@ -165,11 +165,13 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
           }
           
           .print-invoice-info {
-            flex: 1 !important;
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
             text-align: left !important;
             direction: ltr !important;
-            margin-left: auto !important;
-            padding-left: 0 !important;
+            width: auto !important;
+            min-width: 50mm !important;
           }
           
           .print-invoice-title {
