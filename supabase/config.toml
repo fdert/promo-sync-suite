@@ -68,3 +68,6 @@ verify_jwt = false
 
 [functions.send-whatsapp-direct-improved]
 verify_jwt = false
+
+[functions.send-agency-login-details]
+verify_jwt = false

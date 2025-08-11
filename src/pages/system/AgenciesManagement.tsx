@@ -11,6 +11,7 @@ import { Building2, Users, CreditCard, Settings, Search, Eye, UserCheck, UserX, 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import CreateAgencyForm from "@/components/CreateAgencyForm";
+import { SendAgencyLoginButton } from "@/components/SendAgencyLoginButton";
 
 interface Agency {
   id: string;
@@ -294,6 +295,12 @@ const AgenciesManagement = () => {
                         <Settings className="h-4 w-4" />
                         لوحة التحكم
                       </Button>
+                      
+                      <SendAgencyLoginButton
+                        agencyId={agency.id}
+                        agencyName={agency.name}
+                        userEmail={agency.contact_email}
+                      />
                     </div>
                   </TableCell>
                 </TableRow>
