@@ -74,3 +74,6 @@ verify_jwt = false
 
 [functions.test-email]
 verify_jwt = false
+
+[functions.reset-user-password]
+verify_jwt = true
