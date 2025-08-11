@@ -89,7 +89,7 @@ Deno.serve(async (req) => {
       console.log('Could not fetch company name, using default');
     }
 
-    // جلب بيانات الطلب الكاملة مع بنود الطلب والمعلومات المالية لجميع أنواع الإشعارات
+    // جلب بيانات الطلب الكاملة مع بنود الطلب لجميع أنواع الإشعارات
     let orderDetails = null;
     if (order_id) {
       const { data: orderData, error: orderError } = await supabase
@@ -103,24 +103,8 @@ Deno.serve(async (req) => {
         .single();
       
       if (!orderError && orderData) {
-        // حساب المبلغ المدفوع من جدول payments
-        const { data: paymentsData } = await supabase
-          .from('payments')
-          .select('amount')
-          .eq('order_id', order_id);
-          
-        const calculatedPaidAmount = paymentsData?.reduce((sum, payment) => sum + payment.amount, 0) || 0;
-        
-        // حساب إجمالي مبلغ بنود الطلب
-        const orderItemsTotal = orderData.order_items?.reduce((sum: number, item: any) => sum + (item.total_amount || 0), 0) || orderData.amount || 0;
-        
-        orderDetails = {
-          ...orderData,
-          calculated_paid_amount: calculatedPaidAmount,
-          order_items_total: orderItemsTotal,
-          remaining_amount: orderItemsTotal - calculatedPaidAmount
-        };
-        console.log('Order details loaded with financial info:', orderDetails);
+        orderDetails = orderData;
+        console.log('Order details loaded:', orderDetails);
       }
     }
 
@@ -237,9 +221,9 @@ Deno.serve(async (req) => {
       let description = 'غير محدد';
       if (orderDetails) {
         
-        // حساب المبلغ المتبقي باستخدام البيانات المحسوبة من بنود الطلب
-        const totalAmount = parseFloat(orderDetails.order_items_total?.toString() || orderDetails.amount?.toString() || '0');
-        const paidAmount = parseFloat(orderDetails.calculated_paid_amount?.toString() || '0');
+        // حساب المبلغ المتبقي
+        const totalAmount = parseFloat(orderDetails.amount?.toString() || '0');
+        const paidAmount = parseFloat(orderDetails.paid_amount?.toString() || '0');
         remainingAmount = (totalAmount - paidAmount).toString();
         
         // تنسيق التواريخ
@@ -269,19 +253,19 @@ Deno.serve(async (req) => {
       // استبدال المتغيرات
       const replacements: Record<string, string> = {
         'customer_name': customerName || '',
-        'order_number': orderDetails?.order_number || data.order_number || '',
-        'amount': orderDetails?.order_items_total?.toString() || orderDetails?.amount?.toString() || data.amount?.toString() || '',
-        'paid_amount': orderDetails?.calculated_paid_amount?.toString() || data.paid_amount?.toString() || '0',
-        'remaining_amount': orderDetails?.remaining_amount?.toString() || remainingAmount,
-        'payment_type': orderDetails?.payment_type || data.payment_type || 'غير محدد',
-        'progress': orderDetails?.progress?.toString() || data.progress?.toString() || '0',
-        'service_name': orderDetails?.service_name || data.service_name || '',
+        'order_number': data.order_number || '',
+        'amount': data.amount?.toString() || '',
+        'paid_amount': data.paid_amount?.toString() || '0',
+        'remaining_amount': remainingAmount,
+        'payment_type': data.payment_type || 'غير محدد',
+        'progress': data.progress?.toString() || '0',
+        'service_name': data.service_name || '',
         'description': description,
         'order_items': orderItemsText,
         'start_date': startDate,
         'due_date': dueDate,
         'status': data.new_status || data.status || orderDetails?.status || currentStatus || 'جديد',
-        'priority': orderDetails?.priority || data.priority || 'متوسطة',
+        'priority': data.priority || 'متوسطة',
          'estimated_time': data.estimated_days || 'قريباً',
          'company_name': companyName,
          'evaluation_link': `https://e5a7747a-0935-46df-9ea9-1308e76636dc.lovableproject.com/evaluation/token-${order_id}`

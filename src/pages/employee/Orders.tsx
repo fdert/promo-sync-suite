@@ -748,14 +748,6 @@ ${publicFileUrl}
         console.log('Notification type:', notificationType);
 
         if (notificationType) {
-          // حساب المبلغ المدفوع من قاعدة البيانات
-          const { data: paymentsData } = await supabase
-            .from('payments')
-            .select('amount')
-            .eq('order_id', orderId);
-          
-          const paidAmount = paymentsData?.reduce((sum, payment) => sum + payment.amount, 0) || 0;
-          
           const notificationData = {
             type: notificationType,
             order_id: orderId,
@@ -770,7 +762,7 @@ ${publicFileUrl}
               service_name: orderData.service_name,
               description: orderData.description || '',
               payment_type: orderData.payment_type || 'دفع آجل',
-              paid_amount: paidAmount, // المبلغ المدفوع الفعلي
+              paid_amount: 0, // سيتم حسابها من المدفوعات
               status: status,
               priority: orderData.priority || 'متوسطة',
               due_date: orderData.due_date,

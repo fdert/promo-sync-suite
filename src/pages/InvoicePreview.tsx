@@ -232,18 +232,18 @@ const InvoicePreview = () => {
                        {invoice.status}
                      </span>
                    </p>
-                   {invoice.total_paid !== undefined && (
-                     <>
-                       <p><span className="font-medium">المبلغ المدفوع:</span> 
-                         <span className="text-green-600 font-semibold">{invoice.total_paid.toFixed(2)} ر.س</span>
-                       </p>
-                       <p><span className="font-medium">المبلغ المتبقي:</span> 
-                         <span className={`font-semibold ${invoice.remaining_amount! > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                           {invoice.remaining_amount!.toFixed(2)} ر.س
-                         </span>
-                       </p>
-                     </>
-                   )}
+                  {invoice.total_paid !== undefined && invoice.total_paid > 0 && (
+                    <>
+                      <p><span className="font-medium">المبلغ المدفوع:</span> 
+                        <span className="text-green-600 font-semibold">{invoice.total_paid.toFixed(2)} ر.س</span>
+                      </p>
+                      <p><span className="font-medium">المبلغ المتبقي:</span> 
+                        <span className={`font-semibold ${invoice.remaining_amount! > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                          {invoice.remaining_amount!.toFixed(2)} ر.س
+                        </span>
+                      </p>
+                    </>
+                  )}
                   {invoice.payment_date && (
                     <p><span className="font-medium">تاريخ الدفع:</span> {new Date(invoice.payment_date).toLocaleDateString('ar-SA')}</p>
                   )}
