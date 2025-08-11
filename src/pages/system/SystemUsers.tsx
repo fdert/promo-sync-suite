@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, UserPlus, Shield, Users, Eye, Edit, Trash2 } from "lucide-react";
+import { Search, UserPlus, Shield, Users, Eye, Edit, Trash2, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -38,6 +39,7 @@ interface User {
 }
 
 const SystemUsers = () => {
+  const navigate = useNavigate();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -212,11 +214,22 @@ const SystemUsers = () => {
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">إدارة المستخدمين</h1>
-          <p className="text-muted-foreground">
-            إدارة جميع مستخدمي النظام وأدوارهم
-          </p>
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            رجوع
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">إدارة المستخدمين</h1>
+            <p className="text-muted-foreground">
+              إدارة جميع مستخدمي النظام وأدوارهم
+            </p>
+          </div>
         </div>
         <Badge variant="secondary">
           <Users className="h-4 w-4 mr-2" />

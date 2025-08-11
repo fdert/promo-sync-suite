@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building2, Users, CreditCard, Settings, Search, Eye, UserCheck, UserX } from "lucide-react";
+import { Building2, Users, CreditCard, Settings, Search, Eye, UserCheck, UserX, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -25,6 +26,7 @@ interface Agency {
 }
 
 const AgenciesManagement = () => {
+  const navigate = useNavigate();
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [filteredAgencies, setFilteredAgencies] = useState<Agency[]>([]);
   const [loading, setLoading] = useState(true);
@@ -131,9 +133,20 @@ const AgenciesManagement = () => {
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">إدارة الوكالات</h1>
-          <p className="text-muted-foreground">إدارة جميع الوكالات المسجلة في النظام</p>
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            رجوع
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">إدارة الوكالات</h1>
+            <p className="text-muted-foreground">إدارة جميع الوكالات المسجلة في النظام</p>
+          </div>
         </div>
       </div>
 
