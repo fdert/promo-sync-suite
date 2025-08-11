@@ -19,7 +19,6 @@ interface InvoicePrintProps {
     total_amount: number;
     status: string;
     actual_status?: string;
-    payment_status?: string;
     total_paid?: number;
     remaining_amount?: number;
     notes?: string;
@@ -259,10 +258,10 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
       <div style={{ 
         display: 'flex', 
         justifyContent: 'flex-end', 
-        marginBottom: '8px',
+        marginBottom: '5px',
         pageBreakInside: 'avoid'
       }}>
-        <div style={{ width: '150px', fontSize: '11px' }}>
+        <div style={{ width: '120px', fontSize: '11px' }}>
           <div style={{ 
             display: 'flex', 
             justifyContent: 'space-between', 
@@ -287,73 +286,34 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
             padding: '2px 0',
             fontWeight: 'bold',
             fontSize: '12px',
-            borderTop: '2px solid #000',
-            marginBottom: '4px'
+            borderTop: '2px solid #000'
           }}>
             <span>الإجمالي:</span>
             <span>{invoice.total_amount.toFixed(2)} ر.س</span>
           </div>
-          
-          {/* Payment Details */}
-          <div style={{
-            backgroundColor: '#f0f8ff',
-            border: '1px solid #ddd',
-            padding: '4px',
-            fontSize: '10px',
-            marginTop: '2px'
-          }}>
-            <div style={{ 
-              fontWeight: 'bold', 
-              marginBottom: '2px',
-              textAlign: 'center',
-              borderBottom: '1px solid #ccc',
-              paddingBottom: '1px'
-            }}>
-              تفاصيل الدفع
-            </div>
-            
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              marginBottom: '1px'
-            }}>
-              <span>المدفوع:</span>
-              <span style={{ color: '#22c55e', fontWeight: 'bold' }}>
-                {(invoice.total_paid || 0).toFixed(2)} ر.س
-              </span>
-            </div>
-            
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              marginBottom: '1px'
-            }}>
-              <span>المتبقي:</span>
-              <span style={{ 
-                color: (invoice.remaining_amount || 0) > 0 ? '#ef4444' : '#22c55e', 
-                fontWeight: 'bold' 
-              }}>
-                {(invoice.remaining_amount || 0).toFixed(2)} ر.س
-              </span>
-            </div>
-            
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              paddingTop: '2px',
-              borderTop: '1px dotted #ccc'
-            }}>
-              <span>الحالة:</span>
-              <span style={{ 
-                fontWeight: 'bold',
-                color: (invoice.payment_status || invoice.actual_status || invoice.status) === 'مدفوعة' ? '#22c55e' : 
-                       (invoice.payment_status || invoice.actual_status || invoice.status) === 'مدفوعة جزئياً' ? '#3b82f6' : '#ef4444'
-              }}>
-                {invoice.payment_status || invoice.actual_status || invoice.status}
-              </span>
-            </div>
-          </div>
         </div>
+      </div>
+
+      {/* Status and Payment Info */}
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between',
+        fontSize: '10px',
+        marginBottom: '4px',
+        padding: '4px',
+        backgroundColor: '#f9f9f9',
+        border: '1px solid #ddd',
+        pageBreakInside: 'avoid'
+      }}>
+        <div>
+          <span><strong>الحالة:</strong> {invoice.actual_status || invoice.status}</span>
+        </div>
+        {(invoice.total_paid !== undefined && invoice.total_paid > 0) && (
+          <div style={{ textAlign: 'left' }}>
+            <div><strong>المدفوع:</strong> {invoice.total_paid.toFixed(2)} ر.س</div>
+            <div><strong>المتبقي:</strong> {(invoice.remaining_amount || 0).toFixed(2)} ر.س</div>
+          </div>
+        )}
       </div>
 
       {/* Notes */}

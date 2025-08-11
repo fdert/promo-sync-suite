@@ -26,7 +26,6 @@ interface InvoicePreviewProps {
     payment_type: string;
     actual_status?: string;
     actual_payment_type?: string;
-    payment_status?: string;
     total_paid?: number;
     remaining_amount?: number;
     notes?: string;
@@ -204,65 +203,46 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({
                   <span>ضريبة القيمة المضافة (15%):</span>
                   <span className="font-bold text-yellow-700">{invoice.tax_amount?.toLocaleString('ar-SA')} ر.س</span>
                 </div>
-                <div className="flex justify-between text-sm font-bold border-t border-blue-600 pt-1 mb-2">
+                <div className="flex justify-between text-sm font-bold border-t border-blue-600 pt-1">
                   <span>إجمالي المبلغ المستحق:</span>
                   <span className="text-blue-600">{invoice.total_amount?.toLocaleString('ar-SA')} ر.س</span>
                 </div>
-                
-                {/* Payment Details Section */}
-                <div className="bg-blue-50 border border-blue-200 rounded p-3 mt-3">
-                  <h4 className="text-sm font-bold text-blue-700 mb-2 flex items-center gap-2">
-                    <span>💰</span>
-                    <span>تفاصيل المدفوعات</span>
-                  </h4>
-                  
-                  <div className="grid grid-cols-3 gap-3 text-xs">
-                    <div className="text-center">
-                      <div className="text-gray-600 mb-1">المبلغ المدفوع</div>
-                      <div className="font-bold text-green-600 text-sm">
-                        {(invoice.total_paid || 0).toLocaleString('ar-SA')} ر.س
+              </div>
+            </div>
+
+             {/* Payment Info */}
+             <div className="mb-4">
+               <div className="bg-blue-50 p-2 rounded text-xs">
+                 <strong className="text-blue-600 block mb-1">معلومات الحالة:</strong>
+                 <div className="grid grid-cols-1 gap-2">
+                   <div>
+                     <span className="text-gray-600">حالة الفاتورة:</span>
+                     <span className={`font-bold mr-1 px-1 rounded text-xs ${
+                       (invoice.actual_status || invoice.status) === 'مدفوعة' ? 'bg-green-100 text-green-700' : 
+                       (invoice.actual_status || invoice.status) === 'مدفوعة جزئياً' ? 'bg-blue-100 text-blue-700' :
+                       (invoice.actual_status || invoice.status) === 'قيد الانتظار' ? 'bg-yellow-100 text-yellow-700' :
+                       'bg-red-100 text-red-700'
+                     }`}>
+                       {invoice.actual_status || invoice.status}
+                     </span>
+                   </div>
+                 </div>
+                {(invoice.total_paid !== undefined && invoice.total_paid > 0) && (
+                  <div className="mt-2 pt-2 border-t border-blue-200">
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div>
+                        <span className="text-gray-600">المبلغ المدفوع:</span>
+                        <span className="font-bold mr-1 text-green-600">{invoice.total_paid.toFixed(2)} ر.س</span>
                       </div>
-                    </div>
-                    
-                    <div className="text-center">
-                      <div className="text-gray-600 mb-1">المبلغ المتبقي</div>
-                      <div className={`font-bold text-sm ${
-                        (invoice.remaining_amount || invoice.total_amount) > 0 ? 'text-red-600' : 'text-green-600'
-                      }`}>
-                        {(invoice.remaining_amount || invoice.total_amount || 0).toLocaleString('ar-SA')} ر.س
-                      </div>
-                    </div>
-                    
-                    <div className="text-center">
-                      <div className="text-gray-600 mb-1">حالة الدفع</div>
-                      <div className={`font-bold text-xs px-2 py-1 rounded ${
-                        (invoice.payment_status || invoice.actual_status || invoice.status) === 'مدفوعة' ? 'bg-green-100 text-green-700' : 
-                        (invoice.payment_status || invoice.actual_status || invoice.status) === 'مدفوعة جزئياً' ? 'bg-blue-100 text-blue-700' :
-                        'bg-red-100 text-red-700'
-                      }`}>
-                        {invoice.payment_status || invoice.actual_status || invoice.status}
+                      <div>
+                        <span className="text-gray-600">المبلغ المتبقي:</span>
+                        <span className={`font-bold mr-1 ${invoice.remaining_amount! > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                          {invoice.remaining_amount!.toFixed(2)} ر.س
+                        </span>
                       </div>
                     </div>
                   </div>
-                  
-                  {/* Progress Bar */}
-                  {invoice.total_amount > 0 && (
-                    <div className="mt-3">
-                      <div className="flex justify-between text-xs text-gray-600 mb-1">
-                        <span>نسبة السداد</span>
-                        <span>{Math.round(((invoice.total_paid || 0) / invoice.total_amount) * 100)}%</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                          className="bg-green-500 h-2 rounded-full transition-all duration-300"
-                          style={{ 
-                            width: `${Math.min(((invoice.total_paid || 0) / invoice.total_amount) * 100, 100)}%` 
-                          }}
-                        ></div>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                )}
               </div>
             </div>
 

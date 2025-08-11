@@ -53,7 +53,6 @@ import PricingCalculatorPage from "./pages/employee/PricingCalculator";
 import BulkWhatsApp from "./pages/admin/BulkWhatsApp";
 import CustomerGroups from "./pages/admin/CustomerGroups";
 import EmployeeBulkWhatsApp from "./pages/employee/BulkWhatsApp";
-import EmployeeInvoices from "./pages/employee/Invoices";
 
 
 import OrderPayments from "./pages/admin/OrderPayments";
@@ -82,7 +81,7 @@ const App = () => (
               <Route path="customers" element={<EmployeeCustomers />} />
               <Route path="orders" element={<EmployeeOrders />} />
               <Route path="service-types" element={<EmployeeServiceTypes />} />
-              <Route path="invoices" element={<EmployeeInvoices />} />
+              <Route path="invoices" element={<Invoices />} />
               <Route path="print-orders" element={<EmployeePrintOrders />} />
               <Route path="evaluations" element={<Evaluations />} />
               <Route path="print-archive" element={<PrintArchive />} />
