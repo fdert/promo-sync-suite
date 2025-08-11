@@ -219,17 +219,21 @@ Deno.serve(async (req) => {
       
       // إذا كانت هناك تفاصيل طلب، استخدمها
       let description = 'غير محدد';
-      if (orderDetails) {
-        
-        // حساب المبلغ المدفوع الفعلي من جدول المدفوعات
+      let actualPaidAmount = 0;
+      let totalAmount = 0;
+      
+      // حساب المبلغ المدفوع الفعلي من جدول المدفوعات
+      if (order_id) {
         const { data: paymentsData } = await supabase
           .from('payments')
           .select('amount')
           .eq('order_id', order_id);
         
-        const actualPaidAmount = paymentsData?.reduce((sum, payment) => sum + parseFloat(payment.amount?.toString() || '0'), 0) || 0;
-        const totalAmount = parseFloat(orderDetails.amount?.toString() || '0');
-        remainingAmount = (totalAmount - actualPaidAmount).toString();
+        actualPaidAmount = paymentsData?.reduce((sum, payment) => sum + parseFloat(payment.amount?.toString() || '0'), 0) || 0;
+      }
+      
+      if (orderDetails) {
+        totalAmount = parseFloat(orderDetails.amount?.toString() || '0');
         
         // تنسيق التواريخ
         if (orderDetails.start_date) {
@@ -248,24 +252,18 @@ Deno.serve(async (req) => {
         // استخدام البيانات المرسلة مباشرة
         customerPhone = data.customer_phone;
         customerName = data.customer_name;
-        
-        // حساب المبلغ المدفوع الفعلي من جدول المدفوعات
-        const { data: paymentsData } = await supabase
-          .from('payments')
-          .select('amount')
-          .eq('order_id', order_id);
-        
-        const actualPaidAmount = paymentsData?.reduce((sum, payment) => sum + parseFloat(payment.amount?.toString() || '0'), 0) || 0;
-        const totalAmount = parseFloat(data.amount?.toString() || '0');
-        remainingAmount = (totalAmount - actualPaidAmount).toString();
+        totalAmount = parseFloat(data.amount?.toString() || '0');
       }
+      
+      // حساب المبلغ المتبقي
+      remainingAmount = (totalAmount - actualPaidAmount).toString();
       
       // استبدال المتغيرات
       const replacements: Record<string, string> = {
         'customer_name': customerName || '',
         'order_number': data.order_number || '',
-        'amount': data.amount?.toString() || '',
-        'paid_amount': (parseFloat(remainingAmount) > 0 ? (parseFloat(data.amount?.toString() || '0') - parseFloat(remainingAmount)).toString() : data.amount?.toString() || '0'),
+        'amount': totalAmount.toString(),
+        'paid_amount': actualPaidAmount.toString(),
         'remaining_amount': remainingAmount,
         'payment_type': data.payment_type || 'غير محدد',
         'progress': data.progress?.toString() || '0',
@@ -537,6 +535,17 @@ ${data.file_url}
     }
 
     // إعداد بيانات الرسالة للإرسال عبر n8n كمتغيرات منفصلة في الجذر
+    // حساب المبلغ المدفوع الفعلي للـ payload
+    let actualPaidForPayload = 0;
+    if (order_id) {
+      const { data: paymentsData } = await supabase
+        .from('payments')
+        .select('amount')
+        .eq('order_id', order_id);
+      
+      actualPaidForPayload = paymentsData?.reduce((sum, payment) => sum + parseFloat(payment.amount?.toString() || '0'), 0) || 0;
+    }
+
     const messagePayload = {
       // متغيرات قوالب الرسائل - يمكن الوصول إليها مباشرة في n8n
       customer_name: customerName,
@@ -544,7 +553,7 @@ ${data.file_url}
       service_name: data.service_name || '',
       description: orderDetails?.description || data.description || 'غير محدد',
       amount: data.amount?.toString() || '0',
-      paid_amount: (parseFloat(remainingAmount) > 0 ? (parseFloat(data.amount?.toString() || '0') - parseFloat(remainingAmount)).toString() : data.amount?.toString() || '0'),
+      paid_amount: actualPaidForPayload.toString(),
       remaining_amount: remainingAmount,
       payment_type: data.payment_type || 'غير محدد',
       status: data.new_status || data.status || orderDetails?.status || currentStatus || '',
