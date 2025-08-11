@@ -105,6 +105,37 @@ Deno.serve(async (req) => {
       if (!orderError && orderData) {
         orderDetails = orderData;
         console.log('Order details loaded:', orderDetails);
+        
+        // حساب المبلغ المدفوع من جدول المدفوعات مباشرة
+        console.log('=== Payment Calculation Debug ===');
+        console.log('Order ID:', order_id);
+        
+        const { data: payments, error: paymentsError } = await supabase
+          .from('payments')
+          .select('amount')
+          .eq('order_id', order_id);
+        
+        console.log('Payments Error:', paymentsError);
+        console.log('Payments Data:', payments);
+        
+        let totalPaidAmount = 0;
+        if (payments && payments.length > 0) {
+          totalPaidAmount = payments.reduce((sum, payment) => {
+            console.log('Adding payment amount:', payment.amount);
+            return sum + payment.amount;
+          }, 0);
+        }
+        
+        console.log('Total Paid Amount:', totalPaidAmount);
+        console.log('=== Final Calculated Amount ===');
+        
+        // تحديث بيانات الطلب مع المبلغ المحسوب
+        orderDetails.paid_amount = totalPaidAmount;
+        
+        console.log('=== Final Values for Message ===');
+        console.log('Total Amount:', orderDetails.amount);
+        console.log('Actual Paid Amount:', totalPaidAmount);
+        console.log('Remaining Amount:', orderDetails.amount - totalPaidAmount);
       }
     }
 
@@ -443,63 +474,76 @@ ${data.file_url}
         statuses: w.order_statuses
       })));
       
-      // إذا كان هناك webhook مفضل محدد، ابحث عنه أولاً
+      // إذا كان هناك webhook مفضل محدد، ابحث عنه أولاً  
       if (webhook_preference) {
-        const preferredWebhook = webhookSettings.find(w => 
-          w.is_active && 
-          w.webhook_type === 'outgoing' && 
-          w.webhook_name === webhook_preference
-        );
+        console.log('Looking for preferred webhook:', webhook_preference);
         
-        if (preferredWebhook) {
-          // تحقق من دعم نوع الإشعار
-          if (!preferredWebhook.order_statuses || 
-              preferredWebhook.order_statuses.length === 0 || 
-              preferredWebhook.order_statuses.includes(type)) {
-            selectedWebhook = preferredWebhook;
-            console.log('Using preferred webhook:', webhook_preference);
+        for (const webhook of webhookSettings) {
+          console.log('Checking webhook:', {
+            name: webhook.webhook_name,
+            type: webhook.webhook_type,
+            active: webhook.is_active,
+            statuses: webhook.order_statuses
+          });
+          
+          // تحقق من اسم الويب هوك المفضل
+          if (webhook.webhook_name === webhook_preference && 
+              webhook.is_active && 
+              webhook.webhook_type === 'outgoing') {
+            
+            // تحقق من دعم نوع الإشعار
+            if (!webhook.order_statuses || 
+                webhook.order_statuses.length === 0 || 
+                webhook.order_statuses.includes(type)) {
+              selectedWebhook = webhook;
+              console.log('Found and using preferred webhook:', webhook_preference);
+              break;
+            } else {
+              console.log('Preferred webhook does not support notification type:', type);
+            }
           }
         }
       }
       
       // إذا لم نجد الويب هوك المفضل، ابحث عن أي webhook مناسب
       if (!selectedWebhook) {
-        console.log('Preferred webhook not found or not suitable, searching for alternative');
+        console.log('Preferred webhook not found, searching for suitable webhook');
         
         // البحث عن webhook نشط يحتوي على هذا النوع من الإشعارات
         for (const webhook of webhookSettings) {
-        console.log('Checking webhook:', {
-          name: webhook.webhook_name,
-          type: webhook.webhook_type,
-          active: webhook.is_active,
-          statuses: webhook.order_statuses
-        });
-        
-        // تأكد من أن الـ webhook نشط أولاً
-        if (!webhook.is_active) {
-          console.log('Webhook not active, skipping');
-          continue;
-        }
-        
-        // تحقق من webhook_type أولاً - نريد 'outgoing' للإشعارات
-        if (webhook.webhook_type !== 'outgoing') {
-          console.log('Webhook type is not outgoing:', webhook.webhook_type);
-          continue;
-        }
-        
-        // تحقق من order_statuses
-        if (!webhook.order_statuses || webhook.order_statuses.length === 0) {
-          // webhook لجميع الحالات
-          selectedWebhook = webhook;
-          console.log('Using webhook for all statuses');
-          break;
-        } else {
-          console.log('Checking if webhook contains status:', type, 'in:', webhook.order_statuses);
-          if (Array.isArray(webhook.order_statuses) && webhook.order_statuses.includes(type)) {
-            // webhook مخصص لهذا النوع
+          console.log('Checking alternative webhook:', {
+            name: webhook.webhook_name,
+            type: webhook.webhook_type,
+            active: webhook.is_active,
+            statuses: webhook.order_statuses
+          });
+          
+          // تأكد من أن الـ webhook نشط أولاً
+          if (!webhook.is_active) {
+            console.log('Webhook not active, skipping');
+            continue;
+          }
+          
+          // تحقق من webhook_type أولاً - نريد 'outgoing' للإشعارات
+          if (webhook.webhook_type !== 'outgoing') {
+            console.log('Webhook type is not outgoing:', webhook.webhook_type);
+            continue;
+          }
+          
+          // تحقق من order_statuses
+          if (!webhook.order_statuses || webhook.order_statuses.length === 0) {
+            // webhook لجميع الحالات
             selectedWebhook = webhook;
-            console.log('Found matching webhook for type:', type);
+            console.log('Using webhook for all statuses');
             break;
+          } else {
+            console.log('Checking if webhook contains status:', type, 'in:', webhook.order_statuses);
+            if (Array.isArray(webhook.order_statuses) && webhook.order_statuses.includes(type)) {
+              // webhook مخصص لهذا النوع
+              selectedWebhook = webhook;
+              console.log('Found matching webhook for type:', type);
+              break;
+            }
           }
         }
       }
