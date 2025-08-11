@@ -37,8 +37,14 @@ const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
           .select('role')
           .eq('user_id', user.id);
 
-        const userRolesList = userRoles?.map(r => r.role as UserRole) || [];
-        const hasRequiredRole = allowedRoles.some(role => userRolesList.includes(role));
+        console.log('User roles:', userRoles);
+        console.log('Allowed roles:', allowedRoles);
+
+        const userRolesList = userRoles?.map(r => r.role) || [];
+        const hasRequiredRole = allowedRoles.some(role => userRolesList.includes(role as any));
+
+        console.log('User roles list:', userRolesList);
+        console.log('Has required role:', hasRequiredRole);
 
         if (!hasRequiredRole) {
           // إذا كان المستخدم موظف ولكن يحاول الوصول لصفحة إدارية فقط
