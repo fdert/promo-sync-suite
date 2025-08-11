@@ -70,12 +70,13 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
             position: absolute !important;
             left: 0 !important;
             top: 0 !important;
-            transform: scale(1.6) !important;
+            transform: scale(1.5) !important;
             transform-origin: top left !important;
             width: 210mm !important;
             max-width: 210mm !important;
             direction: rtl !important;
             text-align: right !important;
+            padding: 0 3mm !important;
           }
           
           @page {
@@ -368,8 +369,9 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
           }
           
           .print-stamp {
-            text-align: center !important;
+            text-align: left !important;
             margin: 1mm 0 !important;
+            direction: ltr !important;
           }
           
           .print-stamp img {
