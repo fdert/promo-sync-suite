@@ -68,20 +68,20 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
           
           .print-invoice {
             position: absolute !important;
-            left: 2mm !important;
+            left: 0mm !important;
             top: 0 !important;
-            transform: scale(1.8) !important;
+            transform: scale(1.6) !important;
             transform-origin: top left !important;
-            width: 200mm !important;
-            max-width: 200mm !important;
+            width: 210mm !important;
+            max-width: 210mm !important;
             direction: rtl !important;
             text-align: right !important;
-            padding: 0 3mm !important;
+            padding: 0 8mm !important;
           }
           
           @page {
             size: A4 !important;
-            margin: 3mm !important;
+            margin: 8mm !important;
             padding: 0 !important;
           }
           
