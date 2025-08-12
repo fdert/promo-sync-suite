@@ -1412,34 +1412,6 @@ ${publicFileUrl}
 
       if (orderError) throw orderError;
 
-  // تحديث الطلب
-  const updateOrder = async () => {
-    if (!selectedOrderForEditing) return;
-
-    try {
-      setLoading(true);
-
-      console.log('🔄 بداية تحديث الطلب...');
-      console.log('البنود الحالية:', orderItems);
-
-      // تحديث بيانات الطلب الأساسية
-      const { error: orderError } = await supabase
-        .from('orders')
-        .update({
-          customer_id: newOrder.customer_id,
-          service_name: newOrder.service_name,
-          priority: newOrder.priority,
-          due_date: newOrder.due_date || null,
-          description: newOrder.description,
-          amount: newOrder.amount,
-          payment_type: newOrder.payment_type,
-          payment_notes: newOrder.payment_notes,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', selectedOrderForEditing.id);
-
-      if (orderError) throw orderError;
-
       console.log('✅ تم تحديث بيانات الطلب الأساسية');
 
       // تحضير البنود الصالحة للإدراج
@@ -1465,35 +1437,6 @@ ${publicFileUrl}
       }
 
       console.log('✅ تم تحديث البنود بنجاح');
-
-      toast({
-        title: "تم تحديث الطلب",
-        description: "تم تحديث الطلب بنجاح",
-      });
-
-      // إعادة تعيين البيانات وإغلاق النافذة
-      setIsEditOrderDialogOpen(false);
-      setSelectedOrderForEditing(null);
-      setOrderItems([{
-        id: '',
-        item_name: '',
-        quantity: 1,
-        unit_price: 0,
-        total_amount: 0
-      }]);
-      refetch();
-
-    } catch (error) {
-      console.error('❌ خطأ في تحديث الطلب:', error);
-      toast({
-        title: "خطأ في تحديث الطلب",
-        description: "حدث خطأ أثناء تحديث الطلب",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
       toast({
         title: "تم تحديث الطلب",
