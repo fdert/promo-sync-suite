@@ -752,7 +752,7 @@ ${publicFileUrl}
             type: notificationType,
             order_id: orderId,
             source: 'employee_dashboard', // تحديد المصدر
-            webhook_preference: 'لوحة الموظف', // الويب هوك المفضل
+            webhook_preference: 'لوحة الموظف ', // الويب هوك المفضل (مع المسافة)
             data: {
               order_number: orderData.order_number,
               customer_name: orderData.customers.name,
@@ -777,7 +777,7 @@ ${publicFileUrl}
           console.log('Order Data:', orderData);
           console.log('Customer Phone:', orderData.customers?.whatsapp_number);
           console.log('Source: employee_dashboard');
-          console.log('Webhook preference: لوحة الموظف');
+          console.log('Webhook preference: لوحة الموظف ');
           
           const result = await supabase.functions.invoke('send-order-notifications', {
             body: notificationData
@@ -795,7 +795,7 @@ ${publicFileUrl}
             .eq('webhook_name', 'لوحة الموظف')
             .eq('is_active', true);
           
-          console.log('Webhook check for لوحة الموظف:', webhookCheck);
+          console.log('Webhook check for لوحة الموظف :', webhookCheck);
 
           if (result.error) {
             console.error('خطأ في إرسال الإشعار:', result.error);
