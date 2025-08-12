@@ -227,6 +227,20 @@ const Invoices = () => {
     }
   };
 
+  // دالة الحصول على نمط شارة الحالة
+  const getStatusBadgeStyle = (status) => {
+    switch (status) {
+      case 'مدفوعة':
+        return 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300';
+      case 'مدفوعة جزئياً':
+        return 'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-300';
+      case 'قيد الانتظار':
+        return 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300';
+      default:
+        return 'border-gray-200 bg-gray-50 text-gray-700 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-300';
+    }
+  };
+
   useEffect(() => {
     fetchCompanyInfo();
     fetchInvoicesWithPayments();
@@ -296,72 +310,132 @@ const Invoices = () => {
       {/* جدول الفواتير */}
       <Card>
         <CardHeader>
-          <CardTitle>قائمة الفواتير</CardTitle>
-          <CardDescription>
+          <CardTitle className="flex items-center gap-2">
+            <div className="bg-primary/10 p-2 rounded-lg">
+              📋
+            </div>
+            قائمة الفواتير
+          </CardTitle>
+          <CardDescription className="text-base">
             جميع الفواتير مع تفاصيل المدفوعات والحالة
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse border border-gray-300">
+            <table className="w-full border-collapse bg-background">
               <thead>
-                <tr className="bg-muted">
-                  <th className="border border-gray-300 p-3 text-right">رقم الفاتورة</th>
-                  <th className="border border-gray-300 p-3 text-right">العميل</th>
-                  <th className="border border-gray-300 p-3 text-center">تاريخ الإصدار</th>
-                  <th className="border border-gray-300 p-3 text-center">المبلغ الإجمالي</th>
-                  <th className="border border-gray-300 p-3 text-center">المدفوع</th>
-                  <th className="border border-gray-300 p-3 text-center">المتبقي</th>
-                  <th className="border border-gray-300 p-3 text-center">الحالة</th>
-                  <th className="border border-gray-300 p-3 text-center">الإجراءات</th>
+                <tr className="bg-gradient-to-r from-primary/5 to-primary/10 border-b border-border">
+                  <th className="p-4 text-right font-semibold text-foreground border-r border-border min-w-[140px]">
+                    رقم الفاتورة
+                  </th>
+                  <th className="p-4 text-right font-semibold text-foreground border-r border-border min-w-[180px]">
+                    العميل
+                  </th>
+                  <th className="p-4 text-center font-semibold text-foreground border-r border-border min-w-[120px]">
+                    تاريخ الإصدار
+                  </th>
+                  <th className="p-4 text-center font-semibold text-foreground border-r border-border min-w-[130px]">
+                    المبلغ الإجمالي
+                  </th>
+                  <th className="p-4 text-center font-semibold text-foreground border-r border-border min-w-[120px]">
+                    المدفوع
+                  </th>
+                  <th className="p-4 text-center font-semibold text-foreground border-r border-border min-w-[120px]">
+                    المتبقي
+                  </th>
+                  <th className="p-4 text-center font-semibold text-foreground border-r border-border min-w-[120px]">
+                    الحالة
+                  </th>
+                  <th className="p-4 text-center font-semibold text-foreground min-w-[140px]">
+                    الإجراءات
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {filteredInvoices.map((invoice) => (
-                  <tr key={invoice.id} className="hover:bg-muted/50">
-                    <td className="border border-gray-300 p-3 font-mono">
-                      {invoice.invoice_number}
+                {filteredInvoices.map((invoice, index) => (
+                  <tr 
+                    key={invoice.id} 
+                    className={`
+                      border-b border-border/50 transition-all duration-200 hover:bg-muted/30
+                      ${index % 2 === 0 ? 'bg-background' : 'bg-muted/10'}
+                    `}
+                  >
+                    <td className="p-4 border-r border-border/50">
+                      <div className="font-mono text-sm bg-secondary/20 px-2 py-1 rounded inline-block">
+                        {invoice.invoice_number}
+                      </div>
                     </td>
-                    <td className="border border-gray-300 p-3">
-                      {invoice.customers?.name || 'غير محدد'}
+                    <td className="p-4 border-r border-border/50">
+                      <div className="flex flex-col gap-1">
+                        <span className="font-medium text-foreground">
+                          {invoice.customers?.name || 'غير محدد'}
+                        </span>
+                        {invoice.customers?.phone && (
+                          <span className="text-xs text-muted-foreground">
+                            {invoice.customers.phone}
+                          </span>
+                        )}
+                      </div>
                     </td>
-                    <td className="border border-gray-300 p-3 text-center">
-                      {new Date(invoice.issue_date).toLocaleDateString('ar-SA')}
+                    <td className="p-4 text-center border-r border-border/50">
+                      <div className="text-sm">
+                        {new Date(invoice.issue_date).toLocaleDateString('ar-SA')}
+                      </div>
                     </td>
-                    <td className="border border-gray-300 p-3 text-center font-bold">
-                      {invoice.total_amount?.toLocaleString('ar-SA')} ر.س
+                    <td className="p-4 text-center border-r border-border/50">
+                      <div className="font-bold text-base text-foreground">
+                        {invoice.total_amount?.toLocaleString('ar-SA')} 
+                        <span className="text-xs text-muted-foreground mr-1">ر.س</span>
+                      </div>
                     </td>
-                    <td className="border border-gray-300 p-3 text-center">
-                      <span className="font-bold text-green-600">
-                        {invoice.total_paid?.toLocaleString('ar-SA')} ر.س
-                      </span>
+                    <td className="p-4 text-center border-r border-border/50">
+                      <div className="font-bold text-sm">
+                        <span className="text-emerald-600 dark:text-emerald-400">
+                          {invoice.total_paid?.toLocaleString('ar-SA')}
+                        </span>
+                        <span className="text-xs text-muted-foreground mr-1">ر.س</span>
+                      </div>
                     </td>
-                    <td className="border border-gray-300 p-3 text-center">
-                      <span className={`font-bold ${invoice.remaining_amount > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                        {invoice.remaining_amount?.toLocaleString('ar-SA')} ر.س
-                      </span>
+                    <td className="p-4 text-center border-r border-border/50">
+                      <div className="font-bold text-sm">
+                        <span className={`${
+                          invoice.remaining_amount > 0 
+                            ? 'text-red-600 dark:text-red-400' 
+                            : 'text-emerald-600 dark:text-emerald-400'
+                        }`}>
+                          {invoice.remaining_amount?.toLocaleString('ar-SA')}
+                        </span>
+                        <span className="text-xs text-muted-foreground mr-1">ر.س</span>
+                      </div>
                     </td>
-                    <td className="border border-gray-300 p-3 text-center">
-                      <Badge className={getStatusColor(invoice.payment_status)}>
+                    <td className="p-4 text-center border-r border-border/50">
+                      <Badge 
+                        variant="outline"
+                        className={`px-3 py-1 text-xs font-medium border-2 ${getStatusBadgeStyle(invoice.payment_status)}`}
+                      >
                         {invoice.payment_status}
                       </Badge>
                     </td>
-                    <td className="border border-gray-300 p-3">
+                    <td className="p-4">
                       <div className="flex justify-center gap-2">
                         <Button
                           size="sm"
                           variant="outline"
+                          className="h-8 w-8 p-0 hover:bg-primary/10 hover:border-primary"
                           onClick={() => handleViewInvoice(invoice)}
+                          title="معاينة الفاتورة"
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
                         <Button
                           size="sm"
                           variant="outline"
+                          className="h-8 w-8 p-0 hover:bg-secondary/50 hover:border-secondary"
                           onClick={() => {
                             handlePrintInvoice(invoice);
                             updatePrintCount(invoice.id);
                           }}
+                          title="طباعة الفاتورة"
                         >
                           <Printer className="h-4 w-4" />
                         </Button>
@@ -374,8 +448,14 @@ const Invoices = () => {
           </div>
 
           {filteredInvoices.length === 0 && (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">لم يتم العثور على فواتير</p>
+            <div className="text-center py-12">
+              <div className="flex flex-col items-center gap-4">
+                <div className="text-6xl opacity-20">📄</div>
+                <div>
+                  <p className="text-lg font-medium text-muted-foreground">لم يتم العثور على فواتير</p>
+                  <p className="text-sm text-muted-foreground/70 mt-1">جرب تغيير معايير البحث أو الفلاتر</p>
+                </div>
+              </div>
             </div>
           )}
         </CardContent>
