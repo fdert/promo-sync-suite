@@ -188,6 +188,7 @@ const Orders = () => {
 
   // جلب الطلبات
   const fetchOrders = async () => {
+    console.log('🔄 جاري جلب الطلبات من قاعدة البيانات...');
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -206,7 +207,12 @@ const Orders = () => {
         `)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ خطأ في جلب الطلبات:', error);
+        throw error;
+      }
+
+      console.log('✅ تم جلب عدد الطلبات:', data?.length || 0);
       
       // حساب المبلغ المدفوع لكل طلب
       const ordersWithPayments = await Promise.all((data || []).map(async (order: any) => {

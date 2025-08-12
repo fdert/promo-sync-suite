@@ -74,6 +74,7 @@ const Customers = () => {
 
   // جلب العملاء من قاعدة البيانات
   const fetchCustomers = async () => {
+    console.log('🔄 جاري جلب العملاء من قاعدة البيانات...');
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -82,7 +83,7 @@ const Customers = () => {
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error fetching customers:', error);
+        console.error('❌ خطأ في جلب العملاء:', error);
         toast({
           title: "خطأ",
           description: "حدث خطأ في جلب بيانات العملاء",
@@ -91,9 +92,10 @@ const Customers = () => {
         return;
       }
 
+      console.log('✅ تم جلب عدد العملاء:', data?.length || 0);
       setCustomers(data || []);
     } catch (error) {
-      console.error('Error:', error);
+      console.error('❌ خطأ عام:', error);
     } finally {
       setLoading(false);
     }
