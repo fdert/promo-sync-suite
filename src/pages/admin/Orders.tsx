@@ -1357,40 +1357,38 @@ ${companyName}`;
     }
   };
 
-  // حذف الطلب
+  // حذف الطلب مع جميع البيانات المرتبطة
   const deleteOrder = async () => {
     if (!selectedOrderForDelete) return;
 
     try {
       setLoading(true);
 
-      // حذف البنود أولاً
-      const { error: deleteItemsError } = await supabase
-        .from('order_items')
-        .delete()
-        .eq('order_id', selectedOrderForDelete.id);
+      console.log('🗑️ بداية حذف الطلب:', selectedOrderForDelete.order_number);
 
-      if (deleteItemsError) throw deleteItemsError;
+      // استدعاء دالة الحذف الآمن
+      const { data, error } = await supabase.rpc('delete_order_with_related_data', {
+        order_id_param: selectedOrderForDelete.id
+      });
 
-      // حذف المدفوعات
-      const { error: deletePaymentsError } = await supabase
-        .from('payments')
-        .delete()
-        .eq('order_id', selectedOrderForDelete.id);
+      if (error) throw error;
 
-      if (deletePaymentsError) throw deletePaymentsError;
+      // التحقق من نوع البيانات المرجعة
+      const result = data as any;
+      if (result && !result.success) {
+        throw new Error(result.error || 'فشل في حذف الطلب');
+      }
 
-      // حذف الطلب
-      const { error: deleteOrderError } = await supabase
-        .from('orders')
-        .delete()
-        .eq('id', selectedOrderForDelete.id);
+      console.log('✅ تم حذف الطلب بنجاح:', result);
 
-      if (deleteOrderError) throw deleteOrderError;
+      const deletedItems = result?.deleted_items || 0;
+      const deletedPayments = result?.deleted_payments || 0;
+      const deletedInvoices = result?.deleted_invoices || 0;
+      const deletedEntries = result?.deleted_account_entries || 0;
 
       toast({
         title: "تم حذف الطلب",
-        description: "تم حذف الطلب وجميع بياناته المرتبطة بنجاح",
+        description: `تم حذف الطلب ${selectedOrderForDelete.order_number} مع جميع بياناته المرتبطة (${deletedItems} بنود، ${deletedPayments} مدفوعات، ${deletedInvoices} فواتير، ${deletedEntries} قيود محاسبية)`,
       });
 
       setIsDeleteOrderDialogOpen(false);
@@ -1401,7 +1399,7 @@ ${companyName}`;
       console.error('Error deleting order:', error);
       toast({
         title: "خطأ في حذف الطلب",
-        description: "حدث خطأ أثناء حذف الطلب",
+        description: "حدث خطأ أثناء حذف الطلب وبياناته المرتبطة",
         variant: "destructive",
       });
     } finally {

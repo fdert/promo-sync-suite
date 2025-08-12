@@ -2698,6 +2698,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      delete_order_with_related_data: {
+        Args: { order_id_param: string }
+        Returns: Json
+      }
       generate_expense_number: {
         Args: Record<PropertyKey, never>
         Returns: string
