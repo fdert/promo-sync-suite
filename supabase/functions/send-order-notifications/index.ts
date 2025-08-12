@@ -479,7 +479,7 @@ ${data.file_url}
         console.log('Looking for preferred webhook:', webhook_preference);
         
         selectedWebhook = webhookSettings.find(w => 
-          w.webhook_name === webhook_preference && 
+          w.webhook_name.trim() === webhook_preference.trim() && 
           w.is_active && 
           w.webhook_type === 'outgoing'
         );
