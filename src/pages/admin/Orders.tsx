@@ -38,6 +38,8 @@ import {
   Plus,
   Trash2,
   Tags,
+  CheckSquare,
+  Square,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -181,6 +183,11 @@ const Orders = () => {
     total_amount: 0
   }]);
   const [attachmentFiles, setAttachmentFiles] = useState<File[]>([]);
+  
+  // حالات التحديد المتعدد والحذف
+  const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
+  const [isSelectMode, setIsSelectMode] = useState(false);
+  const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
   
   const { toast } = useToast();
   const { user } = useAuth();
@@ -1407,6 +1414,98 @@ ${companyName}`;
     }
   };
 
+  // دوال التحديد المتعدد
+  const toggleSelectMode = () => {
+    setIsSelectMode(!isSelectMode);
+    if (isSelectMode) {
+      setSelectedOrderIds(new Set());
+    }
+  };
+
+  const toggleOrderSelection = (orderId: string) => {
+    const newSelection = new Set(selectedOrderIds);
+    if (newSelection.has(orderId)) {
+      newSelection.delete(orderId);
+    } else {
+      newSelection.add(orderId);
+    }
+    setSelectedOrderIds(newSelection);
+  };
+
+  const selectAllOrders = () => {
+    const allOrderIds = filteredOrders.map(order => order.id);
+    setSelectedOrderIds(new Set(allOrderIds));
+  };
+
+  const deselectAllOrders = () => {
+    setSelectedOrderIds(new Set());
+  };
+
+  // حذف متعدد للطلبات
+  const bulkDeleteOrders = async () => {
+    if (selectedOrderIds.size === 0) return;
+
+    try {
+      setLoading(true);
+      let successCount = 0;
+      let failCount = 0;
+      const selectedOrderNumbers: string[] = [];
+
+      // الحصول على أرقام الطلبات المحددة
+      orders.forEach(order => {
+        if (selectedOrderIds.has(order.id)) {
+          selectedOrderNumbers.push(order.order_number);
+        }
+      });
+
+      console.log('🗑️ بداية حذف الطلبات المتعددة:', selectedOrderNumbers);
+
+      // حذف كل طلب على حدة
+      for (const orderId of selectedOrderIds) {
+        try {
+          const { data, error } = await supabase.rpc('delete_order_with_related_data', {
+            order_id_param: orderId
+          });
+
+          if (error) throw error;
+
+          const result = data as any;
+          if (result && !result.success) {
+            throw new Error(result.error || 'فشل في حذف الطلب');
+          }
+
+          successCount++;
+        } catch (error) {
+          console.error('خطأ في حذف الطلب:', orderId, error);
+          failCount++;
+        }
+      }
+
+      console.log('✅ انتهى حذف الطلبات - نجح:', successCount, 'فشل:', failCount);
+
+      toast({
+        title: "تم حذف الطلبات",
+        description: `تم حذف ${successCount} طلب بنجاح${failCount > 0 ? ` وفشل حذف ${failCount} طلبات` : ''}`,
+        variant: failCount > 0 ? "destructive" : "default",
+      });
+
+      setIsBulkDeleteDialogOpen(false);
+      setSelectedOrderIds(new Set());
+      setIsSelectMode(false);
+      fetchOrders();
+
+    } catch (error) {
+      console.error('Error in bulk delete:', error);
+      toast({
+        title: "خطأ في حذف الطلبات",
+        description: "حدث خطأ أثناء حذف الطلبات المحددة",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // فتح حوار تعديل الطلب
   const openEditOrderDialog = (order: Order) => {
     setSelectedOrderForEditing(order);
@@ -1505,7 +1604,52 @@ ${companyName}`;
 
       {/* قائمة الطلبات */}
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold">قائمة الطلبات ({filteredOrders.length})</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold">قائمة الطلبات ({filteredOrders.length})</h2>
+          
+          {/* أزرار التحديد المتعدد */}
+          <div className="flex gap-2">
+            <Button
+              variant={isSelectMode ? "default" : "outline"}
+              onClick={toggleSelectMode}
+              className="flex items-center gap-2"
+            >
+              {isSelectMode ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
+              {isSelectMode ? "إلغاء التحديد" : "تحديد متعدد"}
+            </Button>
+            
+            {isSelectMode && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={selectAllOrders}
+                  disabled={selectedOrderIds.size === filteredOrders.length}
+                >
+                  تحديد الكل
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={deselectAllOrders}
+                  disabled={selectedOrderIds.size === 0}
+                >
+                  إلغاء تحديد الكل
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setIsBulkDeleteDialogOpen(true)}
+                  disabled={selectedOrderIds.size === 0}
+                  className="flex items-center gap-2"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  حذف المحدد ({selectedOrderIds.size})
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
         
         {filteredOrders.map((order) => (
           <Card key={order.id} className="p-6 border border-border">
@@ -1513,7 +1657,18 @@ ${companyName}`;
               {/* معلومات الطلب */}
               <div className="lg:col-span-2 space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-xl font-semibold">{order.order_number}</h3>
+                  <div className="flex items-center gap-3">
+                    {/* Checkbox للتحديد المتعدد */}
+                    {isSelectMode && (
+                      <input
+                        type="checkbox"
+                        checked={selectedOrderIds.has(order.id)}
+                        onChange={() => toggleOrderSelection(order.id)}
+                        className="w-4 h-4 text-primary bg-background border-border rounded focus:ring-primary"
+                      />
+                    )}
+                    <h3 className="text-xl font-semibold">{order.order_number}</h3>
+                  </div>
                   <div className="flex gap-2">
                     <Badge variant={
                       order.status === 'مكتمل' ? 'default' :
@@ -2728,6 +2883,50 @@ ${companyName}`;
               disabled={loading}
             >
               {loading ? 'جاري الحذف...' : 'حذف الطلب نهائياً'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* حوار تأكيد الحذف المتعدد */}
+      <Dialog open={isBulkDeleteDialogOpen} onOpenChange={setIsBulkDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>تأكيد حذف الطلبات المحددة</DialogTitle>
+            <DialogDescription>
+              هل أنت متأكد من رغبتك في حذف {selectedOrderIds.size} طلب؟ هذا الإجراء لا يمكن التراجع عنه.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 mt-4">
+            <div className="text-destructive text-sm">
+              <strong>سيتم حذف ما يلي لكل طلب:</strong>
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>بنود الطلب</li>
+                <li>المدفوعات والقيود المحاسبية</li>
+                <li>الفواتير وبنودها</li>
+                <li>التقييمات</li>
+                <li>طلبات الطباعة</li>
+                <li>رسائل الواتساب</li>
+                <li>سجلات النشاط</li>
+              </ul>
+            </div>
+          </div>
+          
+          <div className="flex gap-2 justify-end pt-4">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsBulkDeleteDialogOpen(false)}
+              disabled={loading}
+            >
+              إلغاء
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={bulkDeleteOrders}
+              disabled={loading}
+            >
+              {loading ? 'جاري الحذف...' : `حذف ${selectedOrderIds.size} طلب نهائياً`}
             </Button>
           </div>
         </DialogContent>
