@@ -14,6 +14,7 @@ import {
   Settings,
   Calculator,
   Send,
+  CreditCard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -93,6 +94,12 @@ const employeeMenuItems = [
     title: "الحركة المالية للطلبات",
     icon: TrendingUp,
     href: "/employee/financial-movements",
+    allowedRoles: ['employee'] as UserRole[],
+  },
+  {
+    title: "إدارة مدفوعات الطلبات",
+    icon: CreditCard,
+    href: "/employee/order-payments",
     allowedRoles: ['employee'] as UserRole[],
   },
   {

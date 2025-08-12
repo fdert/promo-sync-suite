@@ -56,6 +56,8 @@ import EmployeeBulkWhatsApp from "./pages/employee/BulkWhatsApp";
 import EmployeeInvoices from "./pages/employee/Invoices";
 
 import OrderPayments from "./pages/admin/OrderPayments";
+import EmployeeOrderPayments from "./pages/employee/OrderPayments";
+import EmployeeOrderPaymentsList from "./pages/employee/OrderPaymentsList";
 import InvoiceVerification from "./pages/InvoiceVerification";
 import ElectronicInvoiceSettings from "./pages/admin/ElectronicInvoiceSettings";
 
@@ -94,6 +96,8 @@ const App = () => (
               <Route path="pricing-calculator" element={<PricingCalculatorPage />} />
               <Route path="reports" element={<EmployeeReports />} />
               <Route path="bulk-whatsapp" element={<EmployeeBulkWhatsApp />} />
+              <Route path="order-payments" element={<EmployeeOrderPaymentsList />} />
+              <Route path="order-payments/:orderId" element={<EmployeeOrderPayments />} />
               
             </Route>
             <Route path="/admin" element={
