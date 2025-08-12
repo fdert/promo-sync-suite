@@ -70,19 +70,19 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
             position: absolute !important;
             left: 0mm !important;
             top: 0 !important;
-            transform: scale(1.4) !important;
+            transform: scale(1) !important;
             transform-origin: top left !important;
-            width: 100% !important;
-            max-width: 100% !important;
+            width: 148mm !important;
+            max-width: 148mm !important;
             direction: rtl !important;
             text-align: right !important;
-            padding: 0 4mm !important;
-            min-height: 280mm !important;
+            padding: 0 3mm !important;
+            min-height: 210mm !important;
           }
           
           @page {
-            size: A4 portrait !important;
-            margin: 5mm !important;
+            size: A5 portrait !important;
+            margin: 3mm !important;
             padding: 0 !important;
           }
           
