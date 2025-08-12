@@ -106,11 +106,14 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
             color: #000 !important;
             background: white !important;
             width: 100% !important;
-            max-width: 194mm !important;
+            max-width: 148mm !important;
+            height: auto !important;
+            max-height: 200mm !important;
             margin: 0 auto !important;
             padding: 0 !important;
             page-break-after: avoid !important;
-            overflow: hidden !important;
+            page-break-inside: avoid !important;
+            overflow: visible !important;
           }
           
           .print-invoice * {
