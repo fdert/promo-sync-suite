@@ -2816,6 +2816,10 @@ export type Database = {
         Args: { _user_id: string }
         Returns: undefined
       }
+      update_order_items_safely: {
+        Args: { order_id_param: string; items_data: Json[] }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role:

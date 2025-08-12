@@ -1412,44 +1412,88 @@ ${publicFileUrl}
 
       if (orderError) throw orderError;
 
+  // تحديث الطلب
+  const updateOrder = async () => {
+    if (!selectedOrderForEditing) return;
+
+    try {
+      setLoading(true);
+
+      console.log('🔄 بداية تحديث الطلب...');
+      console.log('البنود الحالية:', orderItems);
+
+      // تحديث بيانات الطلب الأساسية
+      const { error: orderError } = await supabase
+        .from('orders')
+        .update({
+          customer_id: newOrder.customer_id,
+          service_name: newOrder.service_name,
+          priority: newOrder.priority,
+          due_date: newOrder.due_date || null,
+          description: newOrder.description,
+          amount: newOrder.amount,
+          payment_type: newOrder.payment_type,
+          payment_notes: newOrder.payment_notes,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', selectedOrderForEditing.id);
+
+      if (orderError) throw orderError;
+
       console.log('✅ تم تحديث بيانات الطلب الأساسية');
 
-      // حذف البنود القديمة أولاً
-      const { error: deleteItemsError } = await supabase
-        .from('order_items')
-        .delete()
-        .eq('order_id', selectedOrderForEditing.id);
+      // تحضير البنود الصالحة للإدراج
+      const validItems = orderItems.filter(item => item.item_name && item.item_name.trim() !== '');
+      const itemsData = validItems.map(item => ({
+        item_name: item.item_name,
+        quantity: Number(item.quantity) || 1,
+        unit_price: Number(item.unit_price) || 0,
+        total_amount: Number(item.total_amount) || 0
+      }));
 
-      if (deleteItemsError) throw deleteItemsError;
+      console.log('البنود المراد تحديثها:', itemsData);
 
-      console.log('✅ تم حذف البنود القديمة');
+      // استخدام الدالة الآمنة لتحديث البنود
+      const { error: updateItemsError } = await supabase.rpc('update_order_items_safely', {
+        order_id_param: selectedOrderForEditing.id,
+        items_data: itemsData
+      });
 
-      // إضافة البنود الجديدة
-      if (orderItems.length > 0 && orderItems.some(item => item.item_name && item.item_name.trim() !== '')) {
-        // تصفية البنود وتجهيزها للإدراج (بدون id لتجنب التضارب)
-        const itemsToInsert = orderItems
-          .filter(item => item.item_name && item.item_name.trim() !== '')
-          .map(item => ({
-            order_id: selectedOrderForEditing.id,
-            item_name: item.item_name,
-            quantity: Number(item.quantity) || 1,
-            unit_price: Number(item.unit_price) || 0,
-            total_amount: Number(item.total_amount) || 0
-          }));
-
-        console.log('البنود المراد إدراجها:', itemsToInsert);
-
-        const { error: insertItemsError } = await supabase
-          .from('order_items')
-          .insert(itemsToInsert);
-
-        if (insertItemsError) {
-          console.error('❌ خطأ في إدراج البنود:', insertItemsError);
-          throw insertItemsError;
-        }
-
-        console.log('✅ تم إدراج البنود الجديدة بنجاح');
+      if (updateItemsError) {
+        console.error('❌ خطأ في تحديث البنود:', updateItemsError);
+        throw updateItemsError;
       }
+
+      console.log('✅ تم تحديث البنود بنجاح');
+
+      toast({
+        title: "تم تحديث الطلب",
+        description: "تم تحديث الطلب بنجاح",
+      });
+
+      // إعادة تعيين البيانات وإغلاق النافذة
+      setIsEditOrderDialogOpen(false);
+      setSelectedOrderForEditing(null);
+      setOrderItems([{
+        id: '',
+        item_name: '',
+        quantity: 1,
+        unit_price: 0,
+        total_amount: 0
+      }]);
+      refetch();
+
+    } catch (error) {
+      console.error('❌ خطأ في تحديث الطلب:', error);
+      toast({
+        title: "خطأ في تحديث الطلب",
+        description: "حدث خطأ أثناء تحديث الطلب",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
       toast({
         title: "تم تحديث الطلب",
