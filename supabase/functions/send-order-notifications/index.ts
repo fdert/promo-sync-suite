@@ -604,6 +604,29 @@ ${data.file_url}
 
     console.log('Sending notification via webhook:', JSON.stringify(messagePayload, null, 2));
 
+    // حفظ الرسالة في قاعدة البيانات أولاً كـ pending
+    console.log('=== Saving message to database first ===');
+    const { data: savedMessage, error: saveError } = await supabase
+      .from('whatsapp_messages')
+      .insert({
+        from_number: 'system',
+        to_number: customerPhone,
+        message_type: 'text',
+        message_content: message,
+        status: 'pending',
+        is_reply: false,
+        customer_id: orderDetails?.customer_id || null
+      })
+      .select()
+      .single();
+    
+    if (saveError) {
+      console.error('Error saving message:', saveError);
+      throw saveError;
+    }
+    
+    console.log('Message saved to database with ID:', savedMessage.id);
+
     // إرسال الرسالة عبر webhook إلى n8n مع headers صحيحة وإعادة المحاولة
     let response;
     let responseData;
@@ -646,21 +669,20 @@ ${data.file_url}
       responseData = `Fetch error: ${fetchError.message}`;
     }
 
-    // حفظ الرسالة المرسلة في قاعدة البيانات
-    const { data: sentMessage, error: messageError } = await supabase
+    // تحديث حالة الرسالة في قاعدة البيانات
+    const { error: updateError } = await supabase
       .from('whatsapp_messages')
-      .insert({
-        from_number: 'system',
-        to_number: customerPhone,
-        message_type: 'text',
-        message_content: message,
-        status: messageStatus, // سيكون sent أو failed حسب استجابة الويب هوك
-        is_reply: false,
-        customer_id: orderDetails?.customers?.id || null
-      });
+      .update({
+        status: messageStatus,
+        sent_at: messageStatus === 'sent' ? new Date().toISOString() : null,
+        error_message: messageStatus === 'failed' ? responseData : null
+      })
+      .eq('id', savedMessage.id);
 
-    if (messageError) {
-      console.error('Error saving sent message:', messageError);
+    if (updateError) {
+      console.error('Error updating message status:', updateError);
+    } else {
+      console.log('Message status updated to:', messageStatus);
     }
 
     return new Response(
