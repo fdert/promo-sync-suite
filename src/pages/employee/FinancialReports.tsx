@@ -5,7 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TrendingUp, TrendingDown, BarChart3, DollarSign, CalendarRange, FileText, Search, Download } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { TrendingUp, TrendingDown, BarChart3, DollarSign, CalendarRange, FileText, Search, Download, Plus, Receipt } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -26,7 +28,43 @@ const FinancialReports = () => {
     endDate: ''
   });
 
+  // حالة مودال إضافة المصروفات
+  const [isExpenseDialogOpen, setIsExpenseDialogOpen] = useState(false);
+  const [expenseForm, setExpenseForm] = useState({
+    description: '',
+    amount: '',
+    category: '',
+    customCategory: '',
+    date: new Date().toISOString().split('T')[0],
+    paymentMethod: '',
+    notes: ''
+  });
+
   const { toast } = useToast();
+
+  // فئات المصروفات المتاحة
+  const expenseCategories = [
+    { value: 'salaries', label: 'الرواتب' },
+    { value: 'purchases', label: 'المشتريات' },
+    { value: 'cash_expenses', label: 'مصاريف نقدية' },
+    { value: 'withdrawals', label: 'مسحوبات' },
+    { value: 'rent', label: 'الإيجار' },
+    { value: 'utilities', label: 'الخدمات (كهرباء، ماء، إنترنت)' },
+    { value: 'marketing', label: 'التسويق والإعلان' },
+    { value: 'maintenance', label: 'الصيانة' },
+    { value: 'transportation', label: 'المواصلات' },
+    { value: 'office_supplies', label: 'مستلزمات المكتب' },
+    { value: 'other', label: 'أخرى (يرجى التحديد)' }
+  ];
+
+  // طرق الدفع المتاحة
+  const paymentMethods = [
+    { value: 'نقدي', label: 'نقدي' },
+    { value: 'تحويل بنكي', label: 'تحويل بنكي' },
+    { value: 'الشبكة', label: 'بطاقة ائتمانية/الشبكة' },
+    { value: 'شيك', label: 'شيك' },
+    { value: 'أخرى', label: 'أخرى' }
+  ];
 
   // دالة للحصول على تواريخ بداية ونهاية الفترة
   const getDateRange = (period: string, startDate?: string, endDate?: string) => {
@@ -191,22 +229,239 @@ const FinancialReports = () => {
     });
   };
 
+  // دالة إضافة مصروف جديد
+  const handleAddExpense = async () => {
+    try {
+      // التحقق من صحة البيانات
+      if (!expenseForm.description || !expenseForm.amount || !expenseForm.category) {
+        toast({
+          title: "خطأ في البيانات",
+          description: "يرجى ملء جميع الحقول المطلوبة",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // التحقق من الفئة المخصصة إذا كانت مختارة
+      if (expenseForm.category === 'other' && !expenseForm.customCategory) {
+        toast({
+          title: "خطأ في البيانات",
+          description: "يرجى تحديد نوع المصروف عند اختيار 'أخرى'",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // تحديد فئة المصروف النهائية
+      const finalCategory = expenseForm.category === 'other' ? expenseForm.customCategory : 
+        expenseCategories.find(cat => cat.value === expenseForm.category)?.label || expenseForm.category;
+
+      // إنشاء رقم المصروف
+      const { data: lastExpense } = await supabase
+        .from('expenses')
+        .select('expense_number')
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      let expenseNumber = 'EXP-001';
+      if (lastExpense && lastExpense.length > 0) {
+        const lastNumber = parseInt(lastExpense[0].expense_number.split('-')[1]);
+        expenseNumber = `EXP-${String(lastNumber + 1).padStart(3, '0')}`;
+      }
+
+      // إضافة المصروف إلى قاعدة البيانات
+      const { error } = await supabase
+        .from('expenses')
+        .insert({
+          expense_number: expenseNumber,
+          description: expenseForm.description,
+          amount: parseFloat(expenseForm.amount),
+          category: finalCategory,
+          date: expenseForm.date,
+          payment_method: expenseForm.paymentMethod,
+          notes: expenseForm.notes
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      // إعادة تحميل البيانات المالية
+      await fetchFinancialData();
+
+      // إعادة تعيين النموذج وإغلاق المودال
+      setExpenseForm({
+        description: '',
+        amount: '',
+        category: '',
+        customCategory: '',
+        date: new Date().toISOString().split('T')[0],
+        paymentMethod: '',
+        notes: ''
+      });
+      setIsExpenseDialogOpen(false);
+
+      toast({
+        title: "تم الحفظ بنجاح",
+        description: `تم إضافة المصروف برقم ${expenseNumber}`,
+      });
+
+    } catch (error) {
+      console.error('Error adding expense:', error);
+      toast({
+        title: "خطأ في الحفظ",
+        description: "فشل في إضافة المصروف، يرجى المحاولة مرة أخرى",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return <div className="flex justify-center items-center h-64">جاري التحميل...</div>;
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">التقارير المالية</h1>
-          <p className="text-muted-foreground">عرض تفصيلي للوضع المالي والحسابات</p>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">التقارير المالية</h1>
+            <p className="text-muted-foreground">عرض تفصيلي للوضع المالي والحسابات</p>
+          </div>
+          <div className="flex gap-2">
+            <Dialog open={isExpenseDialogOpen} onOpenChange={setIsExpenseDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  إضافة مصروف
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[600px]">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <Receipt className="h-5 w-5" />
+                    إضافة مصروف جديد
+                  </DialogTitle>
+                  <DialogDescription>
+                    قم بإدخال تفاصيل المصروف الجديد
+                  </DialogDescription>
+                </DialogHeader>
+                
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="description">وصف المصروف *</Label>
+                      <Input
+                        id="description"
+                        value={expenseForm.description}
+                        onChange={(e) => setExpenseForm({...expenseForm, description: e.target.value})}
+                        placeholder="مثال: راتب الموظف أحمد - يناير 2024"
+                        className="mt-1"
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="amount">المبلغ (ر.س) *</Label>
+                      <Input
+                        id="amount"
+                        type="number"
+                        step="0.01"
+                        value={expenseForm.amount}
+                        onChange={(e) => setExpenseForm({...expenseForm, amount: e.target.value})}
+                        placeholder="0.00"
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="category">فئة المصروف *</Label>
+                      <Select value={expenseForm.category} onValueChange={(value) => setExpenseForm({...expenseForm, category: value})}>
+                        <SelectTrigger className="mt-1">
+                          <SelectValue placeholder="اختر فئة المصروف" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {expenseCategories.map((category) => (
+                            <SelectItem key={category.value} value={category.value}>
+                              {category.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {expenseForm.category === 'other' && (
+                      <div>
+                        <Label htmlFor="customCategory">تحديد نوع المصروف *</Label>
+                        <Input
+                          id="customCategory"
+                          value={expenseForm.customCategory}
+                          onChange={(e) => setExpenseForm({...expenseForm, customCategory: e.target.value})}
+                          placeholder="حدد نوع المصروف"
+                          className="mt-1"
+                        />
+                      </div>
+                    )}
+
+                    <div>
+                      <Label htmlFor="date">تاريخ المصروف</Label>
+                      <Input
+                        id="date"
+                        type="date"
+                        value={expenseForm.date}
+                        onChange={(e) => setExpenseForm({...expenseForm, date: e.target.value})}
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="paymentMethod">طريقة الدفع</Label>
+                    <Select value={expenseForm.paymentMethod} onValueChange={(value) => setExpenseForm({...expenseForm, paymentMethod: value})}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder="اختر طريقة الدفع" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {paymentMethods.map((method) => (
+                          <SelectItem key={method.value} value={method.value}>
+                            {method.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="notes">ملاحظات إضافية</Label>
+                    <Textarea
+                      id="notes"
+                      value={expenseForm.notes}
+                      onChange={(e) => setExpenseForm({...expenseForm, notes: e.target.value})}
+                      placeholder="أي ملاحظات أو تفاصيل إضافية..."
+                      className="mt-1"
+                      rows={3}
+                    />
+                  </div>
+                </div>
+
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsExpenseDialogOpen(false)}>
+                    إلغاء
+                  </Button>
+                  <Button onClick={handleAddExpense} className="gap-2">
+                    <Plus className="h-4 w-4" />
+                    إضافة المصروف
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            
+            <Button onClick={generateReport} className="gap-2">
+              <Download className="h-4 w-4" />
+              تصدير التقرير
+            </Button>
+          </div>
         </div>
-        <Button onClick={generateReport} className="gap-2">
-          <Download className="h-4 w-4" />
-          تصدير التقرير
-        </Button>
-      </div>
 
       {/* فلتر زمني */}
       <Card>
