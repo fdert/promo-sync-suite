@@ -1104,12 +1104,19 @@ ${publicFileUrl}
 
   // إضافة بند جديد
   const addOrderItem = () => {
-    setOrderItems([...orderItems, {
+    console.log('🔄 إضافة بند جديد');
+    console.log('البنود الحالية قبل الإضافة:', orderItems);
+    
+    const newItems = [...orderItems, {
+      id: '', // تأكد من عدم وجود id
       item_name: '',
-      quantity: 0,
+      quantity: 1,
       unit_price: 0,
       total_amount: 0
-    }]);
+    }];
+    
+    console.log('البنود بعد الإضافة:', newItems);
+    setOrderItems(newItems);
   };
 
   // حذف بند
@@ -1123,6 +1130,9 @@ ${publicFileUrl}
 
   // تحديث بند الطلب
   const updateOrderItem = (index: number, field: keyof OrderItem, value: string | number) => {
+    console.log('🔄 تحديث بند الطلب في الفهرس:', index, 'الحقل:', field, 'القيمة:', value);
+    console.log('البنود الحالية قبل التحديث:', orderItems);
+    
     const newItems = [...orderItems];
     newItems[index] = { ...newItems[index], [field]: value };
     
@@ -1131,13 +1141,16 @@ ${publicFileUrl}
       newItems[index].total_amount = newItems[index].quantity * newItems[index].unit_price;
     }
     
+    console.log('البنود بعد التحديث:', newItems);
     setOrderItems(newItems);
     calculateOrderTotal(newItems);
   };
 
   // حساب إجمالي الطلب
   const calculateOrderTotal = (items: OrderItem[]) => {
+    console.log('🧮 حساب إجمالي الطلب للبنود:', items);
     const total = items.reduce((sum, item) => sum + item.total_amount, 0);
+    console.log('الإجمالي المحسوب:', total);
     setNewOrder(prev => ({ ...prev, amount: total }));
   };
 
