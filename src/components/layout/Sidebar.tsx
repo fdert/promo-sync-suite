@@ -198,6 +198,12 @@ const menuItems = [
     href: "/admin/barcode-settings",
     allowedRoles: ['admin', 'manager'] as UserRole[],
   },
+  {
+    title: "الفواتير الإلكترونية",
+    icon: FileText,
+    href: "/admin/electronic-invoice-settings",
+    allowedRoles: ['admin', 'manager'] as UserRole[],
+  },
 ];
 
 const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {

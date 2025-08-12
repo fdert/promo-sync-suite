@@ -56,6 +56,8 @@ import EmployeeBulkWhatsApp from "./pages/employee/BulkWhatsApp";
 import EmployeeInvoices from "./pages/employee/Invoices";
 
 import OrderPayments from "./pages/admin/OrderPayments";
+import InvoiceVerification from "./pages/InvoiceVerification";
+import ElectronicInvoiceSettings from "./pages/admin/ElectronicInvoiceSettings";
 
 const queryClient = new QueryClient();
 
@@ -69,6 +71,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Home />} />
           <Route path="/invoice/:invoiceId" element={<InvoicePreview />} />
+          <Route path="/verify/:verificationId" element={<InvoiceVerification />} />
           <Route path="/auth" element={<Auth />} />
             <Route path="/employee" element={
               <ProtectedRoute>
@@ -160,11 +163,16 @@ const App = () => (
                     <BulkWhatsApp />
                   </RoleProtectedRoute>
                 } />
-                <Route path="customer-groups" element={
-                  <RoleProtectedRoute allowedRoles={['admin', 'manager']}>
-                    <CustomerGroups />
-                  </RoleProtectedRoute>
-                } />
+                 <Route path="customer-groups" element={
+                   <RoleProtectedRoute allowedRoles={['admin', 'manager']}>
+                     <CustomerGroups />
+                   </RoleProtectedRoute>
+                 } />
+                 <Route path="electronic-invoice-settings" element={
+                   <RoleProtectedRoute allowedRoles={['admin', 'manager']}>
+                     <ElectronicInvoiceSettings />
+                   </RoleProtectedRoute>
+                 } />
             </Route>
             <Route path="/evaluation/:token" element={<Evaluation />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
