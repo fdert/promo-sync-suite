@@ -691,17 +691,15 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
               </div>
             )}
             
-            {/* Electronic Invoice Verification */}
-            {electronicSettings?.verification_enabled && getVerificationLink() && (
-              <div className="print-verification-right">
-                <div className="print-verification-message">
-                  {electronicSettings.verification_message_ar}
-                </div>
-                <div className="print-verification-link">
-                  للتحقق من صحة الفاتورة: {getVerificationLink()}
-                </div>
+            {/* Electronic Invoice Verification - اختبار */}
+            <div className="print-verification-right">
+              <div className="print-verification-message">
+                فاتورة إلكترونية معتمدة - يمكن التحقق من صحتها إلكترونياً
               </div>
-            )}
+              <div className="print-verification-link">
+                للتحقق من صحة الفاتورة: https://e5a7747a-0935-46df-9ea9-1308e76636dc.lovableproject.com/verify/{invoice.id || "test"}
+              </div>
+            </div>
           </div>
         </div>
 
