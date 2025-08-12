@@ -384,9 +384,9 @@ const AccountsReview = () => {
                     <div key={type} className="flex justify-between items-center">
                       <span className="font-medium">{type}</span>
                       <span className={`font-bold ${
-                        Number(balance) >= 0 ? 'text-green-600' : 'text-red-600'
+                        Number(balance || 0) >= 0 ? 'text-green-600' : 'text-red-600'
                       }`}>
-                        {balance.toLocaleString()} ر.س
+                        {(balance || 0).toLocaleString()} ر.س
                       </span>
                     </div>
                   ))}
