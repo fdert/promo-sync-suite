@@ -77,12 +77,13 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
             direction: rtl !important;
             text-align: right !important;
             padding: 0 3mm !important;
-            min-height: 210mm !important;
+            height: 200mm !important;
+            max-height: 200mm !important;
           }
           
           @page {
             size: A5 portrait !important;
-            margin: 3mm !important;
+            margin: 5mm !important;
             padding: 0 !important;
           }
           
@@ -128,9 +129,9 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
             display: flex !important;
             justify-content: space-between !important;
             align-items: flex-start !important;
-            margin-bottom: 2.5mm !important;
+            margin-bottom: 1.5mm !important;
             border-bottom: 2px solid #2563eb !important;
-            padding-bottom: 2mm !important;
+            padding-bottom: 1.5mm !important;
             page-break-inside: avoid !important;
             position: relative !important;
           }
@@ -141,22 +142,22 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
           }
           
           .print-company-name {
-            font-size: 15px !important;
+            font-size: 13px !important;
             font-weight: bold !important;
-            margin-bottom: 1mm !important;
+            margin-bottom: 0.5mm !important;
             color: #2563eb !important;
           }
           
           .print-company-details {
-            font-size: 9px !important;
+            font-size: 8px !important;
             color: #6b7280 !important;
-            line-height: 1.4 !important;
+            line-height: 1.2 !important;
             text-align: right !important;
             direction: rtl !important;
           }
           
           .print-company-details div {
-            margin-bottom: 0.6mm !important;
+            margin-bottom: 0.3mm !important;
           }
           
           .print-logo {
@@ -171,8 +172,8 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
           }
           
           .print-logo img {
-            width: 10mm !important;
-            height: 10mm !important;
+            width: 8mm !important;
+            height: 8mm !important;
             object-fit: contain !important;
           }
           
@@ -183,28 +184,28 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
             text-align: left !important;
             direction: ltr !important;
             width: auto !important;
-            min-width: 50mm !important;
+            min-width: 40mm !important;
           }
           
           .print-invoice-title {
-            font-size: 16px !important;
+            font-size: 14px !important;
             font-weight: bold !important;
-            margin-bottom: 1.2mm !important;
+            margin-bottom: 0.8mm !important;
             color: #2563eb !important;
           }
           
           .print-invoice-details {
-            font-size: 10px !important;
+            font-size: 8px !important;
             color: #6b7280 !important;
-            line-height: 1.3 !important;
+            line-height: 1.2 !important;
           }
           
           .print-invoice-details div {
-            margin-bottom: 0.5mm !important;
+            margin-bottom: 0.3mm !important;
           }
           
           .print-customer-section {
-            margin-bottom: 2mm !important;
+            margin-bottom: 1.5mm !important;
           }
           
           .print-section-header {
@@ -237,15 +238,15 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
           .print-items-table {
             width: 100% !important;
             border-collapse: collapse !important;
-            font-size: 7.5px !important;
-            margin-bottom: 2mm !important;
+            font-size: 7px !important;
+            margin-bottom: 1.5mm !important;
             border: 1px solid #d1d5db !important;
           }
           
           .print-items-table th,
           .print-items-table td {
             border: 1px solid #d1d5db !important;
-            padding: 0.8mm !important;
+            padding: 0.6mm !important;
             text-align: center !important;
             vertical-align: middle !important;
           }
@@ -254,7 +255,7 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
             background-color: #2563eb !important;
             color: white !important;
             font-weight: bold !important;
-            font-size: 7.5px !important;
+            font-size: 7px !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
@@ -265,16 +266,16 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
           
           .print-item-name {
             font-weight: bold !important;
-            margin-bottom: 0.3mm !important;
+            margin-bottom: 0.2mm !important;
           }
           
           .print-item-desc {
-            font-size: 6.5px !important;
+            font-size: 6px !important;
             color: #6b7280 !important;
           }
           
           .print-totals {
-            margin-bottom: 2mm !important;
+            margin-bottom: 1.5mm !important;
             text-align: right !important;
             direction: rtl !important;
           }
@@ -282,7 +283,7 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
           .print-totals-box {
             display: inline-block !important;
             width: 35mm !important;
-            font-size: 8px !important;
+            font-size: 7.5px !important;
             margin-right: auto !important;
             text-align: right !important;
           }
@@ -290,27 +291,27 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
           .print-total-row {
             display: flex !important;
             justify-content: space-between !important;
-            padding: 0.4mm 0 !important;
+            padding: 0.3mm 0 !important;
             border-bottom: 0.3px solid #d1d5db !important;
           }
           
           .print-final-total {
             display: flex !important;
             justify-content: space-between !important;
-            padding: 0.7mm 0 !important;
+            padding: 0.5mm 0 !important;
             font-weight: bold !important;
-            font-size: 8.5px !important;
+            font-size: 8px !important;
             border-top: 1px solid #2563eb !important;
-            margin-top: 0.5mm !important;
+            margin-top: 0.3mm !important;
           }
           
           .print-payment-info {
             background-color: #f0f9ff !important;
             border: 1px solid #bfdbfe !important;
             border-radius: 1mm !important;
-            padding: 1.8mm !important;
-            font-size: 7px !important;
-            margin-bottom: 2mm !important;
+            padding: 1.2mm !important;
+            font-size: 6.5px !important;
+            margin-bottom: 1.5mm !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
@@ -318,21 +319,21 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
           .print-payment-header {
             color: #2563eb !important;
             font-weight: bold !important;
-            margin-bottom: 1mm !important;
-            font-size: 7.5px !important;
+            margin-bottom: 0.7mm !important;
+            font-size: 7px !important;
           }
           
           .print-payment-row {
             display: flex !important;
             justify-content: space-between !important;
-            margin-bottom: 0.7mm !important;
+            margin-bottom: 0.5mm !important;
           }
           
           .print-payment-amounts {
             display: flex !important;
             justify-content: space-between !important;
-            margin-top: 1mm !important;
-            padding-top: 1mm !important;
+            margin-top: 0.7mm !important;
+            padding-top: 0.7mm !important;
             border-top: 1px solid #93c5fd !important;
           }
           
@@ -343,20 +344,20 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
           
           .print-payment-label {
             color: #6b7280 !important;
-            font-size: 6px !important;
-            margin-bottom: 0.3mm !important;
+            font-size: 5.5px !important;
+            margin-bottom: 0.2mm !important;
           }
           
           .print-payment-value {
             font-weight: bold !important;
-            font-size: 6.5px !important;
+            font-size: 6px !important;
           }
           
           .print-notes {
-            font-size: 7px !important;
-            margin-bottom: 1.5mm !important;
+            font-size: 6.5px !important;
+            margin-bottom: 1mm !important;
             background-color: #f9fafb !important;
-            padding: 1mm !important;
+            padding: 0.8mm !important;
             border-radius: 0.5mm !important;
             color: #6b7280 !important;
             -webkit-print-color-adjust: exact !important;
@@ -365,11 +366,11 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
           
           .print-footer {
             text-align: center !important;
-            font-size: 8px !important;
+            font-size: 7px !important;
             color: #6b7280 !important;
             border-top: 0.3px solid #d1d5db !important;
-            padding-top: 1.5mm !important;
-            margin-top: 2mm !important;
+            padding-top: 1mm !important;
+            margin-top: 1.5mm !important;
             direction: rtl !important;
             width: 100% !important;
           }
