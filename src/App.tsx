@@ -17,6 +17,7 @@ import Customers from "./pages/admin/Customers";
 import Orders from "./pages/admin/Orders";
 import Invoices from "./pages/admin/Invoices";
 import Accounts from "./pages/admin/Accounts";
+import FinancialIntegration from "./pages/admin/FinancialIntegration";
 import AccountsReview from "./pages/admin/AccountsReview";
 import AccountsReceivableReview from "./pages/admin/AccountsReceivableReview";
 import PaymentsByType from "./pages/admin/PaymentsByType";
@@ -113,6 +114,7 @@ const App = () => (
               <Route path="orders" element={<Orders />} />
               <Route path="invoices" element={<Invoices />} />
               <Route path="accounts" element={<Accounts />} />
+              <Route path="financial-integration" element={<FinancialIntegration />} />
               <Route path="accounts-review" element={<AccountsReview />} />
               <Route path="accounts-receivable" element={<AccountsReceivableReview />} />
               <Route path="payments-by-type" element={<PaymentsByType />} />

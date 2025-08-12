@@ -399,13 +399,20 @@ const Dashboard = () => {
                 </div>
               )}
             </div>
-            <Button 
-              variant="outline" 
-              className="w-full mt-4"
-              onClick={() => navigate('/admin/orders')}
-            >
-              عرض جميع الطلبات والدفعات
-            </Button>
+            <div className="grid grid-cols-2 gap-2 mt-4">
+              <Button 
+                variant="outline" 
+                onClick={() => navigate('/admin/orders')}
+              >
+                عرض الطلبات
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => navigate('/admin/accounts')}
+              >
+                الحسابات المالية
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -479,18 +486,18 @@ const Dashboard = () => {
             <Button 
               variant="outline" 
               className="h-20 flex-col gap-2"
-              onClick={() => navigate('/admin/orders')}
+              onClick={() => navigate('/admin/accounts')}
             >
               <DollarSign className="h-6 w-6" />
-              إضافة دفعة
+              الحسابات المالية
             </Button>
             <Button 
               variant="outline" 
               className="h-20 flex-col gap-2"
-              onClick={() => navigate('/admin/whatsapp')}
+              onClick={() => navigate('/admin/financial-integration')}
             >
-              <MessageSquare className="h-6 w-6" />
-              إرسال رسالة WhatsApp
+              <FileText className="h-6 w-6" />
+              التكامل المالي
             </Button>
           </div>
         </CardContent>
