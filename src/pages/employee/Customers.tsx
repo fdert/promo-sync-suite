@@ -30,10 +30,10 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useRealtimeData } from "@/hooks/useRealtimeData";
 
 const Customers = () => {
-  const [customers, setCustomers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data: customers, loading, refetch } = useRealtimeData('customers', [], { column: 'created_at', ascending: false });
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -53,37 +53,7 @@ const Customers = () => {
 
   const { toast } = useToast();
 
-  // جلب العملاء من قاعدة البيانات
-  const fetchCustomers = async () => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('customers')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching customers:', error);
-        toast({
-          title: "خطأ",
-          description: "حدث خطأ في جلب بيانات العملاء",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      setCustomers(data || []);
-    } catch (error) {
-      console.error('Error:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // تحميل البيانات عند تحميل الصفحة
-  useEffect(() => {
-    fetchCustomers();
-  }, []);
+  // لا حاجة لجلب البيانات يدوياً - useRealtimeData يتولى ذلك
 
   // التحقق من وجود رقم الجوال
   const checkExistingPhone = async (phone) => {
@@ -174,7 +144,7 @@ const Customers = () => {
 
       console.log('Customer added successfully, refreshing list...');
 
-      await fetchCustomers();
+      await refetch();
       setNewCustomer({
         name: "",
         email: "",
@@ -254,7 +224,7 @@ const Customers = () => {
 
       console.log('Customer updated successfully, refreshing list...');
 
-      await fetchCustomers();
+      await refetch();
       setNewCustomer({
         name: "",
         email: "",

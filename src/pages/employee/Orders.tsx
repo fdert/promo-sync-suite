@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { useRealtimeData } from "@/hooks/useRealtimeData";
 import {
   Table,
   TableBody,
@@ -118,6 +119,7 @@ interface PrintFile {
 }
 
 const Orders = () => {
+  const { data: ordersBase, loading: ordersLoading, refetch } = useRealtimeData<Order>('orders', [], { column: 'created_at', ascending: false });
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -192,30 +194,31 @@ const Orders = () => {
   const { user } = useAuth();
   const { printBarcodeLabel } = useThermalPrint();
 
-  // جلب الطلبات
-  const fetchOrders = async () => {
+  // تحديث بيانات الطلبات مع المدفوعات
+  const updateOrdersWithPayments = async (baseOrders: Order[]) => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('orders')
-        .select(`
-          *,
-          customers(id, name, phone, whatsapp_number),
-          order_items(
-            id,
-            item_name,
-            quantity,
-            unit_price,
-            total_amount,
-            description
-          )
-        `)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
       
-      // حساب المبلغ المدفوع لكل طلب
-      const ordersWithPayments = await Promise.all((data || []).map(async (order: any) => {
+      const ordersWithDetails = await Promise.all(baseOrders.map(async (order: any) => {
+        // جلب تفاصيل العميل والعناصر
+        const { data: orderWithDetails } = await supabase
+          .from('orders')
+          .select(`
+            *,
+            customers(id, name, phone, whatsapp_number),
+            order_items(
+              id,
+              item_name,
+              quantity,
+              unit_price,
+              total_amount,
+              description
+            )
+          `)
+          .eq('id', order.id)
+          .single();
+
+        // حساب المبلغ المدفوع
         const { data: payments } = await supabase
           .from('payments')
           .select('amount')
@@ -224,25 +227,30 @@ const Orders = () => {
         const totalPaid = payments?.reduce((sum, payment) => sum + payment.amount, 0) || 0;
         
         return {
-          ...order,
+          ...(orderWithDetails || order),
           paid_amount: totalPaid,
           calculated_paid_amount: totalPaid,
           remaining_amount: order.amount - totalPaid
         };
       }));
       
-      setOrders(ordersWithPayments);
+      setOrders(ordersWithDetails);
     } catch (error) {
-      console.error('Error fetching orders:', error);
-      toast({
-        title: "خطأ",
-        description: "فشل في جلب الطلبات",
-        variant: "destructive",
-      });
+      console.error('Error updating orders with payments:', error);
     } finally {
       setLoading(false);
     }
   };
+
+  // مراقبة تغييرات البيانات الأساسية
+  useEffect(() => {
+    if (ordersBase.length > 0) {
+      updateOrdersWithPayments(ordersBase);
+    } else {
+      setOrders([]);
+      setLoading(ordersLoading);
+    }
+  }, [ordersBase, ordersLoading]);
 
   // جلب العملاء
   const fetchCustomers = async () => {
@@ -813,7 +821,7 @@ ${publicFileUrl}
       });
 
       // إعادة تحميل الطلبات
-      fetchOrders();
+      refetch();
       setIsEditStatusDialogOpen(false);
       setSelectedOrderForEdit(null);
 
@@ -885,7 +893,7 @@ ${publicFileUrl}
       
       // إعادة جلب المدفوعات والطلبات
       fetchPayments(orderId);
-      fetchOrders();
+      refetch();
 
     } catch (error) {
       console.error('Error adding payment:', error);
@@ -1071,7 +1079,7 @@ ${publicFileUrl}
       setSelectedOrderForInvoice(null);
       
       // إعادة جلب البيانات لتحديث الواجهة
-      fetchOrders();
+      refetch();
 
     } catch (error: any) {
       console.error('Error converting to invoice:', error);
@@ -1295,7 +1303,7 @@ ${publicFileUrl}
       setIsNewOrderDialogOpen(false);
       
       // إعادة جلب الطلبات
-      fetchOrders();
+      refetch();
 
     } catch (error) {
       console.error('Error creating order:', error);
@@ -1402,7 +1410,7 @@ ${publicFileUrl}
 
       setIsEditOrderDialogOpen(false);
       setSelectedOrderForEditing(null);
-      fetchOrders();
+      refetch();
 
     } catch (error) {
       console.error('Error updating order:', error);
@@ -1444,9 +1452,7 @@ ${publicFileUrl}
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  useEffect(() => {
-    fetchOrders();
-  }, []);
+  // useEffect محذوف - البيانات تُجلب تلقائياً عبر useRealtimeData
 
   if (loading) {
     return <div className="flex justify-center p-8">جاري التحميل...</div>;

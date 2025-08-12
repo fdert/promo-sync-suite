@@ -9,8 +9,10 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import InvoicePrint from "@/components/InvoicePrint";
 import InvoicePreview from "@/components/InvoicePreview";
+import { useRealtimeData } from "@/hooks/useRealtimeData";
 
 const Invoices = () => {
+  const { data: invoicesBase, loading: invoicesLoading, refetch } = useRealtimeData('invoices', [], { column: 'created_at', ascending: false });
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -61,28 +63,28 @@ const Invoices = () => {
     }
   };
 
-  // دالة جلب بيانات الفواتير مع المدفوعات
-  const fetchInvoicesWithPayments = async () => {
+  // تحديث بيانات الفواتير مع المدفوعات
+  const updateInvoicesWithPayments = async (baseInvoices: any[]) => {
     setLoading(true);
     try {
-      const { data: invoicesData, error } = await supabase
-        .from('invoices')
-        .select(`
-          *,
-          customers (
-            id,
-            name,
-            phone,
-            address
-          )
-        `)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
       // حساب المدفوعات لكل فاتورة
       const invoicesWithPayments = await Promise.all(
-        invoicesData.map(async (invoice) => {
+        baseInvoices.map(async (invoice) => {
+          // جلب تفاصيل العميل
+          const { data: invoiceWithCustomer } = await supabase
+            .from('invoices')
+            .select(`
+              *,
+              customers (
+                id,
+                name,
+                phone,
+                address
+              )
+            `)
+            .eq('id', invoice.id)
+            .single();
+
           // جلب المدفوعات المرتبطة بالفاتورة مباشرة
           const { data: directPayments } = await supabase
             .from('payments')
@@ -115,7 +117,7 @@ const Invoices = () => {
           }
 
           return {
-            ...invoice,
+            ...(invoiceWithCustomer || invoice),
             total_paid: totalPaid,
             remaining_amount: remainingAmount,
             payment_status: paymentStatus,
@@ -126,16 +128,26 @@ const Invoices = () => {
 
       setInvoices(invoicesWithPayments);
     } catch (error) {
-      console.error('Error fetching invoices:', error);
+      console.error('Error updating invoices with payments:', error);
       toast({
         title: "خطأ",
-        description: "حدث خطأ في جلب بيانات الفواتير",
+        description: "حدث خطأ في تحديث بيانات الفواتير",
         variant: "destructive"
       });
     } finally {
       setLoading(false);
     }
   };
+
+  // مراقبة تغييرات البيانات الأساسية
+  useEffect(() => {
+    if (invoicesBase.length > 0) {
+      updateInvoicesWithPayments(invoicesBase);
+    } else {
+      setInvoices([]);
+      setLoading(invoicesLoading);
+    }
+  }, [invoicesBase, invoicesLoading]);
 
   // دالة معاينة الفاتورة
   const handleViewInvoice = async (invoice) => {
@@ -243,7 +255,6 @@ const Invoices = () => {
 
   useEffect(() => {
     fetchCompanyInfo();
-    fetchInvoicesWithPayments();
   }, []);
 
   if (loading) {
