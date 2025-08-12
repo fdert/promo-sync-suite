@@ -70,14 +70,20 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
   useEffect(() => {
     const loadElectronicSettings = async () => {
       try {
+        console.log('Loading electronic invoice settings...');
         const { data, error } = await supabase
           .from('website_settings')
           .select('setting_value')
           .eq('setting_key', 'electronic_invoice_settings')
           .single();
 
+        console.log('Electronic settings data:', data);
+        console.log('Electronic settings error:', error);
+
         if (data && !error && data.setting_value) {
-          setElectronicSettings(data.setting_value as any as ElectronicInvoiceSettings);
+          const settings = data.setting_value as any as ElectronicInvoiceSettings;
+          console.log('Parsed electronic settings:', settings);
+          setElectronicSettings(settings);
         }
       } catch (error) {
         console.error('Error loading electronic invoice settings:', error);
@@ -89,8 +95,19 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
 
   // Generate verification link
   const getVerificationLink = () => {
-    if (!electronicSettings?.verification_enabled || !invoice.id) return null;
-    return `${electronicSettings.verification_base_url}/${invoice.id}`;
+    console.log('Generating verification link...');
+    console.log('Electronic settings:', electronicSettings);
+    console.log('Invoice ID:', invoice.id);
+    console.log('Verification enabled:', electronicSettings?.verification_enabled);
+    
+    if (!electronicSettings?.verification_enabled || !invoice.id) {
+      console.log('Verification link not generated - conditions not met');
+      return null;
+    }
+    
+    const link = `${electronicSettings.verification_base_url}/${invoice.id}`;
+    console.log('Generated verification link:', link);
+    return link;
   };
   return (
     <>
