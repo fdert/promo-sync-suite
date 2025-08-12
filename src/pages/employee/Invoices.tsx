@@ -172,6 +172,10 @@ const Invoices = () => {
 
   // دالة طباعة الفاتورة
   const handlePrintInvoice = async (invoice) => {
+    console.log('🖨️ بدء طباعة الفاتورة:', invoice.invoice_number);
+    console.log('📋 بيانات الفاتورة الكاملة:', invoice);
+    console.log('🔑 معرف الفاتورة:', invoice.id);
+    
     const { data: invoiceItems, error } = await supabase
       .from('invoice_items')
       .select('*')
@@ -188,10 +192,14 @@ const Invoices = () => {
       actual_payment_type: invoice.payment_type
     };
 
+    console.log('📄 الفاتورة المحدثة للطباعة:', updatedInvoice);
+    console.log('🆔 معرف الفاتورة في البيانات المحدثة:', updatedInvoice.id);
+
     setPrintingInvoice(updatedInvoice);
     setTimeout(() => {
       window.print();
       setPrintingInvoice(null);
+      updatePrintCount(invoice.id);
     }, 100);
   };
 
