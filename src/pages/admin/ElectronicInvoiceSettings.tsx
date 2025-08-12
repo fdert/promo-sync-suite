@@ -58,13 +58,36 @@ const ElectronicInvoiceSettings = () => {
   const saveSettings = async () => {
     setSaving(true);
     try {
-      const { error } = await supabase
+      // التحقق من وجود الإعدادات مسبقاً
+      const { data: existingSettings } = await supabase
         .from('website_settings')
-        .upsert({
-          setting_key: 'electronic_invoice_settings',
-          setting_value: settings as any,
-          created_by: (await supabase.auth.getUser()).data.user?.id
-        });
+        .select('id')
+        .eq('setting_key', 'electronic_invoice_settings')
+        .single();
+
+      let error;
+      
+      if (existingSettings) {
+        // تحديث الإعدادات الموجودة
+        const result = await supabase
+          .from('website_settings')
+          .update({
+            setting_value: settings as any,
+            updated_at: new Date().toISOString()
+          })
+          .eq('setting_key', 'electronic_invoice_settings');
+        error = result.error;
+      } else {
+        // إنشاء إعدادات جديدة
+        const result = await supabase
+          .from('website_settings')
+          .insert({
+            setting_key: 'electronic_invoice_settings',
+            setting_value: settings as any,
+            created_by: (await supabase.auth.getUser()).data.user?.id
+          });
+        error = result.error;
+      }
 
       if (error) throw error;
 
