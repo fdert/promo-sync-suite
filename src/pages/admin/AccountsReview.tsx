@@ -312,7 +312,7 @@ const AccountsReview = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
-              {stats.totalUnpaid.toLocaleString()} ر.س
+              {(stats.totalUnpaid || 0).toLocaleString()} ر.س
             </div>
             <p className="text-xs text-muted-foreground">
               من {stats.totalInvoices} طلب غير مدفوع
@@ -507,10 +507,10 @@ const AccountsReview = () => {
                     <TableRow key={invoice.id}>
                       <TableCell className="font-medium">{invoice.invoice_number}</TableCell>
                       <TableCell>{invoice.customers?.name || 'غير محدد'}</TableCell>
-                      <TableCell>{invoice.total_amount.toLocaleString()} ر.س</TableCell>
+                      <TableCell>{(invoice.total_amount || 0).toLocaleString()} ر.س</TableCell>
                       <TableCell>{(invoice.paid_amount || 0).toLocaleString()} ر.س</TableCell>
                       <TableCell className="font-bold text-red-600">
-                        {invoice.remaining_amount.toLocaleString()} ر.س
+                        {(invoice.remaining_amount || 0).toLocaleString()} ر.س
                       </TableCell>
                       <TableCell>{new Date(invoice.due_date).toLocaleDateString('ar')}</TableCell>
                       <TableCell>
@@ -608,10 +608,10 @@ const AccountsReview = () => {
                       </TableCell>
                       <TableCell className="max-w-xs truncate">{entry.description}</TableCell>
                       <TableCell className="text-green-600 font-medium">
-                        {entry.debit_amount > 0 ? `${entry.debit_amount.toLocaleString()} ر.س` : '-'}
+                        {(entry.debit_amount || 0) > 0 ? `${(entry.debit_amount || 0).toLocaleString()} ر.س` : '-'}
                       </TableCell>
                       <TableCell className="text-red-600 font-medium">
-                        {entry.credit_amount > 0 ? `${entry.credit_amount.toLocaleString()} ر.س` : '-'}
+                        {(entry.credit_amount || 0) > 0 ? `${(entry.credit_amount || 0).toLocaleString()} ر.س` : '-'}
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">{entry.reference_type}</Badge>
@@ -644,7 +644,7 @@ const AccountsReview = () => {
                   {payments.map((payment) => (
                     <TableRow key={payment.id}>
                       <TableCell>{new Date(payment.payment_date).toLocaleDateString('ar')}</TableCell>
-                      <TableCell className="font-bold">{payment.amount.toLocaleString()} ر.س</TableCell>
+                      <TableCell className="font-bold">{(payment.amount || 0).toLocaleString()} ر.س</TableCell>
                       <TableCell>
                         <Badge variant={
                           payment.payment_type === PAYMENT_TYPES.CASH ? 'default' :
