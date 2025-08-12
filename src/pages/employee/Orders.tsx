@@ -1326,6 +1326,9 @@ ${publicFileUrl}
 
   // فتح حوار تعديل الطلب
   const openEditOrderDialog = (order: Order) => {
+    console.log('🔄 فتح حوار تعديل الطلب:', order.order_number);
+    console.log('البنود الحالية للطلب:', order.order_items);
+    
     setSelectedOrderForEditing(order);
     setNewOrder({
       customer_id: order.customer_id || '',
@@ -1339,15 +1342,30 @@ ${publicFileUrl}
       paid_amount: order.paid_amount || 0,
       payment_notes: ''
     });
+    
+    // تحميل البنود الحالية مع إزالة id لتجنب التضارب
     if (order.order_items && order.order_items.length > 0) {
-      setOrderItems(order.order_items.map(item => ({
-        id: item.id,
+      const itemsForEdit = order.order_items.map(item => ({
+        id: '', // إزالة id لتجنب التضارب
         item_name: item.item_name,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-        total_amount: item.total_amount
-      })));
+        quantity: Number(item.quantity) || 1,
+        unit_price: Number(item.unit_price) || 0,
+        total_amount: Number(item.total_amount) || 0
+      }));
+      
+      console.log('البنود بعد التحويل للتعديل:', itemsForEdit);
+      setOrderItems(itemsForEdit);
+    } else {
+      // إذا لم توجد بنود، إنشاء بند فارغ
+      setOrderItems([{
+        id: '',
+        item_name: '',
+        quantity: 1,
+        unit_price: 0,
+        total_amount: 0
+      }]);
     }
+    
     fetchCustomers();
     fetchServices();
     setIsEditOrderDialogOpen(true);
@@ -1359,6 +1377,9 @@ ${publicFileUrl}
 
     try {
       setLoading(true);
+
+      console.log('🔄 بداية تحديث الطلب...');
+      console.log('البنود الحالية:', orderItems);
 
       // تحديث بيانات الطلب الأساسية
       const { error: orderError } = await supabase
@@ -1378,7 +1399,9 @@ ${publicFileUrl}
 
       if (orderError) throw orderError;
 
-      // حذف البنود القديمة
+      console.log('✅ تم تحديث بيانات الطلب الأساسية');
+
+      // حذف البنود القديمة أولاً
       const { error: deleteItemsError } = await supabase
         .from('order_items')
         .delete()
@@ -1386,21 +1409,33 @@ ${publicFileUrl}
 
       if (deleteItemsError) throw deleteItemsError;
 
+      console.log('✅ تم حذف البنود القديمة');
+
       // إضافة البنود الجديدة
-      if (orderItems.length > 0 && orderItems[0].item_name) {
-        const itemsToInsert = orderItems.map(item => ({
-          order_id: selectedOrderForEditing.id,
-          item_name: item.item_name,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-          total_amount: item.total_amount
-        }));
+      if (orderItems.length > 0 && orderItems.some(item => item.item_name && item.item_name.trim() !== '')) {
+        // تصفية البنود وتجهيزها للإدراج (بدون id لتجنب التضارب)
+        const itemsToInsert = orderItems
+          .filter(item => item.item_name && item.item_name.trim() !== '')
+          .map(item => ({
+            order_id: selectedOrderForEditing.id,
+            item_name: item.item_name,
+            quantity: Number(item.quantity) || 1,
+            unit_price: Number(item.unit_price) || 0,
+            total_amount: Number(item.total_amount) || 0
+          }));
+
+        console.log('البنود المراد إدراجها:', itemsToInsert);
 
         const { error: insertItemsError } = await supabase
           .from('order_items')
           .insert(itemsToInsert);
 
-        if (insertItemsError) throw insertItemsError;
+        if (insertItemsError) {
+          console.error('❌ خطأ في إدراج البنود:', insertItemsError);
+          throw insertItemsError;
+        }
+
+        console.log('✅ تم إدراج البنود الجديدة بنجاح');
       }
 
       toast({
@@ -1408,12 +1443,20 @@ ${publicFileUrl}
         description: "تم تحديث الطلب بنجاح",
       });
 
+      // إعادة تعيين البيانات وإغلاق النافذة
       setIsEditOrderDialogOpen(false);
       setSelectedOrderForEditing(null);
+      setOrderItems([{
+        id: '',
+        item_name: '',
+        quantity: 1,
+        unit_price: 0,
+        total_amount: 0
+      }]);
       refetch();
 
     } catch (error) {
-      console.error('Error updating order:', error);
+      console.error('❌ خطأ في تحديث الطلب:', error);
       toast({
         title: "خطأ في تحديث الطلب",
         description: "حدث خطأ أثناء تحديث الطلب",
