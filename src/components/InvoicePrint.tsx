@@ -420,14 +420,30 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
             print-color-adjust: exact !important;
           }
           
-           .print-verification {
+           .print-verification-stamp-section {
+             display: flex !important;
+             justify-content: space-between !important;
+             align-items: flex-start !important;
+             margin-bottom: 1.5mm !important;
+           }
+
+           .print-stamp-verification-container {
+             display: flex !important;
+             justify-content: space-between !important;
+             align-items: center !important;
+             width: 100% !important;
+           }
+
+           .print-verification-right {
              background-color: #f0f9ff !important;
              border: 1px solid #bfdbfe !important;
              border-radius: 1mm !important;
              padding: 1.2mm !important;
              font-size: 6.5px !important;
-             margin-bottom: 1.5mm !important;
-             text-align: center !important;
+             text-align: right !important;
+             direction: rtl !important;
+             margin-left: 3mm !important;
+             flex: 1 !important;
              -webkit-print-color-adjust: exact !important;
              print-color-adjust: exact !important;
            }
@@ -456,37 +472,37 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
              direction: rtl !important;
              width: 100% !important;
            }
-          
-          .print-footer-title {
-            font-size: 7.5px !important;
-            font-weight: bold !important;
-            margin-bottom: 0.5mm !important;
-          }
-          
-          .print-footer-tagline {
-            font-size: 6.5px !important;
-            color: #2563eb !important;
-            font-style: italic !important;
-            margin-bottom: 0.5mm !important;
-          }
-          
-          .print-stamp {
-            text-align: left !important;
-            margin: 1mm 0 !important;
-            direction: ltr !important;
-          }
-          
-          .print-stamp img {
-            width: 10mm !important;
-            height: 8mm !important;
-            object-fit: contain !important;
-          }
-          
-          @media screen {
-            .print-invoice {
-              display: none !important;
-            }
-          }
+           
+           .print-footer-title {
+             font-size: 7.5px !important;
+             font-weight: bold !important;
+             margin-bottom: 0.5mm !important;
+           }
+           
+           .print-footer-tagline {
+             font-size: 6.5px !important;
+             color: #2563eb !important;
+             font-style: italic !important;
+             margin-bottom: 0.5mm !important;
+           }
+           
+           .print-stamp {
+             text-align: right !important;
+             margin: 1mm 0 !important;
+             direction: ltr !important;
+           }
+           
+           .print-stamp img {
+             width: 10mm !important;
+             height: 8mm !important;
+             object-fit: contain !important;
+           }
+           
+           @media screen {
+             .print-invoice {
+               display: none !important;
+             }
+           }
         `}
       </style>
       
@@ -662,24 +678,29 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
           </div>
         )}
 
-        {/* Electronic Invoice Verification */}
-        {electronicSettings?.verification_enabled && getVerificationLink() && (
-          <div className="print-verification">
-            <div className="print-verification-message">
-              {electronicSettings.verification_message_ar}
-            </div>
-            <div className="print-verification-link">
-              للتحقق من صحة الفاتورة: {getVerificationLink()}
-            </div>
+        {/* Electronic Invoice Verification and Stamp Section */}
+        <div className="print-verification-stamp-section">
+          {/* Stamp and Verification combined */}
+          <div className="print-stamp-verification-container">
+            {companyInfo.stamp && (
+              <div className="print-stamp">
+                <img src={companyInfo.stamp} alt="ختم الوكالة" />
+              </div>
+            )}
+            
+            {/* Electronic Invoice Verification */}
+            {electronicSettings?.verification_enabled && getVerificationLink() && (
+              <div className="print-verification-right">
+                <div className="print-verification-message">
+                  {electronicSettings.verification_message_ar}
+                </div>
+                <div className="print-verification-link">
+                  للتحقق من صحة الفاتورة: {getVerificationLink()}
+                </div>
+              </div>
+            )}
           </div>
-        )}
-
-        {/* Stamp */}
-        {companyInfo.stamp && (
-          <div className="print-stamp">
-            <img src={companyInfo.stamp} alt="ختم الوكالة" />
-          </div>
-        )}
+        </div>
 
         {/* Footer */}
         <div className="print-footer">
