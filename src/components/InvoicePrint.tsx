@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface InvoiceItem {
   item_name: string;
@@ -8,8 +9,19 @@ interface InvoiceItem {
   total_amount: number;
 }
 
+interface ElectronicInvoiceSettings {
+  verification_enabled: boolean;
+  verification_base_url: string;
+  verification_message_ar: string;
+  verification_message_en: string;
+  qr_code_enabled: boolean;
+  digital_signature_enabled: boolean;
+  auto_generate_verification: boolean;
+}
+
 interface InvoicePrintProps {
   invoice: {
+    id?: string;
     invoice_number: string;
     order_id?: string;
     issue_date: string;
@@ -53,6 +65,33 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
     email: "البريد الإلكتروني"
   }
 }) => {
+  const [electronicSettings, setElectronicSettings] = useState<ElectronicInvoiceSettings | null>(null);
+
+  useEffect(() => {
+    const loadElectronicSettings = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('website_settings')
+          .select('setting_value')
+          .eq('setting_key', 'electronic_invoice_settings')
+          .single();
+
+        if (data && !error && data.setting_value) {
+          setElectronicSettings(data.setting_value as any as ElectronicInvoiceSettings);
+        }
+      } catch (error) {
+        console.error('Error loading electronic invoice settings:', error);
+      }
+    };
+
+    loadElectronicSettings();
+  }, []);
+
+  // Generate verification link
+  const getVerificationLink = () => {
+    if (!electronicSettings?.verification_enabled || !invoice.id) return null;
+    return `${electronicSettings.verification_base_url}/${invoice.id}`;
+  };
   return (
     <>
       <style type="text/css" media="print">
@@ -364,16 +403,42 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
             print-color-adjust: exact !important;
           }
           
-          .print-footer {
-            text-align: center !important;
-            font-size: 7px !important;
-            color: #6b7280 !important;
-            border-top: 0.3px solid #d1d5db !important;
-            padding-top: 1mm !important;
-            margin-top: 1.5mm !important;
-            direction: rtl !important;
-            width: 100% !important;
-          }
+           .print-verification {
+             background-color: #f0f9ff !important;
+             border: 1px solid #bfdbfe !important;
+             border-radius: 1mm !important;
+             padding: 1.2mm !important;
+             font-size: 6.5px !important;
+             margin-bottom: 1.5mm !important;
+             text-align: center !important;
+             -webkit-print-color-adjust: exact !important;
+             print-color-adjust: exact !important;
+           }
+
+           .print-verification-message {
+             color: #2563eb !important;
+             font-weight: bold !important;
+             margin-bottom: 0.7mm !important;
+             font-size: 7px !important;
+           }
+
+           .print-verification-link {
+             color: #1d4ed8 !important;
+             font-size: 6px !important;
+             word-break: break-all !important;
+             margin-bottom: 0.5mm !important;
+           }
+
+           .print-footer {
+             text-align: center !important;
+             font-size: 7px !important;
+             color: #6b7280 !important;
+             border-top: 0.3px solid #d1d5db !important;
+             padding-top: 1mm !important;
+             margin-top: 1.5mm !important;
+             direction: rtl !important;
+             width: 100% !important;
+           }
           
           .print-footer-title {
             font-size: 7.5px !important;
@@ -577,6 +642,18 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
           <div className="print-notes">
             <strong>ملاحظات:</strong><br/>
             {invoice.notes}
+          </div>
+        )}
+
+        {/* Electronic Invoice Verification */}
+        {electronicSettings?.verification_enabled && getVerificationLink() && (
+          <div className="print-verification">
+            <div className="print-verification-message">
+              {electronicSettings.verification_message_ar}
+            </div>
+            <div className="print-verification-link">
+              للتحقق من صحة الفاتورة: {getVerificationLink()}
+            </div>
           </div>
         )}
 
