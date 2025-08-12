@@ -465,16 +465,29 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
              margin-bottom: 0.5mm !important;
            }
 
-           .print-footer {
-             text-align: center !important;
-             font-size: 7px !important;
-             color: #6b7280 !important;
-             border-top: 0.3px solid #d1d5db !important;
-             padding-top: 1mm !important;
-             margin-top: 1.5mm !important;
-             direction: rtl !important;
-             width: 100% !important;
-           }
+            .print-verification-standalone {
+              background-color: #f0f9ff !important;
+              border: 1px solid #bfdbfe !important;
+              border-radius: 1mm !important;
+              padding: 1.2mm !important;
+              font-size: 6.5px !important;
+              text-align: center !important;
+              margin-bottom: 1.5mm !important;
+              direction: rtl !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+
+            .print-footer {
+              text-align: center !important;
+              font-size: 7px !important;
+              color: #6b7280 !important;
+              border-top: 0.3px solid #d1d5db !important;
+              padding-top: 1mm !important;
+              margin-top: 1.5mm !important;
+              direction: rtl !important;
+              width: 100% !important;
+            }
            
            .print-footer-title {
              font-size: 7.5px !important;
@@ -681,25 +694,20 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
           </div>
         )}
 
-        {/* Electronic Invoice Verification and Stamp Section */}
-        <div className="print-verification-stamp-section">
-          {/* Stamp and Verification combined */}
-          <div className="print-stamp-verification-container">
-            {companyInfo.stamp && (
-              <div className="print-stamp">
-                <img src={companyInfo.stamp} alt="ختم الوكالة" />
-              </div>
-            )}
-            
-            {/* Electronic Invoice Verification - اختبار */}
-            <div className="print-verification-right">
-              <div className="print-verification-message">
-                فاتورة إلكترونية معتمدة - يمكن التحقق من صحتها إلكترونياً
-              </div>
-              <div className="print-verification-link">
-                للتحقق من صحة الفاتورة: https://e5a7747a-0935-46df-9ea9-1308e76636dc.lovableproject.com/verify/{invoice.id || "test"}
-              </div>
-            </div>
+        {/* Stamp */}
+        {companyInfo.stamp && (
+          <div className="print-stamp">
+            <img src={companyInfo.stamp} alt="ختم الوكالة" />
+          </div>
+        )}
+
+        {/* Electronic Invoice Verification - في سطر منفصل */}
+        <div className="print-verification-standalone">
+          <div className="print-verification-message">
+            فاتورة إلكترونية معتمدة - يمكن التحقق من صحتها إلكترونياً
+          </div>
+          <div className="print-verification-link">
+            للتحقق من صحة الفاتورة: https://e5a7747a-0935-46df-9ea9-1308e76636dc.lovableproject.com/verify/{invoice.id || "test"}
           </div>
         </div>
 
