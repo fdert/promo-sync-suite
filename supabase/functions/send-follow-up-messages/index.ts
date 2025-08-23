@@ -77,6 +77,46 @@ serve(async (req) => {
       try {
         console.log(`إرسال رسالة متابعة إلى: ${message.to_number}`);
 
+        // منع التكرار: إذا تم إرسال/تسجيل نفس الرسالة لنفس الرقم خلال آخر ساعتين فتجاوز
+        const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+        const { data: dup } = await supabase
+          .from('whatsapp_messages')
+          .select('id')
+          .eq('to_number', message.to_number)
+          .eq('message_content', message.message_content)
+          .in('status', ['sent', 'pending'])
+          .gt('created_at', twoHoursAgo)
+          .limit(1);
+        if (dup && dup.length > 0) {
+          await supabase
+            .from('whatsapp_messages')
+            .update({ status: 'skipped_duplicate', updated_at: new Date().toISOString() })
+            .eq('id', message.id);
+          console.log('تم تجاهل رسالة مكررة لنفس الرقم والمحتوى');
+          continue;
+        }
+
+        // تحقق خاص برسائل المتأخرات المالية: لا ترسل إذا لا توجد مستحقات
+        if (message.message_type === 'payment_delay_notification' && message.customer_id) {
+          const todayIso = new Date().toISOString();
+          const { data: outstanding } = await supabase
+            .from('invoice_payment_summary')
+            .select('remaining_amount, due_date')
+            .eq('customer_id', message.customer_id)
+            .gt('remaining_amount', 0)
+            .lt('due_date', todayIso)
+            .limit(1);
+
+          if (!outstanding || outstanding.length === 0) {
+            await supabase
+              .from('whatsapp_messages')
+              .update({ status: 'skipped_no_outstanding', updated_at: new Date().toISOString() })
+              .eq('id', message.id);
+            console.log('لا توجد مستحقات متأخرة، تم تخطي الإرسال للعميل:', message.customer_id);
+            continue;
+          }
+        }
+
         const whatsappPayload = {
           messaging_product: "whatsapp",
           to: message.to_number.replace(/[^\d]/g, ''),

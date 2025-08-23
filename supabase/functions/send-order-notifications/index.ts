@@ -604,6 +604,36 @@ ${data.file_url}
 
     console.log('Sending notification via webhook:', JSON.stringify(messagePayload, null, 2));
 
+    // فحص التكرار قبل الحفظ/الإرسال: نفس الرقم ونفس المحتوى خلال آخر 10 دقائق
+    try {
+      const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+      const { data: existingDup } = await supabase
+        .from('whatsapp_messages')
+        .select('id, status, created_at')
+        .eq('to_number', customerPhone)
+        .eq('message_content', message)
+        .in('status', ['sent', 'pending'])
+        .gt('created_at', tenMinAgo)
+        .limit(1);
+
+      if (existingDup && existingDup.length > 0) {
+        console.log('Duplicate notification detected. Skipping send.');
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            message: 'تم تجاهل الإرسال لتجنب التكرار خلال 10 دقائق',
+            duplicate: true
+          }),
+          {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200
+          }
+        );
+      }
+    } catch (e) {
+      console.log('Duplicate pre-check failed, continuing anyway:', e?.message);
+    }
+
     // حفظ الرسالة في قاعدة البيانات أولاً كـ pending
     console.log('=== Saving message to database first ===');
     const { data: savedMessage, error: saveError } = await supabase
