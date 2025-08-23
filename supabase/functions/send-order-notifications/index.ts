@@ -634,21 +634,49 @@ ${data.file_url}
       console.log('Duplicate pre-check failed, continuing anyway:', e?.message);
     }
 
-    // حفظ الرسالة في قاعدة البيانات أولاً كـ pending
-    console.log('=== Saving message to database first ===');
+    // حفظ الرسالة في قاعدة البيانات أولاً كـ pending مع مفتاح منع التكرار
+    console.log('=== Saving message to database first (with dedupe) ===');
+
+    const normalizedPhone = (customerPhone || '').replace(/[^\d]/g, '');
+    const eventOrderId = (typeof orderId !== 'undefined' && orderId) || orderDetails?.id || body?.order_id || 'unknown';
+    const dedupeKey = `${type}|${eventOrderId}|${normalizedPhone}`;
+
     const { data: savedMessage, error: saveError } = await supabase
       .from('whatsapp_messages')
-      .insert({
+      .upsert({
         from_number: 'system',
         to_number: customerPhone,
         message_type: 'text',
         message_content: message,
         status: 'pending',
         is_reply: false,
-        customer_id: orderDetails?.customer_id || null
-      })
+        customer_id: orderDetails?.customer_id || null,
+        dedupe_key: dedupeKey,
+      }, { onConflict: 'dedupe_key', ignoreDuplicates: true })
       .select()
-      .single();
+      .maybeSingle();
+    
+    if (saveError) {
+      console.error('Error saving message:', saveError);
+      throw saveError;
+    }
+
+    if (!savedMessage) {
+      console.log('Duplicate detected via dedupe_key. Skipping webhook send.');
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: 'تم تجاهل الإرسال لتجنب التكرار (dedupe)',
+          duplicate: true
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200
+        }
+      );
+    }
+    
+    console.log('Message saved to database with ID:', savedMessage.id);
     
     if (saveError) {
       console.error('Error saving message:', saveError);

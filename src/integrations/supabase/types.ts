@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.12 (cd3cf9e)"
@@ -2386,6 +2386,7 @@ export type Database = {
           agency_id: string | null
           created_at: string
           customer_id: string | null
+          dedupe_key: string | null
           error_message: string | null
           from_number: string
           id: string
@@ -2406,6 +2407,7 @@ export type Database = {
           agency_id?: string | null
           created_at?: string
           customer_id?: string | null
+          dedupe_key?: string | null
           error_message?: string | null
           from_number: string
           id?: string
@@ -2426,6 +2428,7 @@ export type Database = {
           agency_id?: string | null
           created_at?: string
           customer_id?: string | null
+          dedupe_key?: string | null
           error_message?: string | null
           from_number?: string
           id?: string
@@ -2647,13 +2650,13 @@ export type Database = {
     }
     Functions: {
       add_agency_member_by_email: {
-        Args: { p_agency_id: string; p_user_email: string; p_role: string }
+        Args: { p_agency_id: string; p_role: string; p_user_email: string }
         Returns: string
       }
       assign_user_role: {
         Args: {
-          target_user_id: string
           new_role: Database["public"]["Enums"]["app_role"]
+          target_user_id: string
         }
         Returns: boolean
       }
@@ -2683,17 +2686,17 @@ export type Database = {
       }
       create_invoice_accounting_entry: {
         Args: {
-          invoice_id: string
           customer_name: string
+          invoice_id: string
           total_amount: number
         }
         Returns: undefined
       }
       create_payment_accounting_entry: {
         Args: {
-          payment_id: string
           invoice_id: string
           payment_amount: number
+          payment_id: string
           payment_type: string
         }
         Returns: undefined
@@ -2721,14 +2724,14 @@ export type Database = {
       get_agency_members_with_user_data: {
         Args: { p_agency_id: string }
         Returns: {
-          id: string
           agency_id: string
-          user_id: string
-          role: string
-          permissions: Json
+          created_by: string
+          id: string
           is_active: boolean
           joined_at: string
-          created_by: string
+          permissions: Json
+          role: string
+          user_id: string
           user_info: Json
         }[]
       }
@@ -2741,31 +2744,31 @@ export type Database = {
         Returns: number
       }
       has_agency_role: {
-        Args: { user_id_param: string; role_param: string }
+        Args: { role_param: string; user_id_param: string }
         Returns: boolean
       }
       has_permission: {
-        Args: { _user_id: string; _permission: string }
+        Args: { _permission: string; _user_id: string }
         Returns: boolean
       }
       has_role: {
         Args: {
-          _user_id: string
           _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
         }
         Returns: boolean
       }
       is_agency_member: {
-        Args: { user_id_param: string; agency_id_param: string }
+        Args: { agency_id_param: string; user_id_param: string }
         Returns: boolean
       }
       log_activity: {
         Args: {
-          _user_id: string
           _action: string
-          _resource_type: string
-          _resource_id?: string
           _details?: Json
+          _resource_id?: string
+          _resource_type: string
+          _user_id: string
         }
         Returns: undefined
       }
@@ -2791,24 +2794,24 @@ export type Database = {
       }
       remove_user_role: {
         Args: {
-          target_user_id: string
           old_role: Database["public"]["Enums"]["app_role"]
+          target_user_id: string
         }
         Returns: boolean
       }
       send_whatsapp_notification: {
         Args: {
           customer_id_param: string
-          template_name_param: string
           order_data?: Json
+          template_name_param: string
         }
         Returns: boolean
       }
       send_whatsapp_notification_improved: {
         Args: {
           customer_id_param: string
-          template_name_param: string
           order_data?: Json
+          template_name_param: string
         }
         Returns: boolean
       }
@@ -2821,7 +2824,7 @@ export type Database = {
         Returns: undefined
       }
       update_order_items_safely: {
-        Args: { order_id_param: string; items_data: Json[] }
+        Args: { items_data: Json[]; order_id_param: string }
         Returns: undefined
       }
     }
