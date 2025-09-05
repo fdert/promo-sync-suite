@@ -123,55 +123,59 @@ export const useThermalPrint = () => {
       company_logo_url: companyInfo.logo
     };
 
-    // محتوى HTML للطباعة
+    // محتوى HTML للطباعة محسن لطابعة ZDesigner GX420t
     const printContent = `
       <!DOCTYPE html>
-      <html dir="rtl" lang="ar">
+      <html>
       <head>
         <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>ملصق باركود - ${orderNumber}</title>
         <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
         <style>
-          body {
+          * {
             margin: 0;
             padding: 0;
-            font-family: 'Arial', sans-serif;
+            box-sizing: border-box;
+          }
+          
+          body {
+            width: 100mm;
+            height: 150mm;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
             background: white;
-            color: #000;
-            direction: rtl;
-            -webkit-print-color-adjust: exact;
-            color-adjust: exact;
+            color: black;
+            font-size: 8pt;
+            overflow: hidden;
           }
           
           @page {
-            size: ${pageSize};
+            size: 100mm 150mm;
             margin: 0;
-            padding: 0;
           }
           
           @media print {
             body { 
-              margin: 0;
-              padding: 0;
+              margin: 0 !important;
+              padding: 0 !important;
+              width: 100mm !important;
+              height: 150mm !important;
+              overflow: hidden !important;
             }
             .no-print { 
               display: none !important; 
             }
+            * {
+              -webkit-print-color-adjust: exact !important;
+              color-adjust: exact !important;
+            }
           }
           
-          .label-container {
+          .label-wrapper {
             width: 100mm;
             height: 150mm;
-            max-width: 100mm;
-            max-height: 150mm;
-            margin: 0;
-            padding: 2mm;
-            border: none;
-            background: white;
-            font-size: ${finalSettings.font_size || 10}pt;
-            line-height: 1.1;
-            box-sizing: border-box;
+            padding: 3mm;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -180,27 +184,20 @@ export const useThermalPrint = () => {
           
           .header {
             text-align: center;
+            border-bottom: 1px solid black;
+            padding-bottom: 2mm;
             margin-bottom: 2mm;
-            padding-bottom: 1mm;
-            border-bottom: 1px solid #000;
-            flex-shrink: 0;
-          }
-          
-          .company-logo {
-            max-width: 40mm;
-            max-height: 15mm;
-            margin: 0 auto 2mm auto;
-            display: block;
           }
           
           .company-name {
-            font-size: ${(finalSettings.font_size || 12) + 2}pt;
+            font-size: 10pt;
             font-weight: bold;
             margin-bottom: 1mm;
+            line-height: 1.1;
           }
           
           .date {
-            font-size: ${(finalSettings.font_size || 12) - 2}pt;
+            font-size: 7pt;
             color: #333;
           }
           
@@ -212,25 +209,24 @@ export const useThermalPrint = () => {
           .info-row {
             display: flex;
             justify-content: space-between;
-            align-items: center;
             margin-bottom: 1mm;
-            padding: 1mm 0;
+            font-size: 8pt;
+            line-height: 1.2;
             border-bottom: 1px dotted #ccc;
-            font-size: ${(finalSettings.font_size || 12) - 1}pt;
-          }
-          
-          .info-row:last-child {
-            border-bottom: none;
+            padding-bottom: 0.5mm;
           }
           
           .label {
             font-weight: bold;
+            white-space: nowrap;
           }
           
           .value {
-            max-width: 60%;
             text-align: left;
-            word-wrap: break-word;
+            max-width: 50mm;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
           }
           
           .payment-status {
@@ -238,64 +234,51 @@ export const useThermalPrint = () => {
             font-weight: bold;
           }
           
-          .barcode-section {
+          .barcode-container {
             text-align: center;
-            margin: 1mm 0;
-            padding: 1mm;
-            background: white;
-            flex: 1;
+            margin: 2mm 0;
+            height: 40mm;
             display: flex;
             align-items: center;
             justify-content: center;
+            border: 1px solid black;
+            background: white;
           }
           
-          .barcode-section svg {
-            width: 90mm;
-            height: auto;
-            max-height: 60mm;
+          .barcode-container svg {
+            max-width: 90mm;
+            max-height: 35mm;
           }
           
           .footer {
             text-align: center;
-            margin-top: 1mm;
+            border-top: 1px solid black;
             padding-top: 1mm;
-            border-top: 1px solid #000;
-            font-size: ${(finalSettings.font_size || 12) - 4}pt;
+            font-size: 6pt;
             color: #666;
-            flex-shrink: 0;
           }
           
-          .print-button {
-            display: block;
-            margin: 10px auto;
-            padding: 10px 20px;
+          .print-btn {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 8px 16px;
             background: #007bff;
             color: white;
             border: none;
-            border-radius: 5px;
+            border-radius: 4px;
             cursor: pointer;
-            font-size: 14px;
-          }
-          
-          .print-button:hover {
-            background: #0056b3;
+            z-index: 1000;
           }
         </style>
       </head>
       <body>
-        <button onclick="printLabel()" class="print-button no-print">طباعة الملصق</button>
+        <button onclick="window.print()" class="print-btn no-print">طباعة</button>
         
-        <div class="label-container">
+        <div class="label-wrapper">
           <div class="header">
-            ${finalSettings.show_company_logo && (finalSettings.company_logo_url || companyInfo.logo) ? 
-              `<img src="${finalSettings.company_logo_url || companyInfo.logo}" alt="شعار الشركة" class="company-logo">` : ''
-            }
-            ${finalSettings.show_company_name ? 
-              `<div class="company-name">${finalSettings.company_name || companyInfo.name}</div>` : ''
-            }
-            ${finalSettings.show_date ? 
-              `<div class="date">ملصق طلب - ${new Date().toLocaleDateString('ar-SA')}</div>` : ''
-            }
+            <div class="company-name">${finalSettings.company_name || companyInfo.name}</div>
+            <div class="date">ملصق طلب - ${new Date().toLocaleDateString('ar-SA')}</div>
           </div>
           
           <div class="info-section">
@@ -306,7 +289,7 @@ export const useThermalPrint = () => {
             
             <div class="info-row">
               <span class="label">العميل:</span>
-              <span class="value" title="${customerName}">${customerName}</span>
+              <span class="value" title="${customerName}">${customerName.substring(0, 20)}${customerName.length > 20 ? '...' : ''}</span>
             </div>
             
             <div class="info-row">
@@ -316,17 +299,17 @@ export const useThermalPrint = () => {
             
             <div class="info-row">
               <span class="label">حالة الدفع:</span>
-              <span class="value payment-status">${formatPaymentStatus(paymentStatus)}</span>
+              <span class="value payment-status">${formatPaymentStatus(paymentStatus).substring(0, 15)}${formatPaymentStatus(paymentStatus).length > 15 ? '...' : ''}</span>
             </div>
           </div>
           
-          <div class="barcode-section">
+          <div class="barcode-container">
             <svg id="barcode"></svg>
           </div>
           
           <div class="footer">
-            <div>معرف الطلب: ${orderId.slice(-8)}</div>
-            ${companyInfo.phone ? `<div class="text-xs">هاتف: ${companyInfo.phone}</div>` : ''}
+            <div>ID: ${orderId.slice(-8)}</div>
+            ${companyInfo.phone ? `<div>هاتف: ${companyInfo.phone}</div>` : ''}
           </div>
         </div>
         
@@ -335,28 +318,27 @@ export const useThermalPrint = () => {
             try {
               JsBarcode("#barcode", "${orderNumber}", {
                 format: "CODE128",
-                width: ${finalSettings.barcode_width || 2},
-                height: ${finalSettings.barcode_height || 50},
+                width: 1.5,
+                height: 25,
                 displayValue: true,
-                fontSize: ${(finalSettings.font_size || 12) - 2},
-                textMargin: 5,
-                margin: 5,
+                fontSize: 10,
+                textMargin: 2,
+                margin: 2,
                 background: "white",
                 lineColor: "black"
               });
             } catch (error) {
               console.error('Error generating barcode:', error);
-              document.getElementById('barcode').innerHTML = '<text y="25" text-anchor="middle" x="50%">${orderNumber}</text>';
+              document.getElementById('barcode').innerHTML = '<text y="15" text-anchor="middle" x="50%" font-size="12">${orderNumber}</text>';
             }
           }
           
-          function printLabel() {
-            window.print();
-          }
-          
-          // إنشاء الباركود عند تحميل الصفحة
           window.onload = function() {
             generateBarcode();
+            // طباعة تلقائية بعد تحميل الصفحة
+            setTimeout(function() {
+              window.print();
+            }, 1000);
           };
         </script>
       </body>
