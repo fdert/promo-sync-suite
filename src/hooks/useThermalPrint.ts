@@ -146,7 +146,8 @@ export const useThermalPrint = () => {
           
           @page {
             size: ${pageSize};
-            margin: ${finalSettings.margins || 2}mm;
+            margin: 0;
+            padding: 0;
           }
           
           @media print {
@@ -160,22 +161,27 @@ export const useThermalPrint = () => {
           }
           
           .label-container {
-            width: ${finalSettings.label_width || 76}mm;
-            max-width: ${finalSettings.label_width || 76}mm;
-            margin: 0 auto;
-            padding: ${finalSettings.margins || 2}mm;
-            border: 2px solid #000;
+            width: 150mm;
+            height: 100mm;
+            max-width: 150mm;
+            margin: 0;
+            padding: 3mm;
+            border: 1px solid #000;
             background: white;
             font-size: ${finalSettings.font_size || 12}pt;
-            line-height: 1.3;
+            line-height: 1.2;
             box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
           }
           
           .header {
             text-align: center;
-            margin-bottom: 4mm;
-            padding-bottom: 2mm;
+            margin-bottom: 2mm;
+            padding-bottom: 1mm;
             border-bottom: 1px solid #000;
+            flex-shrink: 0;
           }
           
           .company-logo {
@@ -197,7 +203,8 @@ export const useThermalPrint = () => {
           }
           
           .info-section {
-            margin-bottom: 4mm;
+            flex: 1;
+            margin-bottom: 2mm;
           }
           
           .info-row {
@@ -231,10 +238,11 @@ export const useThermalPrint = () => {
           
           .barcode-section {
             text-align: center;
-            margin: 4mm 0;
-            padding: 2mm;
+            margin: 2mm 0;
+            padding: 1mm;
             border: 1px solid #000;
             background: white;
+            flex-shrink: 0;
           }
           
           .barcode-section svg {
@@ -245,11 +253,12 @@ export const useThermalPrint = () => {
           
           .footer {
             text-align: center;
-            margin-top: 2mm;
-            padding-top: 2mm;
+            margin-top: 1mm;
+            padding-top: 1mm;
             border-top: 1px solid #000;
             font-size: ${(finalSettings.font_size || 12) - 4}pt;
             color: #666;
+            flex-shrink: 0;
           }
           
           .print-button {
