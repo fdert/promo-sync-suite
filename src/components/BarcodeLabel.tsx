@@ -64,8 +64,8 @@ export const BarcodeLabel: React.FC<BarcodeLabelProps> = ({
             .print\\:shadow-none { box-shadow: none !important; }
             .print\\:border-black { border-color: #000 !important; }
             @page { 
-              size: 150mm 100mm; /* مقاس ملصق الباركود 15×10 سم */
-              margin: 2mm;
+              size: 100mm 150mm; /* مقاس ملصق الباركود 10×15 سم */
+              margin: 0;
             }
           }
         `

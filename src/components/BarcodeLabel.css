@@ -9,16 +9,16 @@
   }
   
   @page {
-    size: 150mm 100mm; /* مقاس ملصق الباركود 15×10 سم */
-    margin: 2mm;
+    size: 100mm 150mm; /* مقاس ملصق الباركود 10×15 سم */
+    margin: 0;
   }
   
   .barcode-label {
-    width: 146mm;
-    max-width: 146mm;
+    width: 96mm;
+    max-width: 96mm;
     margin: 0 auto;
     padding: 2mm;
-    border: 1px solid #000;
+    border: none;
     background: white;
     font-size: 10pt;
     line-height: 1.2;
