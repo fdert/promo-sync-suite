@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface PrintOptions {
-  paperSize?: 'thermal-80mm' | 'thermal-58mm' | 'a4';
+  paperSize?: 'thermal-80mm' | 'thermal-58mm' | 'a4' | 'barcode-15x10cm';
   margins?: string;
   settings?: any; // إعدادات الملصق من قاعدة البيانات
 }
@@ -16,7 +16,7 @@ export const useThermalPrint = () => {
     orderId: string,
     options: PrintOptions = {}
   ) => {
-    const { paperSize = 'thermal-80mm', margins = '2mm', settings } = options;
+    const { paperSize = 'barcode-15x10cm', margins = '2mm', settings } = options;
     
     // جلب معلومات الشركة الحقيقية من قاعدة البيانات
     let companyInfo = {
@@ -100,18 +100,22 @@ export const useThermalPrint = () => {
     };
 
     const pageSize = paperSize === 'thermal-80mm' ? '80mm auto' : 
-                     paperSize === 'thermal-58mm' ? '58mm auto' : 'A4';
+                     paperSize === 'thermal-58mm' ? '58mm auto' :
+                     paperSize === 'barcode-15x10cm' ? '150mm 100mm' : 'A4';
 
     const labelWidth = paperSize === 'thermal-80mm' ? '76mm' : 
-                       paperSize === 'thermal-58mm' ? '54mm' : '200mm';
+                       paperSize === 'thermal-58mm' ? '54mm' :
+                       paperSize === 'barcode-15x10cm' ? '146mm' : '200mm';
 
     // استخدام الإعدادات من قاعدة البيانات إذا كانت متوفرة
     const finalSettings = settings || {
-      label_width: paperSize === 'thermal-80mm' ? 80 : 58,
+      label_width: paperSize === 'thermal-80mm' ? 80 : 
+                   paperSize === 'thermal-58mm' ? 58 : 
+                   paperSize === 'barcode-15x10cm' ? 146 : 200,
       margins: 2,
-      barcode_height: 50,
-      barcode_width: 2,
-      font_size: 12,
+      barcode_height: paperSize === 'barcode-15x10cm' ? 80 : 50,
+      barcode_width: paperSize === 'barcode-15x10cm' ? 3 : 2,
+      font_size: paperSize === 'barcode-15x10cm' ? 16 : 12,
       show_company_logo: true,
       show_company_name: true,
       show_date: true,

@@ -9,13 +9,13 @@
   }
   
   @page {
-    size: 80mm auto; /* عرض الطابعة الحرارية 80mm */
+    size: 150mm 100mm; /* مقاس ملصق الباركود 15×10 سم */
     margin: 2mm;
   }
   
   .barcode-label {
-    width: 76mm;
-    max-width: 76mm;
+    width: 146mm;
+    max-width: 146mm;
     margin: 0 auto;
     padding: 2mm;
     border: 1px solid #000;
@@ -43,7 +43,7 @@
 /* تنسيق الملصق للشاشة */
 .barcode-label {
   font-family: 'Arial', sans-serif;
-  max-width: 300px;
+  max-width: 450px; /* زيادة العرض للشاشة لمقاس 15×10 سم */
   background: white;
   border: 2px solid #333;
   border-radius: 8px;
