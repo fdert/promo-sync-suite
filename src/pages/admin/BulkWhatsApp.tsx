@@ -395,10 +395,11 @@ const BulkWhatsApp = () => {
                 <Input
                   id="delay_between_messages"
                   type="number"
-                  min="1"
+                  step="0.1"
+                  min="0.1"
                   max="60"
                   value={formData.delay_between_messages}
-                  onChange={(e) => setFormData(prev => ({ ...prev, delay_between_messages: parseInt(e.target.value) || 5 }))}
+                  onChange={(e) => setFormData(prev => ({ ...prev, delay_between_messages: parseFloat(e.target.value) || 5 }))}
                   placeholder="5"
                 />
                 <p className="text-sm text-muted-foreground mt-1">

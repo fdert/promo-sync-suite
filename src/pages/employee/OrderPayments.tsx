@@ -343,6 +343,7 @@ const OrderPayments = () => {
                     <Input
                       id="amount"
                       type="number"
+                      step="0.01"
                       value={paymentForm.amount}
                       onChange={(e) => setPaymentForm({
                         ...paymentForm,
