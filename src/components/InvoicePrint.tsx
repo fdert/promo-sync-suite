@@ -131,23 +131,24 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
             top: 0 !important;
             transform: scale(1) !important;
             transform-origin: top left !important;
-            width: 148mm !important;
-            max-width: 148mm !important;
+            width: 100mm !important;
+            max-width: 100mm !important;
             direction: rtl !important;
             text-align: right !important;
-            padding: 0 3mm !important;
-            height: 200mm !important;
-            max-height: 200mm !important;
+            padding: 2mm !important;
+            height: 150mm !important;
+            max-height: 150mm !important;
           }
           
           @page {
-            size: A5 portrait !important;
-            margin: 5mm !important;
+            size: 100mm 150mm !important;
+            margin: 0 !important;
             padding: 0 !important;
           }
           
           html, body {
-            height: 100% !important;
+            width: 100mm !important;
+            height: 150mm !important;
             overflow: hidden !important;
           }
           
@@ -161,14 +162,14 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
           .print-invoice {
             display: block !important;
             font-family: 'Arial', sans-serif !important;
-            font-size: 9px !important;
-            line-height: 1.15 !important;
+            font-size: 11px !important;
+            line-height: 1.2 !important;
             color: #000 !important;
             background: white !important;
             width: 100% !important;
-            max-width: 148mm !important;
-            height: auto !important;
-            max-height: 200mm !important;
+            max-width: 100mm !important;
+            height: 150mm !important;
+            max-height: 150mm !important;
             margin: 0 auto !important;
             padding: 0 !important;
             page-break-after: avoid !important;
@@ -297,7 +298,7 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
           .print-items-table {
             width: 100% !important;
             border-collapse: collapse !important;
-            font-size: 7px !important;
+            font-size: 10px !important;
             margin-bottom: 1.5mm !important;
             border: 1px solid #d1d5db !important;
           }
@@ -305,7 +306,7 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
           .print-items-table th,
           .print-items-table td {
             border: 1px solid #d1d5db !important;
-            padding: 0.6mm !important;
+            padding: 0.8mm !important;
             text-align: center !important;
             vertical-align: middle !important;
           }
@@ -314,7 +315,7 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
             background-color: #2563eb !important;
             color: white !important;
             font-weight: bold !important;
-            font-size: 7px !important;
+            font-size: 10px !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
