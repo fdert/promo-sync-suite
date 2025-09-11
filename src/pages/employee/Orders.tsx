@@ -2150,7 +2150,8 @@ ${publicFileUrl}
                       <Label htmlFor="payment-amount">المبلغ (ر.س)</Label>
                        <Input
                          id="payment-amount"
-                         type="text"
+                         type="number"
+                         step="0.01"
                          placeholder="أدخل المبلغ"
                          value={newPayment.amount}
                          onChange={(e) => setNewPayment({...newPayment, amount: parseFloat(e.target.value) || 0})}
@@ -2435,9 +2436,10 @@ ${publicFileUrl}
                         <Label htmlFor={`quantity_${index}`}>الكمية</Label>
                          <Input
                            id={`quantity_${index}`}
-                           type="text"
+                           type="number"
+                           step="0.01"
                            value={item.quantity}
-                           onChange={(e) => updateOrderItem(index, 'quantity', parseInt(e.target.value) || 0)}
+                           onChange={(e) => updateOrderItem(index, 'quantity', parseFloat(e.target.value) || 0)}
                          />
                       </div>
 
@@ -2445,7 +2447,8 @@ ${publicFileUrl}
                         <Label htmlFor={`unit_price_${index}`}>السعر المقرر</Label>
                         <Input
                           id={`unit_price_${index}`}
-                          type="text"
+                          type="number"
+                          step="0.01"
                           value={item.unit_price}
                           onChange={(e) => updateOrderItem(index, 'unit_price', parseFloat(e.target.value) || 0)}
                         />
@@ -2704,9 +2707,10 @@ ${publicFileUrl}
                       <Label htmlFor={`edit_quantity_${index}`}>الكمية</Label>
                         <Input
                           id={`edit_quantity_${index}`}
-                          type="text"
+                          type="number"
+                          step="0.01"
                           value={item.quantity}
-                          onChange={(e) => updateOrderItem(index, 'quantity', parseInt(e.target.value) || 0)}
+                          onChange={(e) => updateOrderItem(index, 'quantity', parseFloat(e.target.value) || 0)}
                         />
                      </div>
 
@@ -2714,7 +2718,8 @@ ${publicFileUrl}
                        <Label htmlFor={`edit_unit_price_${index}`}>السعر</Label>
                        <Input
                          id={`edit_unit_price_${index}`}
-                         type="text"
+                         type="number"
+                         step="0.01"
                          value={item.unit_price}
                          onChange={(e) => updateOrderItem(index, 'unit_price', parseFloat(e.target.value) || 0)}
                        />
