@@ -338,40 +338,24 @@ ${payments.slice(0, 5).map(payment =>
         return;
       }
       
-      // حفظ الرسالة في قاعدة البيانات مع حالة pending (نفس طريقة البروفة)
-      const { error } = await supabase
-        .from('whatsapp_messages')
-        .insert({
-          from_number: 'system',
-          to_number: customer.whatsapp_number || customer.phone,
-          message_type: 'text',
-          message_content: summaryText,
-          status: 'pending',
-          customer_id: selectedCustomerData.customer_id
-        });
+      const phone = customer.whatsapp_number || customer.phone;
 
-      if (error) throw error;
-
-      // استدعاء edge function المخصص لملخص العملاء المدينين
-      try {
-        const { data: functionData, error: functionError } = await supabase.functions.invoke('send-account-summary-simple', {
-          body: {
-            customer_phone: customer.whatsapp_number || customer.phone,
-            customer_name: customer.name,
-            message: summaryText
-          }
-        });
-        
-        if (functionError) {
-          console.error('خطأ في استدعاء edge function:', functionError);
-        } else if (functionData?.success) {
-          console.log('✅ تم إرسال الملخص المالي بنجاح:', functionData);
-        } else {
-          console.warn('⚠️ تحذير من edge function:', functionData);
+      // إرسال مباشر عبر Edge Function الموثوقة مع اختيار أفضل Webhook
+      const { data: functionData, error: functionError } = await supabase.functions.invoke('send-direct-whatsapp', {
+        body: {
+          phone,
+          message: summaryText
         }
-      } catch (pendingError) {
-        console.error('خطأ في معالجة رسائل الملخص المالي:', pendingError);
-        // لا نوقف العملية إذا فشل إرسال الرسائل المعلقة
+      });
+      
+      if (functionError || functionData?.success === false) {
+        console.error('خطأ في الإرسال:', functionError || functionData);
+        toast({
+          title: "خطأ في الإرسال",
+          description: functionData?.error || "فشل في إرسال الرسالة عبر الواتساب",
+          variant: "destructive"
+        });
+        return;
       }
 
       toast({
@@ -381,11 +365,11 @@ ${payments.slice(0, 5).map(payment =>
       
       setShowSummaryDialog(false);
     } catch (error) {
-      console.error('Error saving WhatsApp message:', error);
+      console.error('Error sending WhatsApp message:', error);
       
       toast({
         title: "خطأ",
-        description: "فشل في حفظ الرسالة",
+        description: "فشل في إرسال الرسالة",
         variant: "destructive"
       });
     }
@@ -421,7 +405,7 @@ ${payments.slice(0, 5).map(payment =>
       console.log('📱 الرقم المستهدف:', phoneNumber);
       
       // استدعاء edge function الجديد المبسط
-      const { data: functionData, error: functionError } = await supabase.functions.invoke('send-customer-summary-direct', {
+      const { data: functionData, error: functionError } = await supabase.functions.invoke('send-direct-whatsapp', {
         body: {
           phone: phoneNumber,
           message: summary
