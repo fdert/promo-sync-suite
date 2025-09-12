@@ -56,14 +56,14 @@ Deno.serve(async (req) => {
     const { data: webhookSettings } = await supabase
       .from('webhook_settings')
       .select('*')
-      .eq('webhook_type', 'تقارير مالية واتساب')
+      .eq('webhook_type', 'account_summary')
       .eq('is_active', true)
       .single();
 
     if (!webhookSettings || !webhookSettings.webhook_url) {
-      console.error('No active Financial Reports WhatsApp webhook found');
+      console.error('No active account summary webhook found');
       return new Response(
-        JSON.stringify({ error: 'No webhook configured for Financial Reports WhatsApp' }),
+        JSON.stringify({ error: 'No webhook configured for account summary' }),
         { headers: corsHeaders, status: 400 }
       );
     }
