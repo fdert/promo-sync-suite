@@ -80,16 +80,25 @@ Deno.serve(async (req) => {
     }
 
     // Build payload similar to send-order-notifications for compatibility with n8n
-    const customerPhone = phone; // keep plus if provided
+    // Normalize phone number: keep digits and '+' for storage, digits-only for WA 'to'
+    const cleanedPhone = phone.replace(/[^\d+]/g, '');
+    const toNumber = cleanedPhone.startsWith('+') ? cleanedPhone.slice(1) : cleanedPhone;
+
+    // Build payload compatible with WhatsApp webhook (and keep legacy fields for n8n flows)
     const messagePayload: Record<string, any> = {
-      to: customerPhone,
-      phone: customerPhone,
-      phoneNumber: customerPhone,
+      // WhatsApp-style fields
+      messaging_product: 'whatsapp',
+      to: toNumber,
+      type: 'text',
+      text: { body: message },
+
+      // Legacy/general fields for existing n8n workflows
+      phone: cleanedPhone,
+      phoneNumber: cleanedPhone,
       message,
       messageText: message,
-      text: message,
       notification_type: 'direct_message',
-      type: 'direct_message',
+      message_type: 'direct_message',
       timestamp: Math.floor(Date.now() / 1000),
     };
 
@@ -128,7 +137,7 @@ Deno.serve(async (req) => {
     // Save message record
     const { error: insertError } = await supabase.from('whatsapp_messages').insert({
       from_number: 'system',
-      to_number: customerPhone,
+      to_number: cleanedPhone,
       message_type: 'text',
       message_content: message,
       status,
