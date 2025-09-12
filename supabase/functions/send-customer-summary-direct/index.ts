@@ -90,10 +90,28 @@ Deno.serve(async (req) => {
 
     console.log('Message queued successfully:', messageData.id);
 
-    // استخدام webhook التقارير المالية مباشرة
-    const webhookUrl = 'https://n8n.srv894347.hstgr.cloud/webhook-test/ca719409-ac29-485a-99d4-3b602978eace';
-    
-    console.log('🚀 إرسال رسالة مباشرة إلى webhook التقارير المالية');
+    // جلب رابط الويب هوك من إعدادات قاعدة البيانات (account_summary)
+    const { data: webhookSettings, error: whError } = await supabase
+      .from('webhook_settings')
+      .select('webhook_url')
+      .eq('webhook_type', 'account_summary')
+      .eq('is_active', true)
+      .single();
+
+    if (whError) {
+      console.error('Error fetching account_summary webhook:', whError);
+    }
+
+    if (!webhookSettings?.webhook_url) {
+      console.error('No active account_summary webhook found');
+      return new Response(
+        JSON.stringify({ error: 'No account summary webhook configured' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const webhookUrl = webhookSettings.webhook_url;
+    console.log('🚀 إرسال رسالة مباشرة إلى webhook التقارير المالية:', webhookUrl);
 
     // إعداد بيانات الرسالة للإرسال
     const messagePayload = {

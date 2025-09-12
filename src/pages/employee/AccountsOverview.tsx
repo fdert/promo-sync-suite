@@ -341,7 +341,7 @@ ${payments.slice(0, 5).map(payment =>
       const phone = customer.whatsapp_number || customer.phone;
 
       // إرسال مباشر عبر Edge Function الموثوقة مع اختيار أفضل Webhook
-      const { data: functionData, error: functionError } = await supabase.functions.invoke('send-direct-whatsapp', {
+      const { data: functionData, error: functionError } = await supabase.functions.invoke('send-whatsapp-simple', {
         body: {
           phone,
           message: summaryText
@@ -405,7 +405,7 @@ ${payments.slice(0, 5).map(payment =>
       console.log('📱 الرقم المستهدف:', phoneNumber);
       
       // استدعاء edge function الجديد المبسط
-      const { data: functionData, error: functionError } = await supabase.functions.invoke('send-direct-whatsapp', {
+      const { data: functionData, error: functionError } = await supabase.functions.invoke('send-whatsapp-simple', {
         body: {
           phone: phoneNumber,
           message: summary
