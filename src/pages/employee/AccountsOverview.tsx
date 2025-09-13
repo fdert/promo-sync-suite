@@ -348,12 +348,14 @@ ${payments.slice(0, 5).map(payment =>
         }
       });
       
-      if (functionError || functionData?.success === false) {
-        console.error('خطأ في الإرسال:', functionError || functionData);
+      if (functionError || functionData?.status !== 'sent') {
+        console.error('خطأ/فشل في الإرسال عبر الويب هوك:', functionError || functionData);
+        // فتح واتساب كحل بديل لإتمام الإرسال يدويًا
+        const waNumber = String(phone).replace(/[^\d]/g, '').replace(/^0+/, '');
+        window.open(`https://wa.me/${waNumber}?text=${encodeURIComponent(summaryText)}`, '_blank');
         toast({
-          title: "خطأ في الإرسال",
-          description: functionData?.error || "فشل في إرسال الرسالة عبر الواتساب",
-          variant: "destructive"
+          title: 'تم فتح واتساب كحل بديل',
+          description: 'تعذر الإرسال الآلي، تم فتح واتساب لإرسال الرسالة يدويًا.',
         });
         return;
       }
@@ -412,30 +414,19 @@ ${payments.slice(0, 5).map(payment =>
         }
       });
       
-      if (functionError) {
-        console.error('خطأ في استدعاء edge function:', functionError);
+      if (functionError || functionData?.status !== 'sent') {
+        console.error('خطأ في استدعاء/فشل edge function:', functionError || functionData);
+        // فتح واتساب كحل بديل لإتمام الإرسال يدويًا
+        const waNumber = String(phoneNumber).replace(/[^\d]/g, '').replace(/^0+/, '');
+        window.open(`https://wa.me/${waNumber}?text=${encodeURIComponent(summary)}`, '_blank');
         toast({
-          title: "خطأ في الإرسال",
-          description: "فشل في إرسال الرسالة عبر الواتساب",
-          variant: "destructive"
+          title: 'تم فتح واتساب كحل بديل',
+          description: 'تعذر الإرسال الآلي، تم فتح واتساب لإرسال الرسالة يدويًا.',
         });
         return;
       }
       
-      if (functionData?.success) {
-        console.log('✅ تم إرسال الملخص المالي بنجاح:', functionData);
-        toast({
-          title: "تم الإرسال بنجاح",
-          description: `تم إرسال التقرير المالي للعميل ${customer.customer_name} بنجاح.`,
-        });
-      } else {
-        console.warn('⚠️ تحذير من edge function:', functionData);
-        toast({
-          title: "تحذير",
-          description: functionData?.error || "حدث خطأ في الإرسال",
-          variant: "destructive"
-        });
-      }
+      // نجاح
 
     } catch (error) {
       console.error('❌ خطأ في الإرسال:', error);
