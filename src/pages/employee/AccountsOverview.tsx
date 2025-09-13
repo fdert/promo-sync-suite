@@ -350,12 +350,10 @@ ${payments.slice(0, 5).map(payment =>
       
       if (functionError || functionData?.status !== 'sent') {
         console.error('خطأ/فشل في الإرسال عبر الويب هوك:', functionError || functionData);
-        // فتح واتساب كحل بديل لإتمام الإرسال يدويًا
-        const waNumber = String(phone).replace(/[^\d]/g, '').replace(/^0+/, '');
-        window.open(`https://wa.me/${waNumber}?text=${encodeURIComponent(summaryText)}`, '_blank');
         toast({
-          title: 'تم فتح واتساب كحل بديل',
-          description: 'تعذر الإرسال الآلي، تم فتح واتساب لإرسال الرسالة يدويًا.',
+          title: 'خطأ في الإرسال',
+          description: functionData?.message || 'تعذر الإرسال الآلي عبر القناة المحددة',
+          variant: 'destructive'
         });
         return;
       }
@@ -416,12 +414,10 @@ ${payments.slice(0, 5).map(payment =>
       
       if (functionError || functionData?.status !== 'sent') {
         console.error('خطأ في استدعاء/فشل edge function:', functionError || functionData);
-        // فتح واتساب كحل بديل لإتمام الإرسال يدويًا
-        const waNumber = String(phoneNumber).replace(/[^\d]/g, '').replace(/^0+/, '');
-        window.open(`https://wa.me/${waNumber}?text=${encodeURIComponent(summary)}`, '_blank');
         toast({
-          title: 'تم فتح واتساب كحل بديل',
-          description: 'تعذر الإرسال الآلي، تم فتح واتساب لإرسال الرسالة يدويًا.',
+          title: 'خطأ في الإرسال',
+          description: functionData?.message || 'تعذر الإرسال الآلي عبر القناة المحددة',
+          variant: 'destructive'
         });
         return;
       }

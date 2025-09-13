@@ -114,7 +114,15 @@ Deno.serve(async (req) => {
       .eq('is_active', true)
       .maybeSingle();
 
+    // قائمة بكل ويبهوكات الإرسال العامة لتجربة عدة مسارات عند الفشل
+    const { data: outgoingList } = await supabase
+      .from('webhook_settings')
+      .select('webhook_url, webhook_type, webhook_name, is_active')
+      .eq('webhook_type', 'outgoing')
+      .eq('is_active', true);
+
     const isTestUrl = (url?: string) => !!url && url.includes('/webhook-test/');
+    const nonTestOutgoing = (outgoingList || []).filter((w: any) => w.webhook_url && !isTestUrl(w.webhook_url));
 
     // تحديد الأساسي والاحتياطي مع تفضيل عدم استخدام روابط test
     if (accountSummaryWebhook?.webhook_url && !isTestUrl(accountSummaryWebhook.webhook_url)) {
@@ -192,6 +200,27 @@ Deno.serve(async (req) => {
       });
       responseData = await response.text();
       console.log('Webhook response (fallback):', response.status, responseData);
+    }
+
+    // إذا مازال فاشلاً، جرّب بقية ويبهوكات outgoing غير التجريبية
+    if (!response.ok && Array.isArray(nonTestOutgoing)) {
+      for (const w of nonTestOutgoing) {
+        if (w.webhook_url === usedWebhook?.webhook_url) continue;
+        console.warn('🔁 تجربة ويب هوك بديل:', w.webhook_name);
+        const altRes = await fetch(w.webhook_url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(messagePayload)
+        });
+        const altBody = await altRes.text();
+        console.log('Webhook response (alt):', altRes.status, altBody);
+        if (altRes.ok) {
+          usedWebhook = w;
+          response = altRes;
+          responseData = altBody;
+          break;
+        }
+      }
     }
 
     const newStatus = response.ok ? 'sent' : 'failed';
