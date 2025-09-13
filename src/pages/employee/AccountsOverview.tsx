@@ -294,13 +294,13 @@ const AccountsOverview = () => {
     const payments = customerPayments[customer.customer_id] || [];
     
     const summary = `
-تقرير مالي للعميل: ${customer.customer_name}
-
-المبلغ المستحق الإجمالي: ${customer.outstanding_balance.toLocaleString()} ر.س
-عدد الطلبات غير المدفوعة: ${customer.unpaid_invoices_count}
-أقرب تاريخ استحقاق: ${format(new Date(customer.earliest_due_date), 'dd/MM/yyyy', { locale: ar })}
-آخر تاريخ استحقاق: ${format(new Date(customer.latest_due_date), 'dd/MM/yyyy', { locale: ar })}
-
+ تقرير مالي للعميل: ${customer.customer_name}
+ 
+ جملة المبالغ المستحقة: ${customer.outstanding_balance.toLocaleString()} ر.س
+ عدد الطلبات غير المدفوعة: ${customer.unpaid_invoices_count}
+ أقرب تاريخ استحقاق: ${format(new Date(customer.earliest_due_date), 'dd/MM/yyyy', { locale: ar })}
+ آخر تاريخ استحقاق: ${format(new Date(customer.latest_due_date), 'dd/MM/yyyy', { locale: ar })}
+ 
 آخر ${Math.min(5, orders.length)} طلبات:
 ${orders.slice(0, 5).map(order => 
   `- طلب رقم: ${order.order_number} | الخدمة: ${order.service_name} | المبلغ: ${order.amount.toLocaleString()} ر.س | الحالة: ${order.status}`

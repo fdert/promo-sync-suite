@@ -92,51 +92,46 @@ Deno.serve(async (req) => {
 
     console.log('Message queued successfully:', messageData.id);
 
-    // البحث عن webhook settings مع الأولوية للتقارير المالية
-    let webhookSettings;
-    
+    // البحث عن webhook settings مع الأولوية للتقارير المالية + تهيئة بديل
+    let primaryWebhook: any = null;
+    let fallbackWebhook: any = null;
+
     console.log('🔍 البحث عن ويب هوك التقارير المالية...');
-    
-    // البحث عن ويب هوك التقارير المالية أولاً
-    const { data: accountSummaryWebhook, error: summaryError } = await supabase
+
+    // جلب ويب هوك التقارير المالية
+    const { data: accountSummaryWebhook } = await supabase
       .from('webhook_settings')
       .select('webhook_url, webhook_type, webhook_name, is_active')
       .eq('webhook_type', 'account_summary')
       .eq('is_active', true)
       .maybeSingle();
-    
+
+    // جلب ويب هوك الإرسال العام (outgoing)
+    const { data: outgoingWebhook } = await supabase
+      .from('webhook_settings')
+      .select('webhook_url, webhook_type, webhook_name, is_active')
+      .eq('webhook_type', 'outgoing')
+      .eq('is_active', true)
+      .maybeSingle();
+
+    // تحديد الأساسي والاحتياطي
     if (accountSummaryWebhook?.webhook_url) {
-      webhookSettings = accountSummaryWebhook;
-      console.log('✅ استخدام ويب هوك التقارير المالية:', webhookSettings.webhook_name);
-    } else {
-      console.log('⚠️ لا يوجد ويب هوك للتقارير المالية، جاري البحث عن بديل...');
-      
-      // إذا لم يوجد، ابحث عن ويب هوك outgoing
-      const { data: outgoingWebhook, error: outgoingError } = await supabase
-        .from('webhook_settings')
-        .select('webhook_url, webhook_type, webhook_name, is_active')
-        .eq('webhook_type', 'outgoing')
-        .eq('is_active', true)
-        .limit(1)
-        .maybeSingle();
-      
-      console.log('🔎 نتيجة البحث عن ويب هوك outgoing:', { 
-        data: outgoingWebhook, 
-        error: outgoingError,
-        hasUrl: !!outgoingWebhook?.webhook_url
-      });
-      
-      webhookSettings = outgoingWebhook;
+      primaryWebhook = accountSummaryWebhook;
+      fallbackWebhook = outgoingWebhook?.webhook_url ? outgoingWebhook : null;
+      console.log('✅ استخدام ويب هوك التقارير المالية كخيار أساسي:', primaryWebhook.webhook_name);
+    } else if (outgoingWebhook?.webhook_url) {
+      primaryWebhook = outgoingWebhook;
+      console.log('⚠️ لا يوجد ويب هوك للتقارير المالية. سيتم استخدام outgoing كخيار أساسي:', primaryWebhook.webhook_name);
     }
 
-    console.log('📡 الويب هوك المختار نهائياً:', {
-      name: webhookSettings?.webhook_name,
-      type: webhookSettings?.webhook_type,
-      hasUrl: !!webhookSettings?.webhook_url,
-      url: webhookSettings?.webhook_url ? 'متوفر' : 'مفقود'
+    console.log('📡 الويب هوك الأساسي:', {
+      name: primaryWebhook?.webhook_name,
+      type: primaryWebhook?.webhook_type,
+      hasUrl: !!primaryWebhook?.webhook_url,
+      url: primaryWebhook?.webhook_url ? 'متوفر' : 'مفقود'
     });
 
-    if (!webhookSettings?.webhook_url) {
+    if (!primaryWebhook?.webhook_url) {
       console.error('❌ خطأ: لا يوجد ويب هوك نشط - No active webhook found');
       return new Response(
         JSON.stringify({ 
@@ -150,7 +145,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log('📡 استخدام ويب هوك:', webhookSettings.webhook_name, `(${webhookSettings.webhook_type})`);
+    console.log('📡 استخدام ويب هوك:', primaryWebhook.webhook_name, `(${primaryWebhook.webhook_type})`);
 
     // إعداد بيانات الرسالة للإرسال
     const messagePayload = {
@@ -164,24 +159,31 @@ Deno.serve(async (req) => {
 
     console.log('Sending message payload:', JSON.stringify(messagePayload, null, 2));
 
-    // إرسال الرسالة عبر webhook إلى n8n
-    const response = await fetch(webhookSettings.webhook_url, {
+    // إرسال الرسالة عبر webhook (مع آلية بديلة عند الفشل)
+    let usedWebhook = primaryWebhook;
+    let response = await fetch(primaryWebhook.webhook_url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(messagePayload)
     });
 
-    const responseData = await response.text();
-    console.log(`Webhook response:`, responseData);
+    let responseData = await response.text();
+    console.log('Webhook response (primary):', response.status, responseData);
 
-    let newStatus = 'sent';
-    
-    if (!response.ok) {
-      console.error(`Webhook failed:`, response.status, responseData);
-      newStatus = 'failed';
+    // في حال الفشل مع ويب هوك التقارير المالية، جرّب fallback outgoing إن وجد
+    if (!response.ok && primaryWebhook?.webhook_type === 'account_summary' && fallbackWebhook?.webhook_url && fallbackWebhook.webhook_url !== primaryWebhook.webhook_url) {
+      console.warn('⚠️ فشل الإرسال عبر ويب هوك التقارير المالية. تجربة ويب هوك outgoing كبديل...');
+      usedWebhook = fallbackWebhook;
+      response = await fetch(fallbackWebhook.webhook_url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(messagePayload)
+      });
+      responseData = await response.text();
+      console.log('Webhook response (fallback):', response.status, responseData);
     }
+
+    const newStatus = response.ok ? 'sent' : 'failed';
 
     // تحديث حالة الرسالة
     const { error: updateError } = await supabase
@@ -193,15 +195,16 @@ Deno.serve(async (req) => {
       .eq('id', messageData.id);
 
     if (updateError) {
-      console.error(`Error updating message:`, updateError);
+      console.error('Error updating message:', updateError);
     }
 
     return new Response(
       JSON.stringify({ 
-        success: true, 
-        message: newStatus === 'sent' ? 'تم إرسال الرسالة بنجاح' : 'تم إدخال الرسالة في قائمة الانتظار',
+        success: newStatus === 'sent',
+        message: newStatus === 'sent' ? 'تم إرسال الرسالة بنجاح' : 'فشل الإرسال عبر جميع الويب هوكات المتاحة',
         messageId: messageData.id,
-        status: newStatus
+        status: newStatus,
+        usedWebhook: usedWebhook?.webhook_type || 'unknown'
       }),
       { 
         status: 200, 
