@@ -114,14 +114,20 @@ Deno.serve(async (req) => {
       .eq('is_active', true)
       .maybeSingle();
 
-    // تحديد الأساسي والاحتياطي
-    if (accountSummaryWebhook?.webhook_url) {
+    const isTestUrl = (url?: string) => !!url && url.includes('/webhook-test/');
+
+    // تحديد الأساسي والاحتياطي مع تفضيل عدم استخدام روابط test
+    if (accountSummaryWebhook?.webhook_url && !isTestUrl(accountSummaryWebhook.webhook_url)) {
       primaryWebhook = accountSummaryWebhook;
       fallbackWebhook = outgoingWebhook?.webhook_url ? outgoingWebhook : null;
       console.log('✅ استخدام ويب هوك التقارير المالية كخيار أساسي:', primaryWebhook.webhook_name);
     } else if (outgoingWebhook?.webhook_url) {
       primaryWebhook = outgoingWebhook;
-      console.log('⚠️ لا يوجد ويب هوك للتقارير المالية. سيتم استخدام outgoing كخيار أساسي:', primaryWebhook.webhook_name);
+      fallbackWebhook = accountSummaryWebhook?.webhook_url ? accountSummaryWebhook : null;
+      console.log('ℹ️ سيتم استخدام outgoing كخيار أساسي (رابط التقارير في وضع test أو غير متوفر):', primaryWebhook.webhook_name);
+    } else if (accountSummaryWebhook?.webhook_url) {
+      primaryWebhook = accountSummaryWebhook;
+      console.log('⚠️ لا يوجد outgoing. سيتم استخدام التقارير المالية كخيار أساسي:', primaryWebhook.webhook_name);
     }
 
     console.log('📡 الويب هوك الأساسي:', {
@@ -147,14 +153,19 @@ Deno.serve(async (req) => {
 
     console.log('📡 استخدام ويب هوك:', primaryWebhook.webhook_name, `(${primaryWebhook.webhook_type})`);
 
-    // إعداد بيانات الرسالة للإرسال
+    // إعداد بيانات الرسالة للإرسال (يشمل حقول توافق إضافية)
     const messagePayload = {
       messaging_product: "whatsapp",
       to: cleanPhone.replace('+', ''),
       type: "text",
       text: {
         body: message
-      }
+      },
+      // توافق مع بعض تدفقات n8n القديمة
+      phone: cleanPhone,
+      to_number: cleanPhone,
+      message,
+      text_body: message
     };
 
     console.log('Sending message payload:', JSON.stringify(messagePayload, null, 2));
