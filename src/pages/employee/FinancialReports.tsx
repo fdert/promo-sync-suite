@@ -38,8 +38,10 @@ const FinancialReports = () => {
     customCategory: '',
     date: new Date().toISOString().split('T')[0],
     paymentMethod: '',
-    notes: ''
+    notes: '',
+    receiptFile: null as File | null
   });
+  const [isUploading, setIsUploading] = useState(false);
 
   const { toast } = useToast();
 
@@ -255,9 +257,38 @@ const FinancialReports = () => {
     });
   };
 
+  // دالة رفع ملف الإيصال
+  const uploadReceiptFile = async (file: File, expenseNumber: string): Promise<string | null> => {
+    try {
+      const fileExtension = file.name.split('.').pop();
+      const fileName = `${expenseNumber}-${Date.now()}.${fileExtension}`;
+      const filePath = `receipts/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('expense-receipts')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      // الحصول على URL الملف
+      const { data: { publicUrl } } = supabase.storage
+        .from('expense-receipts')
+        .getPublicUrl(filePath);
+
+      return publicUrl;
+    } catch (error) {
+      console.error('Error uploading receipt:', error);
+      return null;
+    }
+  };
+
   // دالة إضافة مصروف جديد
   const handleAddExpense = async () => {
     try {
+      setIsUploading(true);
+      
       // التحقق من صحة البيانات
       if (!expenseForm.description || !expenseForm.amount || !expenseForm.category) {
         toast({
@@ -295,6 +326,19 @@ const FinancialReports = () => {
         expenseNumber = `EXP-${String(lastNumber + 1).padStart(3, '0')}`;
       }
 
+      // رفع ملف الإيصال إذا كان موجوداً
+      let receiptUrl = null;
+      if (expenseForm.receiptFile) {
+        receiptUrl = await uploadReceiptFile(expenseForm.receiptFile, expenseNumber);
+        if (!receiptUrl) {
+          toast({
+            title: "تحذير",
+            description: "فشل في رفع ملف الإيصال، لكن تم حفظ المصروف",
+            variant: "destructive",
+          });
+        }
+      }
+
       // إضافة المصروف إلى قاعدة البيانات
       const { error } = await supabase
         .from('expenses')
@@ -305,7 +349,8 @@ const FinancialReports = () => {
           category: finalCategory,
           date: expenseForm.date,
           payment_method: expenseForm.paymentMethod,
-          notes: expenseForm.notes
+          notes: expenseForm.notes,
+          receipt_url: receiptUrl
         });
 
       if (error) {
@@ -326,13 +371,14 @@ const FinancialReports = () => {
         customCategory: '',
         date: new Date().toISOString().split('T')[0],
         paymentMethod: '',
-        notes: ''
+        notes: '',
+        receiptFile: null
       });
       setIsExpenseDialogOpen(false);
 
       toast({
         title: "تم الحفظ بنجاح",
-        description: `تم إضافة المصروف برقم ${expenseNumber}`,
+        description: `تم إضافة المصروف برقم ${expenseNumber}${receiptUrl ? ' مع الإيصال' : ''}`,
       });
 
     } catch (error) {
@@ -342,6 +388,8 @@ const FinancialReports = () => {
         description: "فشل في إضافة المصروف، يرجى المحاولة مرة أخرى",
         variant: "destructive",
       });
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -471,15 +519,37 @@ const FinancialReports = () => {
                       rows={3}
                     />
                   </div>
+
+                  <div>
+                    <Label htmlFor="receiptFile">فاتورة المصروف (اختياري)</Label>
+                    <Input
+                      id="receiptFile"
+                      type="file"
+                      accept=".pdf,.jpg,.jpeg,.png,.gif,.doc,.docx"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null;
+                        setExpenseForm({...expenseForm, receiptFile: file});
+                      }}
+                      className="mt-1"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      الملفات المدعومة: PDF, صور (JPG, PNG), مستندات Word
+                    </p>
+                    {expenseForm.receiptFile && (
+                      <p className="text-sm text-primary mt-1">
+                        تم اختيار الملف: {expenseForm.receiptFile.name}
+                      </p>
+                    )}
+                  </div>
                 </div>
 
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsExpenseDialogOpen(false)}>
+                  <Button variant="outline" onClick={() => setIsExpenseDialogOpen(false)} disabled={isUploading}>
                     إلغاء
                   </Button>
-                  <Button onClick={handleAddExpense} className="gap-2">
+                  <Button onClick={handleAddExpense} className="gap-2" disabled={isUploading}>
                     <Plus className="h-4 w-4" />
-                    إضافة المصروف
+                    {isUploading ? 'يتم الحفظ...' : 'إضافة المصروف'}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -757,6 +827,19 @@ const FinancialReports = () => {
                             {expense.notes && (
                               <div className="mt-2 p-2 bg-muted rounded text-xs">
                                 <strong>ملاحظات:</strong> {expense.notes}
+                              </div>
+                            )}
+                            
+                            {expense.receipt_url && (
+                              <div className="mt-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-xs h-6"
+                                  onClick={() => window.open(expense.receipt_url, '_blank')}
+                                >
+                                  عرض الإيصال
+                                </Button>
                               </div>
                             )}
                           </div>
