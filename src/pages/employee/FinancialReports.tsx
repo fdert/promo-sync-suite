@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 const FinancialReports = () => {
   const [loading, setLoading] = useState(true);
   const [accounts, setAccounts] = useState<any[]>([]);
+  const [expenses, setExpenses] = useState<any[]>([]);
   const [financialData, setFinancialData] = useState({
     income: 0,
     expenses: 0,
@@ -121,6 +122,29 @@ const FinancialReports = () => {
     }
   };
 
+  // جلب بيانات المصروفات التفصيلية
+  const fetchExpenses = async () => {
+    try {
+      const { start, end } = getDateRange(dateFilter.period, dateFilter.startDate, dateFilter.endDate);
+
+      const { data, error } = await supabase
+        .from('expenses')
+        .select('*')
+        .gte('date', start.toISOString().split('T')[0])
+        .lte('date', end.toISOString().split('T')[0])
+        .order('date', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching expenses:', error);
+        return;
+      }
+
+      setExpenses(data || []);
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
   // جلب البيانات المالية للفترة المحددة
   const fetchFinancialData = async () => {
     try {
@@ -181,7 +205,8 @@ const FinancialReports = () => {
       setLoading(true);
       await Promise.all([
         fetchAccounts(),
-        fetchFinancialData()
+        fetchFinancialData(),
+        fetchExpenses()
       ]);
       setLoading(false);
     };
@@ -191,6 +216,7 @@ const FinancialReports = () => {
   // تحديث البيانات عند تغيير الفلتر
   useEffect(() => {
     fetchFinancialData();
+    fetchExpenses();
   }, [dateFilter]);
 
   // تجميع الحسابات حسب النوع
@@ -287,7 +313,10 @@ const FinancialReports = () => {
       }
 
       // إعادة تحميل البيانات المالية
-      await fetchFinancialData();
+      await Promise.all([
+        fetchFinancialData(),
+        fetchExpenses()
+      ]);
 
       // إعادة تعيين النموذج وإغلاق المودال
       setExpenseForm({
@@ -578,9 +607,10 @@ const FinancialReports = () => {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="overview">نظرة عامة</TabsTrigger>
           <TabsTrigger value="accounts">الحسابات</TabsTrigger>
+          <TabsTrigger value="expenses">المصروفات</TabsTrigger>
           <TabsTrigger value="detailed">تقرير تفصيلي</TabsTrigger>
         </TabsList>
 
@@ -672,6 +702,84 @@ const FinancialReports = () => {
               </CardContent>
             </Card>
           ))}
+        </TabsContent>
+
+        <TabsContent value="expenses" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Receipt className="h-5 w-5" />
+                بيانات المصروفات
+              </CardTitle>
+              <CardDescription>
+                جميع المصروفات المسجلة للفترة المحددة - عرض فقط
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {expenses.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  لا توجد مصروفات مسجلة في هذه الفترة
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {expenses.map((expense) => (
+                      <Card key={expense.id} className="border-l-4 border-l-destructive">
+                        <CardContent className="p-4">
+                          <div className="space-y-2">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <h4 className="font-semibold text-sm">{expense.expense_number}</h4>
+                                <p className="text-sm text-muted-foreground">{expense.description}</p>
+                              </div>
+                              <span className="text-lg font-bold text-destructive">
+                                {expense.amount?.toLocaleString()} ر.س
+                              </span>
+                            </div>
+                            
+                            <div className="space-y-1 text-xs text-muted-foreground">
+                              <div className="flex justify-between">
+                                <span>الفئة:</span>
+                                <span className="font-medium">{expense.category}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>التاريخ:</span>
+                                <span>{new Date(expense.date).toLocaleDateString('ar-SA')}</span>
+                              </div>
+                              {expense.payment_method && (
+                                <div className="flex justify-between">
+                                  <span>طريقة الدفع:</span>
+                                  <span>{expense.payment_method}</span>
+                                </div>
+                              )}
+                            </div>
+                            
+                            {expense.notes && (
+                              <div className="mt-2 p-2 bg-muted rounded text-xs">
+                                <strong>ملاحظات:</strong> {expense.notes}
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                  
+                  <div className="mt-6 p-4 bg-muted/50 rounded-lg">
+                    <div className="flex justify-between items-center">
+                      <span className="text-lg font-semibold">إجمالي المصروفات:</span>
+                      <span className="text-xl font-bold text-destructive">
+                        {expenses.reduce((sum, expense) => sum + (expense.amount || 0), 0).toLocaleString()} ر.س
+                      </span>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      عدد المصروفات: {expenses.length} مصروف
+                    </p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="detailed" className="space-y-4">
