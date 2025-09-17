@@ -138,8 +138,7 @@ const Accounts = () => {
       const { data, error } = await supabase
         .from('expenses')
         .select('*')
-        .order('date', { ascending: false })
-        .limit(10);
+        .order('date', { ascending: false });
 
       if (error) {
         console.error('Error fetching expenses:', error);
