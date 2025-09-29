@@ -14,48 +14,7 @@ export type Database = {
   }
   public: {
     Tables: {
-      schools: {
-        Row: {
-          address: string | null
-          contact_person: string
-          created_at: string | null
-          email: string
-          id: string
-          phone: string
-          school_name: string
-          school_type: string
-          updated_at: string | null
-          webhook_enabled: boolean | null
-          webhook_url: string | null
-        }
-        Insert: {
-          address?: string | null
-          contact_person: string
-          created_at?: string | null
-          email: string
-          id: string
-          phone: string
-          school_name: string
-          school_type: string
-          updated_at?: string | null
-          webhook_enabled?: boolean | null
-          webhook_url?: string | null
-        }
-        Update: {
-          address?: string | null
-          contact_person?: string
-          created_at?: string | null
-          email?: string
-          id?: string
-          phone?: string
-          school_name?: string
-          school_type?: string
-          updated_at?: string | null
-          webhook_enabled?: boolean | null
-          webhook_url?: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Views: {
       [_ in never]: never
