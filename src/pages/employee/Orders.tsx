@@ -277,7 +277,7 @@ const Orders = () => {
   const fetchServices = async () => {
     try {
       const { data, error } = await supabase
-        .from('services')
+        .from('service_types')
         .select('id, name, base_price')
         .eq('is_active', true)
         .order('name');

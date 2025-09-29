@@ -67,7 +67,7 @@ const ServiceTypes = () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('services')
+        .from('service_types')
         .select('*')
         .order('created_at', { ascending: false });
 
@@ -135,14 +135,14 @@ const ServiceTypes = () => {
       if (editingService) {
         // تعديل خدمة موجودة
         const { error: updateError } = await supabase
-          .from('services')
+          .from('service_types')
           .update(serviceData)
           .eq('id', editingService.id);
         error = updateError;
       } else {
         // إضافة خدمة جديدة
         const { error: insertError } = await supabase
-          .from('services')
+          .from('service_types')
           .insert([serviceData]);
         error = insertError;
       }
@@ -173,7 +173,7 @@ const ServiceTypes = () => {
   const handleDelete = async (serviceId) => {
     try {
       const { error } = await supabase
-        .from('services')
+        .from('service_types')
         .delete()
         .eq('id', serviceId);
 

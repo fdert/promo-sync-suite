@@ -55,7 +55,7 @@ const ServiceTypes = () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('services')
+        .from('service_types')
         .select('*')
         .order('created_at', { ascending: false });
 
@@ -100,7 +100,7 @@ const ServiceTypes = () => {
 
     try {
       const { error } = await supabase
-        .from('services')
+        .from('service_types')
         .insert([{
           name: newService.name,
           description: newService.description,
@@ -162,7 +162,7 @@ const ServiceTypes = () => {
 
     try {
       const { error } = await supabase
-        .from('services')
+        .from('service_types')
         .update({
           name: newService.name,
           description: newService.description,
@@ -205,7 +205,7 @@ const ServiceTypes = () => {
   const handleDeleteService = async (serviceId) => {
     try {
       const { error } = await supabase
-        .from('services')
+        .from('service_types')
         .delete()
         .eq('id', serviceId);
 
@@ -233,7 +233,7 @@ const ServiceTypes = () => {
   const handleToggleActive = async (service) => {
     try {
       const { error } = await supabase
-        .from('services')
+        .from('service_types')
         .update({ is_active: !service.is_active })
         .eq('id', service.id);
 
