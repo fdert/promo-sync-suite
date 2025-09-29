@@ -1170,7 +1170,7 @@ ${publicFileUrl}
   // إنشاء طلب جديد
   const createNewOrder = async () => {
     try {
-      if (!newOrder.customer_id || !newOrder.service_name || !newOrder.due_date) {
+      if (!newOrder.customer_id || !newOrder.service_id || !newOrder.due_date) {
         toast({
           title: "خطأ",
           description: "يرجى ملء جميع الحقول المطلوبة",
@@ -1193,16 +1193,14 @@ ${publicFileUrl}
         .insert({
           order_number: orderNumber,
           customer_id: newOrder.customer_id,
-          service_name: newOrder.service_name,
-          description: newOrder.description,
-          status: 'جديد',
-          priority: newOrder.priority,
-          amount: newOrder.amount,
-          
-          payment_type: newOrder.payment_type,
-          payment_notes: newOrder.payment_notes,
-          due_date: newOrder.due_date,
-          created_by: user?.id
+          service_type_id: newOrder.service_id || null,
+          notes: newOrder.description || null,
+          status: 'pending',
+          total_amount: newOrder.amount || 0,
+          discount: 0,
+          paid_amount: 0,
+          delivery_date: newOrder.due_date || null,
+          created_by: user?.id || null
         })
         .select()
         .single();
