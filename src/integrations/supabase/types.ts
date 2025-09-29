@@ -14,251 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
-      activities: {
+      schools: {
         Row: {
-          access_code: string
-          access_link: string
-          created_at: string | null
-          end_time: string | null
-          id: string
-          settings: Json | null
-          start_time: string | null
-          status: string
-          strategy_id: string
-          teacher_id: string
-          title: string
-          updated_at: string | null
-        }
-        Insert: {
-          access_code: string
-          access_link: string
-          created_at?: string | null
-          end_time?: string | null
-          id?: string
-          settings?: Json | null
-          start_time?: string | null
-          status?: string
-          strategy_id: string
-          teacher_id: string
-          title: string
-          updated_at?: string | null
-        }
-        Update: {
-          access_code?: string
-          access_link?: string
-          created_at?: string | null
-          end_time?: string | null
-          id?: string
-          settings?: Json | null
-          start_time?: string | null
-          status?: string
-          strategy_id?: string
-          teacher_id?: string
-          title?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "activities_strategy_id_fkey"
-            columns: ["strategy_id"]
-            isOneToOne: false
-            referencedRelation: "teaching_strategies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "activities_teacher_id_fkey"
-            columns: ["teacher_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      activity_results: {
-        Row: {
-          activity_id: string
-          average_score: number | null
-          completion_rate: number | null
-          generated_at: string | null
-          id: string
-          results_data: Json | null
-          total_participants: number | null
-        }
-        Insert: {
-          activity_id: string
-          average_score?: number | null
-          completion_rate?: number | null
-          generated_at?: string | null
-          id?: string
-          results_data?: Json | null
-          total_participants?: number | null
-        }
-        Update: {
-          activity_id?: string
-          average_score?: number | null
-          completion_rate?: number | null
-          generated_at?: string | null
-          id?: string
-          results_data?: Json | null
-          total_participants?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "activity_results_activity_id_fkey"
-            columns: ["activity_id"]
-            isOneToOne: false
-            referencedRelation: "activities"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      profiles: {
-        Row: {
+          address: string | null
+          contact_person: string
           created_at: string | null
           email: string
-          full_name: string
-          grade_level: string | null
           id: string
-          role: string
-          school_name: string | null
-          subject: string | null
+          phone: string
+          school_name: string
+          school_type: string
           updated_at: string | null
+          webhook_enabled: boolean | null
+          webhook_url: string | null
         }
         Insert: {
+          address?: string | null
+          contact_person: string
           created_at?: string | null
           email: string
-          full_name: string
-          grade_level?: string | null
           id: string
-          role: string
-          school_name?: string | null
-          subject?: string | null
+          phone: string
+          school_name: string
+          school_type: string
           updated_at?: string | null
+          webhook_enabled?: boolean | null
+          webhook_url?: string | null
         }
         Update: {
+          address?: string | null
+          contact_person?: string
           created_at?: string | null
           email?: string
-          full_name?: string
-          grade_level?: string | null
           id?: string
-          role?: string
-          school_name?: string | null
-          subject?: string | null
+          phone?: string
+          school_name?: string
+          school_type?: string
           updated_at?: string | null
+          webhook_enabled?: boolean | null
+          webhook_url?: string | null
         }
         Relationships: []
-      }
-      student_participations: {
-        Row: {
-          activity_id: string
-          completed_at: string | null
-          created_at: string | null
-          id: string
-          responses: Json | null
-          score: number | null
-          student_id: string
-          updated_at: string | null
-        }
-        Insert: {
-          activity_id: string
-          completed_at?: string | null
-          created_at?: string | null
-          id?: string
-          responses?: Json | null
-          score?: number | null
-          student_id: string
-          updated_at?: string | null
-        }
-        Update: {
-          activity_id?: string
-          completed_at?: string | null
-          created_at?: string | null
-          id?: string
-          responses?: Json | null
-          score?: number | null
-          student_id?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "student_participations_activity_id_fkey"
-            columns: ["activity_id"]
-            isOneToOne: false
-            referencedRelation: "activities"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "student_participations_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      teaching_strategies: {
-        Row: {
-          content: Json
-          created_at: string | null
-          description: string | null
-          grade_level: string
-          id: string
-          is_active: boolean | null
-          strategy_type: string
-          subject: string
-          teacher_id: string
-          title: string
-          updated_at: string | null
-        }
-        Insert: {
-          content: Json
-          created_at?: string | null
-          description?: string | null
-          grade_level: string
-          id?: string
-          is_active?: boolean | null
-          strategy_type: string
-          subject: string
-          teacher_id: string
-          title: string
-          updated_at?: string | null
-        }
-        Update: {
-          content?: Json
-          created_at?: string | null
-          description?: string | null
-          grade_level?: string
-          id?: string
-          is_active?: boolean | null
-          strategy_type?: string
-          subject?: string
-          teacher_id?: string
-          title?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "teaching_strategies_teacher_id_fkey"
-            columns: ["teacher_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      generate_access_code: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      generate_access_link: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never
