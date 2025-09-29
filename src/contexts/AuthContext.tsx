@@ -79,19 +79,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     });
     
-    if (!error && data.user) {
-      // إضافة دور المستخدم مباشرة
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: data.user.id,
-          role: role as any
-        });
-      
-      if (roleError) {
-        console.error('Error adding role:', roleError);
-      }
-    }
+    // Rely on DB trigger to assign role from user_metadata.role
+    // No direct insert here to avoid RLS issues
+
     
     return { error };
   };
