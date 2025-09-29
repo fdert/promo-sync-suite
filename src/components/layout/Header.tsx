@@ -27,12 +27,12 @@ const Header = ({ onMenuClick, title }: HeaderProps) => {
       try {
         const { data } = await supabase
           .from('website_settings')
-          .select('setting_value')
-          .eq('setting_key', 'website_content')
+          .select('value')
+          .eq('key', 'website_content')
           .maybeSingle();
 
-        if (data?.setting_value && typeof data.setting_value === 'object') {
-          const websiteContent = data.setting_value as any;
+        if (data?.value && typeof data.value === 'object') {
+          const websiteContent = data.value as any;
           setCompanyInfo(websiteContent.companyInfo);
         }
       } catch (error) {

@@ -73,15 +73,15 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
         console.log('Loading electronic invoice settings...');
         const { data, error } = await supabase
           .from('website_settings')
-          .select('setting_value')
-          .eq('setting_key', 'electronic_invoice_settings')
+          .select('value')
+          .eq('key', 'electronic_invoice_settings')
           .single();
 
         console.log('Electronic settings data:', data);
         console.log('Electronic settings error:', error);
 
-        if (data && !error && data.setting_value) {
-          const settings = data.setting_value as any as ElectronicInvoiceSettings;
+        if (data && !error && (data as any).value) {
+          const settings = (data as any).value as ElectronicInvoiceSettings;
           console.log('Parsed electronic settings:', settings);
           setElectronicSettings(settings);
         }

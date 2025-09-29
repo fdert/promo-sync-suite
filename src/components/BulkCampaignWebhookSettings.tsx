@@ -11,28 +11,9 @@ import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, ExternalLink, Send, History } from "lucide-react";
 
-interface WebhookSetting {
-  id: string;
-  webhook_name: string;
-  webhook_type: string;
-  webhook_url: string;
-  is_active: boolean;
-  secret_key?: string;
-  created_at: string;
-  updated_at: string;
-}
+type WebhookSetting = any;
 
-interface WebhookLog {
-  id: string;
-  webhook_type: string;
-  campaign_id: string;
-  webhook_url: string;
-  trigger_type: string;
-  status: string;
-  response_data: any;
-  error_message?: string;
-  created_at: string;
-}
+type WebhookLog = any;
 
 const BulkCampaignWebhookSettings = () => {
   const [settings, setSettings] = useState<WebhookSetting | null>(null);

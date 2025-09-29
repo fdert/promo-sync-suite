@@ -34,8 +34,8 @@ export const getOrdersWithCalculatedAmounts = async () => {
   
   return orders?.map(order => ({
     ...order,
-    paid_amount: order.calculated_paid_amount || 0,
-    remaining_amount: order.remaining_amount || 0
+    paid_amount: (order as any).paid_amount || 0,
+    remaining_amount: (order as any).balance || 0
   })) || [];
 };
 

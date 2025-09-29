@@ -39,7 +39,7 @@ const EmployeeProtectedRoute: React.FC<EmployeeProtectedRouteProps> = ({ childre
         console.log('🎭 أدوار المستخدم:', roles);
         
         // الموظفون، المدراء، والمديرون يمكنهم الوصول لصفحة الموظف
-        const canAccess = roles.includes('employee') || roles.includes('admin') || roles.includes('manager');
+        const canAccess = roles.includes('employee') || roles.includes('admin') || (roles as any).includes('manager');
         console.log('✅ هل يمكن الوصول:', canAccess);
         
         setHasEmployeeAccess(canAccess);

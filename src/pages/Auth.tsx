@@ -46,12 +46,12 @@ const Auth = () => {
       try {
         const { data } = await supabase
           .from('website_settings')
-          .select('setting_value')
-          .eq('setting_key', 'website_content')
+          .select('value')
+          .eq('key', 'website_content')
           .maybeSingle();
 
-        if (data?.setting_value && typeof data.setting_value === 'object') {
-          const settingValue = data.setting_value as any;
+        if (data?.value && typeof data.value === 'object') {
+          const settingValue = data.value as any;
           const company = settingValue.companyInfo;
           
           if (company) {
@@ -88,7 +88,7 @@ const Auth = () => {
 
       const roles = userRoles?.map(r => r.role) || [];
       
-      if (roles.includes('admin') || roles.includes('manager')) {
+      if (roles.includes('admin') || (roles as any).includes('manager')) {
         navigate('/admin');
       } else if (roles.includes('employee')) {
         navigate('/employee');

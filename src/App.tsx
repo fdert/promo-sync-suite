@@ -103,7 +103,7 @@ const App = () => (
             </Route>
             <Route path="/admin" element={
               <ProtectedRoute>
-                <RoleProtectedRoute allowedRoles={['admin', 'manager']}>
+                <RoleProtectedRoute allowedRoles={['admin', 'manager'] as any}>
                   <AdminLayout />
                 </RoleProtectedRoute>
               </ProtectedRoute>
@@ -124,7 +124,7 @@ const App = () => (
               <Route path="reports" element={<Reports />} />
               <Route path="services" element={<ServiceTypes />} />
             <Route path="message-templates" element={
-                <RoleProtectedRoute allowedRoles={['admin', 'manager']}>
+                <RoleProtectedRoute allowedRoles={['admin', 'manager'] as any}>
                   <MessageTemplates />
                 </RoleProtectedRoute>
               } />
@@ -144,38 +144,38 @@ const App = () => (
                 </RoleProtectedRoute>
                } />
                <Route path="barcode-settings" element={
-                 <RoleProtectedRoute allowedRoles={['admin', 'manager']}>
+                 <RoleProtectedRoute allowedRoles={['admin', 'manager'] as any}>
                    <BarcodeSettings />
                  </RoleProtectedRoute>
                } />
                <Route path="follow-up-settings" element={
-                 <RoleProtectedRoute allowedRoles={['admin', 'manager']}>
+                 <RoleProtectedRoute allowedRoles={['admin', 'manager'] as any}>
                    <FollowUpSettings />
                  </RoleProtectedRoute>
                } />
                <Route path="evaluations" element={<Evaluations />} />
                <Route path="reviews-management" element={
-                 <RoleProtectedRoute allowedRoles={['admin', 'manager']}>
+                  <RoleProtectedRoute allowedRoles={['admin', 'manager'] as any}>
                    <ReviewsManagement />
                  </RoleProtectedRoute>
                } />
                <Route path="google-maps-integration" element={
-                  <RoleProtectedRoute allowedRoles={['admin', 'manager']}>
+                   <RoleProtectedRoute allowedRoles={['admin', 'manager'] as any}>
                     <GoogleMapsIntegration />
                   </RoleProtectedRoute>
                 } />
                 <Route path="bulk-whatsapp" element={
-                  <RoleProtectedRoute allowedRoles={['admin', 'manager']}>
+                   <RoleProtectedRoute allowedRoles={['admin', 'manager'] as any}>
                     <BulkWhatsApp />
                   </RoleProtectedRoute>
                 } />
                  <Route path="customer-groups" element={
-                   <RoleProtectedRoute allowedRoles={['admin', 'manager']}>
+                    <RoleProtectedRoute allowedRoles={['admin', 'manager'] as any}>
                      <CustomerGroups />
                    </RoleProtectedRoute>
                  } />
                  <Route path="electronic-invoice-settings" element={
-                   <RoleProtectedRoute allowedRoles={['admin', 'manager']}>
+                   <RoleProtectedRoute allowedRoles={['admin', 'manager'] as any}>
                      <ElectronicInvoiceSettings />
                    </RoleProtectedRoute>
                  } />

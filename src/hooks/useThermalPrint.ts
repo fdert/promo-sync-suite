@@ -30,12 +30,12 @@ export const useThermalPrint = () => {
       // جلب من website_settings أولاً
       const { data: websiteData } = await supabase
         .from('website_settings')
-        .select('setting_value')
-        .eq('setting_key', 'website_content')
+        .select('value')
+        .eq('key', 'website_content')
         .single();
 
-      if (websiteData?.setting_value) {
-        const websiteContent = websiteData.setting_value as any;
+      if (websiteData?.value) {
+        const websiteContent = websiteData.value as any;
         if (websiteContent.companyInfo) {
           companyInfo.name = websiteContent.companyInfo.name || companyInfo.name;
           companyInfo.logo = websiteContent.companyInfo.logo || companyInfo.logo;
@@ -53,12 +53,11 @@ export const useThermalPrint = () => {
         .eq('is_active', true)
         .single();
 
-      if (labelSettings) {
-        companyInfo.name = labelSettings.company_name || companyInfo.name;
-        companyInfo.logo = labelSettings.company_logo_url || companyInfo.logo;
-        companyInfo.phone = labelSettings.company_phone || companyInfo.phone;
-        companyInfo.address = labelSettings.company_address || companyInfo.address;
-      }
+      const ls: any = labelSettings || {};
+      companyInfo.name = ls.company_name || companyInfo.name;
+      companyInfo.logo = ls.company_logo_url || companyInfo.logo;
+      companyInfo.phone = ls.company_phone || companyInfo.phone;
+      companyInfo.address = ls.company_address || companyInfo.address;
     } catch (error) {
       console.log('Using default company info');
     }
