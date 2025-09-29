@@ -244,70 +244,70 @@ Deno.serve(async (req) => {
 
       if (templateData?.template_content) {
         console.log('Using template from database:', templateData.template_content);
-      
-      // استخدام القالب من قاعدة البيانات
-      message = templateData.template_content;
-      
-      // إذا كانت هناك تفاصيل طلب، استخدمها
-      let description = 'غير محدد';
-      if (orderDetails) {
         
-        // حساب المبلغ المتبقي
-        const totalAmount = parseFloat(orderDetails.amount?.toString() || '0');
-        const paidAmount = parseFloat(orderDetails.paid_amount?.toString() || '0');
-        remainingAmount = (totalAmount - paidAmount).toString();
+        // استخدام القالب من قاعدة البيانات
+        message = templateData.template_content;
         
-        // تنسيق التواريخ
-        if (orderDetails.start_date) {
-          startDate = new Date(orderDetails.start_date).toLocaleDateString('ar-SA');
+        // إذا كانت هناك تفاصيل طلب، استخدمها
+        let description = 'غير محدد';
+        if (orderDetails) {
+          
+          // حساب المبلغ المتبقي
+          const totalAmount = parseFloat(orderDetails.amount?.toString() || '0');
+          const paidAmount = parseFloat(orderDetails.paid_amount?.toString() || '0');
+          remainingAmount = (totalAmount - paidAmount).toString();
+          
+          // تنسيق التواريخ
+          if (orderDetails.start_date) {
+            startDate = new Date(orderDetails.start_date).toLocaleDateString('ar-SA');
+          }
+          if (orderDetails.due_date) {
+            dueDate = new Date(orderDetails.due_date).toLocaleDateString('ar-SA');
+          }
+          
+          description = orderDetails.description || 'غير محدد';
+          
+          // استخدام بيانات من orderDetails
+          customerPhone = orderDetails.customers?.whatsapp || orderDetails.customers?.phone || data.customer_phone;
+          customerName = orderDetails.customers?.name || data.customer_name;
+        } else {
+          // استخدام البيانات المرسلة مباشرة
+          customerPhone = data.customer_phone;
+          customerName = data.customer_name;
+          
+          // حساب المبلغ المتبقي من البيانات المرسلة
+          const totalAmount = parseFloat(data.amount?.toString() || '0');
+          const paidAmount = parseFloat(data.paid_amount?.toString() || '0');
+          remainingAmount = (totalAmount - paidAmount).toString();
         }
-        if (orderDetails.due_date) {
-          dueDate = new Date(orderDetails.due_date).toLocaleDateString('ar-SA');
-        }
         
-        description = orderDetails.description || 'غير محدد';
-        
-        // استخدام بيانات من orderDetails
-        customerPhone = orderDetails.customers?.whatsapp_number || data.customer_phone;
-        customerName = orderDetails.customers?.name || data.customer_name;
-      } else {
-        // استخدام البيانات المرسلة مباشرة
-        customerPhone = data.customer_phone;
-        customerName = data.customer_name;
-        
-        // حساب المبلغ المتبقي من البيانات المرسلة
-        const totalAmount = parseFloat(data.amount?.toString() || '0');
-        const paidAmount = parseFloat(data.paid_amount?.toString() || '0');
-        remainingAmount = (totalAmount - paidAmount).toString();
-      }
-      
-      // استبدال المتغيرات
-      const replacements: Record<string, string> = {
-        'customer_name': customerName || '',
-        'order_number': data.order_number || '',
-        'amount': data.amount?.toString() || '',
-        'paid_amount': data.paid_amount?.toString() || '0',
-        'remaining_amount': remainingAmount,
-        'payment_type': data.payment_type || 'غير محدد',
-        'progress': data.progress?.toString() || '0',
-        'service_name': data.service_name || '',
-        'description': description,
-        'order_items': orderItemsText,
-        'start_date': startDate,
-        'due_date': dueDate,
-        'status': data.new_status || data.status || orderDetails?.status || currentStatus || 'جديد',
-        'priority': data.priority || 'متوسطة',
-         'estimated_time': data.estimated_days || 'قريباً',
-         'company_name': companyName,
-         'evaluation_link': `https://e5a7747a-0935-46df-9ea9-1308e76636dc.lovableproject.com/evaluation/token-${order_id}`
-      };
+        // استبدال المتغيرات
+        const replacements: Record<string, string> = {
+          'customer_name': customerName || '',
+          'order_number': data.order_number || '',
+          'amount': data.amount?.toString() || '',
+          'paid_amount': data.paid_amount?.toString() || '0',
+          'remaining_amount': remainingAmount,
+          'payment_type': data.payment_type || 'غير محدد',
+          'progress': data.progress?.toString() || '0',
+          'service_name': data.service_name || '',
+          'description': description,
+          'order_items': orderItemsText,
+          'start_date': startDate,
+          'due_date': dueDate,
+          'status': data.new_status || data.status || orderDetails?.status || currentStatus || 'جديد',
+          'priority': data.priority || 'متوسطة',
+           'estimated_time': data.estimated_days || 'قريباً',
+           'company_name': companyName,
+           'evaluation_link': `https://e5a7747a-0935-46df-9ea9-1308e76636dc.lovableproject.com/evaluation/token-${order_id}`
+        };
 
-      // استبدال جميع المتغيرات في الرسالة
-      Object.keys(replacements).forEach(key => {
-        const regex = new RegExp(`{{${key}}}`, 'g');
-        message = message.replace(regex, replacements[key]);
-      });
-    } else {
+        // استبدال جميع المتغيرات في الرسالة
+        Object.keys(replacements).forEach(key => {
+          const regex = new RegExp(`{{${key}}}`, 'g');
+          message = message.replace(regex, replacements[key]);
+        });
+      } else {
       console.log('No template found, using fallback messages');
       
       // الرسائل الافتراضية إذا لم توجد قوالب
@@ -409,23 +409,19 @@ ${data.file_url}
         default:
           // للحصول على بيانات الطلب إذا كان متوفراً
           if (orderDetails) {
-            customerPhone = orderDetails.customers?.whatsapp_number || '';
+            customerPhone = orderDetails.customers?.whatsapp || orderDetails.customers?.phone || '';
             customerName = orderDetails.customers?.name || 'عزيزنا العميل';
+          } else {
+            customerPhone = data.customer_phone;
+            customerName = data.customer_name;
           }
+          message = `${customerName}، تم تحديث طلبك رقم ${data.order_number}.`;
           break;
+      }
       }
     } else {
-      // معالجة الحالات الخاصة عندما لا يوجد قالب
-      switch (type) {
-        case 'account_summary':
-          message = requestBody.message || 'ملخص الحساب';
-          customerPhone = requestBody.customer_phone;
-          customerName = requestBody.customer_name;
-          break;
-          
-        default:
-          throw new Error(`Unknown notification type: ${type}`);
-      }
+      // إذا لم يكن هناك قالب، استخدم الرسائل الافتراضية فقط
+      console.log('No template name, using direct message format');
     }
     
     // التحقق من أن البيانات مكتملة

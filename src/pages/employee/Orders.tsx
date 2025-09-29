@@ -698,7 +698,7 @@ ${publicFileUrl}
         .from('orders')
         .select(`
           *,
-          customers(name, whatsapp_number)
+          customers(name, whatsapp, phone)
         `)
         .eq('id', orderId)
         .single();
@@ -722,7 +722,8 @@ ${publicFileUrl}
       console.log('Customer WhatsApp:', orderData?.customers?.whatsapp_number);
       
       // إرسال إشعار واتساب عند تغيير الحالة
-      if (orderData?.customers?.whatsapp_number) {
+      const customerWhatsapp = orderData?.customers?.whatsapp || orderData?.customers?.phone;
+      if (customerWhatsapp) {
         console.log('Customer data:', orderData.customers);
         
         // تحديد نوع الإشعار بناءً على الحالة الجديدة
@@ -764,8 +765,8 @@ ${publicFileUrl}
             data: {
               order_number: orderData.order_number,
               customer_name: orderData.customers.name,
-              customer_phone: orderData.customers.whatsapp_number,
-              amount: orderData.amount,
+              customer_phone: customerWhatsapp,
+              amount: orderData.total_amount,
               progress: (orderData as any).progress || 0,
               service_name: orderData.service_name,
               description: orderData.description || '',
@@ -783,7 +784,7 @@ ${publicFileUrl}
           console.log('New Status:', status);
           console.log('Notification Type:', notificationType);
           console.log('Order Data:', orderData);
-          console.log('Customer Phone:', orderData.customers?.whatsapp_number);
+          console.log('Customer Phone:', customerWhatsapp);
           console.log('Source: employee_dashboard');
           console.log('Webhook preference: لوحة الموظف ');
           
