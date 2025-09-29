@@ -211,7 +211,7 @@ const Orders = () => {
               item_name,
               quantity,
               unit_price,
-              total_amount,
+              total,
               description
             )
           `)
@@ -230,7 +230,7 @@ const Orders = () => {
           ...(orderWithDetails || order),
           paid_amount: totalPaid,
           calculated_paid_amount: totalPaid,
-          remaining_amount: order.amount - totalPaid
+          remaining_amount: (order.total_amount || 0) - totalPaid
         };
       }));
       
@@ -298,7 +298,7 @@ const Orders = () => {
   const handlePrintBarcodeLabel = async (order: Order) => {
     const customerName = order.customers?.name || 'غير محدد';
     const phoneNumber = order.customers?.whatsapp || order.customers?.phone || 'غير محدد';
-    const totalAmount = order.amount || 0;
+    const totalAmount = order.total_amount || 0;
     const paidAmount = order.paid_amount || 0;
     const paymentStatus = `payment|${totalAmount}|${paidAmount}`;
     
@@ -1587,9 +1587,9 @@ ${publicFileUrl}
                     <p><strong>تاريخ الاستحقاق:</strong> {order.due_date ? new Date(order.due_date).toLocaleDateString('ar-SA') : '-'}</p>
                   </div>
                   <div className="space-y-2">
-                    <p><strong>المبلغ الإجمالي:</strong> {order.amount.toLocaleString()} ر.س</p>
+                    <p><strong>المبلغ الإجمالي:</strong> {(order.total_amount || 0).toLocaleString()} ر.س</p>
                     <p><strong>المبلغ المدفوع:</strong> {(order.paid_amount || 0).toLocaleString()} ر.س</p>
-                    <p><strong>المبلغ المتبقي:</strong> {(order.amount - (order.paid_amount || 0)).toLocaleString()} ر.س</p>
+                    <p><strong>المبلغ المتبقي:</strong> {((order.total_amount || 0) - (order.paid_amount || 0)).toLocaleString()} ر.س</p>
                   </div>
                 </div>
                 
@@ -1611,8 +1611,8 @@ ${publicFileUrl}
                           </div>
                           <div className="text-left space-y-1 min-w-0 ml-2">
                             <p className="text-gray-600">الكمية: {item.quantity}</p>
-                            <p className="text-gray-600">السعر: {item.unit_price.toLocaleString()} ر.س</p>
-                            <p className="font-medium text-blue-600">الإجمالي: {item.total_amount.toLocaleString()} ر.س</p>
+                            <p className="text-gray-600">السعر: {(item.unit_price || 0).toLocaleString()} ر.س</p>
+                            <p className="font-medium text-blue-600">الإجمالي: {(item.total || 0).toLocaleString()} ر.س</p>
                           </div>
                         </div>
                       ))}
@@ -1620,7 +1620,7 @@ ${publicFileUrl}
                         <div className="flex justify-between items-center text-sm font-medium">
                           <span>إجمالي البنود:</span>
                           <span className="text-blue-600">
-                            {order.order_items.reduce((sum, item) => sum + item.total_amount, 0).toLocaleString()} ر.س
+                            {order.order_items.reduce((sum, item) => sum + (item.total || 0), 0).toLocaleString()} ر.س
                           </span>
                         </div>
                       </div>
@@ -2100,7 +2100,7 @@ ${publicFileUrl}
                     <div className="grid grid-cols-3 gap-4 text-center">
                       <div>
                         <p className="text-xs text-muted-foreground">المبلغ الكلي</p>
-                        <p className="text-lg font-bold text-blue-600">{selectedOrderForPayment.amount?.toLocaleString()} ر.س</p>
+                        <p className="text-lg font-bold text-blue-600">{(selectedOrderForPayment.total_amount || 0).toLocaleString()} ر.س</p>
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground">المبلغ المدفوع</p>
@@ -2108,7 +2108,7 @@ ${publicFileUrl}
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground">المبلغ المتبقي</p>
-                        <p className="text-lg font-bold text-red-600">{(selectedOrderForPayment.amount - (selectedOrderForPayment.paid_amount || 0)).toLocaleString()} ر.س</p>
+                        <p className="text-lg font-bold text-red-600">{((selectedOrderForPayment.total_amount || 0) - (selectedOrderForPayment.paid_amount || 0)).toLocaleString()} ر.س</p>
                       </div>
                     </div>
                   </div>
@@ -2243,9 +2243,9 @@ ${publicFileUrl}
                       <p><strong>الخدمة:</strong> {selectedOrderForInvoice.service_name}</p>
                     </div>
                     <div>
-                      <p><strong>المبلغ الإجمالي:</strong> {selectedOrderForInvoice.amount?.toLocaleString()} ر.س</p>
+                      <p><strong>المبلغ الإجمالي:</strong> {(selectedOrderForInvoice.total_amount || 0).toLocaleString()} ر.س</p>
                       <p><strong>المبلغ المدفوع:</strong> {(selectedOrderForInvoice.paid_amount || 0).toLocaleString()} ر.س</p>
-                      <p><strong>المبلغ المتبقي:</strong> {(selectedOrderForInvoice.amount - (selectedOrderForInvoice.paid_amount || 0)).toLocaleString()} ر.س</p>
+                      <p><strong>المبلغ المتبقي:</strong> {((selectedOrderForInvoice.total_amount || 0) - (selectedOrderForInvoice.paid_amount || 0)).toLocaleString()} ر.س</p>
                     </div>
                   </div>
                   
@@ -2727,7 +2727,7 @@ ${publicFileUrl}
                       <Label>الإجمالي</Label>
                       <Input
                         type="text"
-                        value={item.total_amount.toLocaleString()}
+                        value={(item.total || 0).toLocaleString()}
                         disabled
                         className="bg-muted"
                       />
