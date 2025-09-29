@@ -263,8 +263,7 @@ const Customers = () => {
           
           return {
             name: name,
-            phone: phone,
-            import_source: 'CSV Import'
+            phone: phone
           };
         })
         .filter(customer => customer !== null);
@@ -393,8 +392,7 @@ const Customers = () => {
 
           return {
             name: name,
-            phone: phone,
-            import_source: 'Manual Import'
+            phone: phone
           };
         })
         .filter(customer => customer !== null);
