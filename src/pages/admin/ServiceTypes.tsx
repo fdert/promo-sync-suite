@@ -89,10 +89,10 @@ const ServiceTypes = () => {
   );
 
   const handleAddService = async () => {
-    if (!newService.name || !newService.category) {
+    if (!newService.name) {
       toast({
         title: "خطأ",
-        description: "يرجى ملء الحقول المطلوبة",
+        description: "يرجى إدخال اسم الخدمة",
         variant: "destructive",
       });
       return;
@@ -104,7 +104,6 @@ const ServiceTypes = () => {
         .insert([{
           name: newService.name,
           description: newService.description,
-          category: newService.category,
           base_price: newService.base_price ? parseFloat(newService.base_price) : null,
           is_active: newService.is_active
         }]);
@@ -151,10 +150,10 @@ const ServiceTypes = () => {
   };
 
   const handleUpdateService = async () => {
-    if (!newService.name || !newService.category) {
+    if (!newService.name) {
       toast({
         title: "خطأ",
-        description: "يرجى ملء الحقول المطلوبة",
+        description: "يرجى إدخال اسم الخدمة",
         variant: "destructive",
       });
       return;
@@ -166,7 +165,6 @@ const ServiceTypes = () => {
         .update({
           name: newService.name,
           description: newService.description,
-          category: newService.category,
           base_price: newService.base_price ? parseFloat(newService.base_price) : null,
           is_active: newService.is_active
         })

@@ -125,7 +125,6 @@ const ServiceTypes = () => {
     try {
       const serviceData = {
         name: formData.name,
-        category: formData.category || null,
         description: formData.description || null,
         base_price: formData.base_price ? parseFloat(formData.base_price) : null,
         is_active: formData.is_active,
