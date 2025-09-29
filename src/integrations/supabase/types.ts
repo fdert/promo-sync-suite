@@ -1184,7 +1184,13 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      add_user_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "employee" | "user"
