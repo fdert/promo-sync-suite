@@ -258,7 +258,7 @@ const Orders = () => {
       const { data, error } = await supabase
         .from('customers')
         .select('id, name, phone, whatsapp')
-        .eq('status', 'نشط')
+        .eq('is_active', true)
         .order('name');
 
       if (error) throw error;
