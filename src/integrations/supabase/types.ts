@@ -1191,6 +1191,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      generate_order_number: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
     }
     Enums: {
       app_role: "admin" | "employee" | "user"
