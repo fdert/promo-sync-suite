@@ -72,7 +72,7 @@ interface Order {
   customer_id?: string;
   customers?: {
     name: string;
-    whatsapp_number: string;
+    whatsapp: string;
     phone: string;
   };
   order_items?: {
@@ -89,7 +89,7 @@ interface Customer {
   id: string;
   name: string;
   phone?: string;
-  whatsapp_number?: string;
+  whatsapp?: string;
 }
 
 interface Service {
@@ -205,7 +205,7 @@ const Orders = () => {
           .from('orders')
           .select(`
             *,
-            customers(id, name, phone, whatsapp_number),
+            customers(id, name, phone, whatsapp),
             order_items(
               id,
               item_name,
@@ -257,7 +257,7 @@ const Orders = () => {
     try {
       const { data, error } = await supabase
         .from('customers')
-        .select('id, name, phone, whatsapp_number')
+        .select('id, name, phone, whatsapp')
         .eq('status', 'نشط')
         .order('name');
 
@@ -297,7 +297,7 @@ const Orders = () => {
   // طباعة ملصق باركود للطلب
   const handlePrintBarcodeLabel = async (order: Order) => {
     const customerName = order.customers?.name || 'غير محدد';
-    const phoneNumber = order.customers?.whatsapp_number || order.customers?.phone || 'غير محدد';
+    const phoneNumber = order.customers?.whatsapp || order.customers?.phone || 'غير محدد';
     const totalAmount = order.amount || 0;
     const paidAmount = order.paid_amount || 0;
     const paymentStatus = `payment|${totalAmount}|${paidAmount}`;

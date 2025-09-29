@@ -20,7 +20,7 @@ interface Customer {
   id: string;
   name: string;
   phone?: string;
-  whatsapp_number?: string;
+  whatsapp?: string;
 }
 
 interface CustomerSearchSelectProps {
@@ -50,7 +50,7 @@ export function CustomerSearchSelect({
     const phoneMatch = customer.phone?.includes(searchValue) || false;
     
     // البحث في رقم الواتساب
-    const whatsappMatch = customer.whatsapp_number?.includes(searchValue) || false;
+    const whatsappMatch = customer.whatsapp?.includes(searchValue) || false;
     
     return nameMatch || phoneMatch || whatsappMatch;
   });
@@ -72,7 +72,7 @@ export function CustomerSearchSelect({
               <div className="flex flex-col items-start min-w-0 flex-1">
                 <span className="font-medium truncate">{selectedCustomer.name}</span>
                 <span className="text-xs text-muted-foreground truncate">
-                  {selectedCustomer.phone || selectedCustomer.whatsapp_number || 'لا يوجد رقم'}
+                  {selectedCustomer.phone || selectedCustomer.whatsapp || 'لا يوجد رقم'}
                 </span>
               </div>
             </div>
@@ -98,12 +98,12 @@ export function CustomerSearchSelect({
             </CommandEmpty>
             <CommandGroup>
               {filteredCustomers.map((customer) => {
-                const primaryPhone = customer.phone || customer.whatsapp_number;
+                const primaryPhone = customer.phone || customer.whatsapp;
                 
                 return (
                   <CommandItem
                     key={customer.id}
-                    value={`${customer.name} ${customer.phone || ''} ${customer.whatsapp_number || ''}`}
+                    value={`${customer.name} ${customer.phone || ''} ${customer.whatsapp || ''}`}
                     onSelect={() => {
                       onValueChange(customer.id === value ? "" : customer.id);
                       setOpen(false);
@@ -130,11 +130,11 @@ export function CustomerSearchSelect({
                               <span className="truncate">{primaryPhone}</span>
                             </div>
                           )}
-                          {customer.phone && customer.whatsapp_number && customer.phone !== customer.whatsapp_number && (
-                            <div className="flex items-center gap-1">
-                              <span className="text-xs">واتساب:</span>
-                              <span className="truncate">{customer.whatsapp_number}</span>
-                            </div>
+                          {customer.phone && customer.whatsapp && customer.phone !== customer.whatsapp && (
+                            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <Phone className="h-3 w-3" />
+                              <span className="truncate">{customer.whatsapp}</span>
+                            </span>
                           )}
                         </div>
                       </div>
