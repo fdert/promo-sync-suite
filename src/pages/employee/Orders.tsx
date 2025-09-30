@@ -1231,7 +1231,7 @@ ${publicFileUrl}
             item_name: item.item_name,
             quantity: item.quantity,
             unit_price: item.unit_price,
-            total_amount: item.total_amount
+            total: item.total_amount
           }));
 
         if (orderItemsToInsert.length > 0) {
