@@ -333,10 +333,14 @@ const AccountsReceivableReview = () => {
                     <Badge variant="secondary">{customer.unpaid_invoices_count} طلب</Badge>
                   </TableCell>
                   <TableCell>
-                    {format(new Date(customer.earliest_due_date), 'dd/MM/yyyy', { locale: ar })}
+                    {customer.earliest_due_date 
+                      ? format(new Date(customer.earliest_due_date), 'dd/MM/yyyy', { locale: ar })
+                      : '-'}
                   </TableCell>
                   <TableCell>
-                    {format(new Date(customer.latest_due_date), 'dd/MM/yyyy', { locale: ar })}
+                    {customer.latest_due_date 
+                      ? format(new Date(customer.latest_due_date), 'dd/MM/yyyy', { locale: ar })
+                      : '-'}
                   </TableCell>
                   <TableCell>
                     <Dialog>
@@ -392,7 +396,9 @@ const AccountsReceivableReview = () => {
                                           <Badge variant="outline">{order.status}</Badge>
                                         </TableCell>
                                         <TableCell>
-                                          {format(new Date(order.created_at), 'dd/MM/yyyy', { locale: ar })}
+                                          {order.created_at 
+                                            ? format(new Date(order.created_at), 'dd/MM/yyyy', { locale: ar })
+                                            : '-'}
                                         </TableCell>
                                       </TableRow>
                                     ))}
@@ -428,7 +434,9 @@ const AccountsReceivableReview = () => {
                                           <Badge variant="secondary">{payment.payment_type}</Badge>
                                         </TableCell>
                                         <TableCell>
-                                          {format(new Date(payment.payment_date), 'dd/MM/yyyy', { locale: ar })}
+                                          {payment.payment_date 
+                                            ? format(new Date(payment.payment_date), 'dd/MM/yyyy', { locale: ar })
+                                            : '-'}
                                         </TableCell>
                                       </TableRow>
                                     ))}
