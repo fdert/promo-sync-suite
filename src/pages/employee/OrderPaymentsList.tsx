@@ -15,13 +15,14 @@ import { ar } from 'date-fns/locale';
 interface Order {
   id: string;
   order_number: string;
-  service_name: string;
-  amount: number;
+  total_amount: number;
   status: string;
   created_at: string;
   customer: {
     name: string;
-    company?: string;
+  };
+  service_types?: {
+    name: string;
   };
   totalPaid: number;
   remainingAmount: number;
@@ -51,13 +52,14 @@ const EmployeeOrderPaymentsList = () => {
         .select(`
           id,
           order_number,
-          service_name,
-          amount,
+          total_amount,
           status,
           created_at,
           customers (
-            name,
-            company
+            name
+          ),
+          service_types (
+            name
           )
         `)
         .order('created_at', { ascending: false });
@@ -72,12 +74,13 @@ const EmployeeOrderPaymentsList = () => {
             .select('amount')
             .eq('order_id', order.id);
 
-          const totalPaid = (payments || []).reduce((sum, payment) => sum + payment.amount, 0);
-          const remainingAmount = order.amount - totalPaid;
+          const totalPaid = (payments || []).reduce((sum, payment) => sum + Number((payment as any)?.amount || 0), 0);
+          const remainingAmount = Number(order.total_amount || 0) - totalPaid;
 
           return {
             ...order,
             customer: order.customers as any,
+            service_types: order.service_types as any,
             totalPaid,
             remainingAmount
           };
@@ -100,7 +103,7 @@ const EmployeeOrderPaymentsList = () => {
       filtered = filtered.filter(order =>
         order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
         order.customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.service_name.toLowerCase().includes(searchTerm.toLowerCase())
+        (order.service_types?.name || '').toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -306,23 +309,20 @@ const EmployeeOrderPaymentsList = () => {
                 </TableRow>
               ) : (
                 filteredOrders.map((order) => {
-                  const paymentStatus = getPaymentStatus(order.totalPaid, order.amount);
-                  const progress = getPaymentProgress(order.totalPaid, order.amount);
+                  const paymentStatus = getPaymentStatus(order.totalPaid, Number(order.total_amount || 0));
+                  const progress = getPaymentProgress(order.totalPaid, Number(order.total_amount || 0));
                   
                   return (
                     <TableRow key={order.id}>
                       <TableCell className="font-medium">#{order.order_number}</TableCell>
                       <TableCell>
-                        <div>
-                          <p className="font-medium">{order.customer.name}</p>
-                          {order.customer.company && (
-                            <p className="text-sm text-muted-foreground">{order.customer.company}</p>
-                          )}
-                        </div>
+                      <div>
+                        <p className="font-medium">{order.customer.name}</p>
+                      </div>
                       </TableCell>
-                      <TableCell>{order.service_name}</TableCell>
+                      <TableCell>{order.service_types?.name || 'غير محدد'}</TableCell>
                       <TableCell className="font-medium">
-                        {order.amount.toLocaleString()} ر.س
+                        {Number(order.total_amount || 0).toLocaleString()} ر.س
                       </TableCell>
                       <TableCell className="text-green-600 font-medium">
                         {order.totalPaid.toLocaleString()} ر.س
