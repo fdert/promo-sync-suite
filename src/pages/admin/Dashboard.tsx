@@ -25,22 +25,29 @@ const Dashboard = () => {
   const { data: customersStats } = useQuery({
     queryKey: ['customers-stats'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: customers, error: customersError } = await supabase
         .from('customers')
-        .select('id, created_at, total_spent')
-        .eq('status', 'نشط');
+        .select('id, created_at')
+        .eq('is_active', true);
       
-      if (error) throw error;
+      if (customersError) throw customersError;
       
-      const totalCustomers = data.length;
+      // حساب إجمالي قيمة الطلبات لكل عميل
+      const { data: orders, error: ordersError } = await supabase
+        .from('orders')
+        .select('customer_id, total_amount');
+      
+      if (ordersError) throw ordersError;
+      
+      const totalCustomers = customers.length;
       const thisMonth = new Date();
       thisMonth.setDate(1);
       
-      const newThisMonth = data.filter(customer => 
+      const newThisMonth = customers.filter(customer => 
         new Date(customer.created_at) >= thisMonth
       ).length;
       
-      const totalSpent = data.reduce((sum, customer) => sum + (customer.total_spent || 0), 0);
+      const totalSpent = orders.reduce((sum, order) => sum + (order.total_amount || 0), 0);
       
       return { totalCustomers, newThisMonth, totalSpent };
     }
@@ -52,12 +59,12 @@ const Dashboard = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('orders')
-        .select('id, created_at, status, amount');
+        .select('id, created_at, status, total_amount');
       
       if (error) throw error;
       
       const activeOrders = data.filter(order => 
-        ['جديد', 'مؤكد', 'قيد التنفيذ', 'قيد المراجعة'].includes(order.status)
+        ['pending', 'in_progress'].includes(order.status)
       ).length;
       
       const thisMonth = new Date();
@@ -68,7 +75,7 @@ const Dashboard = () => {
       );
       
       // حساب الإيرادات من جميع الطلبات المُنشأة هذا الشهر (لتطابق النظام المحاسبي)
-      const monthlyRevenue = thisMonthOrders.reduce((sum, order) => sum + (order.amount || 0), 0);
+      const monthlyRevenue = thisMonthOrders.reduce((sum, order) => sum + (order.total_amount || 0), 0);
       
       return { activeOrders, monthlyRevenue, totalOrders: data.length };
     }
@@ -83,11 +90,11 @@ const Dashboard = () => {
         .select(`
           id,
           order_number,
-          service_name,
           status,
-          amount,
+          total_amount,
           created_at,
-          customers (name)
+          customers (name),
+          service_types (name)
         `)
         .order('created_at', { ascending: false })
         .limit(5);
@@ -301,13 +308,13 @@ const Dashboard = () => {
                           {order.customers?.name || 'عميل غير محدد'}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {order.service_name}
+                          {order.service_types?.name || 'خدمة غير محددة'}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {new Date(order.created_at).toLocaleDateString('ar-SA')}
                         </p>
                         <p className="text-xs font-medium text-accent">
-                          {formatCurrency(order.amount)}
+                          {formatCurrency(order.total_amount)}
                         </p>
                       </div>
                       <div className="flex flex-col items-end gap-1">

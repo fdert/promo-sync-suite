@@ -59,8 +59,9 @@ const ReviewsManagement = () => {
         .from("evaluations")
         .select(`
           *,
-          customers!customer_id (name, phone, whatsapp_number),
-          orders!order_id (order_number, service_name)
+          customers!customer_id (name, phone, whatsapp),
+          orders!order_id (order_number),
+          service_types (name)
         `)
         .order("created_at", { ascending: false });
 
@@ -263,7 +264,7 @@ const ReviewsManagement = () => {
                     {evaluation.customers?.name || "عميل غير محدد"}
                   </CardTitle>
                   <CardDescription>
-                    {evaluation.orders?.service_name} - طلب رقم {evaluation.orders?.order_number}
+                    {evaluation.service_types?.name || 'خدمة غير محددة'} - طلب رقم {evaluation.orders?.order_number}
                   </CardDescription>
                 </div>
                 {getStatusBadge(evaluation.google_review_status)}

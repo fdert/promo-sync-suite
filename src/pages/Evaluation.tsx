@@ -44,12 +44,17 @@ const Evaluation = () => {
           *,
           orders (
             order_number,
-            service_name,
-            description,
-            amount,
-            due_date
+            notes,
+            total_amount,
+            delivery_date,
+            service_type_id,
+            service_types (name)
           ),
-          customers (name, phone)
+          customers (
+            name,
+            phone,
+            whatsapp
+          )
         `)
         .eq('evaluation_token', token)
         .single();
