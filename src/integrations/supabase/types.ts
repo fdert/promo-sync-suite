@@ -989,27 +989,39 @@ export type Database = {
       webhook_settings: {
         Row: {
           created_at: string | null
+          created_by: string | null
           id: string
           is_active: boolean | null
+          order_statuses: string[] | null
+          secret_key: string | null
           updated_at: string | null
+          webhook_name: string | null
           webhook_token: string | null
           webhook_type: string
           webhook_url: string
         }
         Insert: {
           created_at?: string | null
+          created_by?: string | null
           id?: string
           is_active?: boolean | null
+          order_statuses?: string[] | null
+          secret_key?: string | null
           updated_at?: string | null
+          webhook_name?: string | null
           webhook_token?: string | null
           webhook_type: string
           webhook_url: string
         }
         Update: {
           created_at?: string | null
+          created_by?: string | null
           id?: string
           is_active?: boolean | null
+          order_statuses?: string[] | null
+          secret_key?: string | null
           updated_at?: string | null
+          webhook_name?: string | null
           webhook_token?: string | null
           webhook_type?: string
           webhook_url?: string
