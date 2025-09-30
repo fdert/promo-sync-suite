@@ -1,1 +1,19 @@
 project_id = "pqrzkfpowjutylegdcxj"
+
+[functions.notify-new-order]
+verify_jwt = false
+
+[functions.notify-delivery-delay]
+verify_jwt = false
+
+[functions.notify-payment-delay]
+verify_jwt = false
+
+[functions.notify-whatsapp-failure]
+verify_jwt = false
+
+[functions.notify-expense-logged]
+verify_jwt = false
+
+[functions.daily-financial-report]
+verify_jwt = false

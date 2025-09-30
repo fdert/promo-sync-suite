@@ -31,12 +31,14 @@ import { ar } from "date-fns/locale";
 
 interface FollowUpSettings {
   id?: string;
-  follow_up_whatsapp?: string;
-  follow_up_email?: string;
-  send_whatsapp_on_new_order: boolean;
-  send_whatsapp_on_delivery_delay: boolean;
-  send_whatsapp_on_payment_delay: boolean;
-  send_whatsapp_on_failure: boolean;
+  whatsapp_number?: string;
+  email?: string;
+  notify_new_order: boolean;
+  notify_delivery_delay: boolean;
+  notify_payment_delay: boolean;
+  notify_whatsapp_failure: boolean;
+  notify_expense_logged: boolean;
+  daily_financial_report: boolean;
   delivery_delay_days: number;
   payment_delay_days: number;
 }
@@ -65,12 +67,14 @@ const FollowUpSettings = () => {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("settings");
   const [settings, setSettings] = useState<FollowUpSettings>({
-    send_whatsapp_on_new_order: true,
-    send_whatsapp_on_delivery_delay: true,
-    send_whatsapp_on_payment_delay: true,
-    send_whatsapp_on_failure: true,
-    delivery_delay_days: 7,
-    payment_delay_days: 30,
+    notify_new_order: true,
+    notify_delivery_delay: true,
+    notify_payment_delay: true,
+    notify_whatsapp_failure: true,
+    notify_expense_logged: true,
+    daily_financial_report: true,
+    delivery_delay_days: 1,
+    payment_delay_days: 7,
   });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -106,12 +110,14 @@ const FollowUpSettings = () => {
       if (data) {
         setSettings({
           id: data.id,
-          follow_up_whatsapp: data.follow_up_whatsapp || '',
-          follow_up_email: data.follow_up_email || '',
-          send_whatsapp_on_new_order: data.send_whatsapp_on_new_order,
-          send_whatsapp_on_delivery_delay: data.send_whatsapp_on_delivery_delay,
-          send_whatsapp_on_payment_delay: data.send_whatsapp_on_payment_delay,
-          send_whatsapp_on_failure: data.send_whatsapp_on_failure,
+          whatsapp_number: data.whatsapp_number || '',
+          email: data.email || '',
+          notify_new_order: data.notify_new_order,
+          notify_delivery_delay: data.notify_delivery_delay,
+          notify_payment_delay: data.notify_payment_delay,
+          notify_whatsapp_failure: data.notify_whatsapp_failure,
+          notify_expense_logged: data.notify_expense_logged,
+          daily_financial_report: data.daily_financial_report,
           delivery_delay_days: data.delivery_delay_days,
           payment_delay_days: data.payment_delay_days,
         });
@@ -132,12 +138,14 @@ const FollowUpSettings = () => {
     setSaving(true);
     try {
       const settingsData = {
-        follow_up_whatsapp: settings.follow_up_whatsapp,
-        follow_up_email: settings.follow_up_email,
-        send_whatsapp_on_new_order: settings.send_whatsapp_on_new_order,
-        send_whatsapp_on_delivery_delay: settings.send_whatsapp_on_delivery_delay,
-        send_whatsapp_on_payment_delay: settings.send_whatsapp_on_payment_delay,
-        send_whatsapp_on_failure: settings.send_whatsapp_on_failure,
+        whatsapp_number: settings.whatsapp_number,
+        email: settings.email,
+        notify_new_order: settings.notify_new_order,
+        notify_delivery_delay: settings.notify_delivery_delay,
+        notify_payment_delay: settings.notify_payment_delay,
+        notify_whatsapp_failure: settings.notify_whatsapp_failure,
+        notify_expense_logged: settings.notify_expense_logged,
+        daily_financial_report: settings.daily_financial_report,
         delivery_delay_days: settings.delivery_delay_days,
         payment_delay_days: settings.payment_delay_days,
         updated_at: new Date().toISOString(),
@@ -198,7 +206,7 @@ const FollowUpSettings = () => {
         throw new Error('لا توجد إعدادات متابعة. يرجى حفظ الإعدادات أولاً.');
       }
       
-      if (!settingsData.follow_up_whatsapp) {
+      if (!settingsData.whatsapp_number) {
         throw new Error('يرجى إدخال رقم واتساب فريق المتابعة');
       }
       
@@ -229,15 +237,17 @@ const FollowUpSettings = () => {
 
 📊 نتائج الاختبار:
 ✅ إعدادات المتابعة: موجودة
-📱 رقم واتساب فريق المتابعة: ${settingsData.follow_up_whatsapp}
+📱 رقم واتساب فريق المتابعة: ${settingsData.whatsapp_number}
 📨 الرسائل المعلقة: ${pendingMessages?.length || 0}
 📋 الطلبات الحديثة: ${recentOrders?.length || 0}
 
 ⚙️ الإعدادات النشطة:
-• إشعار طلب جديد: ${settingsData.send_whatsapp_on_new_order ? 'مفعل' : 'معطل'}
-• إشعار تأخير التسليم: ${settingsData.send_whatsapp_on_delivery_delay ? 'مفعل' : 'معطل'}
-• إشعار تأخير الدفع: ${settingsData.send_whatsapp_on_payment_delay ? 'مفعل' : 'معطل'}
-• إشعار فشل الواتساب: ${settingsData.send_whatsapp_on_failure ? 'مفعل' : 'معطل'}
+• إشعار طلب جديد: ${settingsData.notify_new_order ? 'مفعل' : 'معطل'}
+• إشعار تأخير التسليم: ${settingsData.notify_delivery_delay ? 'مفعل' : 'معطل'}
+• إشعار تأخير الدفع: ${settingsData.notify_payment_delay ? 'مفعل' : 'معطل'}
+• إشعار فشل الواتساب: ${settingsData.notify_whatsapp_failure ? 'مفعل' : 'معطل'}
+• إشعار تسجيل المصروفات: ${settingsData.notify_expense_logged ? 'مفعل' : 'معطل'}
+• تقرير مالي يومي: ${settingsData.daily_financial_report ? 'مفعل' : 'معطل'}
 
 🔧 مهل زمنية:
 • مهلة التسليم: ${settingsData.delivery_delay_days} أيام
@@ -250,10 +260,11 @@ const FollowUpSettings = () => {
         .from('whatsapp_messages')
         .insert({
           from_number: 'test_system',
-          to_number: settingsData.follow_up_whatsapp,
+          to_number: settingsData.whatsapp_number,
           message_type: 'follow_up_test',
           message_content: testMessage,
-          status: 'pending'
+          status: 'pending',
+          dedupe_key: `test_${Date.now()}`
         });
       
       if (insertError) {
@@ -476,8 +487,8 @@ const FollowUpSettings = () => {
                     <Input
                       id="whatsapp"
                       placeholder="966501234567"
-                      value={settings.follow_up_whatsapp || ''}
-                      onChange={(e) => setSettings({ ...settings, follow_up_whatsapp: e.target.value })}
+                      value={settings.whatsapp_number || ''}
+                      onChange={(e) => setSettings({ ...settings, whatsapp_number: e.target.value })}
                       className="bg-background/50 border-primary/20 focus:border-primary"
                     />
                   </div>
@@ -489,8 +500,8 @@ const FollowUpSettings = () => {
                       id="email"
                       type="email"
                       placeholder="follow-up@company.com"
-                      value={settings.follow_up_email || ''}
-                      onChange={(e) => setSettings({ ...settings, follow_up_email: e.target.value })}
+                      value={settings.email || ''}
+                      onChange={(e) => setSettings({ ...settings, email: e.target.value })}
                       className="bg-background/50 border-primary/20 focus:border-primary"
                     />
                   </div>
@@ -520,9 +531,9 @@ const FollowUpSettings = () => {
                       </div>
                     </div>
                     <Switch
-                      checked={settings.send_whatsapp_on_new_order}
+                      checked={settings.notify_new_order}
                       onCheckedChange={(checked) => 
-                        setSettings({ ...settings, send_whatsapp_on_new_order: checked })
+                        setSettings({ ...settings, notify_new_order: checked })
                       }
                     />
                   </div>
@@ -538,9 +549,9 @@ const FollowUpSettings = () => {
                       </div>
                     </div>
                     <Switch
-                      checked={settings.send_whatsapp_on_delivery_delay}
+                      checked={settings.notify_delivery_delay}
                       onCheckedChange={(checked) => 
-                        setSettings({ ...settings, send_whatsapp_on_delivery_delay: checked })
+                        setSettings({ ...settings, notify_delivery_delay: checked })
                       }
                     />
                   </div>
@@ -556,9 +567,9 @@ const FollowUpSettings = () => {
                       </div>
                     </div>
                     <Switch
-                      checked={settings.send_whatsapp_on_payment_delay}
+                      checked={settings.notify_payment_delay}
                       onCheckedChange={(checked) => 
-                        setSettings({ ...settings, send_whatsapp_on_payment_delay: checked })
+                        setSettings({ ...settings, notify_payment_delay: checked })
                       }
                     />
                   </div>
@@ -574,9 +585,45 @@ const FollowUpSettings = () => {
                       </div>
                     </div>
                     <Switch
-                      checked={settings.send_whatsapp_on_failure}
+                      checked={settings.notify_whatsapp_failure}
                       onCheckedChange={(checked) => 
-                        setSettings({ ...settings, send_whatsapp_on_failure: checked })
+                        setSettings({ ...settings, notify_whatsapp_failure: checked })
+                      }
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 dark:from-blue-900/20 dark:to-blue-800/20 dark:border-blue-700/30">
+                    <div className="flex items-center gap-3">
+                      <DollarSign className="h-5 w-5 text-blue-600" />
+                      <div>
+                        <h4 className="font-medium">إشعار تسجيل المصروفات</h4>
+                        <p className="text-sm text-muted-foreground">
+                          إرسال إشعار لفريق المتابعة عند تسجيل مصروف جديد
+                        </p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={settings.notify_expense_logged}
+                      onCheckedChange={(checked) => 
+                        setSettings({ ...settings, notify_expense_logged: checked })
+                      }
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-purple-50 to-purple-100 border border-purple-200 dark:from-purple-900/20 dark:to-purple-800/20 dark:border-purple-700/30">
+                    <div className="flex items-center gap-3">
+                      <Activity className="h-5 w-5 text-purple-600" />
+                      <div>
+                        <h4 className="font-medium">تقرير مالي يومي</h4>
+                        <p className="text-sm text-muted-foreground">
+                          إرسال تقرير يومي عن المبالغ المدفوعة والمصروفات والأرباح عند الساعة 00:00
+                        </p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={settings.daily_financial_report}
+                      onCheckedChange={(checked) => 
+                        setSettings({ ...settings, daily_financial_report: checked })
                       }
                     />
                   </div>
@@ -630,7 +677,7 @@ const FollowUpSettings = () => {
             <div className="flex justify-between items-center">
               <Button 
                 onClick={testFollowUpSystem} 
-                disabled={testing || !settings.follow_up_whatsapp}
+                disabled={testing || !settings.whatsapp_number}
                 variant="outline"
                 size="lg"
                 className="min-w-[140px]"

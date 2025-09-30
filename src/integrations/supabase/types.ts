@@ -448,6 +448,54 @@ export type Database = {
           },
         ]
       }
+      follow_up_settings: {
+        Row: {
+          created_at: string | null
+          daily_financial_report: boolean | null
+          delivery_delay_days: number | null
+          email: string | null
+          id: string
+          notify_delivery_delay: boolean | null
+          notify_expense_logged: boolean | null
+          notify_new_order: boolean | null
+          notify_payment_delay: boolean | null
+          notify_whatsapp_failure: boolean | null
+          payment_delay_days: number | null
+          updated_at: string | null
+          whatsapp_number: string
+        }
+        Insert: {
+          created_at?: string | null
+          daily_financial_report?: boolean | null
+          delivery_delay_days?: number | null
+          email?: string | null
+          id?: string
+          notify_delivery_delay?: boolean | null
+          notify_expense_logged?: boolean | null
+          notify_new_order?: boolean | null
+          notify_payment_delay?: boolean | null
+          notify_whatsapp_failure?: boolean | null
+          payment_delay_days?: number | null
+          updated_at?: string | null
+          whatsapp_number: string
+        }
+        Update: {
+          created_at?: string | null
+          daily_financial_report?: boolean | null
+          delivery_delay_days?: number | null
+          email?: string | null
+          id?: string
+          notify_delivery_delay?: boolean | null
+          notify_expense_logged?: boolean | null
+          notify_new_order?: boolean | null
+          notify_payment_delay?: boolean | null
+          notify_whatsapp_failure?: boolean | null
+          payment_delay_days?: number | null
+          updated_at?: string | null
+          whatsapp_number?: string
+        }
+        Relationships: []
+      }
       invoice_items: {
         Row: {
           created_at: string | null

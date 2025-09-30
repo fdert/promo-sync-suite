@@ -1,0 +1,114 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    console.log('Checking for delayed orders...');
+
+    // جلب إعدادات المتابعة
+    const { data: settings, error: settingsError } = await supabase
+      .from('follow_up_settings')
+      .select('*')
+      .single();
+
+    if (settingsError || !settings) {
+      console.error('Failed to fetch follow-up settings:', settingsError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to fetch settings' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+
+    if (!settings.notify_delivery_delay || !settings.whatsapp_number) {
+      console.log('Delivery delay notification is disabled or no WhatsApp number configured');
+      return new Response(
+        JSON.stringify({ message: 'Notification disabled' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    }
+
+    // البحث عن الطلبات المتأخرة
+    const delayDate = new Date();
+    delayDate.setDate(delayDate.getDate() - settings.delivery_delay_days);
+
+    const { data: delayedOrders, error: ordersError } = await supabase
+      .from('orders')
+      .select('id, order_number, delivery_date, customers(name)')
+      .eq('status', 'in_progress')
+      .lt('delivery_date', delayDate.toISOString())
+      .order('delivery_date', { ascending: true })
+      .limit(10);
+
+    if (ordersError) {
+      console.error('Failed to fetch delayed orders:', ordersError);
+      throw ordersError;
+    }
+
+    if (!delayedOrders || delayedOrders.length === 0) {
+      console.log('No delayed orders found');
+      return new Response(
+        JSON.stringify({ message: 'No delayed orders' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    }
+
+    console.log(`Found ${delayedOrders.length} delayed orders`);
+
+    // إرسال إشعار لكل طلب متأخر
+    for (const order of delayedOrders) {
+      const customerName = order.customers?.name || 'غير معروف';
+      const deliveryDate = new Date(order.delivery_date).toLocaleDateString('ar-SA');
+
+      const message = `⚠️ *تنبيه: تجاوز فترة التسليم*
+
+📦 رقم الطلب: ${order.order_number}
+👤 اسم العميل: ${customerName}
+📅 تاريخ التسليم المتوقع: ${deliveryDate}
+⏱️ تأخير: ${settings.delivery_delay_days}+ أيام
+
+يرجى المتابعة الفورية مع العميل.`;
+
+      await supabase
+        .from('whatsapp_messages')
+        .insert({
+          from_number: 'system',
+          to_number: settings.whatsapp_number,
+          message_type: 'delivery_delay_notification',
+          message_content: message,
+          status: 'pending',
+          dedupe_key: `delivery_delay_${order.id}_${new Date().toISOString().split('T')[0]}`
+        });
+    }
+
+    console.log('Delivery delay notifications created successfully');
+
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        message: `Sent ${delayedOrders.length} notifications`,
+        count: delayedOrders.length 
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+    );
+  } catch (error) {
+    console.error('Error in notify-delivery-delay function:', error);
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+    );
+  }
+});
