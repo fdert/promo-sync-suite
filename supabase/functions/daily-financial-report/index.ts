@@ -81,6 +81,8 @@ serve(async (req) => {
       .eq('status', 'completed')
       .gte('updated_at', todayStart)
       .lte('updated_at', todayEnd);
+    // تنسيق رقم الواتساب (إزالة أي محارف غير رقمية)
+    const toNumber = String(settings.whatsapp_number || '').replace(/[^0-9]/g, '');
 
     const message = `📊 *التقرير المالي اليومي*
 
@@ -107,7 +109,7 @@ ${netProfit.toFixed(2)} ريال ${netProfit >= 0 ? '✅' : '❌'}
       .from('whatsapp_messages')
       .insert({
         from_number: 'system',
-        to_number: settings.whatsapp_number,
+        to_number: toNumber,
         message_type: 'daily_financial_report',
         message_content: message,
         status: 'pending',
@@ -127,25 +129,17 @@ ${netProfit.toFixed(2)} ريال ${netProfit >= 0 ? '✅' : '❌'}
     // استدعاء process-whatsapp-queue لإرسال الرسالة فوراً
     console.log('Invoking process-whatsapp-queue to send the message...');
     try {
-      const queueUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/process-whatsapp-queue`;
-      const response = await fetch(queueUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`
-        },
-        body: JSON.stringify({
+      const { data: queueResult, error: queueError } = await supabase.functions.invoke('process-whatsapp-queue', {
+        body: {
           action: 'process_pending_messages',
           timestamp: new Date().toISOString()
-        })
+        }
       });
 
-      if (response.ok) {
-        const queueResult = await response.json();
-        console.log('process-whatsapp-queue invoked successfully:', queueResult);
+      if (queueError) {
+        console.error('Error invoking process-whatsapp-queue:', queueError);
       } else {
-        const errorText = await response.text();
-        console.error('Error invoking process-whatsapp-queue:', response.status, errorText);
+        console.log('process-whatsapp-queue invoked successfully:', queueResult);
       }
     } catch (queueInvokeError) {
       console.error('Failed to invoke process-whatsapp-queue:', queueInvokeError);

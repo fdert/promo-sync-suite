@@ -292,19 +292,25 @@ const FollowUpSettings = () => {
   const handleTestFinancialReport = async () => {
     setIsTestingFinancialReport(true);
     try {
+      // 1) إنشاء تقرير مالي يومي
       const { data, error } = await supabase.functions.invoke('daily-financial-report');
-      
       if (error) throw error;
+
+      // 2) معالجة الرسائل المعلقة فوراً
+      const { data: queueData, error: queueError } = await supabase.functions.invoke('process-whatsapp-queue', {
+        body: { action: 'process_pending_messages', source: 'follow-up-settings-test' }
+      });
+      if (queueError) console.warn('process-whatsapp-queue warning:', queueError);
 
       toast({
         title: "تم إرسال التقرير المالي ✅",
-        description: "تم إنشاء وإرسال التقرير المالي اليومي بنجاح",
+        description: "تم إنشاء ومعالجة التقرير المالي اليومي بنجاح",
       });
     } catch (error) {
       console.error('Error testing financial report:', error);
       toast({
         title: "فشل إرسال التقرير ❌",
-        description: error.message || "حدث خطأ أثناء إرسال التقرير المالي",
+        description: (error as any)?.message || "حدث خطأ أثناء إرسال التقرير المالي",
         variant: "destructive",
       });
     } finally {
