@@ -120,9 +120,10 @@ Deno.serve(async (req) => {
         
         let totalPaidAmount = 0;
         if (payments && payments.length > 0) {
-          totalPaidAmount = payments.reduce((sum, payment) => {
-            console.log('Adding payment amount:', payment.amount);
-            return sum + payment.amount;
+          totalPaidAmount = payments.reduce((sum: number, payment: any) => {
+            const amt = Number(payment?.amount ?? 0);
+            console.log('Adding payment amount:', amt);
+            return sum + (isNaN(amt) ? 0 : amt);
           }, 0);
         }
         

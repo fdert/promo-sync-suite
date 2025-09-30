@@ -9,7 +9,7 @@ export const calculateOrderPaidAmountDirect = async (orderId: string): Promise<n
   
   if (error || !data) return 0;
   
-  return data.reduce((sum, payment) => sum + payment.amount, 0);
+  return data.reduce((sum, payment) => sum + Number((payment as any)?.amount ?? 0), 0);
 };
 
 // دالة لحساب المبالغ المدفوعة للطلب (مباشرة من جدول المدفوعات)
@@ -21,7 +21,7 @@ export const calculateOrderPaidAmount = async (orderId: string): Promise<number>
   
   if (!payments) return 0;
   
-  return payments.reduce((sum, payment) => sum + payment.amount, 0);
+  return payments.reduce((sum, payment) => sum + Number((payment as any)?.amount ?? 0), 0);
 };
 
 // دالة لجلب بيانات الطلبات مع المبالغ المحسوبة من قاعدة البيانات
@@ -34,8 +34,8 @@ export const getOrdersWithCalculatedAmounts = async () => {
   
   return orders?.map(order => ({
     ...order,
-    paid_amount: (order as any).paid_amount || 0,
-    remaining_amount: (order as any).balance || 0
+    paid_amount: Number((order as any).paid_amount ?? 0),
+    remaining_amount: Number((order as any).balance ?? 0)
   })) || [];
 };
 
