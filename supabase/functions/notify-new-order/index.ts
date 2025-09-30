@@ -54,8 +54,8 @@ serve(async (req) => {
 
 يرجى متابعة الطلب والتواصل مع العميل.`;
 
-    // حفظ الرسالة في قاعدة البيانات
-    const { error: insertError } = await supabase
+    // حفظ الرسالة في قاعدة البيانات ثم محاولة إرسالها فورًا عبر webhook
+    const { data: insertedMsg, error: insertError } = await supabase
       .from('whatsapp_messages')
       .insert({
         from_number: 'system',
@@ -64,17 +64,87 @@ serve(async (req) => {
         message_content: message,
         status: 'pending',
         dedupe_key: `new_order_${orderId}_${Date.now()}`
-      });
+      })
+      .select('id')
+      .single();
 
     if (insertError) {
       console.error('Failed to insert WhatsApp message:', insertError);
       throw insertError;
     }
 
+    const messageId = insertedMsg?.id;
+
+    // البحث عن webhook نشط للإرسال (أولوية لـ outgoing ثم أول متاح)
+    const { data: webhooks, error: webhookError } = await supabase
+      .from('webhook_settings')
+      .select('*')
+      .eq('is_active', true)
+      .order('updated_at', { ascending: false });
+
+    if (webhookError) {
+      console.warn('Failed to fetch webhooks, keeping message pending:', webhookError);
+    }
+
+    const selectedWebhook = (webhooks || []).find(w => w.webhook_type === 'outgoing') || (webhooks && webhooks[0]);
+
+    if (selectedWebhook?.webhook_url) {
+      try {
+        const payload = {
+          event: 'whatsapp_message_send',
+          data: {
+            to: settings.whatsapp_number,
+            phone: settings.whatsapp_number,
+            phoneNumber: settings.whatsapp_number,
+            message: message,
+            messageText: message,
+            text: message,
+            type: 'text',
+            message_type: 'new_order_notification',
+            timestamp: Math.floor(Date.now() / 1000),
+            from_number: 'system',
+          }
+        };
+
+        const resp = await fetch(selectedWebhook.webhook_url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const ok = resp.ok;
+        const respText = await resp.text().catch(() => '');
+
+        // تحديث حالة الرسالة بناءً على نتيجة الإرسال
+        const updateData: Record<string, any> = {
+          status: ok ? 'sent' : 'failed',
+          webhook_id: selectedWebhook.id,
+          error_message: ok ? null : `${resp.status} ${resp.statusText} ${respText}`,
+        };
+        if (ok) updateData.sent_at = new Date().toISOString();
+
+        if (messageId) {
+          await supabase.from('whatsapp_messages').update(updateData).eq('id', messageId);
+        }
+
+        console.log(ok ? 'New order notification sent via webhook' : 'Webhook send failed, message updated as failed');
+      } catch (sendErr) {
+        console.error('Error sending webhook for new order notification:', sendErr);
+        if (messageId) {
+          await supabase
+            .from('whatsapp_messages')
+            .update({ status: 'failed', error_message: String(sendErr) })
+            .eq('id', messageId);
+        }
+      }
+    } else {
+      console.log('No active webhook found; message remains pending');
+    }
+
     console.log('New order notification saved successfully');
 
     return new Response(
-      JSON.stringify({ success: true, message: 'Notification sent' }),
+      JSON.stringify({ success: true, message: 'Notification sent or queued' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
   } catch (error) {
