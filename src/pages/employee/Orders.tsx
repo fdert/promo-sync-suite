@@ -1389,32 +1389,61 @@ ${publicFileUrl}
   };
 
   // فتح حوار تعديل الطلب
-  const openEditOrderDialog = (order: Order) => {
+  const openEditOrderDialog = async (order: Order) => {
     console.log('🔄 فتح حوار تعديل الطلب:', order.order_number);
     console.log('البنود الحالية للطلب:', order.order_items);
     
-    setSelectedOrderForEditing(order);
-    setNewOrder({
-      customer_id: order.customer_id || '',
-      service_id: '',
-      service_name: order.service_name,
-      priority: order.priority,
-      due_date: order.due_date || '',
-      description: order.description || '',
-      amount: order.amount,
-      payment_type: order.payment_type || 'دفع آجل',
-      paid_amount: order.paid_amount || 0,
-      payment_notes: ''
-    });
+    // جلب البيانات الكاملة من قاعدة البيانات
+    const { data: fullOrder } = await supabase
+      .from('orders')
+      .select(`
+        *,
+        customers(id, name, phone, whatsapp),
+        service_types(id, name),
+        order_items(id, item_name, quantity, unit_price, total, description)
+      `)
+      .eq('id', order.id)
+      .single();
+
+    if (fullOrder) {
+      setSelectedOrderForEditing(fullOrder);
+      setNewOrder({
+        customer_id: fullOrder.customer_id || '',
+        service_id: fullOrder.service_type_id || '',
+        service_name: fullOrder.service_types?.name || order.service_name,
+        priority: order.priority,
+        due_date: fullOrder.delivery_date || '',
+        description: fullOrder.notes || '', // استخدام notes من قاعدة البيانات
+        amount: fullOrder.total_amount || order.amount,
+        payment_type: order.payment_type || 'دفع آجل',
+        paid_amount: order.paid_amount || 0,
+        payment_notes: ''
+      });
+    } else {
+      setSelectedOrderForEditing(order);
+      setNewOrder({
+        customer_id: order.customer_id || '',
+        service_id: '',
+        service_name: order.service_name,
+        priority: order.priority,
+        due_date: order.due_date || '',
+        description: order.description || '',
+        amount: order.amount,
+        payment_type: order.payment_type || 'دفع آجل',
+        paid_amount: order.paid_amount || 0,
+        payment_notes: ''
+      });
+    }
     
-    // تحميل البنود الحالية مع إزالة id لتجنب التضارب
-    if (order.order_items && order.order_items.length > 0) {
-      const itemsForEdit = order.order_items.map(item => ({
+    // تحميل البنود - استخدام fullOrder إذا كان متاحاً
+    const orderToUse = fullOrder || order;
+    if (orderToUse.order_items && orderToUse.order_items.length > 0) {
+      const itemsForEdit = orderToUse.order_items.map((item: any) => ({
         id: '', // إزالة id لتجنب التضارب
         item_name: item.item_name,
         quantity: Number(item.quantity) || 1,
         unit_price: Number(item.unit_price) || 0,
-        total_amount: Number(item.total_amount) || 0
+        total_amount: Number(item.total || item.total_amount) || 0
       }));
       
       console.log('البنود بعد التحويل للتعديل:', itemsForEdit);
@@ -1439,23 +1468,47 @@ ${publicFileUrl}
   const updateOrder = async () => {
     if (!selectedOrderForEditing) return;
 
+    // التحقق من البيانات المطلوبة
+    if (!newOrder.customer_id) {
+      toast({
+        title: "خطأ",
+        description: "يرجى اختيار العميل",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!newOrder.due_date) {
+      toast({
+        title: "خطأ",
+        description: "يرجى تحديد تاريخ التسليم",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setLoading(true);
 
       console.log('🔄 بداية تحديث الطلب...');
+      console.log('البيانات المراد حفظها:', newOrder);
       console.log('البنود الحالية:', orderItems);
 
-      // تحديث بيانات الطلب الأساسية
+      // تحديث بيانات الطلب الأساسية مع جميع الحقول
+      const updateData: any = {
+        customer_id: newOrder.customer_id,
+        service_type_id: newOrder.service_id || null,
+        delivery_date: newOrder.due_date || null,
+        notes: newOrder.description?.trim() || null,
+        total_amount: newOrder.amount || 0,
+        updated_at: new Date().toISOString()
+      };
+
+      console.log('بيانات التحديث:', updateData);
+
       const { error: orderError } = await supabase
         .from('orders')
-        .update({
-          customer_id: newOrder.customer_id,
-          service_type_id: newOrder.service_id || null,
-          delivery_date: newOrder.due_date || null,
-          notes: newOrder.description,
-          total_amount: newOrder.amount || 0,
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', selectedOrderForEditing.id);
 
       if (orderError) throw orderError;
