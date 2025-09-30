@@ -132,10 +132,16 @@ Deno.serve(async (req) => {
         // تحديث بيانات الطلب مع المبلغ المحسوب
         orderDetails.paid_amount = totalPaidAmount;
         
+        // حساب المبلغ المتبقي بشكل مركزي
+        const totalAmt = Number(orderDetails.total_amount || 0);
+        const paidAmt = Number(totalPaidAmount || 0);
+        const remainingAmt = Math.max(0, totalAmt - paidAmt);
+        orderDetails.remaining_amount = remainingAmt;
+        
         console.log('=== Final Values for Message ===');
         console.log('Total Amount:', orderDetails.total_amount);
         console.log('Actual Paid Amount:', totalPaidAmount);
-        console.log('Remaining Amount:', orderDetails.total_amount - totalPaidAmount);
+        console.log('Remaining Amount:', remainingAmt);
       }
     }
 
@@ -252,10 +258,8 @@ Deno.serve(async (req) => {
         let description = 'غير محدد';
         if (orderDetails) {
           
-          // حساب المبلغ المتبقي
-          const totalAmount = parseFloat(orderDetails.total_amount?.toString() || '0');
-          const paidAmount = parseFloat(orderDetails.paid_amount?.toString() || '0');
-          remainingAmount = (totalAmount - paidAmount).toString();
+          // استخدام المبلغ المتبقي المحسوب مسبقاً
+          remainingAmount = (orderDetails.remaining_amount || 0).toString();
           
           // تنسيق التواريخ
           if (orderDetails.start_date) {
@@ -276,18 +280,18 @@ Deno.serve(async (req) => {
           customerName = data.customer_name;
           
           // حساب المبلغ المتبقي من البيانات المرسلة
-          const totalAmount = parseFloat(data.amount?.toString() || '0');
-          const paidAmount = parseFloat(data.paid_amount?.toString() || '0');
-          remainingAmount = (totalAmount - paidAmount).toString();
+          const totalAmount = Number(data.amount || 0);
+          const paidAmount = Number(data.paid_amount || 0);
+          remainingAmount = Math.max(0, totalAmount - paidAmount).toString();
         }
         
         // استبدال المتغيرات
         const replacements: Record<string, string> = {
           'customer_name': customerName || '',
           'order_number': data.order_number || '',
-          'amount': ((orderDetails?.total_amount ?? data.amount ?? 0).toString()),
-          'paid_amount': ((orderDetails?.paid_amount ?? data.paid_amount ?? 0).toString()),
-          'remaining_amount': remainingAmount,
+          'amount': (Number(orderDetails?.total_amount ?? data.amount ?? 0).toFixed(2)),
+          'paid_amount': (Number(orderDetails?.paid_amount ?? data.paid_amount ?? 0).toFixed(2)),
+          'remaining_amount': (Number(remainingAmount || 0).toFixed(2)),
           'payment_type': data.payment_type || 'غير محدد',
           'progress': data.progress?.toString() || '0',
           'service_name': data.service_name || '',
@@ -570,9 +574,9 @@ ${data.file_url}
       order_number: data.order_number || '',
       service_name: data.service_name || '',
       description: orderDetails?.description || data.description || 'غير محدد',
-      amount: ((orderDetails?.total_amount ?? data.amount ?? 0).toString()),
-      paid_amount: ((orderDetails?.paid_amount ?? data.paid_amount ?? 0).toString()),
-      remaining_amount: remainingAmount,
+      amount: (Number(orderDetails?.total_amount ?? data.amount ?? 0).toFixed(2)),
+      paid_amount: (Number(orderDetails?.paid_amount ?? data.paid_amount ?? 0).toFixed(2)),
+      remaining_amount: (Number(orderDetails?.remaining_amount ?? remainingAmount ?? 0).toFixed(2)),
       payment_type: data.payment_type || 'غير محدد',
       status: data.new_status || data.status || orderDetails?.status || currentStatus || '',
       priority: data.priority || 'متوسطة',
