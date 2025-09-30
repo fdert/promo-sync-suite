@@ -20,13 +20,14 @@ import { ar } from 'date-fns/locale';
 interface Order {
   id: string;
   order_number: string;
-  service_name: string;
-  amount: number;
+  total_amount: number;
   status: string;
   created_at: string;
   customer: {
     name: string;
-    company?: string;
+  };
+  service_types?: {
+    name: string;
   };
 }
 
@@ -83,8 +84,8 @@ const OrderPayments = () => {
     notes: ''
   });
 
-  const totalPaid = payments.reduce((sum, payment) => sum + payment.amount, 0);
-  const remainingAmount = order ? order.amount - totalPaid : 0;
+  const totalPaid = payments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+  const remainingAmount = order ? Number(order.total_amount || 0) - totalPaid : 0;
 
   useEffect(() => {
     if (orderId) {
@@ -97,18 +98,20 @@ const OrderPayments = () => {
 
   const fetchOrderData = async () => {
     try {
+      setLoading(true);
       const { data, error } = await supabase
         .from('orders')
         .select(`
           id,
           order_number,
-          service_name,
-          amount,
+          total_amount,
           status,
           created_at,
           customers (
-            name,
-            company
+            name
+          ),
+          service_types (
+            name
           )
         `)
         .eq('id', orderId)
@@ -122,6 +125,8 @@ const OrderPayments = () => {
     } catch (error) {
       console.error('Error fetching order:', error);
       toast.error('خطأ في جلب بيانات الطلب');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -294,21 +299,18 @@ const OrderPayments = () => {
             <div>
               <p className="text-sm text-muted-foreground">العميل</p>
               <p className="font-medium">{order.customer.name}</p>
-              {order.customer.company && (
-                <p className="text-sm text-muted-foreground">{order.customer.company}</p>
-              )}
             </div>
             <div>
               <p className="text-sm text-muted-foreground">الخدمة</p>
-              <p className="font-medium">{order.service_name}</p>
+              <p className="font-medium">{order.service_types?.name || 'غير محدد'}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">المبلغ الإجمالي</p>
-              <p className="font-medium text-lg">{order.amount.toLocaleString()} ر.س</p>
+              <p className="font-medium text-lg">{Number(order.total_amount || 0).toLocaleString()} ر.س</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">المبلغ المتبقي</p>
-              <p className={`font-medium text-lg ${getPaymentStatusColor(totalPaid, order.amount)}`}>
+              <p className={`font-medium text-lg ${getPaymentStatusColor(totalPaid, order.total_amount)}`}>
                 {remainingAmount.toLocaleString()} ر.س
               </p>
             </div>
@@ -317,11 +319,11 @@ const OrderPayments = () => {
           <div className="mt-4 w-full bg-gray-200 rounded-full h-2">
             <div
               className="bg-green-600 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${Math.min((totalPaid / order.amount) * 100, 100)}%` }}
+              style={{ width: `${Math.min((totalPaid / Number(order.total_amount || 0)) * 100, 100)}%` }}
             ></div>
           </div>
           <p className="text-sm text-muted-foreground mt-1">
-            مدفوع: {((totalPaid / order.amount) * 100).toFixed(1)}%
+            مدفوع: {((totalPaid / Number(order.total_amount || 0)) * 100).toFixed(1)}%
           </p>
         </CardContent>
       </Card>
