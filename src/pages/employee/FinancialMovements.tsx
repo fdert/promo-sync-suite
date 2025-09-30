@@ -17,7 +17,7 @@ import { toast } from "sonner";
 import * as XLSX from "xlsx";
 
 interface FinancialMovement {
-  id: string;
+  order_id: string;
   order_number: string;
   customer_name: string;
   customer_phone: string;
@@ -54,33 +54,34 @@ const EmployeeFinancialMovements = () => {
       const { data, error } = await supabase
         .from('order_payment_summary')
         .select(`
-          id,
+          order_id,
           order_number,
-          amount,
-          calculated_paid_amount,
-          remaining_amount,
+          total_amount,
+          paid_amount,
+          balance,
+          status,
           created_at,
-          service_name,
-          customer_id
+          customer_id,
+          customer_name
         `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      // جلب أسماء وأرقام العملاء
+      // جلب أرقام العملاء
       const customerIds = [...new Set(data?.map(item => item.customer_id).filter(Boolean))];
       const { data: customers } = await supabase
         .from('customers')
-        .select('id, name, phone')
+        .select('id, phone')
         .in('id', customerIds);
 
       const customersMap = new Map(customers?.map(c => [c.id, c]) || []);
 
       const processedData = data?.map(item => {
         const customer = customersMap.get(item.customer_id);
-        const paidAmount = item.calculated_paid_amount || 0;
-        const totalAmount = item.amount || 0;
-        const remainingAmount = totalAmount - paidAmount;
+        const paidAmount = Number(item.paid_amount) || 0;
+        const totalAmount = Number(item.total_amount) || 0;
+        const remainingAmount = Number(item.balance) || 0;
         
         let paymentStatus = 'غير مدفوع';
         if (paidAmount >= totalAmount) {
@@ -90,16 +91,16 @@ const EmployeeFinancialMovements = () => {
         }
 
         return {
-          id: item.id,
+          order_id: item.order_id,
           order_number: item.order_number || '',
-          customer_name: customer?.name || 'غير محدد',
+          customer_name: item.customer_name || 'غير محدد',
           customer_phone: customer?.phone || '',
           amount: totalAmount,
           calculated_paid_amount: paidAmount,
           remaining_amount: remainingAmount,
           payment_status: paymentStatus,
           created_at: item.created_at,
-          service_name: item.service_name || ''
+          service_name: ''
         };
       }) || [];
 
