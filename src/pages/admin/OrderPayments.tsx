@@ -45,7 +45,7 @@ const OrderPayments = () => {
   // نموذج الدفعة الجديدة
   const [newPayment, setNewPayment] = useState({
     amount: '',
-    payment_type: 'نقدي',
+    payment_type: 'cash',
     payment_date: new Date().toISOString().split('T')[0],
     notes: ''
   });
@@ -143,7 +143,7 @@ const OrderPayments = () => {
       setEditingPayment(null);
       setNewPayment({
         amount: '',
-        payment_type: 'نقدي',
+        payment_type: 'cash',
         payment_date: new Date().toISOString().split('T')[0],
         notes: ''
       });
@@ -191,6 +191,16 @@ const OrderPayments = () => {
       currency: 'SAR',
       minimumFractionDigits: 0,
     }).format(amount);
+  };
+
+  const getPaymentTypeLabel = (type: string) => {
+    const labels: Record<string, string> = {
+      'cash': 'نقدي',
+      'bank_transfer': 'تحويل بنكي',
+      'card': 'الشبكة',
+      'check': 'شيك'
+    };
+    return labels[type] || type;
   };
 
   useEffect(() => {
@@ -287,7 +297,7 @@ const OrderPayments = () => {
                   setEditingPayment(null);
                   setNewPayment({
                     amount: '',
-                    payment_type: 'نقدي',
+                    payment_type: 'cash',
                     payment_date: new Date().toISOString().split('T')[0],
                     notes: ''
                   });
@@ -323,10 +333,10 @@ const OrderPayments = () => {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="نقدي">نقدي</SelectItem>
-                        <SelectItem value="تحويل بنكي">تحويل بنكي</SelectItem>
-                        <SelectItem value="الشبكة">الشبكة</SelectItem>
-                        <SelectItem value="شيك">شيك</SelectItem>
+                        <SelectItem value="cash">نقدي</SelectItem>
+                        <SelectItem value="bank_transfer">تحويل بنكي</SelectItem>
+                        <SelectItem value="card">الشبكة</SelectItem>
+                        <SelectItem value="check">شيك</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -378,7 +388,7 @@ const OrderPayments = () => {
                     <TableCell className="font-medium text-green-600">
                       {formatCurrency(payment.amount)}
                     </TableCell>
-                    <TableCell>{payment.payment_type}</TableCell>
+                    <TableCell>{getPaymentTypeLabel(payment.payment_type)}</TableCell>
                     <TableCell>
                       {format(new Date(payment.payment_date), 'yyyy-MM-dd', { locale: ar })}
                     </TableCell>

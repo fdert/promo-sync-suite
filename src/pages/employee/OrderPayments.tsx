@@ -79,7 +79,7 @@ const OrderPayments = () => {
   
   const [paymentForm, setPaymentForm] = useState<PaymentForm>({
     amount: 0,
-    payment_type: 'نقدي',
+    payment_type: 'cash',
     notes: ''
   });
 
@@ -231,6 +231,16 @@ const OrderPayments = () => {
     return 'text-red-600';
   };
 
+  const getPaymentTypeLabel = (type: string) => {
+    const labels: Record<string, string> = {
+      'cash': 'نقدي',
+      'bank_transfer': 'تحويل بنكي',
+      'card': 'الشبكة',
+      'check': 'شيك'
+    };
+    return labels[type] || type;
+  };
+
   const getAccountTypeIcon = (type: string) => {
     switch (type) {
       case 'أصول': return <Wallet className="h-4 w-4" />;
@@ -365,10 +375,10 @@ const OrderPayments = () => {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="نقدي">نقدي</SelectItem>
-                        <SelectItem value="تحويل بنكي">تحويل بنكي</SelectItem>
-                        <SelectItem value="الشبكة">الشبكة</SelectItem>
-                        <SelectItem value="شيك">شيك</SelectItem>
+                        <SelectItem value="cash">نقدي</SelectItem>
+                        <SelectItem value="bank_transfer">تحويل بنكي</SelectItem>
+                        <SelectItem value="card">الشبكة</SelectItem>
+                        <SelectItem value="check">شيك</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -422,7 +432,7 @@ const OrderPayments = () => {
                           {payment.amount.toLocaleString()} ر.س
                         </TableCell>
                         <TableCell>
-                          <Badge variant="secondary">{payment.payment_type}</Badge>
+                          <Badge variant="secondary">{getPaymentTypeLabel(payment.payment_type)}</Badge>
                         </TableCell>
                         <TableCell>
                           {format(new Date(payment.payment_date), 'dd/MM/yyyy', { locale: ar })}

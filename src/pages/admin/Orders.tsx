@@ -157,7 +157,7 @@ const Orders = () => {
   const [payments, setPayments] = useState<any[]>([]);
   const [newPayment, setNewPayment] = useState({
     amount: 0,
-    payment_type: 'نقدي',
+    payment_type: 'cash',
     notes: ''
   });
 
@@ -917,7 +917,7 @@ ${companyName}`;
       });
 
       // إعادة تعيين النموذج
-      setNewPayment({ amount: 0, payment_type: 'نقدي', notes: '' });
+      setNewPayment({ amount: 0, payment_type: 'cash', notes: '' });
       
       // إعادة جلب المدفوعات والطلبات
       await fetchOrderPayments(orderId);
@@ -2280,10 +2280,10 @@ ${companyName}`;
                           <SelectValue placeholder="اختر طريقة الدفع" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="نقدي">نقدي</SelectItem>
-                          <SelectItem value="تحويل بنكي">تحويل بنكي</SelectItem>
-                          <SelectItem value="الشبكة">الشبكة</SelectItem>
-                          <SelectItem value="شيك">شيك</SelectItem>
+                          <SelectItem value="cash">نقدي</SelectItem>
+                          <SelectItem value="bank_transfer">تحويل بنكي</SelectItem>
+                          <SelectItem value="card">الشبكة</SelectItem>
+                          <SelectItem value="check">شيك</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -2301,7 +2301,7 @@ ${companyName}`;
                   <div className="mt-4 flex justify-between">
                     <Button
                       variant="outline"
-                      onClick={() => setNewPayment({ amount: 0, payment_type: 'نقدي', notes: '' })}
+                      onClick={() => setNewPayment({ amount: 0, payment_type: 'cash', notes: '' })}
                     >
                       مسح
                     </Button>
