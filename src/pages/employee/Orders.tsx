@@ -1412,13 +1412,10 @@ ${publicFileUrl}
         .from('orders')
         .update({
           customer_id: newOrder.customer_id,
-          service_name: newOrder.service_name,
-          priority: newOrder.priority,
-          due_date: newOrder.due_date || null,
-          description: newOrder.description,
-          amount: newOrder.amount,
-          payment_type: newOrder.payment_type,
-          payment_notes: newOrder.payment_notes,
+          service_type_id: newOrder.service_id || null,
+          delivery_date: newOrder.due_date || null,
+          notes: newOrder.description,
+          total_amount: newOrder.amount || 0,
           updated_at: new Date().toISOString()
         })
         .eq('id', selectedOrderForEditing.id);
