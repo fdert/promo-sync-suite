@@ -121,6 +121,33 @@ ${netProfit.toFixed(2)} ريال ${netProfit >= 0 ? '✅' : '❌'}
 
     console.log('Daily financial report created successfully');
 
+    // استدعاء process-whatsapp-queue لإرسال الرسالة فوراً
+    console.log('Invoking process-whatsapp-queue to send the message...');
+    try {
+      const queueUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/process-whatsapp-queue`;
+      const response = await fetch(queueUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`
+        },
+        body: JSON.stringify({
+          action: 'process_pending_messages',
+          timestamp: new Date().toISOString()
+        })
+      });
+
+      if (response.ok) {
+        const queueResult = await response.json();
+        console.log('process-whatsapp-queue invoked successfully:', queueResult);
+      } else {
+        const errorText = await response.text();
+        console.error('Error invoking process-whatsapp-queue:', response.status, errorText);
+      }
+    } catch (queueInvokeError) {
+      console.error('Failed to invoke process-whatsapp-queue:', queueInvokeError);
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true, 
