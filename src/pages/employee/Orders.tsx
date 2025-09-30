@@ -1627,7 +1627,7 @@ ${publicFileUrl}
                           <div className="text-left space-y-1 min-w-0 ml-2">
                             <p className="text-gray-600">الكمية: {item.quantity}</p>
                             <p className="text-gray-600">السعر: {(item.unit_price || 0).toLocaleString()} ر.س</p>
-                            <p className="font-medium text-blue-600">الإجمالي: {(item.total || 0).toLocaleString()} ر.س</p>
+                            <p className="font-medium text-blue-600">الإجمالي: {(item.total_amount || 0).toLocaleString()} ر.س</p>
                           </div>
                         </div>
                       ))}
@@ -1635,7 +1635,7 @@ ${publicFileUrl}
                         <div className="flex justify-between items-center text-sm font-medium">
                           <span>إجمالي البنود:</span>
                           <span className="text-blue-600">
-                            {order.order_items.reduce((sum, item) => sum + (item.total || 0), 0).toLocaleString()} ر.س
+                            {order.order_items.reduce((sum, item) => sum + (item.total_amount || 0), 0).toLocaleString()} ر.س
                           </span>
                         </div>
                       </div>
@@ -2495,7 +2495,7 @@ ${publicFileUrl}
               </div>
 
               <div className="p-3 bg-muted rounded-lg">
-                <p className="text-lg font-semibold">إجمالي المبلغ: {newOrder.amount.toFixed(2)} ر.س</p>
+                <p className="text-lg font-semibold">إجمالي المبلغ: {(newOrder.amount || 0).toFixed(2)} ر.س</p>
               </div>
             </div>
 
@@ -2742,7 +2742,7 @@ ${publicFileUrl}
                       <Label>الإجمالي</Label>
                       <Input
                         type="text"
-                        value={(item.total || 0).toLocaleString()}
+                        value={(item.total_amount || 0).toLocaleString()}
                         disabled
                         className="bg-muted"
                       />
@@ -2768,7 +2768,7 @@ ${publicFileUrl}
               <div className="mt-3 p-3 bg-muted rounded-lg">
                 <div className="flex justify-between items-center">
                   <span className="font-medium">إجمالي المبلغ:</span>
-                  <span className="font-bold text-lg">{newOrder.amount.toLocaleString()} ر.س</span>
+                  <span className="font-bold text-lg">{(newOrder.amount || 0).toLocaleString()} ر.س</span>
                 </div>
               </div>
             </div>
