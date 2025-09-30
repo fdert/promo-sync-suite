@@ -1462,29 +1462,44 @@ ${publicFileUrl}
 
       console.log('✅ تم تحديث بيانات الطلب الأساسية');
 
-      // تحضير البنود الصالحة للإدراج
-      const validItems = orderItems.filter(item => item.item_name && item.item_name.trim() !== '');
-      const itemsData = validItems.map(item => ({
-        item_name: item.item_name,
-        quantity: Number(item.quantity) || 1,
-        unit_price: Number(item.unit_price) || 0,
-        total_amount: Number(item.total_amount) || 0
-      }));
+      // حذف البنود القديمة أولاً
+      const { error: deleteItemsError } = await supabase
+        .from('order_items')
+        .delete()
+        .eq('order_id', selectedOrderForEditing.id);
 
-      console.log('البنود المراد تحديثها:', itemsData);
-
-      // استخدام الدالة الآمنة لتحديث البنود
-      const { error: updateItemsError } = await supabase.rpc('update_order_items_safely', {
-        order_id_param: selectedOrderForEditing.id,
-        items_data: itemsData
-      });
-
-      if (updateItemsError) {
-        console.error('❌ خطأ في تحديث البنود:', updateItemsError);
-        throw updateItemsError;
+      if (deleteItemsError) {
+        console.error('❌ خطأ في حذف البنود القديمة:', deleteItemsError);
+        throw deleteItemsError;
       }
 
-      console.log('✅ تم تحديث البنود بنجاح');
+      console.log('✅ تم حذف البنود القديمة');
+
+      // إضافة البنود الجديدة
+      const validItems = orderItems.filter(item => item.item_name && item.item_name.trim() !== '');
+      
+      if (validItems.length > 0) {
+        const itemsData = validItems.map(item => ({
+          order_id: selectedOrderForEditing.id,
+          item_name: item.item_name,
+          quantity: Number(item.quantity) || 1,
+          unit_price: Number(item.unit_price) || 0,
+          total: Number(item.total_amount) || 0  // استخدام total بدلاً من total_amount
+        }));
+
+        console.log('البنود المراد إدراجها:', itemsData);
+
+        const { error: insertItemsError } = await supabase
+          .from('order_items')
+          .insert(itemsData);
+
+        if (insertItemsError) {
+          console.error('❌ خطأ في إدراج البنود الجديدة:', insertItemsError);
+          throw insertItemsError;
+        }
+
+        console.log('✅ تم إدراج البنود الجديدة بنجاح');
+      }
 
       toast({
         title: "تم تحديث الطلب",
