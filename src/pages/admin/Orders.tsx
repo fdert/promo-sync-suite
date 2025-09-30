@@ -63,7 +63,7 @@ interface Order {
   customer_id?: string;
   customers?: {
     name: string;
-    whatsapp_number: string;
+    whatsapp: string;
     phone: string;
   };
   order_items?: {
@@ -80,7 +80,7 @@ interface Customer {
   id: string;
   name: string;
   phone?: string;
-  whatsapp_number?: string;
+  whatsapp?: string;
 }
 
 interface Service {
@@ -202,7 +202,7 @@ const Orders = () => {
         .from('orders')
         .select(`
           *,
-          customers(id, name, phone, whatsapp_number),
+          customers(id, name, phone, whatsapp),
           order_items(
             id,
             item_name,
@@ -256,8 +256,8 @@ const Orders = () => {
     try {
       const { data, error } = await supabase
         .from('customers')
-        .select('id, name, phone, whatsapp_number')
-        .eq('status', 'نشط')
+        .select('id, name, phone, whatsapp')
+        .eq('is_active', true)
         .order('name');
 
       if (error) throw error;
@@ -296,7 +296,7 @@ const Orders = () => {
   // طباعة ملصق باركود للطلب
   const handlePrintBarcodeLabel = async (order: Order) => {
     const customerName = order.customers?.name || 'غير محدد';
-    const phoneNumber = order.customers?.whatsapp_number || order.customers?.phone || 'غير محدد';
+    const phoneNumber = order.customers?.whatsapp || order.customers?.phone || 'غير محدد';
     const totalAmount = order.amount || 0;
     const paidAmount = order.paid_amount || 0;
     const paymentStatus = `payment|${totalAmount}|${paidAmount}`;
@@ -608,7 +608,7 @@ ${publicFileUrl}
 ${companyName}`;
 
       // التحقق من رقم الهاتف
-      const phoneNumber = order.customers?.whatsapp_number || order.customers?.phone || '';
+      const phoneNumber = order.customers?.whatsapp || order.customers?.phone || '';
       if (!phoneNumber) {
         throw new Error('رقم هاتف العميل غير متوفر');
       }
@@ -745,7 +745,7 @@ ${companyName}`;
         .from('orders')
         .select(`
           *,
-          customers(name, whatsapp_number)
+          customers(name, whatsapp)
         `)
         .eq('id', orderId)
         .single();
@@ -769,7 +769,7 @@ ${companyName}`;
       if (error) throw error;
 
         // إرسال إشعار واتساب للعميل
-      if (orderData.customers?.whatsapp_number) {
+      if (orderData.customers?.whatsapp) {
         console.log('Sending WhatsApp notification for status update...');
         
         // تحديد نوع الإشعار بناءً على الحالة الجديدة (مثل لوحة الموظف)
@@ -808,7 +808,7 @@ ${companyName}`;
           data: {
             order_number: orderData.order_number,
             customer_name: orderData.customers.name,
-            customer_phone: orderData.customers.whatsapp_number,
+            customer_phone: orderData.customers.whatsapp,
             old_status: orderData.status,
             new_status: newStatus,
             amount: orderData.amount,
@@ -1009,7 +1009,7 @@ ${companyName}`;
       }
 
       // إرسال الفاتورة عبر الواتساب
-      if (order.customers?.whatsapp_number) {
+      if (order.customers?.whatsapp) {
         const notificationData = {
           type: 'invoice_created',
           invoice_id: newInvoice.id,
@@ -1018,7 +1018,7 @@ ${companyName}`;
           data: {
             invoice_number: invoiceNumber,
             customer_name: order.customers.name,
-            customer_phone: order.customers.whatsapp_number,
+            customer_phone: order.customers.whatsapp,
             order_number: order.order_number,
             amount: order.amount,
             tax_amount: taxAmount,
@@ -1178,7 +1178,7 @@ ${companyName}`;
 
       // إرسال إشعار واتساب للعميل بالطلب الجديد
       const selectedCustomer = customers.find(c => c.id === newOrder.customer_id);
-      if (selectedCustomer?.whatsapp_number) {
+      if (selectedCustomer?.whatsapp) {
         console.log('Sending WhatsApp notification for new order...');
         
         const notificationData = {
@@ -1189,7 +1189,7 @@ ${companyName}`;
           data: {
             order_number: orderNumber,
             customer_name: selectedCustomer.name,
-            customer_phone: selectedCustomer.whatsapp_number,
+            customer_phone: selectedCustomer.whatsapp,
             amount: newOrder.amount,
             service_name: newOrder.service_name,
             description: newOrder.description,
@@ -1266,7 +1266,7 @@ ${companyName}`;
       order.service_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (order.customers?.name && order.customers.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (order.customers?.phone && order.customers.phone.includes(searchTerm)) ||
-      (order.customers?.whatsapp_number && order.customers.whatsapp_number.includes(searchTerm));
+      (order.customers?.whatsapp && order.customers.whatsapp.includes(searchTerm));
     
     const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
     
@@ -2370,7 +2370,7 @@ ${companyName}`;
                   <div className="mt-3 p-3 bg-white rounded border">
                     <p className="text-xs text-muted-foreground mb-1">معلومات الاتصال</p>
                     <div className="flex items-center gap-4 text-sm">
-                      <p><strong>الواتساب:</strong> {selectedOrderForInvoice.customers?.whatsapp_number || 'غير متوفر'}</p>
+                      <p><strong>الواتساب:</strong> {selectedOrderForInvoice.customers?.whatsapp || 'غير متوفر'}</p>
                       <p><strong>الهاتف:</strong> {selectedOrderForInvoice.customers?.phone || 'غير متوفر'}</p>
                     </div>
                   </div>
@@ -2396,7 +2396,7 @@ ${companyName}`;
                       <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
                       <span>تطبيق المدفوعات السابقة على الفاتورة</span>
                     </div>
-                    {selectedOrderForInvoice.customers?.whatsapp_number && (
+                    {selectedOrderForInvoice.customers?.whatsapp && (
                       <div className="flex items-center gap-2">
                         <div className="w-2 h-2 bg-green-600 rounded-full"></div>
                         <span className="text-green-700">إرسال الفاتورة تلقائياً عبر الواتساب</span>
@@ -2410,7 +2410,7 @@ ${companyName}`;
                 </div>
 
                 {/* تحذير إذا لم يكن هناك رقم واتساب */}
-                {!selectedOrderForInvoice.customers?.whatsapp_number && (
+                {!selectedOrderForInvoice.customers?.whatsapp && (
                   <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                     <div className="flex items-center gap-2 text-yellow-800">
                       <div className="w-2 h-2 bg-yellow-600 rounded-full"></div>
