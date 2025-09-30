@@ -1262,6 +1262,21 @@ ${publicFileUrl}
 
       // إرسال إشعار واتساب للعميل بالطلب الجديد
       const selectedCustomer = customers.find(c => c.id === newOrder.customer_id);
+
+      // إشعار داخلي لفريق المتابعة بالطلب الجديد
+      try {
+        await supabase.functions.invoke('notify-new-order', {
+          body: {
+            orderId: createdOrder.id,
+            orderNumber: orderNumber,
+            customerName: selectedCustomer?.name || '',
+            totalAmount: createdOrder.total_amount || 0,
+          }
+        });
+      } catch (e) {
+        console.error('فشل إشعار فريق المتابعة:', e);
+      }
+
       if (selectedCustomer?.whatsapp_number) {
         console.log('Sending WhatsApp notification for new order...');
         
