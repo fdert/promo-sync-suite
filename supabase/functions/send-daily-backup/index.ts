@@ -11,6 +11,8 @@ const corsHeaders = {
 
 interface BackupRequest {
   scheduled?: boolean;
+  testEmail?: boolean;
+  to?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -20,7 +22,43 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    console.log("Starting database backup process...");
+    // Parse request body (optional)
+    let body: BackupRequest = {} as BackupRequest;
+    try {
+      body = await req.json();
+    } catch (_e) {
+      // no body provided
+    }
+    const toRecipient = body.to || "Fm0002009@gmail.com";
+
+    console.log("Starting database backup process...", { testEmail: body.testEmail, to: toRecipient });
+
+    // If only testing email delivery, skip DB backup
+    if (body.testEmail) {
+      console.log("Sending test email only...");
+      const emailResponse = await resend.emails.send({
+        from: "نظام النسخ الاحتياطي <onboarding@resend.dev>",
+        to: [toRecipient],
+        subject: `اختبار نظام النسخ الاحتياطي - ${new Date().toLocaleDateString('ar-SA')}`,
+        html: `
+          <div dir="rtl" style="font-family: Arial, sans-serif; padding: 20px;">
+            <h2 style="color:#2563eb;">هذه رسالة اختبار</h2>
+            <p>تم إرسال رسالة اختبار من نظام النسخ الاحتياطي بنجاح.</p>
+            <p style="color:#6b7280;">إذا وصلتك هذه الرسالة فإعدادات البريد تعمل بشكل صحيح.</p>
+          </div>
+        `,
+      });
+
+      if (emailResponse.error) {
+        console.error("Error sending test email:", emailResponse.error);
+        throw new Error(`Failed to send test email: ${emailResponse.error.message}`);
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, message: "تم إرسال رسالة الاختبار بنجاح", emailId: emailResponse.data?.id }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -55,7 +93,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Sending backup email...");
     const emailResponse = await resend.emails.send({
       from: "نظام النسخ الاحتياطي <onboarding@resend.dev>",
-      to: ["Fm0002009@gmail.com"],
+      to: [toRecipient],
       subject: `النسخة الاحتياطية اليومية - ${currentDate}`,
       html: `
         <div dir="rtl" style="font-family: Arial, sans-serif; padding: 20px;">

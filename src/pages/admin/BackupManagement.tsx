@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Database, Download, Mail, Clock, CheckCircle2, AlertCircle, Settings, PlayCircle } from "lucide-react";
+import { Database, Download, Mail, Clock, CheckCircle2, AlertCircle, Settings, PlayCircle, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useAuth } from "@/contexts/AuthContext";
 
 const BackupManagement = () => {
   const { toast } = useToast();
@@ -20,7 +21,7 @@ const BackupManagement = () => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('send-daily-backup', {
-        body: { scheduled: false }
+        body: { scheduled: false, to: email }
       });
 
       if (error) throw error;
