@@ -90,12 +90,24 @@ serve(async (req) => {
 
     if (selectedWebhook?.webhook_url) {
       try {
+        // تجهيز الرقم بصيغتين للتأكد من التوافق
+        const phoneNumber = settings.whatsapp_number;
+        const phoneWithPlus = phoneNumber.startsWith('+') ? phoneNumber : `+${phoneNumber}`;
+        const phoneWithoutPlus = phoneNumber.replace('+', '');
+
+        console.log('Attempting to send via webhook:', {
+          webhook_url: selectedWebhook.webhook_url,
+          phoneWithPlus,
+          phoneWithoutPlus
+        });
+
         const payload = {
           event: 'whatsapp_message_send',
           data: {
-            to: settings.whatsapp_number,
-            phone: settings.whatsapp_number,
-            phoneNumber: settings.whatsapp_number,
+            to: phoneWithPlus,
+            phone: phoneWithPlus,
+            phoneNumber: phoneWithPlus,
+            phone_without_plus: phoneWithoutPlus,
             message: message,
             messageText: message,
             text: message,
@@ -103,6 +115,9 @@ serve(async (req) => {
             message_type: 'new_order_notification',
             timestamp: Math.floor(Date.now() / 1000),
             from_number: 'system',
+            order_id: orderId,
+            order_number: orderNumber,
+            customer_name: customerName
           }
         };
 
@@ -115,25 +130,38 @@ serve(async (req) => {
         const ok = resp.ok;
         const respText = await resp.text().catch(() => '');
 
+        console.log('Webhook response:', {
+          status: resp.status,
+          statusText: resp.statusText,
+          ok,
+          body: respText
+        });
+
         // تحديث حالة الرسالة بناءً على نتيجة الإرسال
         const updateData: Record<string, any> = {
-          status: ok ? 'sent' : 'failed',
+          status: ok ? 'sent' : 'pending',
           webhook_id: selectedWebhook.id,
           error_message: ok ? null : `${resp.status} ${resp.statusText} ${respText}`,
         };
-        if (ok) updateData.sent_at = new Date().toISOString();
+        if (ok) {
+          updateData.sent_at = new Date().toISOString();
+        }
 
         if (messageId) {
           await supabase.from('whatsapp_messages').update(updateData).eq('id', messageId);
         }
 
-        console.log(ok ? 'New order notification sent via webhook' : 'Webhook send failed, message updated as failed');
+        if (ok) {
+          console.log('New order notification sent via webhook successfully');
+        } else {
+          console.warn('Webhook send failed, message kept as pending for retry');
+        }
       } catch (sendErr) {
         console.error('Error sending webhook for new order notification:', sendErr);
         if (messageId) {
           await supabase
             .from('whatsapp_messages')
-            .update({ status: 'failed', error_message: String(sendErr) })
+            .update({ status: 'pending', error_message: String(sendErr) })
             .eq('id', messageId);
         }
       }
