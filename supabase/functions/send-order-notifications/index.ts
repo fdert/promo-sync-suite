@@ -285,8 +285,8 @@ Deno.serve(async (req) => {
         const replacements: Record<string, string> = {
           'customer_name': customerName || '',
           'order_number': data.order_number || '',
-          'amount': data.amount?.toString() || '',
-          'paid_amount': data.paid_amount?.toString() || '0',
+          'amount': ((orderDetails?.total_amount ?? data.amount ?? 0).toString()),
+          'paid_amount': ((orderDetails?.paid_amount ?? data.paid_amount ?? 0).toString()),
           'remaining_amount': remainingAmount,
           'payment_type': data.payment_type || 'غير محدد',
           'progress': data.progress?.toString() || '0',
@@ -309,6 +309,10 @@ Deno.serve(async (req) => {
         });
       } else {
       console.log('No template found, using fallback messages');
+      
+      const totalAmountNum = Number(orderDetails?.total_amount ?? data.amount ?? 0);
+      const paidAmountNum = Number(orderDetails?.paid_amount ?? data.paid_amount ?? 0);
+      const remainingAmountNum = Math.max(0, Number((totalAmountNum - paidAmountNum).toFixed(2)));
       
       // الرسائل الافتراضية إذا لم توجد قوالب
       switch (type) {
@@ -335,19 +339,19 @@ ${orderItemsText || 'لا توجد بنود محددة'}
           break;
 
         case 'order_in_progress':
-          message = `${data.customer_name}، طلبك رقم ${data.order_number} قيد التنفيذ حالياً. التقدم: ${data.progress || 0}%. سنبقيك على اطلاع بآخر التطورات.`;
+          message = `${data.customer_name}، طلبك رقم ${data.order_number} قيد التنفيذ حالياً. التقدم: ${data.progress || 0}%. سنبقيك على اطلاع بآخر التطورات.\n\n📊 الملخص المالي:\nقيمة الطلب: ${totalAmountNum} ر.س\nمدفوع: ${paidAmountNum} ر.س\nالمتبقي: ${remainingAmountNum} ر.س`;
           customerPhone = data.customer_phone;
           customerName = data.customer_name;
           break;
 
         case 'order_completed':
-          message = `تهانينا ${data.customer_name}! تم إنجاز طلبك رقم ${data.order_number} بنجاح. يمكنك الآن مراجعة النتائج. نشكرك لثقتك بخدماتنا!`;
+          message = `تهانينا ${data.customer_name}! تم إنجاز طلبك رقم ${data.order_number} بنجاح. يمكنك الآن مراجعة النتائج. نشكرك لثقتك بخدماتنا!\n\n📊 الملخص المالي:\nقيمة الطلب: ${totalAmountNum} ر.س\nمدفوع: ${paidAmountNum} ر.س\nالمتبقي: ${remainingAmountNum} ر.س`;
           customerPhone = data.customer_phone;
           customerName = data.customer_name;
           break;
 
         case 'order_updated':
-          message = `${data.customer_name}، تم تحديث طلبك رقم ${data.order_number}. الحالة الحالية: ${data.status}. سنبقيك على اطلاع بأي تطورات جديدة.`;
+          message = `${data.customer_name}، تم تحديث طلبك رقم ${data.order_number}. الحالة الحالية: ${data.status}. سنبقيك على اطلاع بأي تطورات جديدة.\n\n📊 الملخص المالي:\nقيمة الطلب: ${totalAmountNum} ر.س\nمدفوع: ${paidAmountNum} ر.س\nالمتبقي: ${remainingAmountNum} ر.س`;
           customerPhone = data.customer_phone;
           customerName = data.customer_name;
           break;
@@ -359,13 +363,13 @@ ${orderItemsText || 'لا توجد بنود محددة'}
           break;
 
         case 'order_ready_for_delivery':
-          message = `${data.customer_name}، طلبك رقم ${data.order_number} جاهز للتسليم! لتقييم الخدمة يرجى الضغط هنا: ${data.evaluation_link}`;
+          message = `${data.customer_name}، طلبك رقم ${data.order_number} جاهز للتسليم! لتقييم الخدمة يرجى الضغط هنا: ${data.evaluation_link}\n\n📊 الملخص المالي:\nقيمة الطلب: ${totalAmountNum} ر.س\nمدفوع: ${paidAmountNum} ر.س\nالمتبقي: ${remainingAmountNum} ر.س`;
           customerPhone = data.customer_phone;
           customerName = data.customer_name;
           break;
 
         case 'status_update':
-          message = `${data.customer_name}، تم تحديث حالة طلبك رقم ${data.order_number} من "${data.old_status}" إلى "${data.new_status}". سنبقيك على اطلاع بأي تطورات جديدة.`;
+          message = `${data.customer_name}، تم تحديث حالة طلبك رقم ${data.order_number} من "${data.old_status}" إلى "${data.new_status}". سنبقيك على اطلاع بأي تطورات جديدة.\n\n📊 الملخص المالي:\nقيمة الطلب: ${totalAmountNum} ر.س\nمدفوع: ${paidAmountNum} ر.س\nالمتبقي: ${remainingAmountNum} ر.س`;
           customerPhone = data.customer_phone;
           customerName = data.customer_name;
           break;
