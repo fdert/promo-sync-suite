@@ -12,9 +12,10 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const BackupManagement = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [isTestingEmail, setIsTestingEmail] = useState(false);
-  const [email, setEmail] = useState("Fm0002009@gmail.com");
+  const [email, setEmail] = useState("ibdaa.adve@gmail.com");
   const [autoBackupEnabled, setAutoBackupEnabled] = useState(true);
   const [lastBackupTime, setLastBackupTime] = useState<string | null>(null);
 
@@ -98,6 +99,16 @@ const BackupManagement = () => {
         </AlertDescription>
       </Alert>
 
+      <Alert className="border-yellow-500/50 bg-yellow-50 dark:bg-yellow-900/10">
+        <AlertCircle className="h-4 w-4 text-yellow-600" />
+        <AlertDescription className="text-yellow-800 dark:text-yellow-200">
+          <strong>تنبيه هام:</strong> حالياً يمكن إرسال الرسائل فقط إلى البريد المسجل في Resend (ibdaa.adve@gmail.com). لإرسال إلى عناوين أخرى، يجب توثيق الدومين في{" "}
+          <a href="https://resend.com/domains" target="_blank" rel="noopener noreferrer" className="underline font-medium">
+            resend.com/domains
+          </a>
+        </AlertDescription>
+      </Alert>
+
       <div className="grid gap-6 md:grid-cols-2">
         {/* تشغيل يدوي */}
         <Card className="border-primary/20">
@@ -175,7 +186,7 @@ const BackupManagement = () => {
                 dir="ltr"
               />
               <p className="text-xs text-muted-foreground">
-                سيتم إرسال النسخ الاحتياطية إلى هذا البريد
+                سيتم إرسال النسخ الاحتياطية إلى هذا البريد (حالياً مقيد ببريد حساب Resend)
               </p>
             </div>
 
