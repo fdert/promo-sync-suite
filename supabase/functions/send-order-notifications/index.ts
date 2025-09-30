@@ -133,9 +133,9 @@ Deno.serve(async (req) => {
         orderDetails.paid_amount = totalPaidAmount;
         
         console.log('=== Final Values for Message ===');
-        console.log('Total Amount:', orderDetails.amount);
+        console.log('Total Amount:', orderDetails.total_amount);
         console.log('Actual Paid Amount:', totalPaidAmount);
-        console.log('Remaining Amount:', orderDetails.amount - totalPaidAmount);
+        console.log('Remaining Amount:', orderDetails.total_amount - totalPaidAmount);
       }
     }
 
@@ -253,7 +253,7 @@ Deno.serve(async (req) => {
         if (orderDetails) {
           
           // حساب المبلغ المتبقي
-          const totalAmount = parseFloat(orderDetails.amount?.toString() || '0');
+          const totalAmount = parseFloat(orderDetails.total_amount?.toString() || '0');
           const paidAmount = parseFloat(orderDetails.paid_amount?.toString() || '0');
           remainingAmount = (totalAmount - paidAmount).toString();
           
