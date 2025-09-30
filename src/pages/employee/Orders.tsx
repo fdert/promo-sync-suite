@@ -693,6 +693,20 @@ ${publicFileUrl}
     console.log('New Status:', status);
     
     try {
+      // تحويل الحالة العربية إلى القيمة المطلوبة في قاعدة البيانات
+      const statusMapping: Record<string, string> = {
+        'جديد': 'pending',
+        'مؤكد': 'pending',
+        'قيد التنفيذ': 'in_progress',
+        'قيد المراجعة': 'in_progress',
+        'جاهز للتسليم': 'completed',
+        'مكتمل': 'completed',
+        'ملغي': 'cancelled'
+      };
+      
+      const dbStatus = statusMapping[status] || 'pending';
+      console.log('Database Status:', dbStatus);
+      
       // جلب بيانات الطلب مع العميل من قاعدة البيانات
       const { data: orderData, error: fetchError } = await supabase
         .from('orders')
@@ -712,7 +726,7 @@ ${publicFileUrl}
 
       const { error } = await supabase
         .from('orders')
-        .update({ status })
+        .update({ status: dbStatus })
         .eq('id', orderId);
 
       if (error) throw error;
