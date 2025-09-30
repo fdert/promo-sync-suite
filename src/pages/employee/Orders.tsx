@@ -62,15 +62,22 @@ interface Order {
   id: string;
   order_number: string;
   service_name: string;
+  service_types?: {
+    id: string;
+    name: string;
+  };
   description: string;
   status: string;
   priority: string;
   amount: number;
+  total_amount?: number;
   paid_amount: number;
   payment_type?: string;
   due_date: string;
+  delivery_date?: string;
   created_at: string;
   customer_id?: string;
+  items_total?: number;
   customers?: {
     name: string;
     whatsapp: string;
@@ -81,7 +88,8 @@ interface Order {
     item_name: string;
     quantity: number;
     unit_price: number;
-    total_amount: number;
+    total: number;
+    total_amount?: number;
     description?: string;
   }[];
 }
@@ -201,12 +209,13 @@ const Orders = () => {
       setLoading(true);
       
       const ordersWithDetails = await Promise.all(baseOrders.map(async (order: any) => {
-        // جلب تفاصيل العميل والعناصر
+        // جلب تفاصيل العميل والخدمة والعناصر
         const { data: orderWithDetails } = await supabase
           .from('orders')
           .select(`
             *,
             customers(id, name, phone, whatsapp),
+            service_types(id, name),
             order_items(
               id,
               item_name,
@@ -229,9 +238,12 @@ const Orders = () => {
         
         return {
           ...(orderWithDetails || order),
+          service_name: orderWithDetails?.service_types?.name || 'غير محدد',
+          due_date: orderWithDetails?.delivery_date || null,
           paid_amount: totalPaid,
           calculated_paid_amount: totalPaid,
-          remaining_amount: (order.total_amount || 0) - totalPaid
+          remaining_amount: (order.total_amount || 0) - totalPaid,
+          items_total: orderWithDetails?.order_items?.reduce((sum: number, item: any) => sum + (item.total || 0), 0) || 0
         };
       }));
       
@@ -1621,8 +1633,8 @@ ${publicFileUrl}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                   <div className="space-y-2">
                     <p><strong>العميل:</strong> {order.customers?.name || 'غير محدد'}</p>
-                    <p><strong>الخدمة:</strong> {order.service_name}</p>
-                    <p><strong>تاريخ الاستحقاق:</strong> {order.due_date ? new Date(order.due_date).toLocaleDateString('ar-SA') : '-'}</p>
+                    <p><strong>الخدمة:</strong> {order.service_name || 'غير محدد'}</p>
+                    <p><strong>تاريخ التسليم:</strong> {order.due_date ? new Date(order.due_date).toLocaleDateString('ar-SA') : '-'}</p>
                   </div>
                   <div className="space-y-2">
                     <p><strong>المبلغ الإجمالي:</strong> {(order.total_amount || 0).toLocaleString()} ر.س</p>
@@ -1650,7 +1662,7 @@ ${publicFileUrl}
                           <div className="text-left space-y-1 min-w-0 ml-2">
                             <p className="text-gray-600">الكمية: {item.quantity}</p>
                             <p className="text-gray-600">السعر: {(item.unit_price || 0).toLocaleString()} ر.س</p>
-                            <p className="font-medium text-blue-600">الإجمالي: {(item.total_amount || 0).toLocaleString()} ر.س</p>
+                            <p className="font-medium text-blue-600">الإجمالي: {(item.total || 0).toLocaleString()} ر.س</p>
                           </div>
                         </div>
                       ))}
@@ -1658,7 +1670,7 @@ ${publicFileUrl}
                         <div className="flex justify-between items-center text-sm font-medium">
                           <span>إجمالي البنود:</span>
                           <span className="text-blue-600">
-                            {order.order_items.reduce((sum, item) => sum + (item.total_amount || 0), 0).toLocaleString()} ر.س
+                            {(order.items_total || order.order_items.reduce((sum, item) => sum + (item.total || item.total_amount || 0), 0)).toLocaleString()} ر.س
                           </span>
                         </div>
                       </div>
