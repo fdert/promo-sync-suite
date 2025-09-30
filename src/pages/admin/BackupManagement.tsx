@@ -13,6 +13,7 @@ import { useAuth } from "@/contexts/AuthContext";
 const BackupManagement = () => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [isTestingEmail, setIsTestingEmail] = useState(false);
   const [email, setEmail] = useState("Fm0002009@gmail.com");
   const [autoBackupEnabled, setAutoBackupEnabled] = useState(true);
   const [lastBackupTime, setLastBackupTime] = useState<string | null>(null);
@@ -41,6 +42,31 @@ const BackupManagement = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleTestEmail = async () => {
+    setIsTestingEmail(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-daily-backup', {
+        body: { testEmail: true, to: email }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "✅ تم إرسال رسالة الاختبار",
+        description: `تم إرسال رسالة اختبار إلى ${email} بنجاح`,
+      });
+    } catch (error: any) {
+      console.error('Error sending test email:', error);
+      toast({
+        variant: "destructive",
+        title: "❌ خطأ في إرسال الرسالة",
+        description: error.message || "فشل في إرسال رسالة الاختبار",
+      });
+    } finally {
+      setIsTestingEmail(false);
     }
   };
 
@@ -170,10 +196,25 @@ const BackupManagement = () => {
               />
             </div>
 
-            <Button onClick={handleSaveSettings} className="w-full">
-              <CheckCircle2 className="ml-2 h-4 w-4" />
-              حفظ الإعدادات
-            </Button>
+            <div className="grid grid-cols-2 gap-2">
+              <Button onClick={handleTestEmail} disabled={isTestingEmail} variant="outline">
+                {isTestingEmail ? (
+                  <>
+                    <Clock className="ml-2 h-4 w-4 animate-spin" />
+                    جاري الإرسال...
+                  </>
+                ) : (
+                  <>
+                    <Send className="ml-2 h-4 w-4" />
+                    اختبار البريد
+                  </>
+                )}
+              </Button>
+              <Button onClick={handleSaveSettings}>
+                <CheckCircle2 className="ml-2 h-4 w-4" />
+                حفظ الإعدادات
+              </Button>
+            </div>
 
             <div className="border-t pt-4">
               <Alert>
