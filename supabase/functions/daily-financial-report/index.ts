@@ -111,7 +111,7 @@ ${netProfit.toFixed(2)} ريال ${netProfit >= 0 ? '✅' : '❌'}
         message_type: 'daily_financial_report',
         message_content: message,
         status: 'pending',
-        dedupe_key: `daily_report_${today.toISOString().split('T')[0]}`
+        dedupe_key: `daily_report_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
       });
 
     if (insertError) {
@@ -120,6 +120,9 @@ ${netProfit.toFixed(2)} ريال ${netProfit >= 0 ? '✅' : '❌'}
     }
 
     console.log('Daily financial report created successfully');
+
+    // الانتظار قليلاً للتأكد من حفظ الرسالة في قاعدة البيانات
+    await new Promise(resolve => setTimeout(resolve, 500));
 
     // استدعاء process-whatsapp-queue لإرسال الرسالة فوراً
     console.log('Invoking process-whatsapp-queue to send the message...');
