@@ -299,9 +299,9 @@ const AccountsOverview = () => {
  
  جملة المبالغ المستحقة: ${customer.outstanding_balance.toLocaleString()} ر.س
  عدد الطلبات غير المدفوعة: ${customer.unpaid_invoices_count}
- أقرب تاريخ استحقاق: ${format(new Date(customer.earliest_due_date), 'dd/MM/yyyy', { locale: ar })}
- آخر تاريخ استحقاق: ${format(new Date(customer.latest_due_date), 'dd/MM/yyyy', { locale: ar })}
- 
+ أقرب تاريخ استحقاق: ${customer.earliest_due_date ? format(new Date(customer.earliest_due_date), 'dd/MM/yyyy', { locale: ar }) : 'غير محدد'}
+  آخر تاريخ استحقاق: ${customer.latest_due_date ? format(new Date(customer.latest_due_date), 'dd/MM/yyyy', { locale: ar }) : 'غير محدد'}
+  
 آخر ${Math.min(5, orders.length)} طلبات:
 ${orders.slice(0, 5).map(order => 
   `- طلب رقم: ${order.order_number} | الخدمة: ${order.service_name} | المبلغ: ${order.amount.toLocaleString()} ر.س | الحالة: ${order.status}`
@@ -309,7 +309,7 @@ ${orders.slice(0, 5).map(order =>
 
 آخر ${Math.min(5, payments.length)} مدفوعات:
 ${payments.slice(0, 5).map(payment => 
-  `- مبلغ: ${payment.amount.toLocaleString()} ر.س | نوع الدفع: ${payment.payment_type} | التاريخ: ${format(new Date(payment.payment_date), 'dd/MM/yyyy', { locale: ar })}`
+  `- مبلغ: ${payment.amount.toLocaleString()} ر.س | نوع الدفع: ${payment.payment_type} | التاريخ: ${payment.payment_date ? format(new Date(payment.payment_date), 'dd/MM/yyyy', { locale: ar }) : 'غير محدد'}`
 ).join('\n')}
 
 تاريخ التقرير: ${format(new Date(), 'dd/MM/yyyy HH:mm', { locale: ar })}
@@ -520,8 +520,8 @@ ${payments.slice(0, 5).map(payment =>
       ['ملخص العميل', selectedCustomerData.customer_name],
       ['المبلغ المستحق', selectedCustomerData.outstanding_balance],
       ['عدد الطلبات غير المدفوعة', selectedCustomerData.unpaid_invoices_count],
-      ['أقرب استحقاق', format(new Date(selectedCustomerData.earliest_due_date), 'dd/MM/yyyy')],
-      ['آخر استحقاق', format(new Date(selectedCustomerData.latest_due_date), 'dd/MM/yyyy')],
+      ['أقرب استحقاق', selectedCustomerData.earliest_due_date ? format(new Date(selectedCustomerData.earliest_due_date), 'dd/MM/yyyy') : 'غير محدد'],
+      ['آخر استحقاق', selectedCustomerData.latest_due_date ? format(new Date(selectedCustomerData.latest_due_date), 'dd/MM/yyyy') : 'غير محدد'],
       [''],
       ['الطلبات'],
       ['رقم الطلب', 'الخدمة', 'المبلغ', 'الحالة', 'تاريخ الإنشاء'],
@@ -530,7 +530,7 @@ ${payments.slice(0, 5).map(payment =>
         order.service_name,
         order.amount,
         order.status,
-        format(new Date(order.created_at), 'dd/MM/yyyy')
+        order.created_at ? format(new Date(order.created_at), 'dd/MM/yyyy') : 'غير محدد'
       ]),
       [''],
       ['المدفوعات'],
@@ -538,7 +538,7 @@ ${payments.slice(0, 5).map(payment =>
       ...payments.map(payment => [
         payment.amount,
         payment.payment_type,
-        format(new Date(payment.payment_date), 'dd/MM/yyyy')
+        payment.payment_date ? format(new Date(payment.payment_date), 'dd/MM/yyyy') : 'غير محدد'
       ])
     ];
     
@@ -764,10 +764,16 @@ ${payments.slice(0, 5).map(payment =>
                     <Badge variant="secondary">{customer.unpaid_invoices_count} طلب</Badge>
                   </TableCell>
                   <TableCell>
-                    {format(new Date(customer.earliest_due_date), 'dd/MM/yyyy', { locale: ar })}
+                    {customer.earliest_due_date 
+                      ? format(new Date(customer.earliest_due_date), 'dd/MM/yyyy', { locale: ar })
+                      : '-'
+                    }
                   </TableCell>
                   <TableCell>
-                    {format(new Date(customer.latest_due_date), 'dd/MM/yyyy', { locale: ar })}
+                    {customer.latest_due_date
+                      ? format(new Date(customer.latest_due_date), 'dd/MM/yyyy', { locale: ar })
+                      : '-'
+                    }
                   </TableCell>
                    <TableCell>
                      <div className="flex gap-2 flex-wrap">
@@ -823,9 +829,12 @@ ${payments.slice(0, 5).map(payment =>
                                            <TableCell>
                                              <Badge variant="outline">{order.status}</Badge>
                                            </TableCell>
-                                           <TableCell>
-                                             {format(new Date(order.created_at), 'dd/MM/yyyy', { locale: ar })}
-                                           </TableCell>
+                                            <TableCell>
+                                              {order.created_at 
+                                                ? format(new Date(order.created_at), 'dd/MM/yyyy', { locale: ar })
+                                                : '-'
+                                              }
+                                            </TableCell>
                                          </TableRow>
                                        ))}
                                      </TableBody>
@@ -859,9 +868,12 @@ ${payments.slice(0, 5).map(payment =>
                                            <TableCell>
                                              <Badge variant="secondary">{payment.payment_type}</Badge>
                                            </TableCell>
-                                           <TableCell>
-                                             {format(new Date(payment.payment_date), 'dd/MM/yyyy', { locale: ar })}
-                                           </TableCell>
+                                            <TableCell>
+                                              {payment.payment_date
+                                                ? format(new Date(payment.payment_date), 'dd/MM/yyyy', { locale: ar })
+                                                : '-'
+                                              }
+                                            </TableCell>
                                          </TableRow>
                                        ))}
                                      </TableBody>
@@ -941,7 +953,10 @@ ${payments.slice(0, 5).map(payment =>
                       </span>
                     </TableCell>
                     <TableCell>
-                      {format(new Date(order.due_date), 'dd/MM/yyyy', { locale: ar })}
+                      {order.due_date
+                        ? format(new Date(order.due_date), 'dd/MM/yyyy', { locale: ar })
+                        : '-'
+                      }
                     </TableCell>
                     <TableCell>
                       <Badge className={status.color} variant="secondary">
