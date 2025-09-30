@@ -21,6 +21,7 @@ import {
   Tags,
   Activity,
   Send,
+  Database as DatabaseIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -203,6 +204,12 @@ const menuItems = [
     icon: FileText,
     href: "/admin/electronic-invoice-settings",
     allowedRoles: ['admin', 'manager'] as UserRole[],
+  },
+  {
+    title: "النسخ الاحتياطي",
+    icon: DatabaseIcon,
+    href: "/admin/backup-management",
+    allowedRoles: ['admin'] as UserRole[],
   },
 ];
 

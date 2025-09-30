@@ -61,6 +61,7 @@ import EmployeeOrderPayments from "./pages/employee/OrderPayments";
 import EmployeeOrderPaymentsList from "./pages/employee/OrderPaymentsList";
 import InvoiceVerification from "./pages/InvoiceVerification";
 import ElectronicInvoiceSettings from "./pages/admin/ElectronicInvoiceSettings";
+import BackupManagement from "./pages/admin/BackupManagement";
 
 const queryClient = new QueryClient();
 
@@ -177,6 +178,11 @@ const App = () => (
                  <Route path="electronic-invoice-settings" element={
                    <RoleProtectedRoute allowedRoles={['admin', 'manager'] as any}>
                      <ElectronicInvoiceSettings />
+                   </RoleProtectedRoute>
+                 } />
+                 <Route path="backup-management" element={
+                   <RoleProtectedRoute allowedRoles={['admin']}>
+                     <BackupManagement />
                    </RoleProtectedRoute>
                  } />
             </Route>
