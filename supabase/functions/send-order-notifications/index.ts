@@ -96,8 +96,8 @@ Deno.serve(async (req) => {
         .from('orders')
         .select(`
           *,
-          customers(name, whatsapp_number),
-          order_items(item_name, quantity, unit_price, total_amount, description)
+          customers(name, whatsapp, phone),
+          order_items(item_name, quantity, unit_price, total, description)
         `)
         .eq('id', order_id)
         .single();
@@ -143,7 +143,7 @@ Deno.serve(async (req) => {
     if (orderDetails) {
       if (orderDetails.order_items && orderDetails.order_items.length > 0) {
         orderItemsText = orderDetails.order_items.map((item: any, index: number) => 
-          `${index + 1}. ${item.item_name} \n   الكمية: ${item.quantity}\n   السعر: ${item.unit_price} ر.س\n   المجموع: ${item.total_amount} ر.س`
+          `${index + 1}. ${item.item_name} \n   الكمية: ${item.quantity}\n   السعر: ${item.unit_price} ر.س\n   المجموع: ${item.total} ر.س`
         ).join('\n\n');
         console.log('Order items formatted:', orderItemsText);
       } else {
