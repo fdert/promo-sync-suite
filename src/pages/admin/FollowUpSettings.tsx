@@ -79,6 +79,7 @@ const FollowUpSettings = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [isTestingFinancialReport, setIsTestingFinancialReport] = useState(false);
   
   // Activity logs states
   const [logs, setLogs] = useState<ActivityLog[]>([]);
@@ -285,6 +286,29 @@ const FollowUpSettings = () => {
       });
     } finally {
       setTesting(false);
+    }
+  };
+
+  const handleTestFinancialReport = async () => {
+    setIsTestingFinancialReport(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('daily-financial-report');
+      
+      if (error) throw error;
+
+      toast({
+        title: "تم إرسال التقرير المالي ✅",
+        description: "تم إنشاء وإرسال التقرير المالي اليومي بنجاح",
+      });
+    } catch (error) {
+      console.error('Error testing financial report:', error);
+      toast({
+        title: "فشل إرسال التقرير ❌",
+        description: error.message || "حدث خطأ أثناء إرسال التقرير المالي",
+        variant: "destructive",
+      });
+    } finally {
+      setIsTestingFinancialReport(false);
     }
   };
 
@@ -674,23 +698,48 @@ const FollowUpSettings = () => {
             </Card>
 
             {/* أزرار الحفظ والاختبار */}
-            <div className="flex justify-between items-center">
-              <Button 
-                onClick={testFollowUpSystem} 
-                disabled={testing || !settings.whatsapp_number}
-                variant="outline"
-                size="lg"
-                className="min-w-[140px]"
-              >
-                {testing ? (
-                  <div className="flex items-center gap-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                    جاري الاختبار...
-                  </div>
-                ) : (
-                  "اختبار النظام"
-                )}
-              </Button>
+            <div className="flex justify-between items-center gap-3 flex-wrap">
+              <div className="flex gap-3 flex-wrap">
+                <Button 
+                  onClick={testFollowUpSystem} 
+                  disabled={testing || !settings.whatsapp_number}
+                  variant="outline"
+                  size="lg"
+                  className="min-w-[140px]"
+                >
+                  {testing ? (
+                    <div className="flex items-center gap-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                      جاري الاختبار...
+                    </div>
+                  ) : (
+                    <>
+                      <Zap className="h-4 w-4 ml-2" />
+                      اختبار النظام
+                    </>
+                  )}
+                </Button>
+
+                <Button 
+                  onClick={handleTestFinancialReport} 
+                  disabled={isTestingFinancialReport || !settings.whatsapp_number || !settings.daily_financial_report}
+                  variant="outline"
+                  size="lg"
+                  className="min-w-[180px] border-purple-200 hover:border-purple-300 hover:bg-purple-50 dark:border-purple-700 dark:hover:bg-purple-900/20"
+                >
+                  {isTestingFinancialReport ? (
+                    <div className="flex items-center gap-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600"></div>
+                      جاري الإرسال...
+                    </div>
+                  ) : (
+                    <>
+                      <DollarSign className="h-4 w-4 ml-2 text-purple-600" />
+                      اختبار التقرير المالي
+                    </>
+                  )}
+                </Button>
+              </div>
               
               <Button 
                 onClick={handleSave} 
