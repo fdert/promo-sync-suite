@@ -261,8 +261,8 @@ const FollowUpSettings = () => {
         .from('whatsapp_messages')
         .insert({
           from_number: 'test_system',
-          to_number: settingsData.whatsapp_number,
-          message_type: 'follow_up_test',
+          to_number: String(settingsData.whatsapp_number || '').trim(),
+          message_type: 'text',
           message_content: testMessage,
           status: 'pending',
           dedupe_key: `test_${Date.now()}`
@@ -270,6 +270,16 @@ const FollowUpSettings = () => {
       
       if (insertError) {
         console.warn('تحذير: فشل في حفظ رسالة الاختبار:', insertError.message);
+      } else {
+        // معالجة الرسائل عبر الويب هوك (n8n)
+        const { data: queueResult, error: queueError } = await supabase.functions.invoke('process-whatsapp-queue', {
+          body: { action: 'process_pending_messages', source: 'follow-up-settings-follow-up-test' }
+        });
+        if (queueError) {
+          console.warn('تحذير: فشل في استدعاء process-whatsapp-queue:', queueError.message);
+        } else {
+          console.log('تمت معالجة قائمة الواتساب:', queueResult);
+        }
       }
 
       toast({
