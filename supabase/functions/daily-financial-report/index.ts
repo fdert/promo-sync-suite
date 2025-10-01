@@ -81,8 +81,8 @@ serve(async (req) => {
       .eq('status', 'completed')
       .gte('updated_at', todayStart)
       .lte('updated_at', todayEnd);
-    // تنسيق رقم الواتساب (إزالة أي محارف غير رقمية)
-    const toNumber = String(settings.whatsapp_number || '').replace(/[^0-9]/g, '');
+    // استخدام رقم الواتساب كما هو (مع الاحتفاظ بعلامة + إن وجدت)
+    const toNumber = String(settings.whatsapp_number || '').trim();
 
     const message = `📊 *التقرير المالي اليومي*
 
@@ -110,7 +110,7 @@ ${netProfit.toFixed(2)} ريال ${netProfit >= 0 ? '✅' : '❌'}
       .insert({
         from_number: 'system',
         to_number: toNumber,
-        message_type: 'daily_financial_report',
+        message_type: 'text',
         message_content: message,
         status: 'pending',
         dedupe_key: `daily_report_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
