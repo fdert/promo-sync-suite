@@ -55,7 +55,7 @@ serve(async (req) => {
 يرجى متابعة الطلب والتواصل مع العميل.`;
 
     // حفظ الرسالة في قاعدة البيانات
-    const { data: insertedMsg, error: insertError } = await supabase
+    const { data: inserted, error: insertError } = await supabase
       .from('whatsapp_messages')
       .insert({
         from_number: 'system',
@@ -73,7 +73,9 @@ serve(async (req) => {
       throw insertError;
     }
 
-    const messageId = insertedMsg?.id;
+    const messageId = inserted?.id;
+
+    console.log('New order notification saved successfully');
 
     // إرسال مباشر عبر follow_up_webhook_url إذا كان موجوداً
     if (settings.follow_up_webhook_url) {
@@ -123,91 +125,7 @@ serve(async (req) => {
       } catch (webhookError) {
         console.error('Error sending via follow_up_webhook:', webhookError);
       }
-    } else {
-      // الطريقة العادية: البحث عن webhooks النشطة
-      const { data: webhooks, error: webhookError } = await supabase
-        .from('webhook_settings')
-        .select('*')
-        .eq('is_active', true)
-        .order('updated_at', { ascending: false });
-
-      if (webhookError) {
-        console.warn('Failed to fetch webhooks, keeping message pending:', webhookError);
-      }
-
-      const phoneNumber = settings.whatsapp_number;
-      const phoneWithPlus = phoneNumber.startsWith('+') ? phoneNumber : `+${phoneNumber}`;
-      const phoneWithoutPlus = phoneNumber.replace('+', '');
-
-      const candidates = (webhooks || []).sort((a: any, b: any) => {
-        const pa = a.webhook_type === 'outgoing' ? 0 : 1;
-        const pb = b.webhook_type === 'outgoing' ? 0 : 1;
-        return pa - pb;
-      });
-
-      let sent = false;
-      let usedWebhookId: string | null = null;
-      let lastError: string | null = null;
-
-      for (const w of candidates) {
-        if (!w?.webhook_url) continue;
-
-        try {
-          const payload = {
-            event: 'whatsapp_message_send',
-            data: {
-              to: phoneWithPlus,
-              phone: phoneWithPlus,
-              phoneNumber: phoneWithPlus,
-              phone_without_plus: phoneWithoutPlus,
-              message: message,
-              messageText: message,
-              text: message,
-              type: 'text',
-              message_type: 'new_order_notification',
-              timestamp: Math.floor(Date.now() / 1000),
-              from_number: 'system',
-              order_id: orderId,
-              order_number: orderNumber,
-              customer_name: customerName
-            }
-          };
-
-          const resp = await fetch(w.webhook_url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
-
-          if (resp.ok) {
-            sent = true;
-            usedWebhookId = w.id;
-            break;
-          } else {
-            lastError = `${resp.status} ${resp.statusText}`;
-            continue;
-          }
-        } catch (sendErr) {
-          lastError = String(sendErr);
-          continue;
-        }
-      }
-
-      const updateData: Record<string, any> = {
-        status: sent ? 'sent' : 'pending',
-        webhook_id: usedWebhookId,
-        error_message: sent ? null : lastError,
-      };
-      if (sent) {
-        updateData.sent_at = new Date().toISOString();
-      }
-
-      if (messageId) {
-        await supabase.from('whatsapp_messages').update(updateData).eq('id', messageId);
-      }
     }
-
-    console.log('New order notification saved successfully');
 
     return new Response(
       JSON.stringify({ success: true, message: 'Notification sent or queued' }),
