@@ -54,7 +54,7 @@ serve(async (req) => {
 
 يرجى متابعة الطلب والتواصل مع العميل.`;
 
-    // حفظ الرسالة في قاعدة البيانات ثم محاولة إرسالها فورًا عبر webhook
+    // حفظ الرسالة في قاعدة البيانات
     const { data: insertedMsg, error: insertError } = await supabase
       .from('whatsapp_messages')
       .insert({
@@ -75,50 +75,17 @@ serve(async (req) => {
 
     const messageId = insertedMsg?.id;
 
-    // البحث عن جميع webhooks النشطة ومحاولة الإرسال إليها بالتتابع
-    const { data: webhooks, error: webhookError } = await supabase
-      .from('webhook_settings')
-      .select('*')
-      .eq('is_active', true)
-      .order('updated_at', { ascending: false });
-
-    if (webhookError) {
-      console.warn('Failed to fetch webhooks, keeping message pending:', webhookError);
-    }
-
-    // تجهيز الرقم بصيغتين للتأكد من التوافق
-    const phoneNumber = settings.whatsapp_number;
-    const phoneWithPlus = phoneNumber.startsWith('+') ? phoneNumber : `+${phoneNumber}`;
-    const phoneWithoutPlus = phoneNumber.replace('+', '');
-
-    // ترتيب المحاولات: إعطاء أولوية ل outgoing ثم باقي الأنواع
-    const candidates = (webhooks || []).sort((a: any, b: any) => {
-      const pa = a.webhook_type === 'outgoing' ? 0 : 1;
-      const pb = b.webhook_type === 'outgoing' ? 0 : 1;
-      return pa - pb;
-    });
-
-    let sent = false;
-    let usedWebhookId: string | null = null;
-    let lastError: string | null = null;
-
-    for (const w of candidates) {
-      if (!w?.webhook_url) continue;
-
+    // إرسال مباشر عبر follow_up_webhook_url إذا كان موجوداً
+    if (settings.follow_up_webhook_url) {
       try {
-        console.log('Attempting to send via webhook:', {
-          webhook_url: w.webhook_url,
-          phoneWithPlus,
-          phoneWithoutPlus
-        });
-
+        console.log('Sending via follow_up_webhook:', settings.follow_up_webhook_url);
+        
         const payload = {
           event: 'whatsapp_message_send',
           data: {
-            to: phoneWithPlus,
-            phone: phoneWithPlus,
-            phoneNumber: phoneWithPlus,
-            phone_without_plus: phoneWithoutPlus,
+            to: settings.whatsapp_number,
+            phone: settings.whatsapp_number,
+            phoneNumber: settings.whatsapp_number,
             message: message,
             messageText: message,
             text: message,
@@ -132,58 +99,112 @@ serve(async (req) => {
           }
         };
 
-        const resp = await fetch(w.webhook_url, {
+        const webhookResp = await fetch(settings.follow_up_webhook_url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
 
-        const ok = resp.ok;
-        const respText = await resp.text().catch(() => '');
-
-        console.log('Webhook response:', {
-          status: resp.status,
-          statusText: resp.statusText,
-          ok,
-          body: respText
-        });
-
-        if (ok) {
-          sent = true;
-          usedWebhookId = w.id;
-          break; // لا داعي للمحاولة مع Webhook آخر
+        if (webhookResp.ok) {
+          console.log('✅ Sent via follow_up_webhook successfully');
+          
+          if (messageId) {
+            await supabase
+              .from('whatsapp_messages')
+              .update({ 
+                status: 'sent', 
+                sent_at: new Date().toISOString() 
+              })
+              .eq('id', messageId);
+          }
         } else {
-          lastError = `${resp.status} ${resp.statusText} ${respText}`;
-          console.warn('Webhook send failed, will try next active webhook');
+          console.warn('Follow_up_webhook failed, keeping pending');
+        }
+      } catch (webhookError) {
+        console.error('Error sending via follow_up_webhook:', webhookError);
+      }
+    } else {
+      // الطريقة العادية: البحث عن webhooks النشطة
+      const { data: webhooks, error: webhookError } = await supabase
+        .from('webhook_settings')
+        .select('*')
+        .eq('is_active', true)
+        .order('updated_at', { ascending: false });
+
+      if (webhookError) {
+        console.warn('Failed to fetch webhooks, keeping message pending:', webhookError);
+      }
+
+      const phoneNumber = settings.whatsapp_number;
+      const phoneWithPlus = phoneNumber.startsWith('+') ? phoneNumber : `+${phoneNumber}`;
+      const phoneWithoutPlus = phoneNumber.replace('+', '');
+
+      const candidates = (webhooks || []).sort((a: any, b: any) => {
+        const pa = a.webhook_type === 'outgoing' ? 0 : 1;
+        const pb = b.webhook_type === 'outgoing' ? 0 : 1;
+        return pa - pb;
+      });
+
+      let sent = false;
+      let usedWebhookId: string | null = null;
+      let lastError: string | null = null;
+
+      for (const w of candidates) {
+        if (!w?.webhook_url) continue;
+
+        try {
+          const payload = {
+            event: 'whatsapp_message_send',
+            data: {
+              to: phoneWithPlus,
+              phone: phoneWithPlus,
+              phoneNumber: phoneWithPlus,
+              phone_without_plus: phoneWithoutPlus,
+              message: message,
+              messageText: message,
+              text: message,
+              type: 'text',
+              message_type: 'new_order_notification',
+              timestamp: Math.floor(Date.now() / 1000),
+              from_number: 'system',
+              order_id: orderId,
+              order_number: orderNumber,
+              customer_name: customerName
+            }
+          };
+
+          const resp = await fetch(w.webhook_url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+
+          if (resp.ok) {
+            sent = true;
+            usedWebhookId = w.id;
+            break;
+          } else {
+            lastError = `${resp.status} ${resp.statusText}`;
+            continue;
+          }
+        } catch (sendErr) {
+          lastError = String(sendErr);
           continue;
         }
-      } catch (sendErr) {
-        lastError = String(sendErr);
-        console.error('Error sending webhook for new order notification:', sendErr);
-        continue;
       }
-    }
 
-    // تحديث حالة الرسالة بناءً على نتيجة المحاولات
-    const updateData: Record<string, any> = {
-      status: sent ? 'sent' : 'pending',
-      webhook_id: usedWebhookId,
-      error_message: sent ? null : lastError,
-    };
-    if (sent) {
-      updateData.sent_at = new Date().toISOString();
-    }
+      const updateData: Record<string, any> = {
+        status: sent ? 'sent' : 'pending',
+        webhook_id: usedWebhookId,
+        error_message: sent ? null : lastError,
+      };
+      if (sent) {
+        updateData.sent_at = new Date().toISOString();
+      }
 
-    if (messageId) {
-      await supabase.from('whatsapp_messages').update(updateData).eq('id', messageId);
-    }
-
-    if (sent) {
-      console.log('New order notification sent via webhook successfully');
-    } else if (!candidates.length) {
-      console.log('No active webhook found; message remains pending');
-    } else {
-      console.warn('All active webhooks failed; message kept as pending for retry');
+      if (messageId) {
+        await supabase.from('whatsapp_messages').update(updateData).eq('id', messageId);
+      }
     }
 
     console.log('New order notification saved successfully');

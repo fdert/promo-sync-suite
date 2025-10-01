@@ -72,6 +72,53 @@ serve(async (req) => {
 
     console.log('Expense notification saved successfully');
 
+    // إرسال مباشر عبر follow_up_webhook_url إذا كان موجوداً
+    if (settings.follow_up_webhook_url) {
+      try {
+        console.log('Sending via follow_up_webhook:', settings.follow_up_webhook_url);
+        
+        const payload = {
+          event: 'whatsapp_message_send',
+          data: {
+            to: settings.whatsapp_number,
+            phone: settings.whatsapp_number,
+            phoneNumber: settings.whatsapp_number,
+            message: message,
+            messageText: message,
+            text: message,
+            type: 'text',
+            message_type: 'expense_notification',
+            timestamp: Math.floor(Date.now() / 1000),
+            from_number: 'system',
+            expense_id: expenseId
+          }
+        };
+
+        const webhookResp = await fetch(settings.follow_up_webhook_url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (webhookResp.ok) {
+          console.log('✅ Sent via follow_up_webhook successfully');
+          
+          await supabase
+            .from('whatsapp_messages')
+            .update({ 
+              status: 'sent', 
+              sent_at: new Date().toISOString() 
+            })
+            .eq('dedupe_key', `expense_${expenseId}_${Date.now()}`)
+            .limit(1);
+        } else {
+          console.warn('Follow_up_webhook failed, keeping pending');
+        }
+      } catch (webhookError) {
+        console.error('Error sending via follow_up_webhook:', webhookError);
+      }
+    }
+
     return new Response(
       JSON.stringify({ success: true, message: 'Notification sent' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }

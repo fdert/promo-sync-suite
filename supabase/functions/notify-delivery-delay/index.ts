@@ -82,7 +82,7 @@ serve(async (req) => {
 
 يرجى المتابعة الفورية مع العميل.`;
 
-      await supabase
+      const { error: msgInsertError } = await supabase
         .from('whatsapp_messages')
         .insert({
           from_number: 'system',
@@ -92,6 +92,53 @@ serve(async (req) => {
           status: 'pending',
           dedupe_key: `delivery_delay_${order.id}_${new Date().toISOString().split('T')[0]}`
         });
+
+      if (msgInsertError) {
+        console.error('Failed to insert delivery delay notification:', msgInsertError);
+        continue;
+      }
+
+      // إرسال مباشر عبر follow_up_webhook_url إذا كان موجوداً
+      if (settings.follow_up_webhook_url) {
+        try {
+          const payload = {
+            event: 'whatsapp_message_send',
+            data: {
+              to: settings.whatsapp_number,
+              phone: settings.whatsapp_number,
+              phoneNumber: settings.whatsapp_number,
+              message: message,
+              messageText: message,
+              text: message,
+              type: 'text',
+              message_type: 'delivery_delay_notification',
+              timestamp: Math.floor(Date.now() / 1000),
+              from_number: 'system',
+              order_id: order.id,
+              order_number: order.order_number
+            }
+          };
+
+          const webhookResp = await fetch(settings.follow_up_webhook_url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+
+          if (webhookResp.ok) {
+            await supabase
+              .from('whatsapp_messages')
+              .update({ 
+                status: 'sent', 
+                sent_at: new Date().toISOString() 
+              })
+              .eq('dedupe_key', `delivery_delay_${order.id}_${new Date().toISOString().split('T')[0]}`)
+              .limit(1);
+          }
+        } catch (webhookError) {
+          console.error('Error sending via follow_up_webhook:', webhookError);
+        }
+      }
     }
 
     console.log('Delivery delay notifications created successfully');

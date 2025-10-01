@@ -123,26 +123,74 @@ ${netProfit.toFixed(2)} ريال ${netProfit >= 0 ? '✅' : '❌'}
 
     console.log('Daily financial report created successfully');
 
-    // الانتظار قليلاً للتأكد من حفظ الرسالة في قاعدة البيانات
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // إرسال مباشر عبر follow_up_webhook_url إذا كان موجوداً
+    if (settings.follow_up_webhook_url) {
+      try {
+        console.log('Sending via follow_up_webhook:', settings.follow_up_webhook_url);
+        
+        const payload = {
+          event: 'whatsapp_message_send',
+          data: {
+            to: toNumber,
+            phone: toNumber,
+            phoneNumber: toNumber,
+            message: message,
+            messageText: message,
+            text: message,
+            type: 'text',
+            message_type: 'daily_financial_report',
+            timestamp: Math.floor(Date.now() / 1000),
+            from_number: 'system'
+          }
+        };
 
-    // استدعاء process-whatsapp-queue لإرسال الرسالة فوراً
-    console.log('Invoking process-whatsapp-queue to send the message...');
-    try {
-      const { data: queueResult, error: queueError } = await supabase.functions.invoke('process-whatsapp-queue', {
-        body: {
-          action: 'process_pending_messages',
-          timestamp: new Date().toISOString()
+        const webhookResp = await fetch(settings.follow_up_webhook_url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (webhookResp.ok) {
+          console.log('✅ Sent via follow_up_webhook successfully');
+          
+          // تحديث الحالة إلى sent
+          await supabase
+            .from('whatsapp_messages')
+            .update({ 
+              status: 'sent', 
+              sent_at: new Date().toISOString() 
+            })
+            .eq('to_number', toNumber)
+            .eq('message_type', 'text')
+            .order('created_at', { ascending: false })
+            .limit(1);
+        } else {
+          console.warn('Follow_up_webhook failed, keeping pending');
         }
-      });
-
-      if (queueError) {
-        console.error('Error invoking process-whatsapp-queue:', queueError);
-      } else {
-        console.log('process-whatsapp-queue invoked successfully:', queueResult);
+      } catch (webhookError) {
+        console.error('Error sending via follow_up_webhook:', webhookError);
       }
-    } catch (queueInvokeError) {
-      console.error('Failed to invoke process-whatsapp-queue:', queueInvokeError);
+    } else {
+      // الطريقة العادية: استدعاء process-whatsapp-queue
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      console.log('Invoking process-whatsapp-queue to send the message...');
+      try {
+        const { data: queueResult, error: queueError } = await supabase.functions.invoke('process-whatsapp-queue', {
+          body: {
+            action: 'process_pending_messages',
+            timestamp: new Date().toISOString()
+          }
+        });
+
+        if (queueError) {
+          console.error('Error invoking process-whatsapp-queue:', queueError);
+        } else {
+          console.log('process-whatsapp-queue invoked successfully:', queueResult);
+        }
+      } catch (queueInvokeError) {
+        console.error('Failed to invoke process-whatsapp-queue:', queueInvokeError);
+      }
     }
 
     return new Response(
