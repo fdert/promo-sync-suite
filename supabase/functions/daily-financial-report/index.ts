@@ -46,12 +46,24 @@ serve(async (req) => {
     const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
     const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59).toISOString();
 
-    // جلب المدفوعات اليومية
+    // جلب المدفوعات اليومية مع تفاصيل الطلب
     const { data: payments, error: paymentsError } = await supabase
       .from('payments')
-      .select('amount')
+      .select(`
+        amount,
+        payment_type,
+        order_id,
+        orders (
+          order_number,
+          total_amount,
+          paid_amount,
+          customer_id,
+          customers (name)
+        )
+      `)
       .gte('payment_date', todayStart)
-      .lte('payment_date', todayEnd);
+      .lte('payment_date', todayEnd)
+      .order('created_at', { ascending: true });
 
     const totalPayments = payments?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0;
 
@@ -67,12 +79,31 @@ serve(async (req) => {
     // حساب صافي الربح
     const netProfit = totalPayments - totalExpenses;
 
-    // جلب عدد الطلبات الجديدة اليوم
-    const { count: newOrdersCount } = await supabase
+    // جلب الطلبات الجديدة اليوم مع التفاصيل
+    const { data: newOrders } = await supabase
       .from('orders')
-      .select('id', { count: 'exact', head: true })
+      .select(`
+        order_number,
+        total_amount,
+        customers (name),
+        order_items (item_name, quantity, unit_price)
+      `)
       .gte('created_at', todayStart)
-      .lte('created_at', todayEnd);
+      .lte('created_at', todayEnd)
+      .order('created_at', { ascending: true });
+
+    // جلب الطلبات المتأخرة (موعدها اليوم ولم تسلم)
+    const { data: delayedOrders } = await supabase
+      .from('orders')
+      .select(`
+        order_number,
+        delivery_date,
+        customers (name)
+      `)
+      .lte('delivery_date', todayEnd)
+      .neq('status', 'completed')
+      .neq('status', 'cancelled')
+      .order('delivery_date', { ascending: true });
 
     // جلب عدد الطلبات المكتملة اليوم
     const { count: completedOrdersCount } = await supabase
@@ -84,25 +115,102 @@ serve(async (req) => {
     // استخدام رقم الواتساب كما هو (مع الاحتفاظ بعلامة + إن وجدت)
     const toNumber = String(settings.whatsapp_number || '').trim();
 
+    // دالة لتحويل نوع الدفع إلى عربي
+    const getPaymentTypeArabic = (type: string) => {
+      const types: Record<string, string> = {
+        'cash': '💵 نقدي',
+        'card': '💳 شبكة',
+        'bank_transfer': '🏦 تحويل بنكي'
+      };
+      return types[type] || type;
+    };
+
+    // دالة لحساب الأيام المتأخرة
+    const getDaysDelayed = (deliveryDate: string) => {
+      const delivery = new Date(deliveryDate);
+      const diff = Math.floor((today.getTime() - delivery.getTime()) / (1000 * 60 * 60 * 24));
+      return diff;
+    };
+
+    // بناء قسم المدفوعات
+    let paymentsSection = '';
+    if (payments && payments.length > 0) {
+      paymentsSection = '\n💰 *تفاصيل المدفوعات اليومية:*\n';
+      payments.forEach((payment: any, index: number) => {
+        const orderNumber = payment.orders?.order_number || 'غير محدد';
+        const customerName = payment.orders?.customers?.name || 'غير محدد';
+        const totalAmount = payment.orders?.total_amount || 0;
+        const paidAmount = payment.orders?.paid_amount || 0;
+        const remainingAmount = totalAmount - paidAmount;
+        
+        paymentsSection += `\n${index + 1}. طلب: ${orderNumber}`;
+        paymentsSection += `\n   ${getPaymentTypeArabic(payment.payment_type)} - ${payment.amount.toFixed(2)} ر.س`;
+        paymentsSection += `\n   العميل: ${customerName}`;
+        paymentsSection += `\n   الإجمالي: ${totalAmount.toFixed(2)} | المدفوع: ${paidAmount.toFixed(2)} | المتبقي: ${remainingAmount.toFixed(2)}`;
+        paymentsSection += '\n';
+      });
+    }
+
+    // بناء قسم الطلبات الجديدة
+    let newOrdersSection = '';
+    if (newOrders && newOrders.length > 0) {
+      newOrdersSection = '\n📦 *الطلبات الجديدة اليوم:*\n';
+      newOrders.forEach((order: any, index: number) => {
+        const customerName = order.customers?.name || 'غير محدد';
+        newOrdersSection += `\n${index + 1}. طلب: ${order.order_number}`;
+        newOrdersSection += `\n   العميل: ${customerName}`;
+        newOrdersSection += `\n   الإجمالي: ${order.total_amount.toFixed(2)} ر.س`;
+        
+        if (order.order_items && order.order_items.length > 0) {
+          newOrdersSection += '\n   البنود:';
+          order.order_items.forEach((item: any) => {
+            newOrdersSection += `\n   • ${item.item_name} (${item.quantity} × ${item.unit_price.toFixed(2)})`;
+          });
+        }
+        newOrdersSection += '\n';
+      });
+    }
+
+    // بناء قسم الطلبات المتأخرة
+    let delayedSection = '';
+    if (delayedOrders && delayedOrders.length > 0) {
+      delayedSection = '\n⚠️ *الطلبات المتأخرة (موعد التسليم اليوم):*\n';
+      delayedOrders.forEach((order: any, index: number) => {
+        const customerName = order.customers?.name || 'غير محدد';
+        const daysDelayed = getDaysDelayed(order.delivery_date);
+        const deliveryDateFormatted = new Date(order.delivery_date).toLocaleDateString('ar-SA');
+        
+        delayedSection += `\n${index + 1}. طلب: ${order.order_number}`;
+        delayedSection += `\n   العميل: ${customerName}`;
+        delayedSection += `\n   موعد التسليم: ${deliveryDateFormatted}`;
+        delayedSection += `\n   التأخير: ${daysDelayed} يوم`;
+        delayedSection += '\n';
+      });
+    }
+
     const message = `📊 *التقرير المالي اليومي*
 
 📅 التاريخ: ${today.toLocaleDateString('ar-SA')}
 
-💰 *المبالغ المدفوعة اليوم:*
-${totalPayments.toFixed(2)} ريال
+━━━━━━━━━━━━━━━━━━━━
 
-💸 *المصروفات اليومية:*
-${totalExpenses.toFixed(2)} ريال
+📈 *الملخص المالي:*
+💰 إجمالي المدفوعات: ${totalPayments.toFixed(2)} ر.س
+💸 إجمالي المصروفات: ${totalExpenses.toFixed(2)} ر.س
+📊 صافي الربح: ${netProfit.toFixed(2)} ر.س ${netProfit >= 0 ? '✅' : '❌'}
 
-📈 *صافي الربح اليومي:*
-${netProfit.toFixed(2)} ريال ${netProfit >= 0 ? '✅' : '❌'}
+━━━━━━━━━━━━━━━━━━━━
 
-📦 *الطلبات:*
-• طلبات جديدة: ${newOrdersCount || 0}
+📦 *إحصائيات الطلبات:*
+• طلبات جديدة: ${newOrders?.length || 0}
 • طلبات مكتملة: ${completedOrdersCount || 0}
+• طلبات متأخرة: ${delayedOrders?.length || 0}
+${paymentsSection}
+━━━━━━━━━━━━━━━━━━━━
+${newOrdersSection}${newOrdersSection ? '━━━━━━━━━━━━━━━━━━━━' : ''}
+${delayedSection}${delayedSection ? '━━━━━━━━━━━━━━━━━━━━' : ''}
 
----
-تم إنشاء التقرير تلقائياً في تمام الساعة ${today.toLocaleTimeString('ar-SA')}`;
+⏰ تم إنشاء التقرير: ${today.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}`;
 
     // حفظ التقرير
     const { data: inserted, error: insertError } = await supabase
