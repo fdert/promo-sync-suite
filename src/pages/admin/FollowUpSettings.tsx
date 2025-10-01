@@ -33,6 +33,7 @@ interface FollowUpSettings {
   id?: string;
   whatsapp_number?: string;
   email?: string;
+  follow_up_webhook_url?: string;
   notify_new_order: boolean;
   notify_delivery_delay: boolean;
   notify_payment_delay: boolean;
@@ -113,6 +114,7 @@ const FollowUpSettings = () => {
           id: data.id,
           whatsapp_number: data.whatsapp_number || '',
           email: data.email || '',
+          follow_up_webhook_url: data.follow_up_webhook_url || '',
           notify_new_order: data.notify_new_order,
           notify_delivery_delay: data.notify_delivery_delay,
           notify_payment_delay: data.notify_payment_delay,
@@ -141,6 +143,7 @@ const FollowUpSettings = () => {
       const settingsData = {
         whatsapp_number: settings.whatsapp_number,
         email: settings.email,
+        follow_up_webhook_url: settings.follow_up_webhook_url,
         notify_new_order: settings.notify_new_order,
         notify_delivery_delay: settings.notify_delivery_delay,
         notify_payment_delay: settings.notify_payment_delay,
@@ -574,6 +577,23 @@ const FollowUpSettings = () => {
                       className="bg-background/50 border-primary/20 focus:border-primary"
                     />
                   </div>
+                </div>
+                <div className="space-y-2 pt-2">
+                  <Label htmlFor="follow_up_webhook" className="text-sm font-medium flex items-center gap-2">
+                    <MessageSquare className="h-4 w-4 text-primary" />
+                    رابط ويب هوك إدارة المتابعة (n8n)
+                  </Label>
+                  <Input
+                    id="follow_up_webhook"
+                    type="url"
+                    placeholder="https://n8n.example.com/webhook/follow-up"
+                    value={settings.follow_up_webhook_url || ''}
+                    onChange={(e) => setSettings({ ...settings, follow_up_webhook_url: e.target.value })}
+                    className="bg-background/50 border-primary/20 focus:border-primary"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    رابط الويب هوك الخاص بـ n8n لإرسال رسائل إدارة المتابعة (اتركه فارغًا لاستخدام الويب هوك الافتراضي)
+                  </p>
                 </div>
               </CardContent>
             </Card>

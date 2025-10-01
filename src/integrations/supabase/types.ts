@@ -454,6 +454,7 @@ export type Database = {
           daily_financial_report: boolean | null
           delivery_delay_days: number | null
           email: string | null
+          follow_up_webhook_url: string | null
           id: string
           notify_delivery_delay: boolean | null
           notify_expense_logged: boolean | null
@@ -469,6 +470,7 @@ export type Database = {
           daily_financial_report?: boolean | null
           delivery_delay_days?: number | null
           email?: string | null
+          follow_up_webhook_url?: string | null
           id?: string
           notify_delivery_delay?: boolean | null
           notify_expense_logged?: boolean | null
@@ -484,6 +486,7 @@ export type Database = {
           daily_financial_report?: boolean | null
           delivery_delay_days?: number | null
           email?: string | null
+          follow_up_webhook_url?: string | null
           id?: string
           notify_delivery_delay?: boolean | null
           notify_expense_logged?: boolean | null
