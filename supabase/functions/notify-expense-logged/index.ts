@@ -54,7 +54,7 @@ serve(async (req) => {
 تم تسجيل المصروف في النظام بنجاح.`;
 
     // حفظ الرسالة
-    const { error: insertError } = await supabase
+    const { data: inserted, error: insertError } = await supabase
       .from('whatsapp_messages')
       .insert({
         from_number: 'system',
@@ -63,12 +63,16 @@ serve(async (req) => {
         message_content: message,
         status: 'pending',
         dedupe_key: `expense_${expenseId}_${Date.now()}`
-      });
+      })
+      .select('id')
+      .single();
 
     if (insertError) {
       console.error('Failed to insert expense notification:', insertError);
       throw insertError;
     }
+
+    const messageId = inserted?.id;
 
     console.log('Expense notification saved successfully');
 
@@ -103,14 +107,15 @@ serve(async (req) => {
         if (webhookResp.ok) {
           console.log('✅ Sent via follow_up_webhook successfully');
           
-          await supabase
-            .from('whatsapp_messages')
-            .update({ 
-              status: 'sent', 
-              sent_at: new Date().toISOString() 
-            })
-            .eq('dedupe_key', `expense_${expenseId}_${Date.now()}`)
-            .limit(1);
+          if (messageId) {
+            await supabase
+              .from('whatsapp_messages')
+              .update({ 
+                status: 'sent', 
+                sent_at: new Date().toISOString() 
+              })
+              .eq('id', messageId);
+          }
         } else {
           console.warn('Follow_up_webhook failed, keeping pending');
         }

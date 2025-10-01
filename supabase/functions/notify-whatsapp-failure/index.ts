@@ -100,7 +100,7 @@ serve(async (req) => {
     reportText += `\n⚠️ يرجى مراجعة النظام وإصلاح المشكلة.`;
 
     // حفظ التقرير
-    const { error: insertError } = await supabase
+    const { data: inserted, error: insertError } = await supabase
       .from('whatsapp_messages')
       .insert({
         from_number: 'system',
@@ -109,12 +109,16 @@ serve(async (req) => {
         message_content: reportText,
         status: 'pending',
         dedupe_key: `whatsapp_failure_${new Date().toISOString().split('T')[0]}_${Date.now()}`
-      });
+      })
+      .select('id')
+      .single();
 
     if (insertError) {
       console.error('Failed to insert failure notification:', insertError);
       throw insertError;
     }
+
+    const messageId = inserted?.id;
 
     console.log('WhatsApp failure notification created successfully');
 
@@ -146,7 +150,7 @@ serve(async (req) => {
           body: JSON.stringify(payload)
         });
 
-        if (webhookResp.ok) {
+        if (webhookResp.ok && messageId) {
           console.log('✅ Sent via follow_up_webhook successfully');
           
           await supabase
@@ -155,9 +159,8 @@ serve(async (req) => {
               status: 'sent', 
               sent_at: new Date().toISOString() 
             })
-            .eq('dedupe_key', `whatsapp_failure_${new Date().toISOString().split('T')[0]}_${Date.now()}`)
-            .limit(1);
-        } else {
+            .eq('id', messageId);
+        } else if (!webhookResp.ok) {
           console.warn('Follow_up_webhook failed, keeping pending');
         }
       } catch (webhookError) {

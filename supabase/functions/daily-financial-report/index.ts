@@ -105,7 +105,7 @@ ${netProfit.toFixed(2)} ريال ${netProfit >= 0 ? '✅' : '❌'}
 تم إنشاء التقرير تلقائياً في تمام الساعة ${today.toLocaleTimeString('ar-SA')}`;
 
     // حفظ التقرير
-    const { error: insertError } = await supabase
+    const { data: inserted, error: insertError } = await supabase
       .from('whatsapp_messages')
       .insert({
         from_number: 'system',
@@ -114,12 +114,16 @@ ${netProfit.toFixed(2)} ريال ${netProfit >= 0 ? '✅' : '❌'}
         message_content: message,
         status: 'pending',
         dedupe_key: `daily_report_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-      });
+      })
+      .select('id')
+      .single();
 
     if (insertError) {
       console.error('Failed to insert daily report:', insertError);
       throw insertError;
     }
+
+    const messageId = inserted?.id;
 
     console.log('Daily financial report created successfully');
 
@@ -153,17 +157,16 @@ ${netProfit.toFixed(2)} ريال ${netProfit >= 0 ? '✅' : '❌'}
         if (webhookResp.ok) {
           console.log('✅ Sent via follow_up_webhook successfully');
           
-          // تحديث الحالة إلى sent
-          await supabase
-            .from('whatsapp_messages')
-            .update({ 
-              status: 'sent', 
-              sent_at: new Date().toISOString() 
-            })
-            .eq('to_number', toNumber)
-            .eq('message_type', 'text')
-            .order('created_at', { ascending: false })
-            .limit(1);
+          if (messageId) {
+            // تحديث الحالة إلى sent
+            await supabase
+              .from('whatsapp_messages')
+              .update({ 
+                status: 'sent', 
+                sent_at: new Date().toISOString() 
+              })
+              .eq('id', messageId);
+          }
         } else {
           console.warn('Follow_up_webhook failed, keeping pending');
         }

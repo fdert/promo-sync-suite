@@ -332,17 +332,11 @@ const FollowUpSettings = () => {
 
       const toNumber = String(settings.whatsapp_number || '').trim();
 
-      // 1) ادراج الرسالة في الطابور عبر الدالة الخفيفة (simple-whatsapp)
-      const { error: simpleErr } = await supabase.functions.invoke('simple-whatsapp', {
-        body: { phone_number: toNumber, message }
+      // استدعاء دالة التقرير المالي والتي ترسل مباشرة عبر follow_up_webhook إن وُجد
+      const { data: reportResult, error: reportError } = await supabase.functions.invoke('daily-financial-report', {
+        body: {}
       });
-      if (simpleErr) throw simpleErr;
-
-      // 2) معالجة الطابور وإرسال الرسائل عبر الويب هوك (n8n)
-      const { error: queueError } = await supabase.functions.invoke('process-whatsapp-queue', {
-        body: { action: 'process_pending_messages', source: 'follow-up-settings-financial-report' }
-      });
-      if (queueError) throw queueError;
+      if (reportError) throw reportError;
 
       toast({
         title: 'تم إرسال التقرير المالي ✅',

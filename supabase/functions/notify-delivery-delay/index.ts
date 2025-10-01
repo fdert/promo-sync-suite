@@ -82,7 +82,7 @@ serve(async (req) => {
 
 يرجى المتابعة الفورية مع العميل.`;
 
-      const { error: msgInsertError } = await supabase
+      const { data: msgInserted, error: msgInsertError } = await supabase
         .from('whatsapp_messages')
         .insert({
           from_number: 'system',
@@ -91,7 +91,9 @@ serve(async (req) => {
           message_content: message,
           status: 'pending',
           dedupe_key: `delivery_delay_${order.id}_${new Date().toISOString().split('T')[0]}`
-        });
+        })
+        .select('id')
+        .single();
 
       if (msgInsertError) {
         console.error('Failed to insert delivery delay notification:', msgInsertError);
@@ -125,15 +127,14 @@ serve(async (req) => {
             body: JSON.stringify(payload)
           });
 
-          if (webhookResp.ok) {
+          if (webhookResp.ok && msgInserted?.id) {
             await supabase
               .from('whatsapp_messages')
               .update({ 
                 status: 'sent', 
                 sent_at: new Date().toISOString() 
               })
-              .eq('dedupe_key', `delivery_delay_${order.id}_${new Date().toISOString().split('T')[0]}`)
-              .limit(1);
+              .eq('id', msgInserted.id);
           }
         } catch (webhookError) {
           console.error('Error sending via follow_up_webhook:', webhookError);
