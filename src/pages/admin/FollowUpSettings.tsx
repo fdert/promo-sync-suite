@@ -302,26 +302,55 @@ const FollowUpSettings = () => {
   const handleTestFinancialReport = async () => {
     setIsTestingFinancialReport(true);
     try {
-      // 1) إنشاء تقرير مالي يومي
-      const { data, error } = await supabase.functions.invoke('daily-financial-report');
-      if (error) throw error;
+      if (!settings.whatsapp_number) {
+        throw new Error('يرجى إدخال رقم واتساب فريق المتابعة في الإعدادات وحفظه أولاً');
+      }
 
-      // 2) معالجة الرسائل المعلقة فوراً
-      const { data: queueData, error: queueError } = await supabase.functions.invoke('process-whatsapp-queue', {
-        body: { action: 'process_pending_messages', source: 'follow-up-settings-test' }
+      // حساب التقرير محليًا (عميل) ثم إرساله عبر الويب هوك
+      const now = new Date();
+      const start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+      const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).toISOString();
+
+      const [{ data: payments }, { data: expenses }] = await Promise.all([
+        supabase.from('payments').select('amount').gte('payment_date', start).lte('payment_date', end),
+        supabase.from('expenses').select('amount').gte('expense_date', start).lte('expense_date', end),
+      ]);
+
+      const totalPayments = (payments || []).reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+      const totalExpenses = (expenses || []).reduce((sum: number, e: any) => sum + (e.amount || 0), 0);
+      const netProfit = totalPayments - totalExpenses;
+
+      const [{ count: newOrdersCount }, { count: completedOrdersCount }] = await Promise.all([
+        supabase.from('orders').select('id', { count: 'exact', head: true }).gte('created_at', start).lte('created_at', end),
+        supabase.from('orders').select('id', { count: 'exact', head: true }).eq('status', 'completed').gte('updated_at', start).lte('updated_at', end),
+      ]);
+
+      const message = `📊 *التقرير المالي اليومي*\n\n📅 التاريخ: ${now.toLocaleDateString('ar-SA')}\n\n💰 *المبالغ المدفوعة اليوم:*\n${totalPayments.toFixed(2)} ريال\n\n💸 *المصروفات اليومية:*\n${totalExpenses.toFixed(2)} ريال\n\n📈 *صافي الربح اليومي:*\n${netProfit.toFixed(2)} ريال ${netProfit >= 0 ? '✅' : '❌'}\n\n📦 *الطلبات:*\n• طلبات جديدة: ${newOrdersCount || 0}\n• طلبات مكتملة: ${completedOrdersCount || 0}\n\n---\nتم إنشاء التقرير تلقائياً في تمام الساعة ${now.toLocaleTimeString('ar-SA')}`;
+
+      const toNumber = String(settings.whatsapp_number || '').trim();
+
+      // 1) ادراج الرسالة في الطابور عبر الدالة الخفيفة (simple-whatsapp)
+      const { error: simpleErr } = await supabase.functions.invoke('simple-whatsapp', {
+        body: { phone_number: toNumber, message }
       });
-      if (queueError) console.warn('process-whatsapp-queue warning:', queueError);
+      if (simpleErr) throw simpleErr;
+
+      // 2) معالجة الطابور وإرسال الرسائل عبر الويب هوك (n8n)
+      const { error: queueError } = await supabase.functions.invoke('process-whatsapp-queue', {
+        body: { action: 'process_pending_messages', source: 'follow-up-settings-financial-report' }
+      });
+      if (queueError) throw queueError;
 
       toast({
-        title: "تم إرسال التقرير المالي ✅",
-        description: "تم إنشاء ومعالجة التقرير المالي اليومي بنجاح",
+        title: 'تم إرسال التقرير المالي ✅',
+        description: 'تم إنشاء التقرير وإرساله عبر الويب هوك بنجاح',
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error testing financial report:', error);
       toast({
-        title: "فشل إرسال التقرير ❌",
-        description: (error as any)?.message || "حدث خطأ أثناء إرسال التقرير المالي",
-        variant: "destructive",
+        title: 'فشل إرسال التقرير ❌',
+        description: error?.message || 'حدث خطأ أثناء إرسال التقرير المالي',
+        variant: 'destructive',
       });
     } finally {
       setIsTestingFinancialReport(false);
