@@ -20,22 +20,8 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get WhatsApp API settings
-    const whatsappToken = Deno.env.get('WHATSAPP_TOKEN');
-    const whatsappPhoneId = Deno.env.get('WHATSAPP_PHONE_NUMBER_ID');
-    
-    if (!whatsappToken || !whatsappPhoneId) {
-      console.log('⚠️ إعدادات واتساب غير مكتملة');
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'إعدادات واتساب غير مكتملة',
-          processed: 0,
-          failed: 0
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    // Webhook-only mode: do not use Meta API directly
+    console.log('🔌 Webhook-only mode enabled: skipping Meta API settings');
 
     // Get pending follow-up messages
     const { data: pendingMessages, error: fetchError } = await supabase
@@ -68,71 +54,22 @@ serve(async (req) => {
     let processedCount = 0;
     let failedCount = 0;
 
-    // Process each message
-    for (const message of pendingMessages) {
-      try {
-        console.log(`📤 إرسال رسالة إلى: ${message.to_number}`);
-        
-        // Send WhatsApp message
-        const response = await fetch(`https://graph.facebook.com/v17.0/${whatsappPhoneId}/messages`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${whatsappToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            messaging_product: 'whatsapp',
-            to: message.to_number.replace(/\+/g, ''),
-            type: 'text',
-            text: {
-              body: message.message_content
-            }
-          })
-        });
-
-        if (response.ok) {
-          const result = await response.json();
-          console.log(`✅ تم إرسال الرسالة بنجاح:`, result.messages?.[0]?.id);
-          
-          // Update message status to sent
-          await supabase
-            .from('whatsapp_messages')
-            .update({ 
-              status: 'sent',
-              sent_at: new Date().toISOString()
-            })
-            .eq('id', message.id);
-          
-          processedCount++;
-        } else {
-          const errorText = await response.text();
-          console.error(`❌ فشل إرسال الرسالة:`, errorText);
-          
-          // Update message status to failed
-          await supabase
-            .from('whatsapp_messages')
-            .update({ 
-              status: 'failed',
-              error_message: `HTTP ${response.status}: ${errorText}`
-            })
-            .eq('id', message.id);
-          
-          failedCount++;
-        }
-      } catch (error) {
-        console.error(`❌ خطأ في معالجة الرسالة ${message.id}:`, error);
-        
-        // Update message status to failed
-        await supabase
-          .from('whatsapp_messages')
-          .update({ 
-            status: 'failed',
-            error_message: error.message
-          })
-          .eq('id', message.id);
-        
-        failedCount++;
+    // Dispatch via webhook using the queue
+    try {
+      const { data: queueResult, error: queueError } = await supabase.functions.invoke('process-whatsapp-queue', {
+        body: { source: 'process-follow-up-notifications', type: 'follow_up' }
+      });
+      if (queueError) {
+        console.error('❌ خطأ في استدعاء process-whatsapp-queue:', queueError);
+        failedCount = pendingMessages.length;
+      } else {
+        console.log('✅ تم استدعاء process-whatsapp-queue بنجاح:', queueResult);
+        processedCount = queueResult?.processed_count ?? queueResult?.processed ?? 0;
+        failedCount = queueResult?.failed_count ?? queueResult?.failed ?? 0;
       }
+    } catch (invokeErr) {
+      console.error('❌ استثناء أثناء استدعاء process-whatsapp-queue:', invokeErr);
+      failedCount = pendingMessages.length;
     }
 
     console.log(`✅ انتهى: ${processedCount} نجح، ${failedCount} فشل`);
