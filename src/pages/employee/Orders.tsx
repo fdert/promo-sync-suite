@@ -1290,10 +1290,7 @@ ${publicFileUrl}
       try {
         await supabase.functions.invoke('notify-new-order', {
           body: {
-            orderId: createdOrder.id,
-            orderNumber: orderNumber,
-            customerName: selectedCustomer?.name || '',
-            totalAmount: createdOrder.total_amount || 0,
+            orderId: createdOrder.id
           }
         });
       } catch (e) {

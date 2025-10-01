@@ -17,9 +17,9 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { orderId, orderNumber, customerName, totalAmount } = await req.json();
+    const { orderId } = await req.json();
 
-    console.log('Processing new order notification:', { orderId, orderNumber, customerName });
+    console.log('Processing new order notification:', { orderId });
 
     // جلب إعدادات المتابعة
     const { data: settings, error: settingsError } = await supabase
@@ -43,14 +43,81 @@ serve(async (req) => {
       );
     }
 
-    // إنشاء رسالة الإشعار
+    // جلب تفاصيل الطلب الكاملة
+    const { data: order, error: orderError } = await supabase
+      .from('orders')
+      .select(`
+        *,
+        customers (
+          name,
+          phone,
+          whatsapp
+        ),
+        service_types (
+          name
+        ),
+        order_items (
+          item_name,
+          quantity,
+          unit_price,
+          total,
+          description
+        )
+      `)
+      .eq('id', orderId)
+      .single();
+
+    if (orderError || !order) {
+      console.error('Failed to fetch order details:', orderError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to fetch order' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+
+    // تنسيق الحالة
+    const statusMap: Record<string, string> = {
+      'pending': 'قيد الانتظار',
+      'in_progress': 'قيد التنفيذ',
+      'completed': 'مكتمل',
+      'cancelled': 'ملغي'
+    };
+
+    // تنسيق بنود الطلب
+    let itemsText = '';
+    if (order.order_items && order.order_items.length > 0) {
+      itemsText = order.order_items.map((item: any, index: number) => 
+        `${index + 1}. ${item.item_name}
+   الكمية: ${item.quantity}
+   السعر: ${item.unit_price} ريال
+   الإجمالي: ${item.total} ريال${item.description ? `\n   الوصف: ${item.description}` : ''}`
+      ).join('\n\n');
+    }
+
+    // إنشاء رسالة الإشعار المفصلة
     const message = `🎉 *طلب جديد*
 
-📦 رقم الطلب: ${orderNumber}
-👤 اسم العميل: ${customerName}
-💰 المبلغ الإجمالي: ${totalAmount} ريال
+📦 *رقم الطلب:* ${order.order_number}
 
-⏰ تاريخ الإنشاء: ${new Date().toLocaleString('ar-SA')}
+👤 *معلومات العميل:*
+• الاسم: ${order.customers?.name || 'غير محدد'}
+• الجوال: ${order.customers?.phone || order.customers?.whatsapp || 'غير محدد'}
+
+🔧 *تفاصيل الطلب:*
+• الخدمة: ${order.service_types?.name || 'غير محدد'}
+${order.notes ? `• الوصف: ${order.notes}` : ''}
+• الحالة: ${statusMap[order.status] || order.status}
+${order.delivery_date ? `• تاريخ الاستحقاق: ${new Date(order.delivery_date).toLocaleDateString('ar-SA')}` : ''}
+
+💰 *المبالغ المالية:*
+• المبلغ الإجمالي: ${order.total_amount} ريال
+• المبلغ المدفوع: ${order.paid_amount || 0} ريال
+• المبلغ المتبقي: ${(order.total_amount - (order.paid_amount || 0)).toFixed(2)} ريال
+
+📋 *بنود الطلب:*
+${itemsText || 'لا توجد بنود'}
+
+⏰ تاريخ الإنشاء: ${new Date(order.created_at).toLocaleString('ar-SA')}
 
 يرجى متابعة الطلب والتواصل مع العميل.`;
 
@@ -96,8 +163,8 @@ serve(async (req) => {
             timestamp: Math.floor(Date.now() / 1000),
             from_number: 'system',
             order_id: orderId,
-            order_number: orderNumber,
-            customer_name: customerName
+            order_number: order.order_number,
+            customer_name: order.customers?.name
           }
         };
 
