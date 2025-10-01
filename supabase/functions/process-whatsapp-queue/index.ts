@@ -61,10 +61,9 @@ Deno.serve(async (req) => {
 
         let newStatus = success ? 'sent' : 'failed';
 
-        // تحديث حالة الرسالة
+        // تحديث حالة الرسالة (بدون updated_at لأن العمود غير موجود)
         const updateData: any = { 
-          status: newStatus,
-          updated_at: new Date().toISOString()
+          status: newStatus
         };
         
         // إضافة sent_at فقط إذا تم الإرسال بنجاح
