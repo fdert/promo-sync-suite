@@ -125,8 +125,7 @@ const Customers = () => {
           name: newCustomer.name,
           email: newCustomer.email || null,
           phone: newCustomer.phone || null,
-          whatsapp_number: newCustomer.whatsapp_number || null,
-          company: newCustomer.company || null,
+          whatsapp: newCustomer.whatsapp_number || null,
           address: newCustomer.address || null,
           city: newCustomer.city || null,
           notes: newCustomer.notes || null
@@ -174,7 +173,7 @@ const Customers = () => {
       name: customer.name,
       email: customer.email,
       phone: customer.phone,
-      whatsapp_number: customer.whatsapp_number || "",
+      whatsapp_number: customer.whatsapp || "",
       company: customer.company,
       city: customer.city,
       address: customer.address || "",
@@ -204,8 +203,7 @@ const Customers = () => {
           name: newCustomer.name,
           email: newCustomer.email || null,
           phone: newCustomer.phone || null,
-          whatsapp_number: newCustomer.whatsapp_number || null,
-          company: newCustomer.company || null,
+          whatsapp: newCustomer.whatsapp_number || null,
           address: newCustomer.address || null,
           city: newCustomer.city || null,
           notes: newCustomer.notes || null
