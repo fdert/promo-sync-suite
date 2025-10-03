@@ -112,19 +112,31 @@ Deno.serve(async (req) => {
         
         const { data: payments, error: paymentsError } = await supabase
           .from('payments')
-          .select('amount')
+          .select('amount, payment_type')
           .eq('order_id', order_id);
         
         console.log('Payments Error:', paymentsError);
         console.log('Payments Data:', payments);
         
         let totalPaidAmount = 0;
+        let paymentsDetailsText = '';
         if (payments && payments.length > 0) {
           totalPaidAmount = payments.reduce((sum: number, payment: any) => {
             const amt = Number(payment?.amount ?? 0);
             console.log('Adding payment amount:', amt);
             return sum + (isNaN(amt) ? 0 : amt);
           }, 0);
+          
+          // تنسيق تفاصيل الدفعات
+          paymentsDetailsText = payments.map((payment: any, index: number) => {
+            const paymentTypeMap: Record<string, string> = {
+              'cash': 'نقدي',
+              'bank_transfer': 'تحويل بنكي',
+              'card': 'شبكة'
+            };
+            const paymentTypeAr = paymentTypeMap[payment.payment_type] || payment.payment_type || 'نقدي';
+            return `${index + 1}. ${paymentTypeAr}: ${Number(payment.amount).toFixed(2)} ر.س`;
+          }).join('\n');
         }
         
         console.log('Total Paid Amount:', totalPaidAmount);
@@ -344,19 +356,22 @@ ${orderItemsText || 'لا توجد بنود محددة'}
           break;
 
         case 'order_in_progress':
-          message = `${data.customer_name}، طلبك رقم ${data.order_number} قيد التنفيذ حالياً. التقدم: ${data.progress || 0}%. سنبقيك على اطلاع بآخر التطورات.\n\n📊 الملخص المالي:\nقيمة الطلب: ${totalAmountNum} ر.س\nمدفوع: ${paidAmountNum} ر.س\nالمتبقي: ${remainingAmountNum} ر.س`;
+          const paymentsText1 = paymentsDetailsText ? `\n\n💰 الدفعات:\n${paymentsDetailsText}` : '';
+          message = `${data.customer_name}، طلبك رقم ${data.order_number} قيد التنفيذ حالياً. التقدم: ${data.progress || 0}%. سنبقيك على اطلاع بآخر التطورات.\n\n📊 الملخص المالي:\nقيمة الطلب: ${totalAmountNum} ر.س\nمدفوع: ${paidAmountNum} ر.س\nالمتبقي: ${remainingAmountNum} ر.س${paymentsText1}`;
           customerPhone = data.customer_phone;
           customerName = data.customer_name;
           break;
 
         case 'order_completed':
-          message = `تهانينا ${data.customer_name}! تم إنجاز طلبك رقم ${data.order_number} بنجاح. يمكنك الآن مراجعة النتائج. نشكرك لثقتك بخدماتنا!\n\n📊 الملخص المالي:\nقيمة الطلب: ${totalAmountNum} ر.س\nمدفوع: ${paidAmountNum} ر.س\nالمتبقي: ${remainingAmountNum} ر.س`;
+          const paymentsText2 = paymentsDetailsText ? `\n\n💰 الدفعات:\n${paymentsDetailsText}` : '';
+          message = `تهانينا ${data.customer_name}! تم إنجاز طلبك رقم ${data.order_number} بنجاح. يمكنك الآن مراجعة النتائج. نشكرك لثقتك بخدماتنا!\n\n📊 الملخص المالي:\nقيمة الطلب: ${totalAmountNum} ر.س\nمدفوع: ${paidAmountNum} ر.س\nالمتبقي: ${remainingAmountNum} ر.س${paymentsText2}`;
           customerPhone = data.customer_phone;
           customerName = data.customer_name;
           break;
 
         case 'order_updated':
-          message = `${data.customer_name}، تم تحديث طلبك رقم ${data.order_number}. الحالة الحالية: ${data.status}. سنبقيك على اطلاع بأي تطورات جديدة.\n\n📊 الملخص المالي:\nقيمة الطلب: ${totalAmountNum} ر.س\nمدفوع: ${paidAmountNum} ر.س\nالمتبقي: ${remainingAmountNum} ر.س`;
+          const paymentsText3 = paymentsDetailsText ? `\n\n💰 الدفعات:\n${paymentsDetailsText}` : '';
+          message = `${data.customer_name}، تم تحديث طلبك رقم ${data.order_number}. الحالة الحالية: ${data.status}. سنبقيك على اطلاع بأي تطورات جديدة.\n\n📊 الملخص المالي:\nقيمة الطلب: ${totalAmountNum} ر.س\nمدفوع: ${paidAmountNum} ر.س\nالمتبقي: ${remainingAmountNum} ر.س${paymentsText3}`;
           customerPhone = data.customer_phone;
           customerName = data.customer_name;
           break;
@@ -368,13 +383,15 @@ ${orderItemsText || 'لا توجد بنود محددة'}
           break;
 
         case 'order_ready_for_delivery':
-          message = `${data.customer_name}، طلبك رقم ${data.order_number} جاهز للتسليم! لتقييم الخدمة يرجى الضغط هنا: ${data.evaluation_link}\n\n📊 الملخص المالي:\nقيمة الطلب: ${totalAmountNum} ر.س\nمدفوع: ${paidAmountNum} ر.س\nالمتبقي: ${remainingAmountNum} ر.س`;
+          const paymentsText4 = paymentsDetailsText ? `\n\n💰 الدفعات:\n${paymentsDetailsText}` : '';
+          message = `${data.customer_name}، طلبك رقم ${data.order_number} جاهز للتسليم! لتقييم الخدمة يرجى الضغط هنا: ${data.evaluation_link}\n\n📊 الملخص المالي:\nقيمة الطلب: ${totalAmountNum} ر.س\nمدفوع: ${paidAmountNum} ر.س\nالمتبقي: ${remainingAmountNum} ر.س${paymentsText4}`;
           customerPhone = data.customer_phone;
           customerName = data.customer_name;
           break;
 
         case 'status_update':
-          message = `${data.customer_name}، تم تحديث حالة طلبك رقم ${data.order_number} من "${data.old_status}" إلى "${data.new_status}". سنبقيك على اطلاع بأي تطورات جديدة.\n\n📊 الملخص المالي:\nقيمة الطلب: ${totalAmountNum} ر.س\nمدفوع: ${paidAmountNum} ر.س\nالمتبقي: ${remainingAmountNum} ر.س`;
+          const paymentsText5 = paymentsDetailsText ? `\n\n💰 الدفعات:\n${paymentsDetailsText}` : '';
+          message = `${data.customer_name}، تم تحديث حالة طلبك رقم ${data.order_number} من "${data.old_status}" إلى "${data.new_status}". سنبقيك على اطلاع بأي تطورات جديدة.\n\n📊 الملخص المالي:\nقيمة الطلب: ${totalAmountNum} ر.س\nمدفوع: ${paidAmountNum} ر.س\nالمتبقي: ${remainingAmountNum} ر.س${paymentsText5}`;
           customerPhone = data.customer_phone;
           customerName = data.customer_name;
           break;
