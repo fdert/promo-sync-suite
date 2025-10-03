@@ -767,24 +767,20 @@ const FinancialReports = () => {
                             </div>
 
                             {/* طريقة الدفع */}
-                            {expense.payment_method && (
-                              <div className="flex justify-between items-center py-2 border-t border-border/50">
-                                <span className="text-xs text-muted-foreground">طريقة الدفع:</span>
-                                <span className="text-sm font-medium">
-                                  {expense.payment_method}
-                                </span>
-                              </div>
-                            )}
+                            <div className="flex justify-between items-center py-2 border-t border-border/50">
+                              <span className="text-xs text-muted-foreground">طريقة الدفع:</span>
+                              <span className="text-sm font-medium">
+                                {expense.payment_method || 'غير محدد'}
+                              </span>
+                            </div>
 
                             {/* الملاحظات */}
-                            {expense.notes && (
-                              <div className="pt-2 border-t border-border/50">
-                                <span className="text-xs text-muted-foreground block mb-1">ملاحظات:</span>
-                                <p className="text-sm text-foreground/80 line-clamp-3">
-                                  {expense.notes}
-                                </p>
-                              </div>
-                            )}
+                            <div className="pt-2 border-t border-border/50">
+                              <span className="text-xs text-muted-foreground block mb-1">ملاحظات:</span>
+                              <p className="text-sm text-foreground/80 line-clamp-3">
+                                {expense.notes || 'لا توجد ملاحظات'}
+                              </p>
+                            </div>
 
                             {/* التواريخ */}
                             <div className="pt-2 border-t border-border/50 space-y-1">
