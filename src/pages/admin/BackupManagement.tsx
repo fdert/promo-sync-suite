@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/contexts/AuthContext";
+import { BackupRestoreSection } from "@/components/BackupRestoreSection";
 
 const BackupManagement = () => {
   const { toast } = useToast();
@@ -424,6 +425,18 @@ const BackupManagement = () => {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* قسم استيراد واستعادة البيانات */}
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-2xl font-bold text-foreground mb-2">استيراد واستعادة البيانات</h2>
+          <p className="text-muted-foreground">
+            استرجع النسخ الاحتياطية أو استورد الطلبات من ملفات Excel
+          </p>
+        </div>
+        
+        <BackupRestoreSection />
       </div>
 
       {/* معلومات إضافية */}
