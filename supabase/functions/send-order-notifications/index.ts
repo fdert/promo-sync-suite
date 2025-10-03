@@ -71,6 +71,7 @@ Deno.serve(async (req) => {
     let remainingAmount = '0';
     let orderItemsText = '';
     let paymentsDetailsText = '';
+    let paymentsArray: { amount: number; payment_type: string }[] = [];
     let startDate = 'سيتم تحديده';
     let dueDate = 'سيتم تحديده';
     let companyName = 'وكالة الإبداع للدعاية والإعلان';
@@ -137,6 +138,9 @@ Deno.serve(async (req) => {
             const paymentTypeAr = paymentTypeMap[payment.payment_type] || payment.payment_type || 'نقدي';
             return `${index + 1}. ${paymentTypeAr}: ${Number(payment.amount).toFixed(2)} ر.س`;
           }).join('\n');
+          
+          // مصفوفة الدفعات (مهيكلة)
+          paymentsArray = payments.map((p: any) => ({ amount: Number(p.amount) || 0, payment_type: p.payment_type }));
           console.log('Payments Details Text:', paymentsDetailsText);
         }
         
@@ -608,6 +612,8 @@ ${data.file_url}
       start_date: startDate,
       due_date: dueDate,
       order_items: orderItemsText,
+      payments_details: paymentsDetailsText || 'لا توجد دفعات مسجلة',
+      payments: paymentsArray,
       evaluation_link: `https://e5a7747a-0935-46df-9ea9-1308e76636dc.lovableproject.com/evaluation/token-${order_id}`,
       company_name: companyName,
       estimated_time: data.estimated_days || 'قريباً',
