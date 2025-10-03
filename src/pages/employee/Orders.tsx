@@ -706,21 +706,7 @@ ${publicFileUrl}
     console.log('New Status:', status);
     
     try {
-      // تحويل الحالة العربية إلى القيمة المطلوبة في قاعدة البيانات
-      const statusMapping: Record<string, string> = {
-        'جديد': 'pending',
-        'مؤكد': 'pending',
-        'قيد التنفيذ': 'in_progress',
-        'قيد المراجعة': 'in_progress',
-        'جاهز للتسليم': 'completed',
-        'مكتمل': 'completed',
-        'ملغي': 'cancelled'
-      };
-      
-      const dbStatus = statusMapping[status] || 'pending';
-      console.log('Database Status:', dbStatus);
-      
-      // جلب بيانات الطلب مع العميل من قاعدة البيانات
+      // جلب بيانات الطلب مع العميل من قاعدة البيانات أولاً
       const { data: orderData, error: fetchError } = await supabase
         .from('orders')
         .select(`
@@ -737,21 +723,23 @@ ${publicFileUrl}
       
       console.log('Order data loaded:', orderData);
 
+      // تحديث الحالة مباشرة بالقيمة العربية (لأن enum يدعم القيم العربية الآن)
       const { error } = await supabase
         .from('orders')
-        .update({ status: dbStatus })
+        .update({ status: status })
         .eq('id', orderId);
 
       if (error) throw error;
 
       console.log('=== تحقق من إرسال إشعار الواتساب ===');
       console.log('Order data:', orderData);
-      console.log('Customer WhatsApp:', orderData?.customers?.whatsapp_number);
+      console.log('Customer WhatsApp:', orderData?.customers?.whatsapp);
       
       // إرسال إشعار واتساب عند تغيير الحالة
       const customerWhatsapp = orderData?.customers?.whatsapp || orderData?.customers?.phone;
       if (customerWhatsapp) {
         console.log('Customer data:', orderData.customers);
+        console.log('Customer phone number:', customerWhatsapp);
         
         // تحديد نوع الإشعار بناءً على الحالة الجديدة
         let notificationType;
@@ -797,7 +785,7 @@ ${publicFileUrl}
             type: notificationType,
             order_id: orderId,
             source: 'employee_dashboard', // تحديد المصدر
-            webhook_preference: 'لوحة الموظف ', // الويب هوك المفضل (مع المسافة)
+            webhook_preference: 'لوحة الموظف', // الويب هوك المفضل
             data: {
               order_number: orderData.order_number,
               customer_name: orderData.customers.name,
@@ -809,6 +797,8 @@ ${publicFileUrl}
               payment_type: orderData.payment_type || 'دفع آجل',
               paid_amount: paidAmount,
               remaining_amount: remainingAmount,
+              old_status: orderData.status,
+              new_status: status,
               status: status,
               priority: orderData.priority || 'متوسطة',
               due_date: orderData.due_date,
