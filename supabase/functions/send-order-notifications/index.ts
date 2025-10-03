@@ -357,21 +357,21 @@ ${orderItemsText || 'لا توجد بنود محددة'}
           break;
 
         case 'order_in_progress':
-          const paymentsText1 = paymentsDetailsText ? `\n\n💰 الدفعات:\n${paymentsDetailsText}` : '';
+          const paymentsText1 = paymentsDetailsText ? `\n\n💰 الدفعات:\n${paymentsDetailsText}` : '\n\n💰 الدفعات:\nلا توجد دفعات مسجلة';
           message = `${data.customer_name}، طلبك رقم ${data.order_number} قيد التنفيذ حالياً. التقدم: ${data.progress || 0}%. سنبقيك على اطلاع بآخر التطورات.\n\n📊 الملخص المالي:\nقيمة الطلب: ${totalAmountNum} ر.س\nمدفوع: ${paidAmountNum} ر.س\nالمتبقي: ${remainingAmountNum} ر.س${paymentsText1}`;
           customerPhone = data.customer_phone;
           customerName = data.customer_name;
           break;
 
         case 'order_completed':
-          const paymentsText2 = paymentsDetailsText ? `\n\n💰 الدفعات:\n${paymentsDetailsText}` : '';
+          const paymentsText2 = paymentsDetailsText ? `\n\n💰 الدفعات:\n${paymentsDetailsText}` : '\n\n💰 الدفعات:\nلا توجد دفعات مسجلة';
           message = `تهانينا ${data.customer_name}! تم إنجاز طلبك رقم ${data.order_number} بنجاح. يمكنك الآن مراجعة النتائج. نشكرك لثقتك بخدماتنا!\n\n📊 الملخص المالي:\nقيمة الطلب: ${totalAmountNum} ر.س\nمدفوع: ${paidAmountNum} ر.س\nالمتبقي: ${remainingAmountNum} ر.س${paymentsText2}`;
           customerPhone = data.customer_phone;
           customerName = data.customer_name;
           break;
 
         case 'order_updated':
-          const paymentsText3 = paymentsDetailsText ? `\n\n💰 الدفعات:\n${paymentsDetailsText}` : '';
+          const paymentsText3 = paymentsDetailsText ? `\n\n💰 الدفعات:\n${paymentsDetailsText}` : '\n\n💰 الدفعات:\nلا توجد دفعات مسجلة';
           message = `${data.customer_name}، تم تحديث طلبك رقم ${data.order_number}. الحالة الحالية: ${data.status}. سنبقيك على اطلاع بأي تطورات جديدة.\n\n📊 الملخص المالي:\nقيمة الطلب: ${totalAmountNum} ر.س\nمدفوع: ${paidAmountNum} ر.س\nالمتبقي: ${remainingAmountNum} ر.س${paymentsText3}`;
           customerPhone = data.customer_phone;
           customerName = data.customer_name;
@@ -384,14 +384,14 @@ ${orderItemsText || 'لا توجد بنود محددة'}
           break;
 
         case 'order_ready_for_delivery':
-          const paymentsText4 = paymentsDetailsText ? `\n\n💰 الدفعات:\n${paymentsDetailsText}` : '';
+          const paymentsText4 = paymentsDetailsText ? `\n\n💰 الدفعات:\n${paymentsDetailsText}` : '\n\n💰 الدفعات:\nلا توجد دفعات مسجلة';
           message = `${data.customer_name}، طلبك رقم ${data.order_number} جاهز للتسليم! لتقييم الخدمة يرجى الضغط هنا: ${data.evaluation_link}\n\n📊 الملخص المالي:\nقيمة الطلب: ${totalAmountNum} ر.س\nمدفوع: ${paidAmountNum} ر.س\nالمتبقي: ${remainingAmountNum} ر.س${paymentsText4}`;
           customerPhone = data.customer_phone;
           customerName = data.customer_name;
           break;
 
         case 'status_update':
-          const paymentsText5 = paymentsDetailsText ? `\n\n💰 الدفعات:\n${paymentsDetailsText}` : '';
+          const paymentsText5 = paymentsDetailsText ? `\n\n💰 الدفعات:\n${paymentsDetailsText}` : '\n\n💰 الدفعات:\nلا توجد دفعات مسجلة';
           message = `${data.customer_name}، تم تحديث حالة طلبك رقم ${data.order_number} من "${data.old_status}" إلى "${data.new_status}". سنبقيك على اطلاع بأي تطورات جديدة.\n\n📊 الملخص المالي:\nقيمة الطلب: ${totalAmountNum} ر.س\nمدفوع: ${paidAmountNum} ر.س\nالمتبقي: ${remainingAmountNum} ر.س${paymentsText5}`;
           customerPhone = data.customer_phone;
           customerName = data.customer_name;
