@@ -315,9 +315,10 @@ Deno.serve(async (req) => {
           'due_date': dueDate,
           'status': data.new_status || data.status || orderDetails?.status || currentStatus || 'جديد',
           'priority': data.priority || 'متوسطة',
-           'estimated_time': data.estimated_days || 'قريباً',
-           'company_name': companyName,
-           'evaluation_link': `https://e5a7747a-0935-46df-9ea9-1308e76636dc.lovableproject.com/evaluation/token-${order_id}`
+          'estimated_time': data.estimated_days || 'قريباً',
+          'company_name': companyName,
+          'evaluation_link': `https://e5a7747a-0935-46df-9ea9-1308e76636dc.lovableproject.com/evaluation/token-${order_id}`,
+          'payments_details': paymentsDetailsText || 'لا توجد دفعات مسجلة'
         };
 
         // استبدال جميع المتغيرات في الرسالة
@@ -325,6 +326,11 @@ Deno.serve(async (req) => {
           const regex = new RegExp(`{{${key}}}`, 'g');
           message = message.replace(regex, replacements[key]);
         });
+
+        // إذا لم يوفر القالب موضعاً للدفعات، أضف قسماً تلقائياً في النهاية
+        if (!message.includes('💰 الدفعات')) {
+          message += `\n\n💰 الدفعات:\n${replacements['payments_details']}`;
+        }
       } else {
       console.log('No template found, using fallback messages');
       
