@@ -1694,7 +1694,7 @@ ${companyName}`;
                     <p><strong>تاريخ الاستحقاق:</strong> {order.due_date ? new Date(order.due_date).toLocaleDateString('ar-SA') : '-'}</p>
                   </div>
                   <div className="space-y-2">
-                    <p><strong>المبلغ الإجمالي:</strong> {order.amount.toLocaleString()} ر.س</p>
+                    <p><strong>المبلغ الإجمالي:</strong> {Number(order.amount || 0).toLocaleString('ar-SA')} ر.س</p>
                     <p><strong>المبلغ المدفوع:</strong> {(order.paid_amount || 0).toLocaleString()} ر.س</p>
                     <p><strong>المبلغ المتبقي:</strong> {(order.amount - (order.paid_amount || 0)).toLocaleString()} ر.س</p>
                   </div>
@@ -1718,8 +1718,8 @@ ${companyName}`;
                           </div>
                           <div className="text-left space-y-1 min-w-0 ml-2">
                             <p className="text-gray-600">الكمية: {item.quantity}</p>
-                            <p className="text-gray-600">السعر: {item.unit_price.toLocaleString()} ر.س</p>
-                            <p className="font-medium text-blue-600">الإجمالي: {item.total_amount.toLocaleString()} ر.س</p>
+                            <p className="text-gray-600">السعر: {Number(item.unit_price || 0).toLocaleString('ar-SA')} ر.س</p>
+                            <p className="font-medium text-blue-600">الإجمالي: {Number(item.total_amount || 0).toLocaleString('ar-SA')} ر.س</p>
                           </div>
                         </div>
                       ))}
@@ -1727,7 +1727,7 @@ ${companyName}`;
                         <div className="flex justify-between items-center text-sm font-medium">
                           <span>إجمالي البنود:</span>
                           <span className="text-blue-600">
-                            {order.order_items.reduce((sum, item) => sum + item.total_amount, 0).toLocaleString()} ر.س
+                            {(order.order_items.reduce((sum, item) => sum + (item.total_amount || 0), 0)).toLocaleString('ar-SA')} ر.س
                           </span>
                         </div>
                       </div>
@@ -2862,7 +2862,7 @@ ${companyName}`;
                 <span className="font-medium">{selectedOrderForDelete.service_name}</span>
               </div>
               <p><strong>العميل:</strong> {selectedOrderForDelete.customers?.name}</p>
-              <p><strong>المبلغ:</strong> {selectedOrderForDelete.amount.toLocaleString()} ر.س</p>
+              <p><strong>المبلغ:</strong> {Number(selectedOrderForDelete.amount || 0).toLocaleString('ar-SA')} ر.س</p>
               <div className="text-sm text-red-600 bg-red-100 p-2 rounded">
                 <strong>تحذير:</strong> سيتم حذف جميع البيانات المرتبطة بهذا الطلب:
                 <ul className="list-disc list-inside mt-1">
