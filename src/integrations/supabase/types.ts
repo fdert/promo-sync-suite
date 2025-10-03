@@ -414,6 +414,8 @@ export type Database = {
           expense_date: string | null
           expense_type: string
           id: string
+          notes: string | null
+          payment_method: string | null
           receipt_number: string | null
         }
         Insert: {
@@ -425,6 +427,8 @@ export type Database = {
           expense_date?: string | null
           expense_type: string
           id?: string
+          notes?: string | null
+          payment_method?: string | null
           receipt_number?: string | null
         }
         Update: {
@@ -436,6 +440,8 @@ export type Database = {
           expense_date?: string | null
           expense_type?: string
           id?: string
+          notes?: string | null
+          payment_method?: string | null
           receipt_number?: string | null
         }
         Relationships: [

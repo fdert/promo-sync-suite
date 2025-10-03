@@ -37,7 +37,9 @@ const FinancialReports = () => {
     amount: '',
     category: '',
     customCategory: '',
-    date: new Date().toISOString().split('T')[0]
+    date: new Date().toISOString().split('T')[0],
+    paymentMethod: '',
+    notes: ''
   });
   const [isUploading, setIsUploading] = useState(false);
 
@@ -305,7 +307,9 @@ const FinancialReports = () => {
           description: expenseForm.description,
           amount: parseFloat(expenseForm.amount),
           expense_type: finalCategory,
-          expense_date: expenseForm.date
+          expense_date: expenseForm.date,
+          payment_method: expenseForm.paymentMethod || null,
+          notes: expenseForm.notes || null
         });
 
       if (error) {
@@ -324,7 +328,9 @@ const FinancialReports = () => {
         amount: '',
         category: '',
         customCategory: '',
-        date: new Date().toISOString().split('T')[0]
+        date: new Date().toISOString().split('T')[0],
+        paymentMethod: '',
+        notes: ''
       });
       setIsExpenseDialogOpen(false);
 
@@ -470,28 +476,6 @@ const FinancialReports = () => {
                       className="mt-1"
                       rows={3}
                     />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="receiptFile">فاتورة المصروف (اختياري)</Label>
-                    <Input
-                      id="receiptFile"
-                      type="file"
-                      accept=".pdf,.jpg,.jpeg,.png,.gif,.doc,.docx"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0] || null;
-                        setExpenseForm({...expenseForm, receiptFile: file});
-                      }}
-                      className="mt-1"
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      الملفات المدعومة: PDF, صور (JPG, PNG), مستندات Word
-                    </p>
-                    {expenseForm.receiptFile && (
-                      <p className="text-sm text-primary mt-1">
-                        تم اختيار الملف: {expenseForm.receiptFile.name}
-                      </p>
-                    )}
                   </div>
                 </div>
 
@@ -744,89 +728,124 @@ const FinancialReports = () => {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {/* جدول المصروفات */}
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse">
-                      <thead>
-                        <tr className="border-b-2 border-border">
-                          <th className="text-right py-3 px-4 font-semibold text-sm">رقم المصروف</th>
-                          <th className="text-right py-3 px-4 font-semibold text-sm">الوصف</th>
-                          <th className="text-right py-3 px-4 font-semibold text-sm">الفئة</th>
-                          <th className="text-right py-3 px-4 font-semibold text-sm">المبلغ</th>
-                          <th className="text-right py-3 px-4 font-semibold text-sm">التاريخ</th>
-                          <th className="text-right py-3 px-4 font-semibold text-sm">تاريخ الإنشاء</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {expenses.map((expense, index) => (
-                          <tr key={expense.id} className={`border-b border-border hover:bg-muted/50 transition-colors ${index % 2 === 0 ? 'bg-muted/20' : ''}`}>
-                            <td className="py-3 px-4">
-                              <span className="font-mono text-sm font-medium">{expense.receipt_number || 'غير متوفر'}</span>
-                            </td>
-                            <td className="py-3 px-4">
-                              <span className="text-sm">{expense.description || 'لا يوجد وصف'}</span>
-                            </td>
-                            <td className="py-3 px-4">
-                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                                {expense.expense_type || 'غير محدد'}
-                              </span>
-                            </td>
-                            <td className="py-3 px-4">
-                              <span className="font-bold text-destructive text-base">
-                                {expense.amount?.toLocaleString() || '0'} ر.س
-                              </span>
-                            </td>
-                            <td className="py-3 px-4">
-                              <span className="text-sm text-muted-foreground">
-                                {expense.expense_date ? new Date(expense.expense_date).toLocaleDateString('ar-SA', {
-                                  year: 'numeric',
-                                  month: 'long',
-                                  day: 'numeric'
-                                }) : 'غير متوفر'}
-                              </span>
-                            </td>
-                            <td className="py-3 px-4">
-                              <span className="text-sm text-muted-foreground">
-                                {expense.created_at ? new Date(expense.created_at).toLocaleDateString('ar-SA', {
-                                  year: 'numeric',
-                                  month: 'short',
-                                  day: 'numeric',
-                                  hour: '2-digit',
-                                  minute: '2-digit'
-                                }) : 'غير متوفر'}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                      <tfoot>
-                        <tr className="border-t-2 border-border bg-muted/30">
-                          <td colSpan={3} className="py-4 px-4 text-right">
-                            <span className="text-lg font-bold">الإجمالي:</span>
-                          </td>
-                          <td className="py-4 px-4">
-                            <span className="text-xl font-bold text-destructive">
-                              {expenses.reduce((sum, expense) => sum + (expense.amount || 0), 0).toLocaleString()} ر.س
-                            </span>
-                          </td>
-                          <td colSpan={2} className="py-4 px-4">
-                            <span className="text-sm text-muted-foreground">
-                              عدد المصروفات: {expenses.length}
-                            </span>
-                          </td>
-                        </tr>
-                      </tfoot>
-                    </table>
+                  {/* بطاقات المصروفات */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {expenses.map((expense) => (
+                      <Card key={expense.id} className="border-l-4 border-l-destructive hover:shadow-md transition-shadow">
+                        <CardContent className="p-5">
+                          <div className="space-y-3">
+                            {/* رأس البطاقة */}
+                            <div className="flex justify-between items-start pb-3 border-b">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Receipt className="h-4 w-4 text-muted-foreground" />
+                                  <span className="font-mono text-xs font-medium text-muted-foreground">
+                                    {expense.receipt_number || 'غير متوفر'}
+                                  </span>
+                                </div>
+                                <p className="text-sm font-medium line-clamp-2">
+                                  {expense.description || 'لا يوجد وصف'}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* المبلغ والفئة */}
+                            <div className="space-y-2">
+                              <div className="flex justify-between items-center">
+                                <span className="text-xs text-muted-foreground">المبلغ:</span>
+                                <span className="text-xl font-bold text-destructive">
+                                  {expense.amount?.toLocaleString() || '0'} ر.س
+                                </span>
+                              </div>
+                              
+                              <div className="flex justify-between items-center">
+                                <span className="text-xs text-muted-foreground">الفئة:</span>
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                                  {expense.expense_type || 'غير محدد'}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* طريقة الدفع */}
+                            {expense.payment_method && (
+                              <div className="flex justify-between items-center py-2 border-t border-border/50">
+                                <span className="text-xs text-muted-foreground">طريقة الدفع:</span>
+                                <span className="text-sm font-medium">
+                                  {expense.payment_method}
+                                </span>
+                              </div>
+                            )}
+
+                            {/* الملاحظات */}
+                            {expense.notes && (
+                              <div className="pt-2 border-t border-border/50">
+                                <span className="text-xs text-muted-foreground block mb-1">ملاحظات:</span>
+                                <p className="text-sm text-foreground/80 line-clamp-3">
+                                  {expense.notes}
+                                </p>
+                              </div>
+                            )}
+
+                            {/* التواريخ */}
+                            <div className="pt-2 border-t border-border/50 space-y-1">
+                              <div className="flex justify-between items-center">
+                                <span className="text-xs text-muted-foreground">تاريخ المصروف:</span>
+                                <span className="text-xs font-medium">
+                                  {expense.expense_date ? new Date(expense.expense_date).toLocaleDateString('ar-SA', {
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric'
+                                  }) : 'غير متوفر'}
+                                </span>
+                              </div>
+                              
+                              <div className="flex justify-between items-center">
+                                <span className="text-xs text-muted-foreground">تاريخ التسجيل:</span>
+                                <span className="text-xs">
+                                  {expense.created_at ? new Date(expense.created_at).toLocaleDateString('ar-SA', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  }) : 'غير متوفر'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
                   </div>
 
-                  {/* إحصائيات المصروفات حسب الفئة */}
+                  {/* إحصائيات المصروفات */}
                   <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <Card className="bg-muted/30">
+                    {/* الإجمالي */}
+                    <Card className="bg-destructive/5 border-destructive/20">
                       <CardHeader className="pb-3">
-                        <CardTitle className="text-base">إحصائيات حسب الفئة</CardTitle>
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <DollarSign className="h-4 w-4" />
+                          إجمالي المصروفات
+                        </CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <div className="space-y-2">
+                        <div className="text-center">
+                          <div className="text-3xl font-bold text-destructive mb-2">
+                            {expenses.reduce((sum, expense) => sum + (expense.amount || 0), 0).toLocaleString()} ر.س
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            عدد المصروفات: {expenses.length}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* إحصائيات حسب الفئة */}
+                    <Card className="bg-muted/30">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base">حسب الفئة</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2 max-h-32 overflow-y-auto">
                           {Object.entries(
                             expenses.reduce((acc, expense) => {
                               const category = expense.expense_type || 'غير محدد';
@@ -839,78 +858,45 @@ const FinancialReports = () => {
                             }, {} as Record<string, { count: number; total: number }>)
                           )
                           .sort((a, b) => b[1].total - a[1].total)
+                          .slice(0, 5)
                           .map(([category, data]) => (
-                            <div key={category} className="flex justify-between items-center py-2 border-b border-border/50 last:border-0">
-                              <div className="flex-1">
-                                <div className="font-medium text-sm">{category}</div>
-                                <div className="text-xs text-muted-foreground">{data.count} مصروف</div>
-                              </div>
-                              <div className="text-right">
-                                <div className="font-bold text-destructive text-sm">
-                                  {data.total.toLocaleString()} ر.س
-                                </div>
-                              </div>
+                            <div key={category} className="flex justify-between items-center text-sm">
+                              <span className="text-muted-foreground truncate">{category}</span>
+                              <span className="font-bold text-destructive">
+                                {data.total.toLocaleString()} ر.س
+                              </span>
                             </div>
                           ))}
                         </div>
                       </CardContent>
                     </Card>
 
+                    {/* متوسط المصروفات */}
                     <Card className="bg-muted/30">
                       <CardHeader className="pb-3">
-                        <CardTitle className="text-base">متوسط المصروفات</CardTitle>
+                        <CardTitle className="text-base">المتوسطات</CardTitle>
                       </CardHeader>
                       <CardContent>
                         <div className="space-y-3">
-                          <div className="text-center py-3">
-                            <div className="text-sm text-muted-foreground mb-1">متوسط المصروف الواحد</div>
-                            <div className="text-2xl font-bold text-destructive">
+                          <div className="text-center pb-3 border-b border-border/50">
+                            <div className="text-sm text-muted-foreground mb-1">متوسط المصروف</div>
+                            <div className="text-xl font-bold text-destructive">
                               {(expenses.reduce((sum, expense) => sum + (expense.amount || 0), 0) / expenses.length).toLocaleString(undefined, {
                                 minimumFractionDigits: 2,
                                 maximumFractionDigits: 2
                               })} ر.س
                             </div>
                           </div>
-                          <div className="border-t pt-3">
-                            <div className="flex justify-between text-sm">
-                              <span className="text-muted-foreground">أعلى مصروف:</span>
-                              <span className="font-bold text-destructive">
-                                {Math.max(...expenses.map(e => e.amount || 0)).toLocaleString()} ر.س
-                              </span>
-                            </div>
-                            <div className="flex justify-between text-sm mt-2">
-                              <span className="text-muted-foreground">أقل مصروف:</span>
-                              <span className="font-bold">
-                                {Math.min(...expenses.map(e => e.amount || 0)).toLocaleString()} ر.س
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="bg-muted/30">
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-base">ملخص الفترة</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          <div className="flex justify-between items-center py-2 border-b border-border/50">
-                            <span className="text-sm text-muted-foreground">إجمالي المصروفات:</span>
-                            <span className="font-bold text-destructive">
-                              {expenses.reduce((sum, expense) => sum + (expense.amount || 0), 0).toLocaleString()} ر.س
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">أعلى مصروف:</span>
+                            <span className="font-bold">
+                              {Math.max(...expenses.map(e => e.amount || 0)).toLocaleString()} ر.س
                             </span>
                           </div>
-                          <div className="flex justify-between items-center py-2 border-b border-border/50">
-                            <span className="text-sm text-muted-foreground">عدد المصروفات:</span>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">أقل مصروف:</span>
                             <span className="font-bold">
-                              {expenses.length}
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center py-2">
-                            <span className="text-sm text-muted-foreground">عدد الفئات:</span>
-                            <span className="font-bold">
-                              {new Set(expenses.map(e => e.expense_type)).size}
+                              {Math.min(...expenses.map(e => e.amount || 0)).toLocaleString()} ر.س
                             </span>
                           </div>
                         </div>
