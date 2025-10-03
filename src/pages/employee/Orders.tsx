@@ -786,6 +786,7 @@ ${publicFileUrl}
             order_id: orderId,
             source: 'employee_dashboard', // تحديد المصدر
             webhook_preference: 'لوحة الموظف', // الويب هوك المفضل
+            force_send: true, // إجبار الإرسال حتى لو كانت الرسالة مكررة
             data: {
               order_number: orderData.order_number,
               customer_name: orderData.customers.name,

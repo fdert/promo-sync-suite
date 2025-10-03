@@ -34,8 +34,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { type, order_id, data, source, webhook_preference } = requestBody;
-    console.log('Notification request:', { type, order_id, data, source, webhook_preference });
+    const { type, order_id, data, source, webhook_preference, force_send } = requestBody;
+    console.log('Notification request:', { type, order_id, data, source, webhook_preference, force_send });
 
     if (!type) {
       console.error('Missing required field: type');
@@ -610,33 +610,38 @@ ${data.file_url}
     console.log('Sending notification via webhook:', JSON.stringify(messagePayload, null, 2));
 
     // فحص التكرار قبل الحفظ/الإرسال: نفس الرقم ونفس المحتوى خلال آخر 10 دقائق
-    try {
-      const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-      const { data: existingDup } = await supabase
-        .from('whatsapp_messages')
-        .select('id, status, created_at')
-        .eq('to_number', customerPhone)
-        .eq('message_content', message)
-        .in('status', ['sent', 'pending'])
-        .gt('created_at', tenMinAgo)
-        .limit(1);
+    // إلا إذا كان force_send = true (من لوحة الموظف عند تغيير الحالة)
+    if (!force_send) {
+      try {
+        const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+        const { data: existingDup } = await supabase
+          .from('whatsapp_messages')
+          .select('id, status, created_at')
+          .eq('to_number', customerPhone)
+          .eq('message_content', message)
+          .in('status', ['sent', 'pending'])
+          .gt('created_at', tenMinAgo)
+          .limit(1);
 
-      if (existingDup && existingDup.length > 0) {
-        console.log('Duplicate notification detected. Skipping send.');
-        return new Response(
-          JSON.stringify({ 
-            success: true, 
-            message: 'تم تجاهل الإرسال لتجنب التكرار خلال 10 دقائق',
-            duplicate: true
-          }),
-          {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 200
-          }
-        );
+        if (existingDup && existingDup.length > 0) {
+          console.log('Duplicate notification detected. Skipping send.');
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              message: 'تم تجاهل الإرسال لتجنب التكرار خلال 10 دقائق',
+              duplicate: true
+            }),
+            {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 200
+            }
+          );
+        }
+      } catch (e) {
+        console.log('Duplicate pre-check failed, continuing anyway:', e?.message);
       }
-    } catch (e) {
-      console.log('Duplicate pre-check failed, continuing anyway:', e?.message);
+    } else {
+      console.log('Force send enabled, skipping duplicate check');
     }
 
     // حفظ الرسالة في قاعدة البيانات أولاً كـ pending مع مفتاح منع التكرار
