@@ -1280,7 +1280,20 @@ export type Database = {
         | "failed"
       invoice_status: "draft" | "sent" | "paid" | "cancelled"
       message_status: "pending" | "sent" | "delivered" | "read" | "failed"
-      order_status: "pending" | "in_progress" | "completed" | "cancelled"
+      order_status:
+        | "pending"
+        | "in_progress"
+        | "completed"
+        | "cancelled"
+        | "جديد"
+        | "مؤكد"
+        | "قيد التنفيذ"
+        | "قيد المراجعة"
+        | "جاهز للتسليم"
+        | "مكتمل"
+        | "ملغي"
+        | "مؤجل"
+        | "قيد الانتظار"
       payment_type: "cash" | "card" | "bank_transfer" | "check" | "other"
     }
     CompositeTypes: {
@@ -1419,7 +1432,21 @@ export const Constants = {
       ],
       invoice_status: ["draft", "sent", "paid", "cancelled"],
       message_status: ["pending", "sent", "delivered", "read", "failed"],
-      order_status: ["pending", "in_progress", "completed", "cancelled"],
+      order_status: [
+        "pending",
+        "in_progress",
+        "completed",
+        "cancelled",
+        "جديد",
+        "مؤكد",
+        "قيد التنفيذ",
+        "قيد المراجعة",
+        "جاهز للتسليم",
+        "مكتمل",
+        "ملغي",
+        "مؤجل",
+        "قيد الانتظار",
+      ],
       payment_type: ["cash", "card", "bank_transfer", "check", "other"],
     },
   },
