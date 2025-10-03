@@ -209,7 +209,7 @@ const Orders = () => {
             item_name,
             quantity,
             unit_price,
-            total_amount,
+            total:total_amount,
             description
           )
         `)
