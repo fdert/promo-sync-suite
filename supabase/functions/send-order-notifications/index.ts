@@ -99,7 +99,8 @@ Deno.serve(async (req) => {
         .select(`
           *,
           customers(name, whatsapp, phone),
-          order_items(item_name, quantity, unit_price, total, description)
+          order_items(item_name, quantity, unit_price, total, description),
+          service_types(name)
         `)
         .eq('id', order_id)
         .single();
@@ -303,6 +304,15 @@ Deno.serve(async (req) => {
           remainingAmount = Math.max(0, totalAmount - paidAmount).toString();
         }
         
+        // تنسيق تاريخ التسليم
+        let deliveryDate = 'غير محدد';
+        if (orderDetails?.delivery_date) {
+          deliveryDate = new Date(orderDetails.delivery_date).toLocaleDateString('ar-SA');
+        }
+        
+        // الحصول على اسم الخدمة
+        const serviceName = orderDetails?.service_types?.name || data.service_name || 'غير محدد';
+        
         // استبدال المتغيرات
         const replacements: Record<string, string> = {
           'customer_name': customerName || '',
@@ -312,11 +322,12 @@ Deno.serve(async (req) => {
           'remaining_amount': (Number(remainingAmount || 0).toFixed(2)),
           'payment_type': data.payment_type || 'غير محدد',
           'progress': data.progress?.toString() || '0',
-          'service_name': data.service_name || '',
+          'service_name': serviceName,
           'description': description,
           'order_items': orderItemsText,
           'start_date': startDate,
           'due_date': dueDate,
+          'delivery_date': deliveryDate,
           'status': data.new_status || data.status || orderDetails?.status || currentStatus || 'جديد',
           'priority': data.priority || 'متوسطة',
           'estimated_time': data.estimated_days || 'قريباً',
@@ -611,11 +622,21 @@ ${data.file_url}
     }
 
     // إعداد بيانات الرسالة للإرسال عبر n8n كمتغيرات منفصلة في الجذر
+    
+    // تنسيق تاريخ التسليم للإرسال
+    let deliveryDateFormatted = 'غير محدد';
+    if (orderDetails?.delivery_date) {
+      deliveryDateFormatted = new Date(orderDetails.delivery_date).toLocaleDateString('ar-SA');
+    }
+    
+    // الحصول على اسم الخدمة للإرسال
+    const serviceNameForSend = orderDetails?.service_types?.name || data.service_name || 'غير محدد';
+    
     const messagePayload = {
       // متغيرات قوالب الرسائل - يمكن الوصول إليها مباشرة في n8n
       customer_name: customerName,
       order_number: data.order_number || '',
-      service_name: data.service_name || '',
+      service_name: serviceNameForSend,
       description: orderDetails?.description || data.description || 'غير محدد',
       amount: (Number(orderDetails?.total_amount ?? data.amount ?? 0).toFixed(2)),
       paid_amount: (Number(orderDetails?.paid_amount ?? data.paid_amount ?? 0).toFixed(2)),
@@ -625,6 +646,7 @@ ${data.file_url}
       priority: data.priority || 'متوسطة',
       start_date: startDate,
       due_date: dueDate,
+      delivery_date: deliveryDateFormatted,
       order_items: orderItemsText,
       payments_details: paymentsDetailsText || 'لا توجد دفعات مسجلة',
       payments: paymentsArray,
