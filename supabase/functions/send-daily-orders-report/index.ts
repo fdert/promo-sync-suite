@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.0";
 import { Resend } from "npm:resend@2.0.0";
+import * as XLSX from "https://cdn.sheetjs.com/xlsx-0.20.1/package/xlsx.mjs";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
@@ -86,11 +87,11 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`Found ${orders.length} orders, generating Excel...`);
 
-    // Generate CSV content (Excel compatible)
-    let csvContent = "\uFEFF"; // UTF-8 BOM for Excel
+    // Prepare data for Excel
+    const excelData: any[] = [];
     
     // Headers
-    const headers = [
+    excelData.push([
       "رقم الطلب",
       "اسم العميل",
       "رقم الهاتف",
@@ -110,9 +111,7 @@ const handler = async (req: Request): Promise<Response> => {
       "البنود",
       "المدفوعات",
       "الملاحظات"
-    ];
-    
-    csvContent += headers.join(",") + "\n";
+    ]);
 
     // Data rows
     orders.forEach((order: any) => {
@@ -131,7 +130,7 @@ const handler = async (req: Request): Promise<Response> => {
       
       const remainingAmount = (order.total_amount || 0) - (order.paid_amount || 0);
       
-      const row = [
+      excelData.push([
         order.order_number || "",
         customer.name || "",
         customer.phone || "",
@@ -148,23 +147,56 @@ const handler = async (req: Request): Promise<Response> => {
         order.tax || 0,
         order.created_at ? new Date(order.created_at).toLocaleDateString('ar-SA') : "",
         order.delivery_date ? new Date(order.delivery_date).toLocaleDateString('ar-SA') : "",
-        `"${items.replace(/"/g, '""')}"`,
-        `"${payments.replace(/"/g, '""')}"`,
-        `"${(order.notes || "").replace(/"/g, '""')}"`
-      ];
-      
-      csvContent += row.join(",") + "\n";
+        items,
+        payments,
+        order.notes || ""
+      ]);
     });
 
-    console.log("Excel content generated successfully, preparing email...");
+    console.log("Excel data prepared, creating workbook...");
 
+    // Create workbook and worksheet
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.aoa_to_sheet(excelData);
+    
+    // Set column widths
+    const colWidths = [
+      { wch: 20 }, // رقم الطلب
+      { wch: 20 }, // اسم العميل
+      { wch: 15 }, // رقم الهاتف
+      { wch: 15 }, // الواتساب
+      { wch: 25 }, // البريد الإلكتروني
+      { wch: 15 }, // المدينة
+      { wch: 15 }, // المنطقة
+      { wch: 20 }, // نوع الخدمة
+      { wch: 15 }, // الحالة
+      { wch: 15 }, // المبلغ الإجمالي
+      { wch: 15 }, // المبلغ المدفوع
+      { wch: 15 }, // المبلغ المتبقي
+      { wch: 10 }, // الخصم
+      { wch: 10 }, // الضريبة
+      { wch: 15 }, // تاريخ الإنشاء
+      { wch: 15 }, // تاريخ التسليم
+      { wch: 40 }, // البنود
+      { wch: 40 }, // المدفوعات
+      { wch: 30 }, // الملاحظات
+    ];
+    worksheet['!cols'] = colWidths;
+    
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(workbook, worksheet, "الطلبات");
+
+    console.log("Workbook created, converting to buffer...");
+
+    // Write workbook to buffer
+    const excelBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+    
     // Get current date for filename
     const currentDate = new Date().toISOString().split('T')[0];
-    const filename = `orders-report-${currentDate}.csv`;
+    const filename = `orders-report-${currentDate}.xlsx`;
 
-    // Create attachment
-    const csvBuffer = new TextEncoder().encode(csvContent);
-    const csvBase64 = btoa(String.fromCharCode(...new Uint8Array(csvBuffer)));
+    // Convert to base64
+    const excelBase64 = btoa(String.fromCharCode(...new Uint8Array(excelBuffer)));
 
     // Calculate statistics
     const totalOrders = orders.length;
@@ -227,7 +259,7 @@ const handler = async (req: Request): Promise<Response> => {
       attachments: [
         {
           filename: filename,
-          content: csvBase64,
+          content: excelBase64,
         },
       ],
     });
@@ -245,7 +277,7 @@ const handler = async (req: Request): Promise<Response> => {
         message: "تم إرسال تقرير الطلبات بنجاح",
         emailId: emailResponse.data?.id,
         ordersCount: totalOrders,
-        reportSize: csvBuffer.length,
+        reportSize: excelBuffer.length,
       }),
       {
         status: 200,
