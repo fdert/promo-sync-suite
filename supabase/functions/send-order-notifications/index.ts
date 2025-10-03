@@ -333,7 +333,10 @@ Deno.serve(async (req) => {
         });
 
         // إذا لم يوفر القالب موضعاً للدفعات، أضف قسماً تلقائياً في النهاية
-        if (!message.includes('💰 الدفعات')) {
+        const hasPaymentsWord = /الدفعات/.test(message);
+        const hasPaymentsDetails = paymentsDetailsText && message.includes(paymentsDetailsText);
+        const hasPaymentsPlaceholder = /{{\s*payments(_details)?\s*}}/i.test(message);
+        if (!hasPaymentsWord && !hasPaymentsDetails && !hasPaymentsPlaceholder) {
           message += `\n\n💰 الدفعات:\n${replacements['payments_details']}`;
         }
       } else {
