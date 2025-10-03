@@ -766,20 +766,21 @@ const FinancialReports = () => {
                               </div>
                             </div>
 
-                            {/* طريقة الدفع */}
-                            <div className="flex justify-between items-center py-2 border-t border-border/50">
-                              <span className="text-xs text-muted-foreground">طريقة الدفع:</span>
-                              <span className="text-sm font-medium">
-                                {expense.payment_method || 'غير محدد'}
-                              </span>
-                            </div>
-
-                            {/* الملاحظات */}
-                            <div className="pt-2 border-t border-border/50">
-                              <span className="text-xs text-muted-foreground block mb-1">ملاحظات:</span>
-                              <p className="text-sm text-foreground/80 line-clamp-3">
-                                {expense.notes || 'لا توجد ملاحظات'}
-                              </p>
+                            {/* طريقة الدفع والملاحظات */}
+                            <div className="pt-2 border-t border-border/50 space-y-2">
+                              <div className="flex justify-between items-center">
+                                <span className="text-xs text-muted-foreground font-medium">طريقة الدفع:</span>
+                                <span className="text-sm font-medium bg-muted/30 px-2 py-1 rounded">
+                                  {expense.payment_method || 'غير محدد'}
+                                </span>
+                              </div>
+                              
+                              <div>
+                                <span className="text-xs text-muted-foreground font-medium block mb-1">ملاحظات إضافية:</span>
+                                <p className="text-sm text-foreground/90 bg-muted/20 p-2 rounded min-h-[2.5rem]">
+                                  {expense.notes || 'لا توجد ملاحظات إضافية'}
+                                </p>
+                              </div>
                             </div>
 
                             {/* التواريخ */}
