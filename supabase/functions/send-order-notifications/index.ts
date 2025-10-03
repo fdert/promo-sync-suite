@@ -644,12 +644,12 @@ ${data.file_url}
       console.log('Force send enabled, skipping duplicate check');
     }
 
-    // حفظ الرسالة في قاعدة البيانات أولاً كـ pending مع مفتاح منع التكرار
     console.log('=== Saving message to database first (with dedupe) ===');
 
     const normalizedPhone = (customerPhone || '').replace(/[^\d]/g, '');
-    const eventOrderId = (typeof orderId !== 'undefined' && orderId) || orderDetails?.id || body?.order_id || 'unknown';
-    const dedupeKey = `${type}|${eventOrderId}|${normalizedPhone}`;
+    const eventOrderId = (typeof order_id !== 'undefined' && order_id) || orderDetails?.id || requestBody?.order_id || 'unknown';
+    const dedupeKeyBase = `${type}|${eventOrderId}|${normalizedPhone}`;
+    const dedupeKey = force_send ? `${dedupeKeyBase}|${Date.now()}` : dedupeKeyBase;
 
     const { data: savedMessage, error: saveError } = await supabase
       .from('whatsapp_messages')
@@ -672,18 +672,22 @@ ${data.file_url}
     }
 
     if (!savedMessage) {
-      console.log('Duplicate detected via dedupe_key. Skipping webhook send.');
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: 'تم تجاهل الإرسال لتجنب التكرار (dedupe)',
-          duplicate: true
-        }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200
-        }
-      );
+      if (force_send) {
+        console.log('Duplicate via dedupe_key but force_send enabled. Proceeding to send.');
+      } else {
+        console.log('Duplicate detected via dedupe_key. Skipping webhook send.');
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            message: 'تم تجاهل الإرسال لتجنب التكرار (dedupe)',
+            duplicate: true
+          }),
+          {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200
+          }
+        );
+      }
     }
     
     console.log('Message saved to database with ID:', savedMessage.id);
