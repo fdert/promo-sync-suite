@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.process-whatsapp-queue]
 verify_jwt = false
+
+[functions.send-daily-orders-report]
+verify_jwt = false
