@@ -1257,6 +1257,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      delete_order_with_related_data: {
+        Args: { order_id_param: string }
+        Returns: Json
+      }
       generate_database_backup: {
         Args: Record<PropertyKey, never>
         Returns: string
