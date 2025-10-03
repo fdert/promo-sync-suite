@@ -209,7 +209,7 @@ const Orders = () => {
             item_name,
             quantity,
             unit_price,
-            total:total_amount,
+            total_amount:total,
             description
           )
         `)
@@ -557,7 +557,7 @@ const Orders = () => {
       // جلب بنود الطلب
       const { data: orderItems, error: itemsError } = await supabase
         .from('order_items')
-        .select('*')
+        .select('id, item_name, quantity, unit_price, total_amount:total, description')
         .eq('order_id', orderId);
 
       if (itemsError) {
@@ -999,7 +999,7 @@ ${companyName}`;
           description: item.description || '',
           quantity: item.quantity,
           unit_price: item.unit_price,
-          total_amount: item.total_amount
+          total: item.total_amount
         }));
 
         const { error: insertItemsError } = await supabase
@@ -1165,7 +1165,7 @@ ${companyName}`;
             item_name: item.item_name,
             quantity: item.quantity,
             unit_price: item.unit_price,
-            total_amount: item.total_amount
+            total: item.total_amount
           }));
 
         if (orderItemsToInsert.length > 0) {
@@ -1334,7 +1334,7 @@ ${companyName}`;
           item_name: item.item_name,
           quantity: item.quantity,
           unit_price: item.unit_price,
-          total_amount: item.total_amount
+          total: item.total_amount
         }));
 
         const { error: insertItemsError } = await supabase
