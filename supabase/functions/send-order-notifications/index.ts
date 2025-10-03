@@ -70,6 +70,7 @@ Deno.serve(async (req) => {
     let customerName = '';
     let remainingAmount = '0';
     let orderItemsText = '';
+    let paymentsDetailsText = '';
     let startDate = 'سيتم تحديده';
     let dueDate = 'سيتم تحديده';
     let companyName = 'وكالة الإبداع للدعاية والإعلان';
@@ -119,7 +120,6 @@ Deno.serve(async (req) => {
         console.log('Payments Data:', payments);
         
         let totalPaidAmount = 0;
-        let paymentsDetailsText = '';
         if (payments && payments.length > 0) {
           totalPaidAmount = payments.reduce((sum: number, payment: any) => {
             const amt = Number(payment?.amount ?? 0);
@@ -137,6 +137,7 @@ Deno.serve(async (req) => {
             const paymentTypeAr = paymentTypeMap[payment.payment_type] || payment.payment_type || 'نقدي';
             return `${index + 1}. ${paymentTypeAr}: ${Number(payment.amount).toFixed(2)} ر.س`;
           }).join('\n');
+          console.log('Payments Details Text:', paymentsDetailsText);
         }
         
         console.log('Total Paid Amount:', totalPaidAmount);
