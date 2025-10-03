@@ -261,16 +261,16 @@ Deno.serve(async (req) => {
     if (templateName) {
       const { data: templateData, error: templateError } = await supabase
         .from('message_templates')
-        .select('template_content')
-        .eq('template_name', templateName)
+        .select('content')
+        .eq('name', templateName)
         .eq('is_active', true)
         .maybeSingle();
 
-      if (templateData?.template_content) {
-        console.log('Using template from database:', templateData.template_content);
+      if (templateData?.content) {
+        console.log('Using template from database:', templateData.content);
         
         // استخدام القالب من قاعدة البيانات
-        message = templateData.template_content;
+        message = templateData.content;
         
         // إذا كانت هناك تفاصيل طلب، استخدمها
         let description = 'غير محدد';
@@ -322,7 +322,8 @@ Deno.serve(async (req) => {
           'estimated_time': data.estimated_days || 'قريباً',
           'company_name': companyName,
           'evaluation_link': `https://e5a7747a-0935-46df-9ea9-1308e76636dc.lovableproject.com/evaluation/token-${order_id}`,
-          'payments_details': paymentsDetailsText || 'لا توجد دفعات مسجلة'
+          'payments_details': paymentsDetailsText || 'لا توجد دفعات مسجلة',
+          'payments': paymentsDetailsText || 'لا توجد دفعات مسجلة'
         };
 
         // استبدال جميع المتغيرات في الرسالة
