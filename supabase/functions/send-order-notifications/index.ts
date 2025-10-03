@@ -604,6 +604,11 @@ ${data.file_url}
         throw new Error(`No active webhook configured for notification type: ${type}`);
       }
     }
+    // ضمان إرفاق الدفعات دائماً بنهاية الرسالة
+    const finalPaymentsDetailsText = paymentsDetailsText || 'لا توجد دفعات مسجلة';
+    if (!message.includes(finalPaymentsDetailsText)) {
+      message += `\n\n💰 الدفعات:\n${finalPaymentsDetailsText}`;
+    }
 
     // إعداد بيانات الرسالة للإرسال عبر n8n كمتغيرات منفصلة في الجذر
     const messagePayload = {
