@@ -332,11 +332,20 @@ Deno.serve(async (req) => {
           message = message.replace(regex, replacements[key]);
         });
 
-        // إذا لم يوفر القالب موضعاً للدفعات، أضف قسماً تلقائياً في النهاية
+        // تضمين الدفعات في القالب حتى لو ذُكر العنوان بدون تفاصيل
         const hasPaymentsWord = /الدفعات/.test(message);
         const hasPaymentsDetails = paymentsDetailsText && message.includes(paymentsDetailsText);
         const hasPaymentsPlaceholder = /{{\s*payments(_details)?\s*}}/i.test(message);
-        if (!hasPaymentsWord && !hasPaymentsDetails && !hasPaymentsPlaceholder) {
+        if (hasPaymentsPlaceholder) {
+          // تم الاستبدال مسبقاً عبر replacements
+        } else if (hasPaymentsWord && !hasPaymentsDetails) {
+          const headerRegex = /(💰\s*)?الدفعات\s*:?[\t ]*(?:\n|$)/i;
+          if (headerRegex.test(message)) {
+            message = message.replace(headerRegex, (m) => `${m}${replacements['payments_details']}\n`);
+          } else {
+            message += `\n\n💰 الدفعات:\n${replacements['payments_details']}`;
+          }
+        } else if (!hasPaymentsWord && !hasPaymentsDetails) {
           message += `\n\n💰 الدفعات:\n${replacements['payments_details']}`;
         }
       } else {
