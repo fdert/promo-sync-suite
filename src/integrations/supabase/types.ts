@@ -1261,6 +1261,10 @@ export type Database = {
         Args: { order_id_param: string }
         Returns: Json
       }
+      exec_sql: {
+        Args: { sql: string }
+        Returns: undefined
+      }
       generate_database_backup: {
         Args: Record<PropertyKey, never>
         Returns: string
