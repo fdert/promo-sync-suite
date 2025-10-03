@@ -37,10 +37,7 @@ const FinancialReports = () => {
     amount: '',
     category: '',
     customCategory: '',
-    date: new Date().toISOString().split('T')[0],
-    paymentMethod: '',
-    notes: '',
-    receiptFile: null as File | null
+    date: new Date().toISOString().split('T')[0]
   });
   const [isUploading, setIsUploading] = useState(false);
 
@@ -133,9 +130,9 @@ const FinancialReports = () => {
       const { data, error } = await supabase
         .from('expenses')
         .select('*')
-        .gte('date', start.toISOString().split('T')[0])
-        .lte('date', end.toISOString().split('T')[0])
-        .order('date', { ascending: false });
+        .gte('expense_date', start.toISOString().split('T')[0])
+        .lte('expense_date', end.toISOString().split('T')[0])
+        .order('expense_date', { ascending: false });
 
       if (error) {
         console.error('Error fetching expenses:', error);
@@ -169,9 +166,9 @@ const FinancialReports = () => {
       // جلب المصروفات
       const { data: expensesData, error: expensesError } = await supabase
         .from('expenses')
-        .select('amount, date')
-        .gte('date', start.toISOString().split('T')[0])
-        .lte('date', end.toISOString().split('T')[0]);
+        .select('amount, expense_date')
+        .gte('expense_date', start.toISOString().split('T')[0])
+        .lte('expense_date', end.toISOString().split('T')[0]);
 
       if (expensesError) {
         console.error('Error fetching expenses:', expensesError);
@@ -258,33 +255,6 @@ const FinancialReports = () => {
     });
   };
 
-  // دالة رفع ملف الإيصال
-  const uploadReceiptFile = async (file: File, expenseNumber: string): Promise<string | null> => {
-    try {
-      const fileExtension = file.name.split('.').pop();
-      const fileName = `${expenseNumber}-${Date.now()}.${fileExtension}`;
-      const filePath = `receipts/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('expense-receipts')
-        .upload(filePath, file);
-
-      if (uploadError) {
-        throw uploadError;
-      }
-
-      // الحصول على URL الملف
-      const { data: { publicUrl } } = supabase.storage
-        .from('expense-receipts')
-        .getPublicUrl(filePath);
-
-      return publicUrl;
-    } catch (error) {
-      console.error('Error uploading receipt:', error);
-      return null;
-    }
-  };
-
   // دالة إضافة مصروف جديد
   const handleAddExpense = async () => {
     try {
@@ -317,41 +287,25 @@ const FinancialReports = () => {
       // إنشاء رقم المصروف
       const { data: lastExpense } = await supabase
         .from('expenses')
-        .select('expense_number')
+        .select('receipt_number')
         .order('created_at', { ascending: false })
         .limit(1);
 
       let expenseNumber = 'EXP-001';
       if (lastExpense && lastExpense.length > 0) {
-        const lastNumber = parseInt(lastExpense[0].expense_number.split('-')[1]);
+        const lastNumber = parseInt(lastExpense[0].receipt_number.split('-')[1]);
         expenseNumber = `EXP-${String(lastNumber + 1).padStart(3, '0')}`;
-      }
-
-      // رفع ملف الإيصال إذا كان موجوداً
-      let receiptUrl = null;
-      if (expenseForm.receiptFile) {
-        receiptUrl = await uploadReceiptFile(expenseForm.receiptFile, expenseNumber);
-        if (!receiptUrl) {
-          toast({
-            title: "تحذير",
-            description: "فشل في رفع ملف الإيصال، لكن تم حفظ المصروف",
-            variant: "destructive",
-          });
-        }
       }
 
       // إضافة المصروف إلى قاعدة البيانات
       const { error } = await supabase
         .from('expenses')
         .insert({
-          expense_number: expenseNumber,
+          receipt_number: expenseNumber,
           description: expenseForm.description,
           amount: parseFloat(expenseForm.amount),
-          category: finalCategory,
-          date: expenseForm.date,
-          payment_method: expenseForm.paymentMethod,
-          notes: expenseForm.notes,
-          receipt_url: receiptUrl
+          expense_type: finalCategory,
+          expense_date: expenseForm.date
         });
 
       if (error) {
@@ -370,16 +324,13 @@ const FinancialReports = () => {
         amount: '',
         category: '',
         customCategory: '',
-        date: new Date().toISOString().split('T')[0],
-        paymentMethod: '',
-        notes: '',
-        receiptFile: null
+        date: new Date().toISOString().split('T')[0]
       });
       setIsExpenseDialogOpen(false);
 
       toast({
         title: "تم الحفظ بنجاح",
-        description: `تم إضافة المصروف برقم ${expenseNumber}${receiptUrl ? ' مع الإيصال' : ''}`,
+        description: `تم إضافة المصروف برقم ${expenseNumber}`,
       });
 
     } catch (error) {
@@ -800,7 +751,7 @@ const FinancialReports = () => {
                           <div className="space-y-2">
                             <div className="flex justify-between items-start">
                               <div>
-                                <h4 className="font-semibold text-sm">{expense.expense_number}</h4>
+                                <h4 className="font-semibold text-sm">{expense.receipt_number}</h4>
                                 <p className="text-sm text-muted-foreground">{expense.description}</p>
                               </div>
                               <span className="text-lg font-bold text-destructive">
@@ -811,38 +762,13 @@ const FinancialReports = () => {
                             <div className="space-y-1 text-xs text-muted-foreground">
                               <div className="flex justify-between">
                                 <span>الفئة:</span>
-                                <span className="font-medium">{expense.category}</span>
+                                <span className="font-medium">{expense.expense_type}</span>
                               </div>
                               <div className="flex justify-between">
                                 <span>التاريخ:</span>
-                                <span>{new Date(expense.date).toLocaleDateString('ar-SA')}</span>
+                                <span>{new Date(expense.expense_date).toLocaleDateString('ar-SA')}</span>
                               </div>
-                              {expense.payment_method && (
-                                <div className="flex justify-between">
-                                  <span>طريقة الدفع:</span>
-                                  <span>{expense.payment_method}</span>
-                                </div>
-                              )}
                             </div>
-                            
-                            {expense.notes && (
-                              <div className="mt-2 p-2 bg-muted rounded text-xs">
-                                <strong>ملاحظات:</strong> {expense.notes}
-                              </div>
-                            )}
-                            
-                            {expense.receipt_url && (
-                              <div className="mt-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="text-xs h-6"
-                                  onClick={() => window.open(expense.receipt_url, '_blank')}
-                                >
-                                  عرض الإيصال
-                                </Button>
-                              </div>
-                            )}
                           </div>
                         </CardContent>
                       </Card>
