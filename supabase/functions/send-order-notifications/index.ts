@@ -20,13 +20,23 @@ function cleanPhoneNumber(phone: string | null | undefined): string {
 function normalizePhoneInternational(phone: string | null | undefined): string {
   if (!phone) return '';
   const digits = phone.replace(/[^\d]/g, '');
-  // حالات شائعة في السعودية
-  if (digits.startsWith('00966')) return digits.slice(4);
-  if (digits.startsWith('966')) return digits;
-  if (digits.startsWith('05') && digits.length === 10) return '966' + digits.slice(1);
-  if (digits.startsWith('5') && digits.length === 9) return '966' + digits;
-  // fallback: أعد الأرقام كما هي
-  return digits;
+  // توحيد إلى صيغة E.164 مع +966 لرقم سعودي
+  if (digits.startsWith('00966')) {
+    const local = digits.slice(5);
+    return '+966' + (local.startsWith('0') ? local.slice(1) : local);
+  }
+  if (digits.startsWith('966')) {
+    const local = digits.slice(3);
+    return '+966' + (local.startsWith('0') ? local.slice(1) : local);
+  }
+  if (digits.startsWith('05') && digits.length === 10) {
+    return '+966' + digits.slice(1);
+  }
+  if (digits.startsWith('5') && digits.length === 9) {
+    return '+966' + digits;
+  }
+  // fallback: إن لم يُعرف، أعد الرقم مع + إن كان يبدو دولياً
+  return digits.length >= 11 ? ('+' + digits) : digits;
 }
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
