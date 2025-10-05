@@ -753,7 +753,6 @@ ${data.file_url}
 
     console.log('=== Saving message to database first (with dedupe) ===');
 
-    const normalizedPhone = normalizePhoneInternational(customerPhone);
     const eventOrderId = (typeof order_id !== 'undefined' && order_id) || orderDetails?.id || requestBody?.order_id || 'unknown';
     const dedupeKeyBase = `${type}|${eventOrderId}|${normalizedPhone}`;
     const dedupeKey = force_send ? `${dedupeKeyBase}|${Date.now()}` : dedupeKeyBase;
