@@ -29,9 +29,29 @@ const handler = async (req: Request): Promise<Response> => {
     } catch (_e) {
       // no body provided
     }
-    const toRecipient = body.to || "Fm0002009@gmail.com";
 
-    console.log("Starting database backup process...", { testEmail: body.testEmail, to: toRecipient });
+    // Initialize Supabase client first to get email from settings
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Get email from follow_up_settings if scheduled
+    let toRecipient = body.to || "Fm0002009@gmail.com";
+    if (body.scheduled) {
+      console.log("This is a scheduled backup, fetching email from settings...");
+      const { data: settings } = await supabase
+        .from('follow_up_settings')
+        .select('email')
+        .limit(1)
+        .single();
+      
+      if (settings?.email) {
+        toRecipient = settings.email;
+        console.log("Using email from settings:", toRecipient);
+      }
+    }
+
+    console.log("Starting database backup process...", { testEmail: body.testEmail, scheduled: body.scheduled, to: toRecipient });
 
     // If only testing email delivery, skip DB backup
     if (body.testEmail) {
@@ -59,11 +79,6 @@ const handler = async (req: Request): Promise<Response> => {
         { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
-
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Call the database function to generate backup
     console.log("Generating database backup...");
