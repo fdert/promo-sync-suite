@@ -17,6 +17,17 @@ function cleanPhoneNumber(phone: string | null | undefined): string {
     .replace(/[^\d+\s-]/g, '') // السماح فقط بالأرقام و + والمسافات والشرطات
     .trim();
 }
+function normalizePhoneInternational(phone: string | null | undefined): string {
+  if (!phone) return '';
+  const digits = phone.replace(/[^\d]/g, '');
+  // حالات شائعة في السعودية
+  if (digits.startsWith('00966')) return digits.slice(4);
+  if (digits.startsWith('966')) return digits;
+  if (digits.startsWith('05') && digits.length === 10) return '966' + digits.slice(1);
+  if (digits.startsWith('5') && digits.length === 9) return '966' + digits;
+  // fallback: أعد الأرقام كما هي
+  return digits;
+}
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -92,12 +103,17 @@ Deno.serve(async (req) => {
     try {
       const { data: companyData } = await supabase
         .from('website_settings')
-        .select('setting_value')
-        .eq('setting_key', 'company_info')
+        .select('value')
+        .eq('key', 'company_info')
         .maybeSingle();
 
-      if (companyData?.setting_value?.companyName) {
-        companyName = companyData.setting_value.companyName;
+      try {
+        const parsed = typeof companyData?.value === 'string' ? JSON.parse(companyData.value as any) : (companyData?.value as any);
+        if (parsed?.companyName) {
+          companyName = parsed.companyName;
+        }
+      } catch (_) {
+        // ignore JSON parse errors
       }
     } catch (error) {
       console.log('Could not fetch company name, using default');
@@ -318,7 +334,9 @@ Deno.serve(async (req) => {
           remainingAmount = Math.max(0, totalAmount - paidAmount).toString();
         }
         
-        // تنسيق تاريخ التسليم
+        // توحيد تنسيق رقم الهاتف إلى صيغة دولية (SA)
+        const customerPhoneNormalized = normalizePhoneInternational(customerPhone);
+        
         let deliveryDate = 'غير محدد';
         if (orderDetails?.delivery_date) {
           deliveryDate = new Date(orderDetails.delivery_date).toLocaleDateString('ar-SA');
@@ -673,16 +691,16 @@ ${data.file_url}
       order_items: orderItemsText,
       payments_details: paymentsDetailsText || 'لا توجد دفعات مسجلة',
       payments: paymentsArray,
-      evaluation_link: `https://e5a7747a-0935-46df-9ea9-1308e76636dc.lovableproject.com/evaluation/token-${order_id}`,
+      evaluation_link: `https://e5a7747a-0935-46df-9ea9-1308e76636dc.lovableproject.com/evaluation/${order_id}`,
       company_name: companyName,
       estimated_time: data.estimated_days || 'قريباً',
       progress: data.progress?.toString() || '0',
       date: new Date().toLocaleDateString('ar-SA'),
       
       // بيانات الواتساب للإرسال المباشر
-      to: customerPhone,
-      phone: customerPhone,
-      phoneNumber: customerPhone,
+      to: normalizedPhone,
+      phone: normalizedPhone,
+      phoneNumber: normalizedPhone,
       message: message,
       messageText: message,
       text: message,
@@ -706,7 +724,7 @@ ${data.file_url}
         const { data: existingDup } = await supabase
           .from('whatsapp_messages')
           .select('id, status, created_at')
-          .eq('to_number', customerPhone)
+          .eq('to_number', normalizedPhone)
           .eq('message_content', message)
           .in('status', ['sent', 'pending'])
           .gt('created_at', tenMinAgo)
@@ -735,7 +753,7 @@ ${data.file_url}
 
     console.log('=== Saving message to database first (with dedupe) ===');
 
-    const normalizedPhone = (customerPhone || '').replace(/[^\d]/g, '');
+    const normalizedPhone = normalizePhoneInternational(customerPhone);
     const eventOrderId = (typeof order_id !== 'undefined' && order_id) || orderDetails?.id || requestBody?.order_id || 'unknown';
     const dedupeKeyBase = `${type}|${eventOrderId}|${normalizedPhone}`;
     const dedupeKey = force_send ? `${dedupeKeyBase}|${Date.now()}` : dedupeKeyBase;
@@ -744,7 +762,7 @@ ${data.file_url}
       .from('whatsapp_messages')
       .upsert({
         from_number: 'system',
-        to_number: customerPhone,
+        to_number: normalizedPhone,
         message_type: 'text',
         message_content: message,
         status: 'pending',
