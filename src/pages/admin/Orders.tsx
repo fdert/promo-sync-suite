@@ -746,7 +746,7 @@ ${companyName}`;
         .from('orders')
         .select(`
           *,
-          customers(name, whatsapp)
+          customers(name, whatsapp, phone)
         `)
         .eq('id', orderId)
         .single();
@@ -769,9 +769,11 @@ ${companyName}`;
 
       if (error) throw error;
 
-        // إرسال إشعار واتساب للعميل
-      if (orderData.customers?.whatsapp) {
+      // إرسال إشعار واتساب للعميل - استخدام phone كبديل إذا كان whatsapp فارغاً
+      const customerWhatsapp = orderData.customers?.whatsapp || orderData.customers?.phone;
+      if (customerWhatsapp) {
         console.log('Sending WhatsApp notification for status update...');
+        console.log('Customer phone:', customerWhatsapp);
         
         // تحديد نوع الإشعار بناءً على الحالة الجديدة (مثل لوحة الموظف)
         let notificationType;
@@ -809,7 +811,7 @@ ${companyName}`;
           data: {
             order_number: orderData.order_number,
             customer_name: orderData.customers.name,
-            customer_phone: orderData.customers.whatsapp,
+            customer_phone: customerWhatsapp,
             old_status: orderData.status,
             new_status: newStatus,
             amount: orderData.amount,
