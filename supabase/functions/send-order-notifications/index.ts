@@ -673,6 +673,8 @@ ${data.file_url}
     }
 
     // إعداد بيانات الرسالة للإرسال عبر n8n كمتغيرات منفصلة في الجذر
+    const normalizedPhone = normalizePhoneInternational(customerPhone);
+    const phoneDigits = normalizedPhone.startsWith('+') ? normalizedPhone.slice(1) : normalizedPhone;
     
     // تنسيق تاريخ التسليم للإرسال
     let deliveryDateFormatted = 'غير محدد';
@@ -709,8 +711,13 @@ ${data.file_url}
       
       // بيانات الواتساب للإرسال المباشر
       to: normalizedPhone,
+      to_e164: normalizedPhone,
+      to_digits: phoneDigits,
       phone: normalizedPhone,
       phoneNumber: normalizedPhone,
+      phone_e164: normalizedPhone,
+      phone_digits: phoneDigits,
+      msisdn: phoneDigits,
       message: message,
       messageText: message,
       text: message,
