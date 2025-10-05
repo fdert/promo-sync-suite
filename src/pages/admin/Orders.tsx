@@ -1700,8 +1700,8 @@ ${companyName}`;
                   </div>
                   <div className="space-y-2">
                     <p><strong>المبلغ الإجمالي:</strong> {Number(order.amount || 0).toLocaleString('ar-SA')} ر.س</p>
-                    <p><strong>المبلغ المدفوع:</strong> {(order.paid_amount || 0).toLocaleString()} ر.س</p>
-                    <p><strong>المبلغ المتبقي:</strong> {(order.amount - (order.paid_amount || 0)).toLocaleString()} ر.س</p>
+                    <p><strong>المبلغ المدفوع:</strong> {Number(order.paid_amount || 0).toLocaleString()} ر.س</p>
+                    <p><strong>المبلغ المتبقي:</strong> {Number((order.amount || 0) - (order.paid_amount || 0)).toLocaleString()} ر.س</p>
                   </div>
                 </div>
                 
@@ -2223,15 +2223,15 @@ ${companyName}`;
                     <div className="grid grid-cols-3 gap-4 text-center">
                       <div>
                         <p className="text-xs text-muted-foreground">المبلغ الكلي</p>
-                        <p className="text-lg font-bold text-blue-600">{selectedOrderForPayment.amount?.toLocaleString()} ر.س</p>
+                        <p className="text-lg font-bold text-blue-600">{Number(selectedOrderForPayment.amount || 0).toLocaleString()} ر.س</p>
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground">المبلغ المدفوع</p>
-                        <p className="text-lg font-bold text-green-600">{(selectedOrderForPayment.paid_amount || 0).toLocaleString()} ر.س</p>
+                        <p className="text-lg font-bold text-green-600">{Number(selectedOrderForPayment.paid_amount || 0).toLocaleString()} ر.س</p>
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground">المبلغ المتبقي</p>
-                        <p className="text-lg font-bold text-red-600">{(selectedOrderForPayment.amount - (selectedOrderForPayment.paid_amount || 0)).toLocaleString()} ر.س</p>
+                        <p className="text-lg font-bold text-red-600">{Number((selectedOrderForPayment.amount || 0) - (selectedOrderForPayment.paid_amount || 0)).toLocaleString()} ر.س</p>
                       </div>
                     </div>
                   </div>
@@ -2245,7 +2245,7 @@ ${companyName}`;
                       {payments.map((payment) => (
                         <div key={payment.id} className="flex justify-between items-center p-3 bg-gray-50 rounded">
                           <div>
-                            <p className="font-medium">{payment.amount?.toLocaleString()} ر.س</p>
+                            <p className="font-medium">{Number(payment.amount || 0).toLocaleString()} ر.س</p>
                             <p className="text-xs text-muted-foreground">
                               {payment.payment_type} • {new Date(payment.payment_date).toLocaleDateString('ar-SA')}
                             </p>
@@ -2366,9 +2366,9 @@ ${companyName}`;
                       <p><strong>الخدمة:</strong> {selectedOrderForInvoice.service_name}</p>
                     </div>
                     <div>
-                      <p><strong>المبلغ الإجمالي:</strong> {selectedOrderForInvoice.amount?.toLocaleString()} ر.س</p>
-                      <p><strong>المبلغ المدفوع:</strong> {(selectedOrderForInvoice.paid_amount || 0).toLocaleString()} ر.س</p>
-                      <p><strong>المبلغ المتبقي:</strong> {(selectedOrderForInvoice.amount - (selectedOrderForInvoice.paid_amount || 0)).toLocaleString()} ر.س</p>
+                      <p><strong>المبلغ الإجمالي:</strong> {Number(selectedOrderForInvoice.amount || 0).toLocaleString()} ر.س</p>
+                      <p><strong>المبلغ المدفوع:</strong> {Number(selectedOrderForInvoice.paid_amount || 0).toLocaleString()} ر.س</p>
+                      <p><strong>المبلغ المتبقي:</strong> {Number((selectedOrderForInvoice.amount || 0) - (selectedOrderForInvoice.paid_amount || 0)).toLocaleString()} ر.س</p>
                     </div>
                   </div>
                   
@@ -2649,7 +2649,7 @@ ${companyName}`;
                 <div className="flex justify-between items-center">
                   <span className="font-medium">إجمالي المبلغ:</span>
                   <span className="text-lg font-bold text-blue-600">
-                    {newOrder.amount.toLocaleString()} ر.س
+                    {Number(newOrder.amount || 0).toLocaleString()} ر.س
                   </span>
                 </div>
               </div>
