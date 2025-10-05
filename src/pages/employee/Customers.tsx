@@ -31,6 +31,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useRealtimeData } from "@/hooks/useRealtimeData";
+import { cleanPhoneNumber } from "@/lib/utils";
 
 const Customers = () => {
   const { data: customers, loading, refetch } = useRealtimeData('customers', [], { column: 'created_at', ascending: false });
@@ -119,13 +120,16 @@ const Customers = () => {
 
     try {
       console.log('Attempting to insert customer into database...');
+      const cleanedPhone = cleanPhoneNumber(newCustomer.phone);
+      const cleanedWhatsapp = cleanPhoneNumber(newCustomer.whatsapp_number);
+      
       const { error } = await supabase
         .from('customers')
         .insert([{
           name: newCustomer.name,
           email: newCustomer.email || null,
-          phone: newCustomer.phone || null,
-          whatsapp: newCustomer.whatsapp_number || null,
+          phone: cleanedPhone || null,
+          whatsapp: cleanedWhatsapp || cleanedPhone || null,
           address: newCustomer.address || null,
           city: newCustomer.city || null,
           notes: newCustomer.notes || null
@@ -197,13 +201,16 @@ const Customers = () => {
 
     try {
       console.log('Attempting to update customer in database...');
+      const cleanedPhone = cleanPhoneNumber(newCustomer.phone);
+      const cleanedWhatsapp = cleanPhoneNumber(newCustomer.whatsapp_number);
+      
       const { error } = await supabase
         .from('customers')
         .update({
           name: newCustomer.name,
           email: newCustomer.email || null,
-          phone: newCustomer.phone || null,
-          whatsapp: newCustomer.whatsapp_number || null,
+          phone: cleanedPhone || null,
+          whatsapp: cleanedWhatsapp || cleanedPhone || null,
           address: newCustomer.address || null,
           city: newCustomer.city || null,
           notes: newCustomer.notes || null

@@ -45,6 +45,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import Papa from 'papaparse';
+import { cleanPhoneNumber } from "@/lib/utils";
 
 const Customers = () => {
   const [customers, setCustomers] = useState([]);
@@ -263,7 +264,8 @@ const Customers = () => {
           
           return {
             name: name,
-            phone: phone
+            phone: cleanPhoneNumber(phone),
+            whatsapp: cleanPhoneNumber(phone)
           };
         })
         .filter(customer => customer !== null);
@@ -392,7 +394,8 @@ const Customers = () => {
 
           return {
             name: name,
-            phone: phone
+            phone: cleanPhoneNumber(phone),
+            whatsapp: cleanPhoneNumber(phone)
           };
         })
         .filter(customer => customer !== null);
@@ -780,12 +783,14 @@ const Customers = () => {
     }
 
     try {
+      const cleanedPhone = cleanPhoneNumber(newCustomer.phone);
       const { error } = await supabase
         .from('customers')
         .insert([{
           name: newCustomer.name,
           email: newCustomer.email || null,
-          phone: newCustomer.phone || null,
+          phone: cleanedPhone || null,
+          whatsapp: cleanedPhone || null,
           company: newCustomer.company || null,
           address: newCustomer.address || null,
           city: newCustomer.city || null,
@@ -852,12 +857,14 @@ const Customers = () => {
     }
 
     try {
+      const cleanedPhone = cleanPhoneNumber(newCustomer.phone);
       const { error } = await supabase
         .from('customers')
         .update({
           name: newCustomer.name,
           email: newCustomer.email || null,
-          phone: newCustomer.phone || null,
+          phone: cleanedPhone || null,
+          whatsapp: cleanedPhone || null,
           company: newCustomer.company || null,
           address: newCustomer.address || null,
           city: newCustomer.city || null,

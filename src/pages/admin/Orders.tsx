@@ -48,6 +48,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Switch } from "@/components/ui/switch";
 import { useThermalPrint } from "@/hooks/useThermalPrint";
 import "@/components/BarcodeLabel.css";
+import { cleanPhoneNumber } from "@/lib/utils";
 
 interface Order {
   id: string;
@@ -769,8 +770,10 @@ ${companyName}`;
 
       if (error) throw error;
 
-      // إرسال إشعار واتساب للعميل - استخدام phone كبديل إذا كان whatsapp فارغاً
-      const customerWhatsapp = orderData.customers?.whatsapp || orderData.customers?.phone;
+      // إرسال إشعار واتساب للعميل - استخدام phone كبديل إذا كان whatsapp فارغاً وتنظيف الرقم
+      let customerWhatsapp = orderData.customers?.whatsapp || orderData.customers?.phone;
+      customerWhatsapp = cleanPhoneNumber(customerWhatsapp);
+      
       if (customerWhatsapp) {
         console.log('Sending WhatsApp notification for status update...');
         console.log('Customer phone:', customerWhatsapp);

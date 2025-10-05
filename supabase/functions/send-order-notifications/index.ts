@@ -6,6 +6,18 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
+/**
+ * تنظيف رقم الهاتف من الأحرف الخاصة والرموز غير المرئية
+ */
+function cleanPhoneNumber(phone: string | null | undefined): string {
+  if (!phone) return '';
+  
+  return phone
+    .replace(/[\u200E\u200F\u202A-\u202E\u2066-\u2069]/g, '') // إزالة رموز التوجيه
+    .replace(/[^\d+\s-]/g, '') // السماح فقط بالأرقام و + والمسافات والشرطات
+    .trim();
+}
+
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -293,16 +305,11 @@ Deno.serve(async (req) => {
           // استخدام بيانات من orderDetails وتنظيف الرقم
           customerPhone = orderDetails.customers?.whatsapp || orderDetails.customers?.phone || data.customer_phone;
           // تنظيف رقم الهاتف من الأحرف الخاصة
-          if (customerPhone) {
-            customerPhone = customerPhone.replace(/[\u200E\u200F\u202A-\u202E]/g, '').trim();
-          }
+          customerPhone = cleanPhoneNumber(customerPhone);
           customerName = orderDetails.customers?.name || data.customer_name;
         } else {
           // استخدام البيانات المرسلة مباشرة وتنظيف الرقم
-          customerPhone = data.customer_phone;
-          if (customerPhone) {
-            customerPhone = customerPhone.replace(/[\u200E\u200F\u202A-\u202E]/g, '').trim();
-          }
+          customerPhone = cleanPhoneNumber(data.customer_phone);
           customerName = data.customer_name;
           
           // حساب المبلغ المتبقي من البيانات المرسلة

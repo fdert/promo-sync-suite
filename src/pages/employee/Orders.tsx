@@ -57,6 +57,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Switch } from "@/components/ui/switch";
 import { useThermalPrint } from "@/hooks/useThermalPrint";
 import "@/components/BarcodeLabel.css";
+import { cleanPhoneNumber } from "@/lib/utils";
 
 interface Order {
   id: string;
@@ -739,7 +740,7 @@ ${publicFileUrl}
       let customerWhatsapp = orderData?.customers?.whatsapp || orderData?.customers?.phone;
       if (customerWhatsapp) {
         // تنظيف الرقم من الأحرف الخاصة (Left-to-Right Marks وغيرها)
-        customerWhatsapp = customerWhatsapp.replace(/[\u200E\u200F\u202A-\u202E]/g, '').trim();
+        customerWhatsapp = cleanPhoneNumber(customerWhatsapp);
         console.log('Customer data:', orderData.customers);
         console.log('Customer phone number:', customerWhatsapp);
         
