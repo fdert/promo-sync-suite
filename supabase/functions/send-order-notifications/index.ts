@@ -205,9 +205,14 @@ Deno.serve(async (req) => {
     // تنسيق بنود الطلب أولاً (سواء كان هناك template أم لا)
     if (orderDetails) {
       if (orderDetails.order_items && orderDetails.order_items.length > 0) {
-        orderItemsText = orderDetails.order_items.map((item: any, index: number) => 
-          `${index + 1}. ${item.item_name} \n   الكمية: ${item.quantity}\n   السعر: ${item.unit_price} ر.س\n   المجموع: ${item.total} ر.س`
-        ).join('\n\n');
+        orderItemsText = orderDetails.order_items.map((item: any, index: number) => {
+          let itemText = `${index + 1}. ${item.item_name}`;
+          if (item.description) {
+            itemText += ` (${item.description})`;
+          }
+          itemText += `\n   الكمية: ${item.quantity}\n   السعر: ${item.unit_price} ر.س\n   المجموع: ${item.total} ر.س`;
+          return itemText;
+        }).join('\n\n');
         console.log('Order items formatted:', orderItemsText);
       } else {
         orderItemsText = 'لا توجد بنود محددة';
