@@ -290,12 +290,19 @@ Deno.serve(async (req) => {
           
           description = orderDetails.description || 'غير محدد';
           
-          // استخدام بيانات من orderDetails
+          // استخدام بيانات من orderDetails وتنظيف الرقم
           customerPhone = orderDetails.customers?.whatsapp || orderDetails.customers?.phone || data.customer_phone;
+          // تنظيف رقم الهاتف من الأحرف الخاصة
+          if (customerPhone) {
+            customerPhone = customerPhone.replace(/[\u200E\u200F\u202A-\u202E]/g, '').trim();
+          }
           customerName = orderDetails.customers?.name || data.customer_name;
         } else {
-          // استخدام البيانات المرسلة مباشرة
+          // استخدام البيانات المرسلة مباشرة وتنظيف الرقم
           customerPhone = data.customer_phone;
+          if (customerPhone) {
+            customerPhone = customerPhone.replace(/[\u200E\u200F\u202A-\u202E]/g, '').trim();
+          }
           customerName = data.customer_name;
           
           // حساب المبلغ المتبقي من البيانات المرسلة
@@ -332,7 +339,7 @@ Deno.serve(async (req) => {
           'priority': data.priority || 'متوسطة',
           'estimated_time': data.estimated_days || 'قريباً',
           'company_name': companyName,
-          'evaluation_link': `https://e5a7747a-0935-46df-9ea9-1308e76636dc.lovableproject.com/evaluation/token-${order_id}`,
+          'evaluation_link': `https://e5a7747a-0935-46df-9ea9-1308e76636dc.lovableproject.com/evaluation/${order_id}`,
           'payments_details': paymentsDetailsText || 'لا توجد دفعات مسجلة',
           'payments': paymentsDetailsText || 'لا توجد دفعات مسجلة'
         };

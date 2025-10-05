@@ -735,9 +735,11 @@ ${publicFileUrl}
       console.log('Order data:', orderData);
       console.log('Customer WhatsApp:', orderData?.customers?.whatsapp);
       
-      // إرسال إشعار واتساب عند تغيير الحالة
-      const customerWhatsapp = orderData?.customers?.whatsapp || orderData?.customers?.phone;
+      // إرسال إشعار واتساب عند تغيير الحالة - تنظيف الرقم من الأحرف الخاصة
+      let customerWhatsapp = orderData?.customers?.whatsapp || orderData?.customers?.phone;
       if (customerWhatsapp) {
+        // تنظيف الرقم من الأحرف الخاصة (Left-to-Right Marks وغيرها)
+        customerWhatsapp = customerWhatsapp.replace(/[\u200E\u200F\u202A-\u202E]/g, '').trim();
         console.log('Customer data:', orderData.customers);
         console.log('Customer phone number:', customerWhatsapp);
         
