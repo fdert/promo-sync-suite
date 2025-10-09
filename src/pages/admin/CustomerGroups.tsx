@@ -37,10 +37,12 @@ const CustomerGroups = () => {
   const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const [showMembersDialog, setShowMembersDialog] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<CustomerGroup | null>(null);
   const [groupMembers, setGroupMembers] = useState<Customer[]>([]);
   const [customerSearchTerm, setCustomerSearchTerm] = useState("");
+  const [editCustomerSearchTerm, setEditCustomerSearchTerm] = useState("");
   
   const [formData, setFormData] = useState({
     name: "",
@@ -217,12 +219,93 @@ const CustomerGroups = () => {
     setShowMembersDialog(true);
   };
 
+  const handleEditGroup = async (group: CustomerGroup) => {
+    setSelectedGroup(group);
+    setFormData({
+      name: group.name,
+      description: group.description || ""
+    });
+    
+    // جلب أعضاء المجموعة الحاليين
+    try {
+      const { data, error } = await supabase
+        .from('customer_group_members')
+        .select('customer_id')
+        .eq('group_id', group.id);
+
+      if (error) throw error;
+      
+      const memberIds = (data || []).map(item => item.customer_id);
+      setSelectedCustomers(memberIds);
+      setShowEditDialog(true);
+    } catch (error) {
+      console.error('Error fetching group members:', error);
+      toast.error('حدث خطأ في جلب أعضاء المجموعة');
+    }
+  };
+
+  const handleUpdateGroup = async () => {
+    if (!selectedGroup || !formData.name.trim()) {
+      toast.error('يرجى إدخال اسم المجموعة');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // تحديث بيانات المجموعة
+      const { error: updateError } = await supabase
+        .from('customer_groups')
+        .update({
+          name: formData.name,
+          description: formData.description
+        })
+        .eq('id', selectedGroup.id);
+
+      if (updateError) throw updateError;
+
+      // حذف جميع الأعضاء القدامى
+      const { error: deleteError } = await supabase
+        .from('customer_group_members')
+        .delete()
+        .eq('group_id', selectedGroup.id);
+
+      if (deleteError) throw deleteError;
+
+      // إضافة الأعضاء الجدد
+      if (selectedCustomers.length > 0) {
+        const memberInserts = selectedCustomers.map(customerId => ({
+          group_id: selectedGroup.id,
+          customer_id: customerId
+        }));
+
+        const { error: membersError } = await supabase
+          .from('customer_group_members')
+          .insert(memberInserts);
+
+        if (membersError) throw membersError;
+      }
+      
+      toast.success('تم تحديث المجموعة بنجاح');
+      setShowEditDialog(false);
+      resetForm();
+      fetchGroups();
+    } catch (error) {
+      console.error('Error updating group:', error);
+      toast.error('حدث خطأ في تحديث المجموعة');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       name: "",
       description: ""
     });
     setSelectedCustomers([]);
+    setCustomerSearchTerm("");
+    setEditCustomerSearchTerm("");
+    setSelectedGroup(null);
   };
 
   const handleCustomerToggle = (customerId: string) => {
@@ -235,6 +318,15 @@ const CustomerGroups = () => {
 
   const filteredCustomersForGroup = customers.filter(customer => {
     const searchLower = customerSearchTerm.toLowerCase();
+    return (
+      customer.name.toLowerCase().includes(searchLower) ||
+      customer.phone?.toLowerCase().includes(searchLower) ||
+      customer.whatsapp?.toLowerCase().includes(searchLower)
+    );
+  });
+
+  const filteredCustomersForEdit = customers.filter(customer => {
+    const searchLower = editCustomerSearchTerm.toLowerCase();
     return (
       customer.name.toLowerCase().includes(searchLower) ||
       customer.phone?.toLowerCase().includes(searchLower) ||
@@ -368,6 +460,13 @@ const CustomerGroups = () => {
                   <Button
                     variant="outline"
                     size="sm"
+                    onClick={() => handleEditGroup(group)}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => handleDeleteGroup(group.id)}
                     className="text-destructive hover:text-destructive"
                   >
@@ -379,6 +478,90 @@ const CustomerGroups = () => {
           </Card>
         ))}
       </div>
+
+      {/* Dialog تعديل المجموعة */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>تعديل المجموعة</DialogTitle>
+            <DialogDescription>
+              تعديل بيانات المجموعة والعملاء المنتمين لها
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="edit-name">اسم المجموعة *</Label>
+              <Input
+                id="edit-name"
+                value={formData.name}
+                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="أدخل اسم المجموعة"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="edit-description">الوصف</Label>
+              <Textarea
+                id="edit-description"
+                value={formData.description}
+                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="أدخل وصف المجموعة"
+                rows={3}
+              />
+            </div>
+
+            <div>
+              <Label>العملاء ({selectedCustomers.length} محدد)</Label>
+              <Input
+                placeholder="بحث بالاسم أو رقم الجوال..."
+                value={editCustomerSearchTerm}
+                onChange={(e) => setEditCustomerSearchTerm(e.target.value)}
+                className="mb-2"
+              />
+              <div className="border rounded-lg p-4 max-h-60 overflow-y-auto">
+                <div className="space-y-2">
+                  {filteredCustomersForEdit.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-4">
+                      لا توجد نتائج للبحث
+                    </p>
+                  ) : (
+                    filteredCustomersForEdit.map((customer) => (
+                      <div key={customer.id} className="flex items-center space-x-2 space-x-reverse">
+                        <Checkbox
+                          id={`edit-${customer.id}`}
+                          checked={selectedCustomers.includes(customer.id)}
+                          onCheckedChange={() => handleCustomerToggle(customer.id)}
+                        />
+                        <Label htmlFor={`edit-${customer.id}`} className="flex-1 cursor-pointer">
+                          <div className="flex justify-between">
+                            <span>{customer.name}</span>
+                            <span className="text-sm text-muted-foreground">
+                              {customer.whatsapp || customer.phone}
+                            </span>
+                          </div>
+                        </Label>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => {
+                setShowEditDialog(false);
+                resetForm();
+              }}>
+                إلغاء
+              </Button>
+              <Button onClick={handleUpdateGroup} disabled={loading}>
+                {loading ? "جاري الحفظ..." : "حفظ التعديلات"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog عرض أعضاء المجموعة */}
       <Dialog open={showMembersDialog} onOpenChange={setShowMembersDialog}>
