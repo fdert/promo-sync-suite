@@ -40,6 +40,7 @@ const CustomerGroups = () => {
   const [showMembersDialog, setShowMembersDialog] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<CustomerGroup | null>(null);
   const [groupMembers, setGroupMembers] = useState<Customer[]>([]);
+  const [customerSearchTerm, setCustomerSearchTerm] = useState("");
   
   const [formData, setFormData] = useState({
     name: "",
@@ -232,6 +233,15 @@ const CustomerGroups = () => {
     );
   };
 
+  const filteredCustomersForGroup = customers.filter(customer => {
+    const searchLower = customerSearchTerm.toLowerCase();
+    return (
+      customer.name.toLowerCase().includes(searchLower) ||
+      customer.phone?.toLowerCase().includes(searchLower) ||
+      customer.whatsapp?.toLowerCase().includes(searchLower)
+    );
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -279,9 +289,20 @@ const CustomerGroups = () => {
 
               <div>
                 <Label>العملاء ({selectedCustomers.length} محدد)</Label>
+                <Input
+                  placeholder="بحث بالاسم أو رقم الجوال..."
+                  value={customerSearchTerm}
+                  onChange={(e) => setCustomerSearchTerm(e.target.value)}
+                  className="mb-2"
+                />
                 <div className="border rounded-lg p-4 max-h-60 overflow-y-auto">
                   <div className="space-y-2">
-                    {customers.map((customer) => (
+                    {filteredCustomersForGroup.length === 0 ? (
+                      <p className="text-center text-muted-foreground py-4">
+                        لا توجد نتائج للبحث
+                      </p>
+                    ) : (
+                      filteredCustomersForGroup.map((customer) => (
                       <div key={customer.id} className="flex items-center space-x-2 space-x-reverse">
                         <Checkbox
                           id={customer.id}
@@ -297,7 +318,8 @@ const CustomerGroups = () => {
                           </div>
                         </Label>
                       </div>
-                    ))}
+                      ))
+                    )}
                   </div>
                 </div>
               </div>
