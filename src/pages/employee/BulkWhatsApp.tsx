@@ -19,7 +19,6 @@ interface CustomerGroup {
   id: string;
   name: string;
   description?: string;
-  color?: string;
   member_count?: number;
 }
 
@@ -76,7 +75,7 @@ const BulkWhatsApp = () => {
     try {
       const { data, error } = await supabase
         .from('customer_groups')
-        .select('id, name, description, color')
+        .select('id, name, description')
         .order('name');
 
       if (error) throw error;
