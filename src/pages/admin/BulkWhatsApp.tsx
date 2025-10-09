@@ -45,8 +45,8 @@ interface BulkCampaign {
 
 interface MessageTemplate {
   id: string;
-  template_name: string;
-  template_content: string;
+  name: string;
+  content: string;
 }
 
 const BulkWhatsApp = () => {
@@ -133,9 +133,9 @@ const BulkWhatsApp = () => {
     try {
       const { data, error } = await supabase
         .from('message_templates')
-        .select('id, template_name, template_content')
+        .select('id, name, content')
         .eq('is_active', true)
-        .order('template_name');
+        .order('name');
 
       if (error) throw error;
       setTemplates(data || []);
@@ -151,7 +151,7 @@ const BulkWhatsApp = () => {
       setFormData(prev => ({
         ...prev,
         selected_template: templateId,
-        message_content: template.template_content
+        message_content: template.content
       }));
     }
   };
@@ -162,16 +162,17 @@ const BulkWhatsApp = () => {
         const { count, error } = await supabase
           .from('customers')
           .select('*', { count: 'exact', head: true })
-          .not('whatsapp_number', 'is', null)
-          .neq('whatsapp_number', '');
+          .not('whatsapp', 'is', null)
+          .neq('whatsapp', '');
 
         if (error) throw error;
         return count || 0;
       } else {
         if (selectedGroups.length === 0) return 0;
 
-        // حساب تجريبي مؤقت حتى يتم تحديث ملف الأنواع
-        return selectedGroups.length * 10;
+        // اجمع عدد الأعضاء من المجموعات المحددة
+        const counts = selectedGroups.map(id => groups.find(g => g.id === id)?.member_count || 0);
+        return counts.reduce((sum, c) => sum + c, 0);
       }
     } catch (error) {
       console.error('Error calculating recipients:', error);
@@ -194,16 +195,22 @@ const BulkWhatsApp = () => {
     try {
       const totalRecipients = await calculateTotalRecipients();
 
-      const campaignData = {
+      const campaignData: any = {
         name: formData.name,
-        message_content: formData.message_content,
-        target_type: formData.target_type,
-        target_groups: formData.target_type === 'groups' ? selectedGroups : [],
         scheduled_at: formData.scheduled_at ? new Date(formData.scheduled_at).toISOString() : null,
         total_recipients: totalRecipients,
         status: formData.scheduled_at ? 'scheduled' : 'draft',
-        created_by: user?.id
+        created_by: user?.id,
       };
+
+      // خزن معرف القالب إذا تم اختياره
+      if (formData.selected_template) {
+        campaignData.message_template_id = formData.selected_template;
+      }
+      // إذا تم اختيار مجموعات، استخدم أول مجموعة لأن الجدول يدعم مجموعة واحدة فقط حالياً
+      if (formData.target_type === 'groups' && selectedGroups.length > 0) {
+        campaignData.customer_group_id = selectedGroups[0];
+      }
 
       console.log('Creating campaign:', campaignData);
 
@@ -396,7 +403,7 @@ const BulkWhatsApp = () => {
                   <SelectContent>
                     {templates.map((template) => (
                       <SelectItem key={template.id} value={template.id}>
-                        {template.template_name}
+                        {template.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
