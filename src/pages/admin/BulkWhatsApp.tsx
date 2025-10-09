@@ -65,8 +65,7 @@ const BulkWhatsApp = () => {
     message_content: "",
     target_type: "all" as 'all' | 'groups',
     scheduled_at: "",
-    selected_template: "",
-    delay_between_messages: 5
+    selected_template: ""
   });
 
   useEffect(() => {
@@ -203,7 +202,6 @@ const BulkWhatsApp = () => {
         scheduled_at: formData.scheduled_at ? new Date(formData.scheduled_at).toISOString() : null,
         total_recipients: totalRecipients,
         status: formData.scheduled_at ? 'scheduled' : 'draft',
-        delay_between_messages: formData.delay_between_messages,
         created_by: user?.id
       };
 
@@ -305,8 +303,7 @@ const BulkWhatsApp = () => {
       message_content: "",
       target_type: "all",
       scheduled_at: "",
-      selected_template: "",
-      delay_between_messages: 5
+      selected_template: ""
     });
     setSelectedGroups([]);
   };
@@ -388,23 +385,6 @@ const BulkWhatsApp = () => {
                     onChange={(e) => setFormData(prev => ({ ...prev, scheduled_at: e.target.value }))}
                   />
                 </div>
-              </div>
-
-              <div>
-                <Label htmlFor="delay_between_messages">الفاصل الزمني بين الرسائل (بالثواني)</Label>
-                <Input
-                  id="delay_between_messages"
-                  type="number"
-                  step="0.1"
-                  min="0.1"
-                  max="60"
-                  value={formData.delay_between_messages}
-                  onChange={(e) => setFormData(prev => ({ ...prev, delay_between_messages: parseFloat(e.target.value) || 5 }))}
-                  placeholder="5"
-                />
-                <p className="text-sm text-muted-foreground mt-1">
-                  يُنصح بوضع فاصل زمني لتجنب حظر الواتساب (1-60 ثانية)
-                </p>
               </div>
 
               <div>
