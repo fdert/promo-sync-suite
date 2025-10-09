@@ -18,7 +18,6 @@ interface CustomerGroup {
   id: string;
   name: string;
   description?: string;
-  color?: string;
   created_at: string;
   member_count?: number;
 }
@@ -44,8 +43,7 @@ const CustomerGroups = () => {
   
   const [formData, setFormData] = useState({
     name: "",
-    description: "",
-    color: "#3b82f6"
+    description: ""
   });
 
   useEffect(() => {
@@ -157,7 +155,6 @@ const CustomerGroups = () => {
         .insert({
           name: formData.name,
           description: formData.description,
-          color: formData.color,
           created_by: user?.id
         })
         .select()
@@ -222,8 +219,7 @@ const CustomerGroups = () => {
   const resetForm = () => {
     setFormData({
       name: "",
-      description: "",
-      color: "#3b82f6"
+      description: ""
     });
     setSelectedCustomers([]);
   };
@@ -282,24 +278,6 @@ const CustomerGroups = () => {
               </div>
 
               <div>
-                <Label htmlFor="color">لون المجموعة</Label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    id="color"
-                    value={formData.color}
-                    onChange={(e) => setFormData(prev => ({ ...prev, color: e.target.value }))}
-                    className="w-12 h-10 border rounded cursor-pointer"
-                  />
-                  <Input
-                    value={formData.color}
-                    onChange={(e) => setFormData(prev => ({ ...prev, color: e.target.value }))}
-                    placeholder="#3b82f6"
-                  />
-                </div>
-              </div>
-
-              <div>
                 <Label>العملاء ({selectedCustomers.length} محدد)</Label>
                 <div className="border rounded-lg p-4 max-h-60 overflow-y-auto">
                   <div className="space-y-2">
@@ -342,13 +320,7 @@ const CustomerGroups = () => {
           <Card key={group.id} className="hover:shadow-lg transition-shadow">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div
-                    className="w-4 h-4 rounded-full"
-                    style={{ backgroundColor: group.color }}
-                  />
-                  <CardTitle className="text-lg">{group.name}</CardTitle>
-                </div>
+                <CardTitle className="text-lg">{group.name}</CardTitle>
                 <Badge variant="secondary" className="flex items-center gap-1">
                   <Users className="h-3 w-3" />
                   {group.member_count}
