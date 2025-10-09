@@ -27,7 +27,7 @@ interface Customer {
   id: string;
   name: string;
   phone?: string;
-  whatsapp_number?: string;
+  whatsapp?: string;
   email?: string;
 }
 
@@ -88,7 +88,7 @@ const CustomerGroups = () => {
     try {
       const { data, error } = await supabase
         .from('customers')
-        .select('id, name, phone, whatsapp_number, email')
+        .select('id, name, phone, whatsapp, email')
         .order('name');
 
       if (error) throw error;
@@ -111,7 +111,7 @@ const CustomerGroups = () => {
             id,
             name,
             phone,
-            whatsapp_number,
+            whatsapp,
             email
           )
         `)
@@ -131,7 +131,7 @@ const CustomerGroups = () => {
           id: item.customers.id,
           name: item.customers.name,
           phone: item.customers.phone,
-          whatsapp_number: item.customers.whatsapp_number,
+          whatsapp: item.customers.whatsapp,
           email: item.customers.email
         }));
 
@@ -314,7 +314,7 @@ const CustomerGroups = () => {
                           <div className="flex justify-between">
                             <span>{customer.name}</span>
                             <span className="text-sm text-muted-foreground">
-                              {customer.whatsapp_number || customer.phone}
+                              {customer.whatsapp || customer.phone}
                             </span>
                           </div>
                         </Label>
@@ -411,7 +411,7 @@ const CustomerGroups = () => {
                   <TableRow key={member.id}>
                     <TableCell className="font-medium">{member.name}</TableCell>
                     <TableCell>{member.phone || '-'}</TableCell>
-                    <TableCell>{member.whatsapp_number || '-'}</TableCell>
+                    <TableCell>{member.whatsapp || '-'}</TableCell>
                     <TableCell>{member.email || '-'}</TableCell>
                   </TableRow>
                 ))}
