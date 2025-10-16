@@ -55,12 +55,6 @@ const LoyaltyManagement = () => {
   const [settings, setSettings] = useState<LoyaltySettings | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const [transactionForm, setTransactionForm] = useState({
-    type: "earn",
-    points: "",
-    description: ""
-  });
-
   useEffect(() => {
     fetchCustomers();
     fetchSettings();
@@ -152,105 +146,6 @@ const LoyaltyManagement = () => {
     }
   };
 
-  const handleTransaction = async () => {
-    if (!selectedCustomerId || !transactionForm.points) {
-      toast({
-        title: "خطأ",
-        description: "يرجى اختيار عميل وإدخال عدد النقاط",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!settings?.is_active) {
-      toast({
-        title: "تنبيه",
-        description: "نظام الولاء غير مفعل حالياً",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const points = parseInt(transactionForm.points);
-      const newBalance = (customerPoints?.total_points || 0) + points;
-
-      // تحديث نقاط العميل
-      const { error: updateError } = await supabase
-        .from("customer_loyalty_points")
-        .update({
-          total_points: newBalance,
-          lifetime_points: (customerPoints?.lifetime_points || 0) + points,
-        })
-        .eq("customer_id", selectedCustomerId);
-
-      if (updateError) throw updateError;
-
-      // إضافة معاملة
-      const { error: transactionError } = await supabase
-        .from("loyalty_transactions")
-        .insert([{
-          customer_id: selectedCustomerId,
-          transaction_type: 'earn',
-          points: points,
-          balance_after: newBalance,
-          description: transactionForm.description,
-          created_by: user?.id
-        }]);
-
-      if (transactionError) throw transactionError;
-
-      // إرسال رسالة واتساب
-      const customer = customers.find(c => c.id === selectedCustomerId);
-      if (customer?.whatsapp) {
-        await sendWhatsAppNotification(customer, newBalance, points, false);
-      }
-
-      toast({
-        title: "نجح",
-        description: `تم إضافة ${points} نقطة بنجاح`,
-      });
-
-      setTransactionForm({ type: "earn", points: "", description: "" });
-      fetchCustomerPoints(selectedCustomerId);
-      fetchRecentTransactions();
-    } catch (error: any) {
-      console.error("Error processing transaction:", error);
-      toast({
-        title: "خطأ",
-        description: error.message || "فشل في معالجة العملية",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const sendWhatsAppNotification = async (
-    customer: Customer,
-    balance: number,
-    pointsChange: number,
-    isRedeem: boolean
-  ) => {
-    try {
-      const message = `مرحباً ${customer.name}،\n\n${
-        isRedeem 
-          ? `تم خصم ${Math.abs(pointsChange)} نقطة من رصيدك` 
-          : `تم إضافة ${pointsChange} نقطة إلى رصيدك`
-      }.\n\nرصيدك الحالي: ${balance} نقطة\n\nشكراً لولائكم! 🎁`;
-
-      await supabase.functions.invoke("send-direct-whatsapp", {
-        body: {
-          phone: customer.whatsapp,
-          message: message
-        }
-      });
-    } catch (error) {
-      console.error("Error sending WhatsApp notification:", error);
-    }
-  };
 
   const getTransactionIcon = (type: string) => {
     switch (type) {
@@ -293,7 +188,7 @@ const LoyaltyManagement = () => {
     <div className="space-y-6 p-6">
       <div>
         <h1 className="text-3xl font-bold text-foreground">نظام الولاء</h1>
-        <p className="text-muted-foreground">إدارة نقاط الولاء للعملاء</p>
+        <p className="text-muted-foreground">عرض نقاط الولاء للعملاء</p>
       </div>
 
       {/* إحصائيات سريعة */}
@@ -311,157 +206,117 @@ const LoyaltyManagement = () => {
         ))}
       </div>
 
-      <Tabs defaultValue="add" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="add">إضافة نقاط</TabsTrigger>
-          <TabsTrigger value="history">سجل المعاملات</TabsTrigger>
-        </TabsList>
+      <Card>
+        <CardHeader>
+          <CardTitle>عرض نقاط العملاء</CardTitle>
+          <CardDescription>
+            يمكنك الاطلاع على نقاط الولاء للعملاء فقط. لإدارة النقاط، يرجى الرجوع إلى لوحة الإدارة.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="customer">العميل</Label>
+            <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
+              <SelectTrigger>
+                <SelectValue placeholder="اختر العميل" />
+              </SelectTrigger>
+              <SelectContent>
+                {customers.map((customer) => (
+                  <SelectItem key={customer.id} value={customer.id}>
+                    {customer.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-        <TabsContent value="add" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>إضافة نقاط الولاء</CardTitle>
-              <CardDescription>
-                إضافة نقاط الولاء للعملاء
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="customer">العميل</Label>
-                <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="اختر العميل" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {customers.map((customer) => (
-                      <SelectItem key={customer.id} value={customer.id}>
-                        {customer.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {customerPoints && (
-                <Card className="bg-muted">
-                  <CardContent className="pt-6">
-                    <div className="grid grid-cols-3 gap-4 text-center">
-                      <div>
-                        <p className="text-sm text-muted-foreground">الرصيد الحالي</p>
-                        <p className="text-2xl font-bold text-primary">{customerPoints.total_points}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">إجمالي النقاط المكتسبة</p>
-                        <p className="text-2xl font-bold">{customerPoints.lifetime_points}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">النقاط المستبدلة</p>
-                        <p className="text-2xl font-bold">{customerPoints.redeemed_points}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              <div className="space-y-2">
-                <Label htmlFor="points">عدد النقاط</Label>
-                <Input
-                  id="points"
-                  type="number"
-                  value={transactionForm.points}
-                  onChange={(e) => setTransactionForm({ ...transactionForm, points: e.target.value })}
-                  placeholder="أدخل عدد النقاط"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description">الوصف (اختياري)</Label>
-                <Textarea
-                  id="description"
-                  value={transactionForm.description}
-                  onChange={(e) => setTransactionForm({ ...transactionForm, description: e.target.value })}
-                  placeholder="وصف العملية"
-                  rows={3}
-                />
-              </div>
-
-              {settings && (
-                <div className="text-sm text-muted-foreground space-y-1">
-                  <p>• كل {settings.points_per_currency} ريال = نقطة واحدة</p>
-                  <p>• كل نقطة = {settings.currency_per_point} ريال</p>
-                  <p>• الحد الأدنى للاستبدال: {settings.min_points_to_redeem} نقطة</p>
+          {customerPoints && (
+            <Card className="bg-muted">
+              <CardContent className="pt-6">
+                <div className="grid grid-cols-3 gap-4 text-center">
+                  <div>
+                    <p className="text-sm text-muted-foreground">الرصيد الحالي</p>
+                    <p className="text-2xl font-bold text-primary">{customerPoints.total_points}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">إجمالي النقاط المكتسبة</p>
+                    <p className="text-2xl font-bold">{customerPoints.lifetime_points}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">النقاط المستبدلة</p>
+                    <p className="text-2xl font-bold">{customerPoints.redeemed_points}</p>
+                  </div>
                 </div>
-              )}
+              </CardContent>
+            </Card>
+          )}
 
-              <Button
-                onClick={handleTransaction}
-                disabled={loading || !selectedCustomerId || !transactionForm.points}
-                className="w-full"
-              >
-                {loading ? "جاري المعالجة..." : "تنفيذ العملية"}
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
+          {settings && (
+            <div className="text-sm text-muted-foreground space-y-1 p-4 bg-muted rounded-lg">
+              <p className="font-semibold mb-2">إعدادات نظام الولاء:</p>
+              <p>• كل {settings.points_per_currency} ريال = نقطة واحدة</p>
+              <p>• كل نقطة = {settings.currency_per_point} ريال</p>
+              <p>• الحد الأدنى للاستبدال: {settings.min_points_to_redeem} نقطة</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-        <TabsContent value="history" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>سجل معاملات الولاء</CardTitle>
-              <CardDescription>آخر 20 معاملة</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>التاريخ</TableHead>
-                    <TableHead>العميل</TableHead>
-                    <TableHead>النوع</TableHead>
-                    <TableHead>النقاط</TableHead>
-                    <TableHead>الرصيد بعد</TableHead>
-                    <TableHead>الوصف</TableHead>
+      <Card>
+        <CardHeader>
+          <CardTitle>سجل معاملات الولاء</CardTitle>
+          <CardDescription>آخر 20 معاملة</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>التاريخ</TableHead>
+                <TableHead>العميل</TableHead>
+                <TableHead>النوع</TableHead>
+                <TableHead>النقاط</TableHead>
+                <TableHead>الرصيد بعد</TableHead>
+                <TableHead>الوصف</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {transactions.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground">
+                    لا توجد معاملات
+                  </TableCell>
+                </TableRow>
+              ) : (
+                transactions.map((transaction) => (
+                  <TableRow key={transaction.id}>
+                    <TableCell>
+                      {new Date(transaction.created_at).toLocaleDateString('ar-SA')}
+                    </TableCell>
+                    <TableCell>{transaction.customers?.name}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {getTransactionIcon(transaction.transaction_type)}
+                        <Badge variant={getTransactionBadge(transaction.transaction_type)}>
+                          {transaction.transaction_type === 'earn' ? 'إضافة' :
+                           transaction.transaction_type === 'redeem' ? 'خصم' :
+                           transaction.transaction_type === 'welcome_bonus' ? 'مكافأة' : 'تعديل'}
+                        </Badge>
+                      </div>
+                    </TableCell>
+                    <TableCell className={transaction.transaction_type === 'redeem' ? 'text-red-500' : 'text-green-500'}>
+                      {transaction.transaction_type === 'redeem' ? '-' : '+'}{transaction.points}
+                    </TableCell>
+                    <TableCell>{transaction.balance_after}</TableCell>
+                    <TableCell className="max-w-xs truncate">
+                      {transaction.description || '-'}
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {transactions.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground">
-                        لا توجد معاملات
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    transactions.map((transaction) => (
-                      <TableRow key={transaction.id}>
-                        <TableCell>
-                          {new Date(transaction.created_at).toLocaleDateString('ar-SA')}
-                        </TableCell>
-                        <TableCell>{transaction.customers?.name}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            {getTransactionIcon(transaction.transaction_type)}
-                            <Badge variant={getTransactionBadge(transaction.transaction_type)}>
-                              {transaction.transaction_type === 'earn' ? 'إضافة' :
-                               transaction.transaction_type === 'redeem' ? 'خصم' :
-                               transaction.transaction_type === 'welcome_bonus' ? 'مكافأة' : 'تعديل'}
-                            </Badge>
-                          </div>
-                        </TableCell>
-                        <TableCell className={transaction.transaction_type === 'redeem' ? 'text-red-500' : 'text-green-500'}>
-                          {transaction.transaction_type === 'redeem' ? '-' : '+'}{transaction.points}
-                        </TableCell>
-                        <TableCell>{transaction.balance_after}</TableCell>
-                        <TableCell className="max-w-xs truncate">
-                          {transaction.description || '-'}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   );
 };
