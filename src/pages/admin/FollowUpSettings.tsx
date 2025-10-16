@@ -373,7 +373,7 @@ const FollowUpSettings = () => {
     try {
       setLogsLoading(true);
       let query = supabase
-        .from('activity_logs')
+        .from('user_activity_logs')
         .select(`
           *
         `)
@@ -395,9 +395,7 @@ const FollowUpSettings = () => {
         query = query.eq('action', actionFilter);
       }
 
-      if (resourceFilter && resourceFilter !== "all") {
-        query = query.eq('resource_type', resourceFilter);
-      }
+      // resource_type غير متوفر في user_activity_logs حالياً، لذلك نتخطى الفلترة على مستوى الخادم
 
       const { data, error } = await query.limit(500);
 
@@ -420,8 +418,8 @@ const FollowUpSettings = () => {
     
     const searchLower = searchTerm.toLowerCase();
     return (
-      log.action.toLowerCase().includes(searchLower) ||
-      log.resource_type.toLowerCase().includes(searchLower) ||
+      (log.action || '').toLowerCase().includes(searchLower) ||
+      ((log.resource_type || '').toLowerCase().includes(searchLower)) ||
       (log.details && JSON.stringify(log.details).toLowerCase().includes(searchLower))
     );
   });
@@ -1002,9 +1000,9 @@ const FollowUpSettings = () => {
                               {log.action}
                             </Badge>
                           </TableCell>
-                          <TableCell>{log.resource_type}</TableCell>
+                          <TableCell>{log.resource_type || '-'}</TableCell>
                           <TableCell className="font-mono text-sm">
-                            {log.resource_id}
+                            {log.resource_id || '-'}
                           </TableCell>
                           <TableCell>
                             <div className="max-w-xs truncate" title={formatDetails(log.details)}>
