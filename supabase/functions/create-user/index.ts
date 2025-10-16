@@ -62,6 +62,7 @@ serve(async (req) => {
       .insert({
         id: userId,
         full_name: name,
+        email: email,
         status: 'active'
       });
 

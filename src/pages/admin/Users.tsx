@@ -40,12 +40,9 @@ const Users = () => {
         .select(`
           id,
           full_name,
-          avatar_url,
+          email,
           phone,
-          company,
-          status,
-          last_login,
-          role
+          status
         `);
 
       if (profilesError) {
@@ -71,23 +68,14 @@ const Users = () => {
           if (permissionsError) {
             console.error('Error fetching permissions:', permissionsError);
           }
-
-          // جلب البريد الإلكتروني من جدول auth (للقراءة فقط)
-          let email = 'غير محدد';
-          try {
-            const { data: authData, error: authError } = await supabase.auth.admin.getUserById(profile.id);
-            email = authData?.user?.email || 'غير محدد';
-          } catch (authError) {
-            console.error('Error fetching auth data:', authError);
-          }
           
           return {
             id: profile.id,
             name: profile.full_name || 'غير محدد',
-            email: email,
+            email: profile.email || 'غير محدد',
             role: roleData?.role || 'user',
             status: profile.status || 'pending',
-            lastLogin: profile.last_login ? formatRelativeTime(profile.last_login) : 'لم يدخل بعد',
+            lastLogin: 'غير متوفر',
             permissions: permissionsData?.map(p => p.permission) || []
           };
         })
