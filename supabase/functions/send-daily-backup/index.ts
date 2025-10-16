@@ -13,6 +13,7 @@ interface BackupRequest {
   scheduled?: boolean;
   testEmail?: boolean;
   to?: string;
+  cron_secret?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -28,6 +29,18 @@ const handler = async (req: Request): Promise<Response> => {
       body = await req.json();
     } catch (_e) {
       // no body provided
+    }
+
+    // إذا كانت المكالمة مجدولة، تحقق من cron_secret
+    if (body.scheduled && body.cron_secret !== "daily-backup-cron-2025") {
+      console.error("Invalid cron secret provided");
+      return new Response(
+        JSON.stringify({ error: "Unauthorized: Invalid cron secret" }),
+        {
+          status: 401,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
     }
 
     // Initialize Supabase client first to get email from settings
