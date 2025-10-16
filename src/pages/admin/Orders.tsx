@@ -1268,8 +1268,8 @@ ${companyName}`;
   // تصفية الطلبات
   const filteredOrders = orders.filter(order => {
     const matchesSearch = 
-      order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.service_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (order.order_number && order.order_number.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (order.service_name && order.service_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (order.customers?.name && order.customers.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (order.customers?.phone && order.customers.phone.includes(searchTerm)) ||
       (order.customers?.whatsapp && order.customers.whatsapp.includes(searchTerm));
