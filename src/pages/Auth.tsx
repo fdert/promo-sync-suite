@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Palette, LogIn, UserPlus, AlertCircle, Shield } from "lucide-react";
+import { Palette, LogIn, UserPlus, AlertCircle, Shield, Chrome } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -36,7 +36,7 @@ const Auth = () => {
     logo: "https://gcuqfxacnbxdldsbmgvf.supabase.co/storage/v1/object/public/logos/logo-1754189656106.jpg"
   });
 
-  const { signIn, signUp, signUpAdmin, user } = useAuth();
+  const { signIn, signUp, signUpAdmin, signInWithGoogle, user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -217,6 +217,19 @@ const Auth = () => {
     setLoading(false);
   };
 
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    setError("");
+    
+    const { error } = await signInWithGoogle();
+    
+    if (error) {
+      setError("فشل تسجيل الدخول بحساب Google");
+      setLoading(false);
+    }
+    // سيتم إعادة توجيه المستخدم تلقائياً إلى Google
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-accent/5 to-background p-2 sm:p-4 md:p-6">
       <Card className="w-full max-w-sm sm:max-w-md md:max-w-lg shadow-2xl border-0 bg-card/50 backdrop-blur-sm mx-2">
@@ -316,6 +329,26 @@ const Auth = () => {
                 <Button type="submit" className="w-full h-12 text-base font-bold rounded-xl bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 transition-all duration-200 shadow-lg hover:shadow-xl" disabled={loading}>
                   {loading ? "جاري تسجيل الدخول..." : "تسجيل الدخول"}
                 </Button>
+
+                <div className="relative my-6">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-muted"></span>
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-card px-2 text-muted-foreground font-semibold">أو</span>
+                  </div>
+                </div>
+
+                <Button 
+                  type="button"
+                  onClick={handleGoogleSignIn}
+                  variant="outline"
+                  className="w-full h-12 text-base font-bold rounded-xl border-2 hover:bg-accent/5 transition-all duration-200"
+                  disabled={loading}
+                >
+                  <Chrome className="ml-2 h-5 w-5 text-blue-500" />
+                  تسجيل الدخول بحساب Google
+                </Button>
               </form>
             </TabsContent>
 
@@ -382,6 +415,26 @@ const Auth = () => {
                 
                 <Button type="submit" className="w-full h-12 text-base font-bold rounded-xl bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 transition-all duration-200 shadow-lg hover:shadow-xl" disabled={loading}>
                   {loading ? "جاري إنشاء الحساب..." : "إنشاء حساب"}
+                </Button>
+
+                <div className="relative my-6">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-muted"></span>
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-card px-2 text-muted-foreground font-semibold">أو</span>
+                  </div>
+                </div>
+
+                <Button 
+                  type="button"
+                  onClick={handleGoogleSignIn}
+                  variant="outline"
+                  className="w-full h-12 text-base font-bold rounded-xl border-2 hover:bg-accent/5 transition-all duration-200"
+                  disabled={loading}
+                >
+                  <Chrome className="ml-2 h-5 w-5 text-blue-500" />
+                  تسجيل الدخول بحساب Google
                 </Button>
               </form>
             </TabsContent>

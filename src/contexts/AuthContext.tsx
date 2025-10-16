@@ -8,6 +8,7 @@ interface AuthContextType {
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>;
   signUpAdmin: (email: string, password: string, fullName: string, role: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signInWithGoogle: () => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   loading: boolean;
 }
@@ -25,6 +26,7 @@ export const useAuth = () => {
       signUp: async () => ({ error: null }),
       signUpAdmin: async () => ({ error: null }),
       signIn: async () => ({ error: null }),
+      signInWithGoogle: async () => ({ error: null }),
       signOut: async () => {},
       loading: true,
     } as AuthContextType;
@@ -105,6 +107,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { error };
   };
 
+  const signInWithGoogle = async () => {
+    const redirectUrl = `${window.location.origin}/auth`;
+    
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: redirectUrl,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent'
+        }
+      }
+    });
+    
+    return { error };
+  };
+
   const signOut = async () => {
     try {
       // Clear local state first to prevent race conditions
@@ -130,6 +149,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signUp,
     signUpAdmin,
     signIn,
+    signInWithGoogle,
     signOut,
     loading
   };
