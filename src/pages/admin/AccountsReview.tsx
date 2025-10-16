@@ -105,7 +105,7 @@ const AccountsReview = () => {
         .select(`
           *
         `)
-        .order('due_date', { ascending: true });
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
 
@@ -125,17 +125,17 @@ const AccountsReview = () => {
       }).map(order => {
         const customer = customerMap.get(order.customer_id);
         const today = new Date();
-        const dueDate = new Date(order.due_date);
-        const daysDiff = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+        const createdDate = new Date(order.created_at);
+        const daysDiff = Math.floor((today.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
         
         return {
           ...order,
           customers: customer,
-          remaining_amount: order.remaining_amount || 0,
-          paid_amount: order.calculated_paid_amount || 0,
-          days_overdue: daysDiff > 0 ? daysDiff : 0,
-          is_overdue: daysDiff > 0,
-          payment_status: (order.calculated_paid_amount || 0) > 0 ? 'partial' : 'unpaid'
+          remaining_amount: order.balance || 0,
+          paid_amount: order.paid_amount || 0,
+          days_overdue: daysDiff > 30 ? (daysDiff - 30) : 0,
+          is_overdue: daysDiff > 30,
+          payment_status: (order.paid_amount || 0) > 0 ? 'partial' : 'unpaid'
         };
       });
 

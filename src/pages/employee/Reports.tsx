@@ -49,7 +49,7 @@ interface Expense {
   amount: number;
   category: string;
   payment_method: string;
-  date: string;
+  expense_date: string;
   notes?: string;
   created_at: string;
 }
@@ -104,7 +104,7 @@ const Reports = () => {
     amount: "",
     category: "",
     payment_method: "",
-    date: new Date().toISOString().split('T')[0],
+    expense_date: new Date().toISOString().split('T')[0],
     notes: ""
   });
 
@@ -320,7 +320,7 @@ const Reports = () => {
           amount: parseFloat(newExpense.amount),
           category: newExpense.category,
           payment_method: newExpense.payment_method,
-          date: newExpense.date,
+          expense_date: newExpense.expense_date,
           notes: newExpense.notes,
           created_by: user?.id
         });
@@ -332,7 +332,7 @@ const Reports = () => {
         amount: "",
         category: "",
         payment_method: "",
-        date: new Date().toISOString().split('T')[0],
+        expense_date: new Date().toISOString().split('T')[0],
         notes: ""
       });
       setIsAddExpenseOpen(false);
@@ -359,7 +359,7 @@ const Reports = () => {
       amount: expense.amount.toString(),
       category: expense.category || "",
       payment_method: expense.payment_method || "",
-      date: expense.date,
+      expense_date: expense.expense_date,
       notes: expense.notes || ""
     });
     setIsEditExpenseOpen(true);
@@ -383,7 +383,7 @@ const Reports = () => {
           amount: parseFloat(newExpense.amount),
           category: newExpense.category,
           payment_method: newExpense.payment_method,
-          date: newExpense.date,
+          expense_date: newExpense.expense_date,
           notes: newExpense.notes
         })
         .eq('id', editingExpense.id);
@@ -395,7 +395,7 @@ const Reports = () => {
         amount: "",
         category: "",
         payment_method: "",
-        date: new Date().toISOString().split('T')[0],
+        expense_date: new Date().toISOString().split('T')[0],
         notes: ""
       });
       setIsEditExpenseOpen(false);
@@ -492,12 +492,12 @@ const Reports = () => {
                 </Select>
               </div>
               <div>
-                <Label htmlFor="date">التاريخ</Label>
+                <Label htmlFor="expense_date">التاريخ</Label>
                 <Input
-                  id="date"
+                  id="expense_date"
                   type="date"
-                  value={newExpense.date}
-                  onChange={(e) => setNewExpense({ ...newExpense, date: e.target.value })}
+                  value={newExpense.expense_date}
+                  onChange={(e) => setNewExpense({ ...newExpense, expense_date: e.target.value })}
                 />
               </div>
               <div>
@@ -692,7 +692,7 @@ const Reports = () => {
                         </TableCell>
                         <TableCell>{expense.payment_method}</TableCell>
                         <TableCell>
-                          {new Date(expense.date).toLocaleDateString('ar-SA')}
+                          {new Date(expense.expense_date).toLocaleDateString('ar-SA')}
                         </TableCell>
                         <TableCell>
                           <Button
@@ -940,12 +940,12 @@ const Reports = () => {
               </Select>
             </div>
             <div>
-              <Label htmlFor="edit-date">التاريخ</Label>
+              <Label htmlFor="edit-expense-date">التاريخ</Label>
               <Input
-                id="edit-date"
+                id="edit-expense-date"
                 type="date"
-                value={newExpense.date}
-                onChange={(e) => setNewExpense({ ...newExpense, date: e.target.value })}
+                value={newExpense.expense_date}
+                onChange={(e) => setNewExpense({ ...newExpense, expense_date: e.target.value })}
               />
             </div>
             <div>

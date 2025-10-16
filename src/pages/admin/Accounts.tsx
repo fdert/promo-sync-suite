@@ -62,7 +62,7 @@ const Accounts = () => {
     description: "",
     amount: "",
     category: "",
-    date: new Date().toISOString().split('T')[0],
+    expense_date: new Date().toISOString().split('T')[0],
     payment_method: "",
     notes: ""
   });
@@ -396,7 +396,7 @@ const Accounts = () => {
           description: newExpense.description,
           amount: parseFloat(newExpense.amount),
           category: newExpense.category,
-          date: newExpense.date,
+          expense_date: newExpense.expense_date,
           payment_method: newExpense.payment_method,
           notes: newExpense.notes,
           created_by: (await supabase.auth.getUser()).data.user?.id
@@ -422,7 +422,7 @@ const Accounts = () => {
         description: "",
         amount: "",
         category: "",
-        date: new Date().toISOString().split('T')[0],
+        expense_date: new Date().toISOString().split('T')[0],
         payment_method: "",
         notes: ""
       });
@@ -450,7 +450,7 @@ const Accounts = () => {
           description: editingExpense.description,
           amount: parseFloat(editingExpense.amount),
           category: editingExpense.category,
-          date: editingExpense.date,
+          expense_date: editingExpense.expense_date,
           payment_method: editingExpense.payment_method,
           notes: editingExpense.notes,
         })
@@ -870,9 +870,9 @@ const Accounts = () => {
       // جلب المصروفات للفترة المحددة
       const { data: expensesData, error: expensesError } = await supabase
         .from('expenses')
-        .select('amount, date')
-        .gte('date', start.toISOString().split('T')[0])
-        .lte('date', end.toISOString().split('T')[0]);
+        .select('amount, expense_date')
+        .gte('expense_date', start.toISOString().split('T')[0])
+        .lte('expense_date', end.toISOString().split('T')[0]);
 
       if (expensesError) {
         console.error('Error fetching filtered expenses:', expensesError);
@@ -887,8 +887,8 @@ const Accounts = () => {
 
   const monthlyExpenses = (expenses || [])
     .filter(expense => {
-      if (!expense.date) return false;
-      const expenseDate = new Date(expense.date);
+      if (!expense.expense_date) return false;
+      const expenseDate = new Date(expense.expense_date);
       const currentMonth = new Date();
       return expenseDate.getMonth() === currentMonth.getMonth() && 
              expenseDate.getFullYear() === currentMonth.getFullYear();
@@ -1514,12 +1514,12 @@ const Accounts = () => {
                       </Select>
                     </div>
                     <div>
-                      <Label htmlFor="date">التاريخ</Label>
+                      <Label htmlFor="expense_date">التاريخ</Label>
                       <Input
-                        id="date"
+                        id="expense_date"
                         type="date"
-                        value={newExpense.date}
-                        onChange={(e) => setNewExpense({...newExpense, date: e.target.value})}
+                        value={newExpense.expense_date}
+                        onChange={(e) => setNewExpense({...newExpense, expense_date: e.target.value})}
                       />
                     </div>
                   </div>
@@ -2017,12 +2017,12 @@ const Accounts = () => {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="edit_date">التاريخ</Label>
+                <Label htmlFor="edit_expense_date">التاريخ</Label>
                 <Input
-                  id="edit_date"
+                  id="edit_expense_date"
                   type="date"
-                  value={editingExpense?.date || ''}
-                  onChange={(e) => setEditingExpense({...editingExpense, date: e.target.value})}
+                  value={editingExpense?.expense_date || ''}
+                  onChange={(e) => setEditingExpense({...editingExpense, expense_date: e.target.value})}
                 />
               </div>
               <div>
