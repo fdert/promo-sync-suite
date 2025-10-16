@@ -36,7 +36,7 @@ const Auth = () => {
     logo: "https://gcuqfxacnbxdldsbmgvf.supabase.co/storage/v1/object/public/logos/logo-1754189656106.jpg"
   });
 
-  const { signIn, signUp, signUpAdmin, user } = useAuth();
+  const { signIn, signUp, signUpAdmin, user, isSigningOut } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -72,10 +72,11 @@ const Auth = () => {
 
   // إعادة توجيه المستخدمين المسجلين حسب أدوارهم
   useEffect(() => {
-    if (user) {
+    // Don't redirect if user is in the process of signing out
+    if (user && !isSigningOut) {
       getUserRole();
     }
-  }, [user, navigate]);
+  }, [user, navigate, isSigningOut]);
 
   const getUserRole = async () => {
     if (!user) return;
