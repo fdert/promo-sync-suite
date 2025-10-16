@@ -120,7 +120,7 @@ const OrdersPaymentsReport = () => {
       }
 
       // تطبيق فلتر السنة
-      if (selectedYear) {
+      if (selectedYear && selectedYear !== "all") {
         const startOfYear = `${selectedYear}-01-01T00:00:00`;
         const endOfYear = `${selectedYear}-12-31T23:59:59`;
         ordersQuery = ordersQuery.gte('created_at', startOfYear).lte('created_at', endOfYear);
@@ -170,7 +170,7 @@ const OrdersPaymentsReport = () => {
     setStartDate("");
     setEndDate("");
     setSelectedMonth("");
-    setSelectedYear("");
+    setSelectedYear("all");
     setStatusFilter("all");
   };
 
@@ -430,7 +430,7 @@ const OrdersPaymentsReport = () => {
                   <SelectValue placeholder="اختر السنة" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">جميع السنوات</SelectItem>
+                  <SelectItem value="all">جميع السنوات</SelectItem>
                   {years.map((year) => (
                     <SelectItem key={year} value={year.toString()}>
                       {year}
