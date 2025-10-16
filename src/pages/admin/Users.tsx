@@ -325,27 +325,34 @@ const Users = () => {
     }
 
     try {
-      // إنشاء مستخدم جديد في Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: newUser.email,
-        password: newUser.password || 'TempPass123!',
-        email_confirm: true,
-        user_metadata: {
-          full_name: newUser.name
+      // استدعاء edge function لإنشاء المستخدم
+      const { data, error } = await supabase.functions.invoke('create-user', {
+        body: {
+          email: newUser.email,
+          password: newUser.password || undefined,
+          name: newUser.name,
+          role: newUser.role,
+          permissions: newUser.permissions
         }
       });
 
-      if (authError) {
+      if (error) {
         toast({
           title: "خطأ",
-          description: `خطأ في إنشاء المستخدم: ${authError.message}`,
+          description: `خطأ في إنشاء المستخدم: ${error.message}`,
           variant: "destructive",
         });
         return;
       }
 
-      // تحديث الدور والصلاحيات
-      await updateUserRoleAndPermissions(authData.user.id, newUser.role, newUser.permissions);
+      if (data?.error) {
+        toast({
+          title: "خطأ",
+          description: `خطأ في إنشاء المستخدم: ${data.error}`,
+          variant: "destructive",
+        });
+        return;
+      }
       
       // إعادة جلب البيانات
       await fetchUsers();
@@ -353,9 +360,13 @@ const Users = () => {
       setNewUser({ name: "", email: "", password: "", role: "", permissions: [] });
       setIsAddUserOpen(false);
       
+      const successMessage = data?.user?.temporaryPassword 
+        ? `تم إضافة المستخدم بنجاح. كلمة المرور المؤقتة: ${data.user.temporaryPassword}`
+        : "تم إضافة المستخدم الجديد بنجاح";
+      
       toast({
         title: "تم إضافة المستخدم",
-        description: "تم إضافة المستخدم الجديد بنجاح",
+        description: successMessage,
       });
     } catch (error) {
       console.error('Error creating user:', error);
@@ -416,9 +427,11 @@ const Users = () => {
 
   const deleteUser = async (userId) => {
     try {
-      const { error } = await supabase.auth.admin.deleteUser(userId);
+      const { data, error } = await supabase.functions.invoke('delete-user', {
+        body: { userId }
+      });
       
-      if (error) {
+      if (error || data?.error) {
         toast({
           title: "خطأ",
           description: "حدث خطأ في حذف المستخدم",
