@@ -88,12 +88,7 @@ const OrdersPaymentsReport = () => {
           paid_amount,
           status,
           created_by,
-          customers:customer_id (
-            name
-          ),
-          profiles:created_by (
-            full_name
-          )
+          customer_id
         `)
         .order('created_at', { ascending: false });
 
@@ -135,17 +130,35 @@ const OrdersPaymentsReport = () => {
 
       if (ordersError) throw ordersError;
 
-      // جلب بيانات المدفوعات لكل طلب
+      // جلب بيانات العملاء
+      const customerIds = [...new Set((ordersData || []).map((o: any) => o.customer_id).filter(Boolean))];
+      const { data: customersData } = await supabase
+        .from('customers')
+        .select('id, name')
+        .in('id', customerIds.length > 0 ? customerIds : ['00000000-0000-0000-0000-000000000000']);
+
+      // جلب بيانات المستخدمين (منشئي الطلبات)
+      const creatorIds = [...new Set((ordersData || []).map((o: any) => o.created_by).filter(Boolean))];
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', creatorIds.length > 0 ? creatorIds : ['00000000-0000-0000-0000-000000000000']);
+
+      // إنشاء خرائط للبحث السريع
+      const customersMap = new Map((customersData || []).map((c: any) => [c.id, c.name]));
+      const profilesMap = new Map((profilesData || []).map((p: any) => [p.id, p.full_name]));
+
+      // دمج البيانات
       const enrichedData: OrderPaymentData[] = (ordersData || []).map((order: any) => ({
         order_id: order.id,
         order_number: order.order_number,
-        customer_name: order.customers?.name || 'غير محدد',
+        customer_name: customersMap.get(order.customer_id) || 'غير محدد',
         created_at: order.created_at,
         total_amount: Number(order.total_amount || 0),
         paid_amount: Number(order.paid_amount || 0),
         remaining_amount: Number(order.total_amount || 0) - Number(order.paid_amount || 0),
         status: order.status,
-        created_by_name: order.profiles?.full_name || 'غير محدد',
+        created_by_name: profilesMap.get(order.created_by) || 'غير محدد',
       }));
 
       setData(enrichedData);
