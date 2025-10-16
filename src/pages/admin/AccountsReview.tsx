@@ -113,7 +113,7 @@ const AccountsReview = () => {
       const customerIds = [...new Set(data?.map(order => order.customer_id).filter(Boolean))];
       const { data: customers } = await supabase
         .from('customers')
-        .select('id, name, phone, whatsapp_number')
+        .select('id, name, phone, whatsapp')
         .in('id', customerIds);
 
       const customerMap = new Map(customers?.map(c => [c.id, c]) || []);
@@ -231,11 +231,11 @@ const AccountsReview = () => {
       return false;
     }
     
-    if (searchFilters.dateFrom && new Date(invoice.issue_date) < new Date(searchFilters.dateFrom)) {
+    if (searchFilters.dateFrom && new Date(invoice.created_at) < new Date(searchFilters.dateFrom)) {
       return false;
     }
     
-    if (searchFilters.dateTo && new Date(invoice.issue_date) > new Date(searchFilters.dateTo)) {
+    if (searchFilters.dateTo && new Date(invoice.created_at) > new Date(searchFilters.dateTo)) {
       return false;
     }
     
