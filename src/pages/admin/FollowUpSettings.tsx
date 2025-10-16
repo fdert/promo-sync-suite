@@ -28,6 +28,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
+import OrdersPaymentsReport from "@/components/OrdersPaymentsReport";
 
 interface FollowUpSettings {
   id?: string;
@@ -518,7 +519,7 @@ const FollowUpSettings = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="settings" className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4" />
             إعدادات المتابعة
@@ -526,6 +527,10 @@ const FollowUpSettings = () => {
           <TabsTrigger value="activity-logs" className="flex items-center gap-2">
             <Activity className="h-4 w-4" />
             سجلات النشاط
+          </TabsTrigger>
+          <TabsTrigger value="orders-payments" className="flex items-center gap-2">
+            <DollarSign className="h-4 w-4" />
+            تقرير الطلبات والمدفوعات
           </TabsTrigger>
         </TabsList>
 
@@ -1032,6 +1037,11 @@ const FollowUpSettings = () => {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Orders and Payments Report Tab */}
+        <TabsContent value="orders-payments" className="space-y-6">
+          <OrdersPaymentsReport />
         </TabsContent>
       </Tabs>
     </div>
