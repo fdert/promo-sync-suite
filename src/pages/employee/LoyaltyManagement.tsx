@@ -175,26 +175,14 @@ const LoyaltyManagement = () => {
 
     try {
       const points = parseInt(transactionForm.points);
-      const isRedeem = transactionForm.type === "redeem";
-
-      if (isRedeem && customerPoints && points > customerPoints.total_points) {
-        throw new Error("عدد النقاط المطلوب استبداله أكبر من رصيد العميل");
-      }
-
-      if (isRedeem && settings && points < settings.min_points_to_redeem) {
-        throw new Error(`الحد الأدنى للاستبدال هو ${settings.min_points_to_redeem} نقطة`);
-      }
-
-      const pointsChange = isRedeem ? -points : points;
-      const newBalance = (customerPoints?.total_points || 0) + pointsChange;
+      const newBalance = (customerPoints?.total_points || 0) + points;
 
       // تحديث نقاط العميل
       const { error: updateError } = await supabase
         .from("customer_loyalty_points")
         .update({
           total_points: newBalance,
-          lifetime_points: isRedeem ? customerPoints?.lifetime_points : (customerPoints?.lifetime_points || 0) + points,
-          redeemed_points: isRedeem ? (customerPoints?.redeemed_points || 0) + points : customerPoints?.redeemed_points
+          lifetime_points: (customerPoints?.lifetime_points || 0) + points,
         })
         .eq("customer_id", selectedCustomerId);
 
@@ -205,7 +193,7 @@ const LoyaltyManagement = () => {
         .from("loyalty_transactions")
         .insert([{
           customer_id: selectedCustomerId,
-          transaction_type: transactionForm.type as any,
+          transaction_type: 'earn',
           points: points,
           balance_after: newBalance,
           description: transactionForm.description,
@@ -217,12 +205,12 @@ const LoyaltyManagement = () => {
       // إرسال رسالة واتساب
       const customer = customers.find(c => c.id === selectedCustomerId);
       if (customer?.whatsapp) {
-        await sendWhatsAppNotification(customer, newBalance, pointsChange, isRedeem);
+        await sendWhatsAppNotification(customer, newBalance, points, false);
       }
 
       toast({
         title: "نجح",
-        description: `تم ${isRedeem ? 'خصم' : 'إضافة'} ${points} نقطة بنجاح`,
+        description: `تم إضافة ${points} نقطة بنجاح`,
       });
 
       setTransactionForm({ type: "earn", points: "", description: "" });
@@ -325,16 +313,16 @@ const LoyaltyManagement = () => {
 
       <Tabs defaultValue="add" className="space-y-4">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="add">إضافة/خصم نقاط</TabsTrigger>
+          <TabsTrigger value="add">إضافة نقاط</TabsTrigger>
           <TabsTrigger value="history">سجل المعاملات</TabsTrigger>
         </TabsList>
 
         <TabsContent value="add" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>إدارة نقاط العميل</CardTitle>
+              <CardTitle>إضافة نقاط الولاء</CardTitle>
               <CardDescription>
-                أضف أو اخصم نقاط الولاء للعملاء
+                إضافة نقاط الولاء للعملاء
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -375,31 +363,15 @@ const LoyaltyManagement = () => {
                 </Card>
               )}
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="type">نوع العملية</Label>
-                  <Select value={transactionForm.type} onValueChange={(value) => setTransactionForm({ ...transactionForm, type: value })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="earn">إضافة نقاط</SelectItem>
-                      <SelectItem value="redeem">خصم نقاط (استبدال)</SelectItem>
-                      <SelectItem value="adjustment">تعديل</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="points">عدد النقاط</Label>
-                  <Input
-                    id="points"
-                    type="number"
-                    value={transactionForm.points}
-                    onChange={(e) => setTransactionForm({ ...transactionForm, points: e.target.value })}
-                    placeholder="أدخل عدد النقاط"
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="points">عدد النقاط</Label>
+                <Input
+                  id="points"
+                  type="number"
+                  value={transactionForm.points}
+                  onChange={(e) => setTransactionForm({ ...transactionForm, points: e.target.value })}
+                  placeholder="أدخل عدد النقاط"
+                />
               </div>
 
               <div className="space-y-2">
