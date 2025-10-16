@@ -10,7 +10,6 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   loading: boolean;
-  isSigningOut: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -27,7 +26,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isSigningOut, setIsSigningOut] = useState(false);
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -98,22 +96,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signOut = async () => {
-    setIsSigningOut(true);
     try {
-      // Clear local state first
+      // Clear local state first to prevent immediate re-login
       setUser(null);
       setSession(null);
-      // Then sign out from Supabase
-      await supabase.auth.signOut();
+      // Sign out from Supabase
+      await supabase.auth.signOut({ scope: 'local' });
     } catch (error) {
       console.error('Sign out error:', error);
-    } finally {
-      // Redirect to auth page after a brief delay to ensure state is cleared
-      setTimeout(() => {
-        setIsSigningOut(false);
-        window.location.href = '/auth';
-      }, 100);
     }
+    // Always redirect regardless of errors
+    window.location.href = '/auth';
   };
 
   const value = {
@@ -123,8 +116,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signUpAdmin,
     signIn,
     signOut,
-    loading,
-    isSigningOut
+    loading
   };
 
   return (
