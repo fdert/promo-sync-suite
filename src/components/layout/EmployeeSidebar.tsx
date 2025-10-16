@@ -15,6 +15,7 @@ import {
   Calculator,
   Send,
   CreditCard,
+  Gift,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -112,6 +113,12 @@ const employeeMenuItems = [
     title: "حاسبة التسعيرات الأولية",
     icon: Calculator,
     href: "/employee/pricing-calculator",
+    allowedRoles: ['employee'] as UserRole[],
+  },
+  {
+    title: "نظام الولاء",
+    icon: Gift,
+    href: "/employee/loyalty",
     allowedRoles: ['employee'] as UserRole[],
   },
 ];

@@ -287,6 +287,58 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_loyalty_points: {
+        Row: {
+          created_at: string | null
+          customer_id: string
+          id: string
+          lifetime_points: number
+          redeemed_points: number
+          total_points: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          customer_id: string
+          id?: string
+          lifetime_points?: number
+          redeemed_points?: number
+          total_points?: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          customer_id?: string
+          id?: string
+          lifetime_points?: number
+          redeemed_points?: number
+          total_points?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_loyalty_points_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: true
+            referencedRelation: "customer_order_balances"
+            referencedColumns: ["customer_id"]
+          },
+          {
+            foreignKeyName: "customer_loyalty_points_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: true
+            referencedRelation: "customer_outstanding_balances"
+            referencedColumns: ["customer_id"]
+          },
+          {
+            foreignKeyName: "customer_loyalty_points_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: true
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           address: string | null
@@ -632,6 +684,103 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loyalty_settings: {
+        Row: {
+          created_at: string | null
+          currency_per_point: number
+          id: string
+          is_active: boolean | null
+          min_points_to_redeem: number
+          points_expiry_days: number | null
+          points_per_currency: number
+          updated_at: string | null
+          welcome_points: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          currency_per_point?: number
+          id?: string
+          is_active?: boolean | null
+          min_points_to_redeem?: number
+          points_expiry_days?: number | null
+          points_per_currency?: number
+          updated_at?: string | null
+          welcome_points?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          currency_per_point?: number
+          id?: string
+          is_active?: boolean | null
+          min_points_to_redeem?: number
+          points_expiry_days?: number | null
+          points_per_currency?: number
+          updated_at?: string | null
+          welcome_points?: number | null
+        }
+        Relationships: []
+      }
+      loyalty_transactions: {
+        Row: {
+          balance_after: number
+          created_at: string | null
+          created_by: string | null
+          customer_id: string
+          description: string | null
+          id: string
+          points: number
+          reference_id: string | null
+          reference_type: string | null
+          transaction_type: Database["public"]["Enums"]["loyalty_transaction_type"]
+        }
+        Insert: {
+          balance_after: number
+          created_at?: string | null
+          created_by?: string | null
+          customer_id: string
+          description?: string | null
+          id?: string
+          points: number
+          reference_id?: string | null
+          reference_type?: string | null
+          transaction_type: Database["public"]["Enums"]["loyalty_transaction_type"]
+        }
+        Update: {
+          balance_after?: number
+          created_at?: string | null
+          created_by?: string | null
+          customer_id?: string
+          description?: string | null
+          id?: string
+          points?: number
+          reference_id?: string | null
+          reference_type?: string | null
+          transaction_type?: Database["public"]["Enums"]["loyalty_transaction_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_transactions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customer_order_balances"
+            referencedColumns: ["customer_id"]
+          },
+          {
+            foreignKeyName: "loyalty_transactions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customer_outstanding_balances"
+            referencedColumns: ["customer_id"]
+          },
+          {
+            foreignKeyName: "loyalty_transactions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
             referencedColumns: ["id"]
           },
         ]
@@ -1289,6 +1438,12 @@ export type Database = {
         | "completed"
         | "failed"
       invoice_status: "draft" | "sent" | "paid" | "cancelled"
+      loyalty_transaction_type:
+        | "earn"
+        | "redeem"
+        | "expire"
+        | "adjustment"
+        | "welcome_bonus"
       message_status: "pending" | "sent" | "delivered" | "read" | "failed"
       order_status:
         | "pending"
@@ -1441,6 +1596,13 @@ export const Constants = {
         "failed",
       ],
       invoice_status: ["draft", "sent", "paid", "cancelled"],
+      loyalty_transaction_type: [
+        "earn",
+        "redeem",
+        "expire",
+        "adjustment",
+        "welcome_bonus",
+      ],
       message_status: ["pending", "sent", "delivered", "read", "failed"],
       order_status: [
         "pending",

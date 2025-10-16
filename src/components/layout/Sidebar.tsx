@@ -22,6 +22,7 @@ import {
   Activity,
   Send,
   Database as DatabaseIcon,
+  Gift,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -210,6 +211,12 @@ const menuItems = [
     icon: DatabaseIcon,
     href: "/admin/backup-management",
     allowedRoles: ['admin'] as UserRole[],
+  },
+  {
+    title: "إعدادات نظام الولاء",
+    icon: Gift,
+    href: "/admin/loyalty-settings",
+    allowedRoles: ['admin', 'manager'] as UserRole[],
   },
 ];
 

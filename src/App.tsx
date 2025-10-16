@@ -62,6 +62,8 @@ import EmployeeOrderPaymentsList from "./pages/employee/OrderPaymentsList";
 import InvoiceVerification from "./pages/InvoiceVerification";
 import ElectronicInvoiceSettings from "./pages/admin/ElectronicInvoiceSettings";
 import BackupManagement from "./pages/admin/BackupManagement";
+import LoyaltyManagement from "./pages/employee/LoyaltyManagement";
+import LoyaltySettings from "./pages/admin/LoyaltySettings";
 
 const queryClient = new QueryClient();
 
@@ -100,7 +102,7 @@ const App = () => (
               <Route path="bulk-whatsapp" element={<EmployeeBulkWhatsApp />} />
               <Route path="order-payments" element={<EmployeeOrderPaymentsList />} />
               <Route path="order-payments/:orderId" element={<EmployeeOrderPayments />} />
-              
+              <Route path="loyalty" element={<LoyaltyManagement />} />
             </Route>
             <Route path="/admin" element={
               <ProtectedRoute>
@@ -183,6 +185,11 @@ const App = () => (
                  <Route path="backup-management" element={
                    <RoleProtectedRoute allowedRoles={['admin']}>
                      <BackupManagement />
+                   </RoleProtectedRoute>
+                 } />
+                 <Route path="loyalty-settings" element={
+                   <RoleProtectedRoute allowedRoles={['admin', 'manager'] as any}>
+                     <LoyaltySettings />
                    </RoleProtectedRoute>
                  } />
             </Route>
