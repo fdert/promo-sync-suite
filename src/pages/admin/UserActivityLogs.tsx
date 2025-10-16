@@ -91,9 +91,10 @@ const UserActivityLogs = () => {
     try {
       setLoading(true);
       let query = supabase
-        .from('activity_logs')
+        .from('user_activity_logs')
         .select(`
-          *
+          *,
+          profiles(full_name)
         `)
         .order('created_at', { ascending: false });
 
