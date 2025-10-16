@@ -43,7 +43,7 @@ const Reports = () => {
             id,
             customer_id,
             status,
-            completion_date,
+            created_at,
             customers(name, id)
           )
         `)
@@ -56,8 +56,8 @@ const Reports = () => {
       const { data: expenses, error: expensesError } = await supabase
         .from('expenses')
         .select('*')
-        .gte('date', startDate)
-        .lte('date', endDate);
+        .gte('created_at', startDate)
+        .lte('created_at', endDate);
 
       if (expensesError) throw expensesError;
 
@@ -66,8 +66,8 @@ const Reports = () => {
         .from('orders')
         .select('*')
         .eq('status', 'مكتمل')
-        .gte('completion_date', startDate)
-        .lte('completion_date', endDate);
+        .gte('created_at', startDate)
+        .lte('created_at', endDate);
 
       if (ordersError) throw ordersError;
 
@@ -89,7 +89,7 @@ const Reports = () => {
       });
 
       expenses?.forEach(expense => {
-        const month = new Date(expense.date).toLocaleDateString('ar-SA', { month: 'long' });
+        const month = new Date(expense.created_at).toLocaleDateString('ar-SA', { month: 'long' });
         if (!monthlyData[month]) {
           monthlyData[month] = { month, revenue: 0, expenses: 0 };
         }
