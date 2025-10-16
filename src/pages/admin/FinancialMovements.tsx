@@ -18,7 +18,7 @@ import * as XLSX from "xlsx";
 import { useNavigate } from "react-router-dom";
 
 interface FinancialMovement {
-  id: string;
+  order_id: string;
   order_number: string;
   customer_name: string;
   customer_phone: string;
@@ -56,33 +56,50 @@ const FinancialMovements = () => {
       const { data, error } = await supabase
         .from('order_payment_summary')
         .select(`
-          id,
+          order_id,
           order_number,
-          amount,
-          calculated_paid_amount,
-          remaining_amount,
+          total_amount,
+          paid_amount,
+          balance,
           created_at,
-          service_name,
           customer_id
         `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      // جلب أسماء وأرقام العملاء
+      // جلب أسماء وأرقام العملاء وأسماء الخدمات
       const customerIds = [...new Set(data?.map(item => item.customer_id).filter(Boolean))];
+      const orderIds = [...new Set(data?.map(item => item.order_id).filter(Boolean))];
+      
       const { data: customers } = await supabase
         .from('customers')
         .select('id, name, phone')
         .in('id', customerIds);
 
+      const { data: orders } = await supabase
+        .from('orders')
+        .select('id, service_type_id')
+        .in('id', orderIds);
+
+      const serviceTypeIds = [...new Set(orders?.map(o => o.service_type_id).filter(Boolean))];
+      const { data: serviceTypes } = await supabase
+        .from('service_types')
+        .select('id, name')
+        .in('id', serviceTypeIds);
+
       const customersMap = new Map(customers?.map(c => [c.id, c]) || []);
+      const ordersMap = new Map(orders?.map(o => [o.id, o]) || []);
+      const serviceTypesMap = new Map(serviceTypes?.map(s => [s.id, s]) || []);
 
       const processedData = data?.map(item => {
         const customer = customersMap.get(item.customer_id);
-        const paidAmount = Math.max(0, item.calculated_paid_amount || 0);
-        const totalAmount = Math.max(0, item.amount || 0);
-        const remainingAmount = Math.max(0, totalAmount - paidAmount);
+        const order = ordersMap.get(item.order_id);
+        const serviceType = order ? serviceTypesMap.get(order.service_type_id) : null;
+        
+        const paidAmount = Math.max(0, item.paid_amount || 0);
+        const totalAmount = Math.max(0, item.total_amount || 0);
+        const remainingAmount = Math.max(0, item.balance || 0);
         
         let paymentStatus = 'غير مدفوع';
         if (totalAmount === 0) {
@@ -94,7 +111,7 @@ const FinancialMovements = () => {
         }
 
         return {
-          id: item.id,
+          order_id: item.order_id,
           order_number: item.order_number || '',
           customer_name: customer?.name || 'غير محدد',
           customer_phone: customer?.phone || '',
@@ -103,7 +120,7 @@ const FinancialMovements = () => {
           remaining_amount: remainingAmount,
           payment_status: paymentStatus,
           created_at: item.created_at,
-          service_name: item.service_name || ''
+          service_name: serviceType?.name || 'غير محدد'
         };
       }) || [];
 
@@ -528,7 +545,7 @@ const FinancialMovements = () => {
               </TableHeader>
               <TableBody>
                 {filteredMovements.map((item) => (
-                  <TableRow key={item.id}>
+                  <TableRow key={item.order_id}>
                     <TableCell className="font-medium">{item.order_number}</TableCell>
                     <TableCell>{item.customer_name}</TableCell>
                     <TableCell>{item.customer_phone}</TableCell>
@@ -548,7 +565,7 @@ const FinancialMovements = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => navigate(`/admin/order-payments/${item.id}`)}
+                        onClick={() => navigate(`/admin/order-payments/${item.order_id}`)}
                         className="gap-2"
                       >
                         <Edit className="h-4 w-4" />
