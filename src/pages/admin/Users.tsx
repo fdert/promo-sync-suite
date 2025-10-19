@@ -334,9 +334,21 @@ const Users = () => {
       }
 
       if (data?.error) {
+        // ترجمة رسائل الخطأ إلى العربية
+        let errorMsg = data.error;
+        if (typeof errorMsg === 'string') {
+          if (errorMsg.includes('already been registered') || errorMsg.includes('email_exists')) {
+            errorMsg = 'هذا البريد الإلكتروني مسجل بالفعل. يرجى استخدام بريد إلكتروني آخر';
+          } else if (errorMsg.includes('invalid email')) {
+            errorMsg = 'البريد الإلكتروني غير صالح';
+          } else if (errorMsg.includes('password')) {
+            errorMsg = 'كلمة المرور غير صالحة. يجب أن تكون 6 أحرف على الأقل';
+          }
+        }
+        
         toast({
-          title: "خطأ",
-          description: `خطأ في إنشاء المستخدم: ${data.error}`,
+          title: "خطأ في إنشاء المستخدم",
+          description: errorMsg,
           variant: "destructive",
         });
         return;

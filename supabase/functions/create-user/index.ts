@@ -48,8 +48,19 @@ serve(async (req) => {
 
     if (authError) {
       console.error('Error creating auth user:', authError);
+      
+      // ترجمة رسائل الخطأ الشائعة إلى العربية
+      let errorMessage = authError.message;
+      if (authError.message.includes('already been registered') || authError.message.includes('email_exists')) {
+        errorMessage = 'هذا البريد الإلكتروني مسجل بالفعل. يرجى استخدام بريد إلكتروني آخر';
+      } else if (authError.message.includes('invalid email')) {
+        errorMessage = 'البريد الإلكتروني غير صالح';
+      } else if (authError.message.includes('password')) {
+        errorMessage = 'كلمة المرور غير صالحة. يجب أن تكون 6 أحرف على الأقل';
+      }
+      
       return new Response(
-        JSON.stringify({ error: authError.message }),
+        JSON.stringify({ error: errorMessage }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       );
     }
