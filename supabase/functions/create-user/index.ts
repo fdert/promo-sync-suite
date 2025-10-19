@@ -48,17 +48,74 @@ serve(async (req) => {
 
     if (authError) {
       console.error('Error creating auth user:', authError);
-      
+
+      const isEmailExists = (authError as any)?.code === 'email_exists' ||
+        authError.message.includes('already been registered') ||
+        authError.message.includes('email_exists');
+
+      if (isEmailExists) {
+        // في حال كان البريد مسجلاً مسبقاً: نربط الدور والصلاحيات بالحساب الموجود بدلاً من الفشل
+        const { data: existingProfile } = await supabaseClient
+          .from('profiles')
+          .select('id, full_name, email')
+          .eq('email', email)
+          .maybeSingle();
+
+        if (!existingProfile) {
+          return new Response(
+            JSON.stringify({ error: 'هذا البريد مسجل بالفعل، لكن لم نعثر على ملف المستخدم. يرجى أن يقوم المستخدم بتسجيل الدخول مرة واحدة ثم أعد المحاولة.' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+          );
+        }
+
+        const existingUserId = existingProfile.id;
+
+        // تحديث الاسم إن لم يكن موجوداً
+        if (!existingProfile.full_name && name) {
+          await supabaseClient.from('profiles')
+            .update({ full_name: name })
+            .eq('id', existingUserId);
+        }
+
+        // Upsert للدور لتجنب التكرار (يوجد قيد فريد على user_id, role)
+        await supabaseClient
+          .from('user_roles')
+          .upsert({ user_id: existingUserId, role }, { onConflict: 'user_id,role', ignoreDuplicates: true });
+
+        // إدراج الصلاحيات الجديدة فقط
+        if (Array.isArray(permissions) && permissions.length > 0) {
+          const { data: existingPerms } = await supabaseClient
+            .from('user_permissions')
+            .select('permission')
+            .eq('user_id', existingUserId);
+
+          const existingSet = new Set((existingPerms || []).map((p: any) => p.permission));
+          const toInsert = permissions
+            .filter((p: string) => !existingSet.has(p))
+            .map((p: string) => ({ user_id: existingUserId, permission: p }));
+
+          if (toInsert.length > 0) {
+            await supabaseClient.from('user_permissions').insert(toInsert);
+          }
+        }
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            user: { id: existingUserId, email, name, role, existed: true }
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        );
+      }
+
       // ترجمة رسائل الخطأ الشائعة إلى العربية
       let errorMessage = authError.message;
-      if (authError.message.includes('already been registered') || authError.message.includes('email_exists')) {
-        errorMessage = 'هذا البريد الإلكتروني مسجل بالفعل. يرجى استخدام بريد إلكتروني آخر';
-      } else if (authError.message.includes('invalid email')) {
+      if (authError.message.includes('invalid email')) {
         errorMessage = 'البريد الإلكتروني غير صالح';
       } else if (authError.message.includes('password')) {
         errorMessage = 'كلمة المرور غير صالحة. يجب أن تكون 6 أحرف على الأقل';
       }
-      
+
       return new Response(
         JSON.stringify({ error: errorMessage }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
