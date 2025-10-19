@@ -63,11 +63,15 @@ const OrdersPaymentsReport = () => {
     try {
       const { data: usersData, error } = await supabase
         .from('profiles')
-        .select('id, full_name')
+        .select('id, full_name, email')
         .order('full_name');
 
       if (error) throw error;
-      setUsers(usersData || []);
+      const normalized = (usersData || []).map((u: any) => ({
+        id: u.id,
+        full_name: u.full_name || u.email || 'بدون اسم',
+      }));
+      setUsers(normalized);
     } catch (error) {
       console.error('Error fetching users:', error);
     }
@@ -141,12 +145,12 @@ const OrdersPaymentsReport = () => {
       const creatorIds = [...new Set((ordersData || []).map((o: any) => o.created_by).filter(Boolean))];
       const { data: profilesData } = await supabase
         .from('profiles')
-        .select('id, full_name')
+        .select('id, full_name, email')
         .in('id', creatorIds.length > 0 ? creatorIds : ['00000000-0000-0000-0000-000000000000']);
 
       // إنشاء خرائط للبحث السريع
       const customersMap = new Map((customersData || []).map((c: any) => [c.id, c.name]));
-      const profilesMap = new Map((profilesData || []).map((p: any) => [p.id, p.full_name]));
+      const profilesMap = new Map((profilesData || []).map((p: any) => [p.id, p.full_name || p.email || 'غير معروف']));
 
       // دمج البيانات
       const enrichedData: OrderPaymentData[] = (ordersData || []).map((order: any) => ({
