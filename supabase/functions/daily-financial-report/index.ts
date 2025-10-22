@@ -266,7 +266,6 @@ ${delayedSection}${delayedSection ? '━━━━━━━━━━━━━━�
           console.log('✅ Sent via follow_up_webhook successfully');
           
           if (messageId) {
-            // تحديث الحالة إلى sent
             await supabase
               .from('whatsapp_messages')
               .update({ 
@@ -281,33 +280,12 @@ ${delayedSection}${delayedSection ? '━━━━━━━━━━━━━━�
       } catch (webhookError) {
         console.error('Error sending via follow_up_webhook:', webhookError);
       }
-    } else {
-      // الطريقة العادية: استدعاء process-whatsapp-queue
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      console.log('Invoking process-whatsapp-queue to send the message...');
-      try {
-        const { data: queueResult, error: queueError } = await supabase.functions.invoke('process-whatsapp-queue', {
-          body: {
-            action: 'process_pending_messages',
-            timestamp: new Date().toISOString()
-          }
-        });
-
-        if (queueError) {
-          console.error('Error invoking process-whatsapp-queue:', queueError);
-        } else {
-          console.log('process-whatsapp-queue invoked successfully:', queueResult);
-        }
-      } catch (queueInvokeError) {
-        console.error('Failed to invoke process-whatsapp-queue:', queueInvokeError);
-      }
     }
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: 'Daily report sent',
+        message: 'Daily report sent or queued',
         data: {
           totalPayments,
           totalExpenses,
