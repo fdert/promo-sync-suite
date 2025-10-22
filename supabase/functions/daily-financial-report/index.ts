@@ -220,117 +220,128 @@ ${delayedSection}${delayedSection ? '━━━━━━━━━━━━━━�
 ⏰ تم إنشاء التقرير: ${today.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}`;
 
     const finalMessage = isTest ? `🧪 *هذه رسالة اختبار*\n\n${message}` : message;
-    // حفظ التقرير
-    const { data: inserted, error: insertError } = await supabase
-      .from('whatsapp_messages')
-      .insert({
-        from_number: 'system',
-        to_number: toNumber,
-        message_type: 'text',
-        message_content: finalMessage,
-        status: 'pending',
-        dedupe_key: isTest ? `daily_report_test_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` : `daily_report_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-      })
-      .select('id')
-      .single();
 
-    if (insertError) {
-      console.error('Failed to insert daily report:', insertError);
-      throw insertError;
-    }
-
-    const messageId = inserted?.id;
-
-    console.log('Daily financial report created successfully');
-
-    // في وضع الاختبار: معالجة قائمة الواتساب فورًا لضمان الإرسال عبر قناة موحّدة
-    if (isTest) {
-      try {
-        const { error: queueError } = await supabase.functions.invoke('process-whatsapp-queue', {
-          body: { action: 'process_pending_messages', source: 'daily-financial-report-test' }
-        }) as any;
-        if (queueError) {
-          console.warn('Queue processing error (test):', queueError);
-        } else {
-          console.log('Queued WhatsApp message for processing (test).');
+    // تقسيم الرسالة إلى أجزاء قصيرة مناسبة للواتساب لتجنب الرفض بسبب الطول
+    const splitMessage = (text: string, max = 1400) => {
+      const parts: string[] = [];
+      const separators = ['\n━━━━━━━━━━━━━━━━━━━━\n', '\n\n', '\n', ' '];
+      let remaining = text;
+      while (remaining.length > max) {
+        let cut = -1;
+        for (const sep of separators) {
+          const idx = remaining.lastIndexOf(sep, max - 40);
+          if (idx > 0) { cut = idx + sep.length; break; }
         }
-      } catch (e) {
-        console.warn('Failed to invoke process-whatsapp-queue (test):', e);
+        if (cut <= 0) cut = Math.min(max - 40, remaining.length);
+        parts.push(remaining.slice(0, cut).trim());
+        remaining = remaining.slice(cut);
       }
-    }
+      if (remaining.trim().length) parts.push(remaining.trim());
+      return parts;
+    };
 
-    // إرسال مباشر عبر follow_up_webhook_url إذا كان موجوداً (حتى في وضع الاختبار)
-    if (settings.follow_up_webhook_url) {
-      try {
-        console.log('Sending via follow_up_webhook:', settings.follow_up_webhook_url);
-        
-        const payload = {
-          event: 'whatsapp_message_send',
-          data: {
-            to: toNumber, // الرقم كما هو في الإعدادات
-            to_e164: toNumber,
-            to_digits: toNumber.replace(/[^\d]/g, ''),
-            phone: toNumber.replace(/[^\d]/g, ''), // رقم مُطبع بدون رموز
-            phoneNumber: toNumber.replace(/[^\d]/g, ''),
-            phone_e164: toNumber,
-            phone_digits: toNumber.replace(/[^\d]/g, ''),
-            msisdn: toNumber.replace(/[^\d]/g, ''),
-            message: finalMessage,
-            messageText: finalMessage,
-            text: finalMessage,
-            type: 'text',
-            message_type: 'text',
-            timestamp: Math.floor(Date.now() / 1000),
-            from_number: 'system',
-            // حقول توافق مع مسار إشعار الطلب الجديد (n8n)
-            order_id: null,
-            order_number: `REPORT-${new Date().toISOString().slice(0,10).replaceAll('-', '')}`,
-            customer_name: 'إدارة المتابعة',
-            notification_type: 'financial_report'
-          }
-        };
+    const chunks = splitMessage(finalMessage, 1400);
+    console.log(`Daily report will be sent in ${chunks.length} part(s).`);
 
-        const webhookResp = await fetch(settings.follow_up_webhook_url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        const respText = await webhookResp.text();
+    const sentIds: string[] = [];
 
-        if (webhookResp.ok) {
-          console.log('✅ Sent via follow_up_webhook successfully');
-          
-          if (messageId) {
-            await supabase
-              .from('whatsapp_messages')
-              .update({ 
-                status: 'sent', 
-                sent_at: new Date().toISOString() 
-              })
-              .eq('id', messageId);
-          }
-        } else {
-          console.warn('Follow_up_webhook failed, keeping pending');
-        }
-      } catch (webhookError) {
-        console.error('Error sending via follow_up_webhook:', webhookError);
+    for (let i = 0; i < chunks.length; i++) {
+      const suffix = `\n\n— الجزء ${i + 1}/${chunks.length}`;
+      let content = chunks[i];
+      // تأكد أن اللاحقة لا تتجاوز الحد
+      if (content.length + suffix.length > 1500) {
+        content = content.slice(0, 1500 - suffix.length - 3) + '...';
       }
-    }
+      const partMessage = `${content}${chunks.length > 1 ? suffix : ''}`;
 
-    // مسار احتياطي قوي: إرسال مباشرة عبر دالة send-whatsapp-direct-improved في وضع الاختبار
-    if (isTest) {
-      try {
-        const directPhone = toNumber.replace(/[^\d]/g, '');
-        const directResp: any = await supabase.functions.invoke('send-whatsapp-direct-improved', {
-          body: { phone: directPhone, message: finalMessage, customer_name: 'إدارة المتابعة' }
-        });
-        if (directResp?.error) {
-          console.warn('Fallback direct send error:', directResp.error);
-        } else {
-          console.log('✅ Fallback direct send invoked successfully');
+      // حفظ كل جزء كرسالة مستقلة
+      const { data: insertedPart, error: insertErrorPart } = await supabase
+        .from('whatsapp_messages')
+        .insert({
+          from_number: 'system',
+          to_number: toNumber,
+          message_type: 'text',
+          message_content: partMessage,
+          status: 'pending',
+          dedupe_key: `${isTest ? 'daily_report_test' : 'daily_report'}_${new Date().toISOString()}_part_${i + 1}`
+        })
+        .select('id')
+        .single();
+
+      if (insertErrorPart) {
+        console.error('Failed to insert daily report part:', insertErrorPart);
+        throw insertErrorPart;
+      }
+
+      const partId = insertedPart?.id as string | undefined;
+
+      // إرسال عبر follow_up_webhook_url إن وُجد
+      if (settings.follow_up_webhook_url) {
+        try {
+          console.log('Sending via follow_up_webhook:', settings.follow_up_webhook_url, `part ${i + 1}/${chunks.length}`);
+          const payload = {
+            event: 'whatsapp_message_send',
+            data: {
+              to: toNumber,
+              to_e164: toNumber,
+              to_digits: toNumber.replace(/[^\d]/g, ''),
+              phone: toNumber.replace(/[^\d]/g, ''),
+              phoneNumber: toNumber.replace(/[^\d]/g, ''),
+              phone_e164: toNumber,
+              phone_digits: toNumber.replace(/[^\d]/g, ''),
+              msisdn: toNumber.replace(/[^\d]/g, ''),
+              message: partMessage,
+              messageText: partMessage,
+              text: partMessage,
+              type: 'text',
+              message_type: 'text',
+              timestamp: Math.floor(Date.now() / 1000),
+              from_number: 'system',
+              order_id: null,
+              order_number: `REPORT-${new Date().toISOString().slice(0,10).replaceAll('-', '')}`,
+              customer_name: 'إدارة المتابعة',
+              notification_type: 'financial_report'
+            }
+          };
+
+          const webhookResp = await fetch(settings.follow_up_webhook_url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const respText = await webhookResp.text();
+          if (webhookResp.ok) {
+            console.log('✅ Sent via follow_up_webhook successfully', { part: i + 1, total: chunks.length, resp: respText?.slice(0, 120) });
+            if (partId) {
+              await supabase
+                .from('whatsapp_messages')
+                .update({ status: 'sent', sent_at: new Date().toISOString() })
+                .eq('id', partId);
+            }
+            sentIds.push(partId || '');
+          } else {
+            console.warn('Follow_up_webhook failed for part', i + 1, 'status:', webhookResp.status);
+          }
+        } catch (webhookError) {
+          console.error('Error sending via follow_up_webhook (part):', webhookError);
         }
-      } catch (e) {
-        console.warn('Failed to invoke send-whatsapp-direct-improved:', e);
+      }
+
+      // في وضع الاختبار: إرسال كل جزء مباشرة عبر الدالة المحسّنة
+      if (isTest) {
+        try {
+          const directPhone = toNumber.replace(/[^\d]/g, '');
+          const directResp: any = await supabase.functions.invoke('send-whatsapp-direct-improved', {
+            body: { phone: directPhone, message: partMessage, customer_name: 'إدارة المتابعة' }
+          });
+          if (directResp?.error) {
+            console.warn('Fallback direct send error (part):', directResp.error);
+          } else {
+            console.log('✅ Fallback direct send invoked successfully (part)', i + 1);
+          }
+        } catch (e) {
+          console.warn('Failed to invoke send-whatsapp-direct-improved (part):', e);
+        }
       }
     }
 
