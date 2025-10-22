@@ -300,12 +300,17 @@ const FinancialReports = () => {
       }
 
       // إضافة المصروف إلى قاعدة البيانات
+      const amountNum = Number(expenseForm.amount);
+      if (!isFinite(amountNum) || amountNum <= 0) {
+        toast({ title: "خطأ", description: "المبلغ غير صالح", variant: "destructive" });
+        return;
+      }
       const { data: expenseData, error: expenseError } = await supabase
         .from('expenses')
         .insert({
           receipt_number: expenseNumber,
-          description: expenseForm.description,
-          amount: parseFloat(expenseForm.amount),
+          description: expenseForm.description.trim(),
+          amount: amountNum,
           expense_type: finalCategory,
           expense_date: expenseForm.date,
           payment_method: expenseForm.paymentMethod || null,

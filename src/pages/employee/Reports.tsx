@@ -298,10 +298,18 @@ const Reports = () => {
   };
 
   const handleAddExpense = async () => {
-    if (!newExpense.description || !newExpense.amount) {
+    // تحقق صارم من القيم
+    const amountNum = Number(newExpense.amount);
+    if (
+      !newExpense.description?.trim() ||
+      !newExpense.category?.trim() ||
+      !newExpense.payment_method?.trim() ||
+      !newExpense.expense_date?.toString().trim() ||
+      !isFinite(amountNum) || amountNum <= 0
+    ) {
       toast({
         title: "خطأ",
-        description: "يرجى ملء الحقول المطلوبة",
+        description: "يرجى تعبئة جميع الحقول بشكل صحيح (المبلغ رقم أكبر من صفر)",
         variant: "destructive",
       });
       return;
@@ -313,8 +321,8 @@ const Reports = () => {
         .from('expenses')
         .insert({
           expense_type: newExpense.category || 'عام',
-          description: newExpense.description,
-          amount: parseFloat(newExpense.amount),
+          description: newExpense.description.trim(),
+          amount: amountNum,
           payment_method: newExpense.payment_method,
           expense_date: newExpense.expense_date,
           notes: newExpense.notes,
