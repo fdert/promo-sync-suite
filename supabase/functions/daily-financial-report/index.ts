@@ -75,12 +75,13 @@ serve(async (req) => {
 
     const totalPayments = payments?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0;
 
-    // جلب المصروفات اليومية
+    // جلب المصروفات اليومية مع التفاصيل
     const { data: expenses, error: expensesError } = await supabase
       .from('expenses')
-      .select('amount')
+      .select('amount, expense_type, description')
       .gte('expense_date', todayStart)
-      .lte('expense_date', todayEnd);
+      .lte('expense_date', todayEnd)
+      .order('created_at', { ascending: true });
 
     const totalExpenses = expenses?.reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
 
@@ -152,97 +153,80 @@ serve(async (req) => {
       return diff;
     };
 
-    // بناء قسم المدفوعات
+    // بناء قسم المدفوعات (مبسط)
     let paymentsSection = '';
     if (payments && payments.length > 0) {
-      paymentsSection = '\n💰 *تفاصيل المدفوعات اليومية:*\n';
+      paymentsSection = '\n💰 *تفاصيل المدفوعات:*\n';
       payments.forEach((payment: any, index: number) => {
         const orderNumber = payment.orders?.order_number || 'غير محدد';
         const customerName = payment.orders?.customers?.name || 'غير محدد';
-        const totalAmount = payment.orders?.total_amount || 0;
-        const paidAmount = payment.orders?.paid_amount || 0;
-        const remainingAmount = totalAmount - paidAmount;
         
-        paymentsSection += `\n${index + 1}. طلب: ${orderNumber}`;
-        paymentsSection += `\n   ${getPaymentTypeArabic(payment.payment_type)} - ${payment.amount.toFixed(2)} ر.س`;
-        paymentsSection += `\n   العميل: ${customerName}`;
-        paymentsSection += `\n   الإجمالي: ${totalAmount.toFixed(2)} | المدفوع: ${paidAmount.toFixed(2)} | المتبقي: ${remainingAmount.toFixed(2)}`;
-        paymentsSection += '\n';
+        paymentsSection += `${index + 1}. ${orderNumber} - ${customerName}\n`;
+        paymentsSection += `   ${getPaymentTypeArabic(payment.payment_type)}: ${payment.amount.toFixed(2)} ر.س\n`;
       });
     }
 
-    // بناء قسم الطلبات الجديدة
+    // بناء قسم المصروفات
+    let expensesSection = '';
+    if (expenses && expenses.length > 0) {
+      expensesSection = '\n💸 *تفاصيل المصروفات:*\n';
+      expenses.forEach((expense: any, index: number) => {
+        const description = expense.description || expense.expense_type || 'مصروف';
+        expensesSection += `${index + 1}. ${description}: ${expense.amount.toFixed(2)} ر.س\n`;
+      });
+    }
+
+    // بناء قسم الطلبات الجديدة (مبسط)
     let newOrdersSection = '';
     if (newOrders && newOrders.length > 0) {
-      newOrdersSection = '\n📦 *الطلبات الجديدة اليوم:*\n';
+      newOrdersSection = '\n📦 *الطلبات الجديدة:*\n';
       newOrders.forEach((order: any, index: number) => {
         const customerName = order.customers?.name || 'غير محدد';
-        newOrdersSection += `\n${index + 1}. طلب: ${order.order_number}`;
-        newOrdersSection += `\n   العميل: ${customerName}`;
-        newOrdersSection += `\n   الإجمالي: ${order.total_amount.toFixed(2)} ر.س`;
-        
-        newOrdersSection += '\n';
+        newOrdersSection += `${index + 1}. ${order.order_number} - ${customerName}: ${order.total_amount.toFixed(2)} ر.س\n`;
       });
     }
 
-    // بناء قسم الطلبات المكتملة اليوم
+    // بناء قسم الطلبات المكتملة (مبسط)
     let completedSection = '';
     if (completedOrdersToday && completedOrdersToday.length > 0) {
-      completedSection = '\n✅ *الطلبات المكتملة اليوم:*\n';
+      completedSection = '\n✅ *الطلبات المكتملة:*\n';
       completedOrdersToday.forEach((order: any, index: number) => {
         const customerName = order.customers?.name || 'غير محدد';
-        completedSection += `\n${index + 1}. طلب: ${order.order_number}`;
-        completedSection += `\n   العميل: ${customerName}`;
-        completedSection += `\n   الإجمالي: ${Number(order.total_amount || 0).toFixed(2)} ر.س\n`;
+        completedSection += `${index + 1}. ${order.order_number} - ${customerName}: ${Number(order.total_amount || 0).toFixed(2)} ر.س\n`;
       });
     }
 
-    // بناء قسم الطلبات المتأخرة
+    // بناء قسم الطلبات الجاهزة للتسليم (مبسط)
     let delayedSection = '';
     if (delayedOrders && delayedOrders.length > 0) {
-      delayedSection = '\n📅 *طلبات موعد تسليمها اليوم:*\n';
+      delayedSection = '\n📅 *جاهزة للتسليم اليوم:*\n';
       delayedOrders.forEach((order: any, index: number) => {
         const customerName = order.customers?.name || 'غير محدد';
-        const daysDelayed = getDaysDelayed(order.delivery_date);
-        const deliveryDateFormatted = new Date(order.delivery_date).toLocaleDateString('ar-SA');
-        
-        delayedSection += `\n${index + 1}. طلب: ${order.order_number}`;
-        delayedSection += `\n   العميل: ${customerName}`;
-        delayedSection += `\n   موعد التسليم: ${deliveryDateFormatted}`;
-        delayedSection += `\n   التأخير: ${daysDelayed} يوم`;
-        delayedSection += '\n';
+        delayedSection += `${index + 1}. ${order.order_number} - ${customerName}\n`;
       });
     }
 
     const message = `📊 *التقرير المالي اليومي*
-
-📅 التاريخ: ${today.toLocaleDateString('ar-SA')}
+📅 ${today.toLocaleDateString('ar-SA')}
 
 ━━━━━━━━━━━━━━━━━━━━
 
 📈 *الملخص المالي:*
-💰 إجمالي المدفوعات: ${totalPayments.toFixed(2)} ر.س
-💸 إجمالي المصروفات: ${totalExpenses.toFixed(2)} ر.س
+💰 المدفوعات: ${totalPayments.toFixed(2)} ر.س
+💸 المصروفات: ${totalExpenses.toFixed(2)} ر.س
 📊 صافي الربح: ${netProfit.toFixed(2)} ر.س ${netProfit >= 0 ? '✅' : '❌'}
 
 ━━━━━━━━━━━━━━━━━━━━
 
-📦 *إحصائيات الطلبات:*
-• طلبات جديدة: ${newOrders?.length || 0}
-• طلبات مكتملة: ${completedOrdersCount || 0}
-• طلبات متأخرة: ${delayedOrders?.length || 0}
-${paymentsSection}
-━━━━━━━━━━━━━━━━━━━━
-${newOrdersSection}${newOrdersSection ? '━━━━━━━━━━━━━━━━━━━━' : ''}
-${completedSection}${completedSection ? '━━━━━━━━━━━━━━━━━━━━' : ''}
-${delayedSection}${delayedSection ? '━━━━━━━━━━━━━━━━━━━━' : ''}
-
-⏰ تم إنشاء التقرير: ${today.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}`;
+📦 *إحصائيات:*
+• جديدة: ${newOrders?.length || 0} | مكتملة: ${completedOrdersCount || 0} | للتسليم: ${delayedOrders?.length || 0}
+${paymentsSection}${paymentsSection ? '━━━━━━━━━━━━━━━━━━━━\n' : ''}${expensesSection}${expensesSection ? '━━━━━━━━━━━━━━━━━━━━\n' : ''}${newOrdersSection}${newOrdersSection ? '━━━━━━━━━━━━━━━━━━━━\n' : ''}${completedSection}${completedSection ? '━━━━━━━━━━━━━━━━━━━━\n' : ''}${delayedSection}${delayedSection ? '━━━━━━━━━━━━━━━━━━━━\n' : ''}
+⏰ ${today.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}`;
 
     const finalMessage = isTest ? `🧪 *هذه رسالة اختبار*\n\n${message}` : message;
 
-    // تقسيم الرسالة إلى أجزاء قصيرة مناسبة للواتساب لتجنب الرفض بسبب الطول
-    const splitMessage = (text: string, max = 1400) => {
+    // تقسيم الرسالة إلى أجزاء قصيرة مناسبة للواتساب
+    const splitMessage = (text: string, max = 1000) => {
       const parts: string[] = [];
       const separators = ['\n━━━━━━━━━━━━━━━━━━━━\n', '\n\n', '\n', ' '];
       let remaining = text;
@@ -260,7 +244,7 @@ ${delayedSection}${delayedSection ? '━━━━━━━━━━━━━━�
       return parts;
     };
 
-    const chunks = splitMessage(finalMessage, 1400);
+    const chunks = splitMessage(finalMessage, 1000);
     console.log(`Daily report will be sent in ${chunks.length} part(s).`);
 
     const sentIds: string[] = [];
