@@ -918,7 +918,8 @@ ${publicFileUrl}
       // إنشاء القيد المحاسبي
       try {
         const accountType = newPayment.payment_type === 'cash' ? 'نقدية' : 
-                           newPayment.payment_type === 'bank_transfer' ? 'بنك' : 'نقدية';
+                           newPayment.payment_type === 'bank_transfer' ? 'بنك' :
+                           newPayment.payment_type === 'card' ? 'الشبكة' : 'نقدية';
         
         const { data: cashAccount } = await supabase
           .from('accounts')
@@ -937,6 +938,10 @@ ${publicFileUrl}
           .single();
 
         if (cashAccount && receivableAccount) {
+          const paymentTypeLabel = newPayment.payment_type === 'cash' ? 'نقداً' : 
+                                   newPayment.payment_type === 'bank_transfer' ? 'تحويل بنكي' :
+                                   newPayment.payment_type === 'card' ? 'الشبكة' : 'نقداً';
+          
           await supabase.from('account_entries').insert([
             {
               account_id: cashAccount.id,
@@ -944,7 +949,7 @@ ${publicFileUrl}
               credit: 0,
               reference_type: 'payment',
               reference_id: paymentData.id,
-              description: `دفعة للطلب - ${newPayment.payment_type === 'cash' ? 'نقداً' : 'تحويل بنكي'}`
+              description: `دفعة للطلب - ${paymentTypeLabel}`
             },
             {
               account_id: receivableAccount.id,

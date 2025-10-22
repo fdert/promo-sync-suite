@@ -215,7 +215,8 @@ const OrderPayments = () => {
       // إنشاء القيد المحاسبي
       try {
         const accountType = paymentForm.payment_type === 'cash' ? 'نقدية' : 
-                           paymentForm.payment_type === 'bank_transfer' ? 'بنك' : 'نقدية';
+                           paymentForm.payment_type === 'bank_transfer' ? 'بنك' :
+                           paymentForm.payment_type === 'card' ? 'الشبكة' : 'نقدية';
         
         const { data: cashAccount } = await supabase
           .from('accounts')
@@ -234,6 +235,10 @@ const OrderPayments = () => {
           .single();
 
         if (cashAccount && receivableAccount) {
+          const paymentTypeLabel = paymentForm.payment_type === 'cash' ? 'نقداً' : 
+                                   paymentForm.payment_type === 'bank_transfer' ? 'تحويل بنكي' :
+                                   paymentForm.payment_type === 'card' ? 'الشبكة' : 'نقداً';
+          
           await supabase.from('account_entries').insert([
             {
               account_id: cashAccount.id,
@@ -241,7 +246,7 @@ const OrderPayments = () => {
               credit: 0,
               reference_type: 'payment',
               reference_id: paymentData.id,
-              description: `دفعة للطلب - ${paymentForm.payment_type === 'cash' ? 'نقداً' : 'تحويل بنكي'}`
+              description: `دفعة للطلب - ${paymentTypeLabel}`
             },
             {
               account_id: receivableAccount.id,

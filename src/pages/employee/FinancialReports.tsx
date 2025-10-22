@@ -329,7 +329,8 @@ const FinancialReports = () => {
           .single();
 
         const accountType = expenseForm.paymentMethod === 'cash' ? 'نقدية' : 
-                           expenseForm.paymentMethod === 'bank_transfer' ? 'بنك' : 'نقدية';
+                           expenseForm.paymentMethod === 'bank_transfer' ? 'بنك' :
+                           expenseForm.paymentMethod === 'card' ? 'الشبكة' : 'نقدية';
         
         const { data: cashAccount } = await supabase
           .from('accounts')

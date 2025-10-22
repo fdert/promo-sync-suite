@@ -336,7 +336,8 @@ const Reports = () => {
           .single();
 
         const accountType = newExpense.payment_method === 'cash' ? 'نقدية' : 
-                           newExpense.payment_method === 'bank_transfer' ? 'بنك' : 'نقدية';
+                           newExpense.payment_method === 'bank_transfer' ? 'بنك' :
+                           newExpense.payment_method === 'card' ? 'الشبكة' : 'نقدية';
         
         const { data: cashAccount } = await supabase
           .from('accounts')
