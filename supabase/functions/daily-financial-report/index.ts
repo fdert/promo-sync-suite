@@ -317,6 +317,23 @@ ${delayedSection}${delayedSection ? '━━━━━━━━━━━━━━�
       }
     }
 
+    // مسار احتياطي قوي: إرسال مباشرة عبر دالة send-whatsapp-direct-improved في وضع الاختبار
+    if (isTest) {
+      try {
+        const directPhone = toNumber.replace(/[^\d]/g, '');
+        const directResp: any = await supabase.functions.invoke('send-whatsapp-direct-improved', {
+          body: { phone: directPhone, message: finalMessage, customer_name: 'إدارة المتابعة' }
+        });
+        if (directResp?.error) {
+          console.warn('Fallback direct send error:', directResp.error);
+        } else {
+          console.log('✅ Fallback direct send invoked successfully');
+        }
+      } catch (e) {
+        console.warn('Failed to invoke send-whatsapp-direct-improved:', e);
+      }
+    }
+
     // معالجة قائمة الرسائل عبر القناة القياسية دائماً لضمان الإرسال
     try {
       const { error: queueError2 } = await supabase.functions.invoke('process-whatsapp-queue', {
