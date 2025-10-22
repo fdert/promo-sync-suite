@@ -1130,9 +1130,49 @@ const FollowUpSettings = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => applyQuickFilter('all')}
+                  onClick={() => { applyQuickFilter('all'); setSearchTerm(''); setActionFilter('all'); setSelectedUserId('all'); }}
                 >
-                  الكل
+                  إعادة الضبط
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      const { data: authData } = await supabase.auth.getUser();
+                      const user = authData?.user;
+                      if (!user) {
+                        toast({ title: "غير مسجل الدخول", description: "الرجاء تسجيل الدخول", variant: "destructive" });
+                        return;
+                      }
+
+                      const actions = ['create', 'update', 'delete', 'login', 'logout'];
+                      const now = new Date();
+                      const payload = actions.map((a, idx) => ({
+                        user_id: user.id,
+                        action: a,
+                        details: { seed: idx, test: true },
+                        ip_address: '127.0.0.1',
+                        user_agent: 'Test Browser',
+                        created_at: new Date(now.getTime() - idx * 60000).toISOString(),
+                      }));
+
+                      const { error: insertError, count } = await supabase
+                        .from('user_activity_logs')
+                        .insert(payload)
+                        .select('id', { count: 'exact', head: false });
+
+                      if (insertError) throw insertError;
+
+                      toast({ title: "تم الإنشاء", description: `تمت إضافة ${count || payload.length} سجل نشاط تجريبي` });
+                      await fetchActivityLogs();
+                    } catch (error: any) {
+                      console.error('Error creating test logs:', error);
+                      toast({ title: "خطأ", description: error?.message || "فشل في إنشاء سجلات الاختبار", variant: "destructive" });
+                    }
+                  }}
+                >
+                  إنشاء سجلات تجريبية
                 </Button>
               </div>
 
