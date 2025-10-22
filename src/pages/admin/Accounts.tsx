@@ -79,7 +79,7 @@ const Accounts = () => {
           .from('user_roles')
           .select('role')
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle();
         
         if (data && !error) {
           setUserRole(data.role);
@@ -102,12 +102,23 @@ const Accounts = () => {
 
       if (error) {
         console.error('Error fetching accounts:', error);
+        toast({
+          title: "خطأ",
+          description: "فشل في جلب الحسابات المحاسبية",
+          variant: "destructive",
+        });
         return;
       }
 
       setAccounts(data || []);
+      console.log('تم جلب الحسابات:', data?.length || 0, 'حساب');
     } catch (error) {
       console.error('Error:', error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ غير متوقع في جلب الحسابات",
+        variant: "destructive",
+      });
     }
   };
 
@@ -118,19 +129,30 @@ const Accounts = () => {
         .from('account_entries')
         .select(`
           *,
-          accounts(account_name, account_type)
+          accounts(account_name, account_type, account_number)
         `)
         .order('created_at', { ascending: false })
-        .limit(20);
+        .limit(100);
 
       if (error) {
         console.error('Error fetching account entries:', error);
+        toast({
+          title: "خطأ",
+          description: "فشل في جلب القيود المحاسبية",
+          variant: "destructive",
+        });
         return;
       }
 
       setAccountEntries(data || []);
+      console.log('تم جلب القيود:', data?.length || 0, 'قيد');
     } catch (error) {
       console.error('Error:', error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ غير متوقع في جلب القيود",
+        variant: "destructive",
+      });
     }
   };
 
@@ -140,16 +162,28 @@ const Accounts = () => {
       const { data, error } = await supabase
         .from('expenses')
         .select('*')
-        .order('expense_date', { ascending: false });
+        .order('expense_date', { ascending: false })
+        .limit(100);
 
       if (error) {
         console.error('Error fetching expenses:', error);
+        toast({
+          title: "خطأ",
+          description: "فشل في جلب المصروفات",
+          variant: "destructive",
+        });
         return;
       }
 
       setExpenses(data || []);
+      console.log('تم جلب المصروفات:', data?.length || 0, 'مصروف');
     } catch (error) {
       console.error('Error:', error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ غير متوقع في جلب المصروفات",
+        variant: "destructive",
+      });
     }
   };
 
@@ -167,6 +201,11 @@ const Accounts = () => {
 
       if (error) {
         console.error('Error fetching customer order balances:', error);
+        toast({
+          title: "خطأ",
+          description: "فشل في جلب أرصدة العملاء",
+          variant: "destructive",
+        });
         return;
       }
 
@@ -210,8 +249,14 @@ const Accounts = () => {
       }));
 
       setDebtorInvoices(processedData);
+      console.log('تم جلب العملاء المدينين:', processedData.length, 'عميل');
     } catch (error) {
       console.error('Error fetching debtor invoices:', error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ في جلب العملاء المدينين",
+        variant: "destructive",
+      });
     }
   };
 
