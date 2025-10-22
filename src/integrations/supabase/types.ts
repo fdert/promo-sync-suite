@@ -518,6 +518,7 @@ export type Database = {
           notify_expense_logged: boolean | null
           notify_new_order: boolean | null
           notify_payment_delay: boolean | null
+          notify_payment_logged: boolean | null
           notify_whatsapp_failure: boolean | null
           payment_delay_days: number | null
           updated_at: string | null
@@ -534,6 +535,7 @@ export type Database = {
           notify_expense_logged?: boolean | null
           notify_new_order?: boolean | null
           notify_payment_delay?: boolean | null
+          notify_payment_logged?: boolean | null
           notify_whatsapp_failure?: boolean | null
           payment_delay_days?: number | null
           updated_at?: string | null
@@ -550,6 +552,7 @@ export type Database = {
           notify_expense_logged?: boolean | null
           notify_new_order?: boolean | null
           notify_payment_delay?: boolean | null
+          notify_payment_logged?: boolean | null
           notify_whatsapp_failure?: boolean | null
           payment_delay_days?: number | null
           updated_at?: string | null
