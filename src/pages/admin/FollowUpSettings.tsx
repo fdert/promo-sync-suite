@@ -350,6 +350,14 @@ const FollowUpSettings = () => {
       });
       if (reportError) throw reportError;
 
+      // تشغيل معالج قائمة رسائل الواتساب لضمان الإرسال عبر نفس القناة المستخدمة في بقية الإشعارات
+      const { data: queueData, error: queueError } = await supabase.functions.invoke('process-whatsapp-queue', {
+        body: { action: 'process_pending_messages', source: 'follow-up-settings-financial-report-test' }
+      });
+      if (queueError) {
+        console.warn('تحذير: فشل في استدعاء process-whatsapp-queue:', queueError.message || queueError);
+      }
+
       toast({
         title: 'تم إرسال التقرير المالي ✅',
         description: 'تم إنشاء التقرير وإرساله عبر الويب هوك بنجاح',
