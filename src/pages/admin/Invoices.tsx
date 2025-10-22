@@ -16,6 +16,29 @@ import { supabase } from "@/integrations/supabase/client";
 import InvoicePrint from "@/components/InvoicePrint";
 import InvoicePreview from "@/components/InvoicePreview";
 
+// خرائط تحويل حالة الفاتورة بين العربية و enum قاعدة البيانات
+const mapStatusToEnum = (status?: string) => {
+  const m: Record<string, 'draft' | 'sent' | 'paid' | 'cancelled'> = {
+    'مسودة': 'draft',
+    'مرسلة': 'sent',
+    'قيد الانتظار': 'sent',
+    'مدفوعة': 'paid',
+    'مدفوع': 'paid',
+    'ملغاة': 'cancelled',
+  };
+  return m[status || ''] || 'sent';
+};
+
+const mapEnumToArabic = (status?: 'draft' | 'sent' | 'paid' | 'cancelled') => {
+  const m: Record<'draft' | 'sent' | 'paid' | 'cancelled', string> = {
+    draft: 'مسودة',
+    sent: 'قيد الانتظار',
+    paid: 'مدفوعة',
+    cancelled: 'ملغاة',
+  };
+  return status ? m[status] : 'قيد الانتظار';
+};
+
 const Invoices = () => {
   const [invoices, setInvoices] = useState([]);
   const [customers, setCustomers] = useState([]);
@@ -839,7 +862,7 @@ const Invoices = () => {
         tax: Number(invoiceData.tax || 0),
         discount: Number(invoiceData.discount || 0),
         total_amount: Number(invoiceData.total_amount),
-        status: invoiceData.status,
+        status: mapStatusToEnum(invoiceData.status),
         notes: invoiceData.notes || null,
         order_id: invoiceData.order_id || null
       };

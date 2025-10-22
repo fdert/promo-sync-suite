@@ -994,12 +994,10 @@ ${companyName}`;
           invoice_number: invoiceNumber,
           customer_id: order.customer_id,
           order_id: order.id,
-          amount: order.total_amount,
-          tax_amount: taxAmount,
+          tax: taxAmount,
           total_amount: totalAmount,
-          status: (order.paid_amount || 0) >= totalAmount ? 'مدفوعة' : 'قيد الانتظار',
+          status: (order.paid_amount || 0) >= totalAmount ? 'paid' : 'sent',
           due_date: order.delivery_date,
-          payment_type: order.payment_type,
           created_by: user?.id
         })
         .select()
