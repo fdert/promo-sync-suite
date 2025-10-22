@@ -400,7 +400,7 @@ const Reports = () => {
       console.error('Error adding expense:', error);
       toast({
         title: "خطأ",
-        description: "حدث خطأ في إضافة المصروف",
+        description: `فشل إضافة المصروف: ${(error as any)?.message || 'تحقق من البيانات وحاول مرة أخرى'}`,
         variant: "destructive",
       });
     }
@@ -435,7 +435,7 @@ const Reports = () => {
         .update({
           description: newExpense.description,
           amount: parseFloat(newExpense.amount),
-          category: newExpense.category,
+          expense_type: newExpense.category,
           payment_method: newExpense.payment_method,
           expense_date: newExpense.expense_date,
           notes: newExpense.notes

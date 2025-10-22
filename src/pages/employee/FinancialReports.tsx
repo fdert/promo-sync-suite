@@ -290,12 +290,14 @@ const FinancialReports = () => {
       const { data: lastExpense } = await supabase
         .from('expenses')
         .select('receipt_number')
+        .not('receipt_number', 'is', null)
         .order('created_at', { ascending: false })
         .limit(1);
 
       let expenseNumber = 'EXP-001';
-      if (lastExpense && lastExpense.length > 0) {
-        const lastNumber = parseInt(lastExpense[0].receipt_number.split('-')[1]);
+      if (lastExpense && lastExpense.length > 0 && lastExpense[0].receipt_number) {
+        const match = String(lastExpense[0].receipt_number).match(/EXP-(\d+)/);
+        const lastNumber = match ? parseInt(match[1], 10) : 0;
         expenseNumber = `EXP-${String(lastNumber + 1).padStart(3, '0')}`;
       }
 
@@ -396,7 +398,7 @@ const FinancialReports = () => {
       console.error('Error adding expense:', error);
       toast({
         title: "خطأ في الحفظ",
-        description: "فشل في إضافة المصروف، يرجى المحاولة مرة أخرى",
+        description: `فشل في إضافة المصروف: ${(error as any)?.message || 'تحقق من البيانات وحاول مرة أخرى'}`,
         variant: "destructive",
       });
     } finally {
