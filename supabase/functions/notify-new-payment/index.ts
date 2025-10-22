@@ -17,16 +17,9 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { payment_id } = await req.json();
-    
-    if (!payment_id) {
-      return new Response(
-        JSON.stringify({ error: 'payment_id is required' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      );
-    }
+    const { payment_id, test } = await req.json();
 
-    console.log('Processing new payment notification:', payment_id);
+    console.log('Processing new payment notification:', { payment_id, test });
 
     // جلب إعدادات المتابعة
     const { data: settings, error: settingsError } = await supabase
@@ -50,29 +43,6 @@ serve(async (req) => {
       );
     }
 
-    // جلب تفاصيل الدفعة
-    const { data: payment, error: paymentError } = await supabase
-      .from('payments')
-      .select(`
-        *,
-        orders (
-          order_number,
-          total_amount,
-          paid_amount,
-          customers (name, whatsapp)
-        )
-      `)
-      .eq('id', payment_id)
-      .single();
-
-    if (paymentError || !payment) {
-      console.error('Failed to fetch payment details:', paymentError);
-      return new Response(
-        JSON.stringify({ error: 'Payment not found' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
-      );
-    }
-
     const getPaymentTypeArabic = (type: string) => {
       const types: Record<string, string> = {
         'cash': '💵 نقدي',
@@ -82,13 +52,67 @@ serve(async (req) => {
       return types[type] || type;
     };
 
-    const orderNumber = payment.orders?.order_number || 'غير محدد';
-    const customerName = payment.orders?.customers?.name || 'غير محدد';
-    const customerWhatsapp = payment.orders?.customers?.whatsapp || 'غير متوفر';
-    const totalAmount = payment.orders?.total_amount || 0;
-    const paidAmount = payment.orders?.paid_amount || 0;
-    const remainingAmount = totalAmount - paidAmount;
-    const paymentDate = new Date(payment.payment_date).toLocaleDateString('ar-SA');
+    let orderNumber, customerName, customerWhatsapp, totalAmount, paidAmount, remainingAmount, paymentDate, payment;
+    
+    // في حالة الاختبار، إنشاء بيانات وهمية
+    if (test) {
+      console.log('Test mode: Creating dummy payment data');
+      const now = new Date();
+      payment = {
+        id: 'test-payment-id',
+        amount: 750.00,
+        payment_type: 'cash',
+        payment_date: now.toISOString(),
+        reference_number: 'REF-TEST-001',
+        notes: 'دفعة تجريبية لاختبار النظام'
+      };
+      orderNumber = 'ORD-TEST-12345';
+      customerName = 'عميل تجريبي';
+      customerWhatsapp = '+966501234567';
+      totalAmount = 1500;
+      paidAmount = 1250;
+      remainingAmount = 250;
+      paymentDate = now.toLocaleDateString('ar-SA');
+    } else {
+      if (!payment_id) {
+        return new Response(
+          JSON.stringify({ error: 'payment_id is required' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        );
+      }
+      
+      // جلب تفاصيل الدفعة الحقيقية
+      const { data: fetchedPayment, error: paymentError } = await supabase
+        .from('payments')
+        .select(`
+          *,
+          orders (
+            order_number,
+            total_amount,
+            paid_amount,
+            customers (name, whatsapp)
+          )
+        `)
+        .eq('id', payment_id)
+        .single();
+
+      if (paymentError || !fetchedPayment) {
+        console.error('Failed to fetch payment details:', paymentError);
+        return new Response(
+          JSON.stringify({ error: 'Payment not found' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
+        );
+      }
+      
+      payment = fetchedPayment;
+      orderNumber = payment.orders?.order_number || 'غير محدد';
+      customerName = payment.orders?.customers?.name || 'غير محدد';
+      customerWhatsapp = payment.orders?.customers?.whatsapp || 'غير متوفر';
+      totalAmount = payment.orders?.total_amount || 0;
+      paidAmount = payment.orders?.paid_amount || 0;
+      remainingAmount = totalAmount - paidAmount;
+      paymentDate = new Date(payment.payment_date).toLocaleDateString('ar-SA');
+    }
 
     const message = `💰 *إشعار: تسجيل دفعة جديدة*
 
@@ -113,7 +137,9 @@ ${payment.notes ? `• ملاحظات: ${payment.notes}` : ''}
 • المتبقي: ${remainingAmount.toFixed(2)} ر.س
 • الحالة: ${remainingAmount <= 0 ? '✅ مدفوع بالكامل' : '⏳ دفعة جزئية'}
 
-⏰ ${new Date().toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}`;
+⏰ ${new Date().toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}
+
+${test ? '\n🧪 *هذه رسالة اختبار*' : ''}`;
 
     const { data: msgInserted, error: msgInsertError } = await supabase
       .from('whatsapp_messages')
@@ -123,7 +149,7 @@ ${payment.notes ? `• ملاحظات: ${payment.notes}` : ''}
         message_type: 'payment_notification',
         message_content: message,
         status: 'pending',
-        dedupe_key: `payment_logged_${payment_id}`
+        dedupe_key: `payment_logged_${test ? 'test' : payment_id}_${Date.now()}`
       })
       .select('id')
       .single();

@@ -17,9 +17,9 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { orderId } = await req.json();
+    const { orderId, test } = await req.json();
 
-    console.log('Processing new order notification:', { orderId });
+    console.log('Processing new order notification:', { orderId, test });
 
     // جلب إعدادات المتابعة
     const { data: settings, error: settingsError } = await supabase
@@ -43,36 +43,79 @@ serve(async (req) => {
       );
     }
 
-    // جلب تفاصيل الطلب الكاملة
-    const { data: order, error: orderError } = await supabase
-      .from('orders')
-      .select(`
-        *,
-        customers (
-          name,
-          phone,
-          whatsapp
-        ),
-        service_types (
-          name
-        ),
-        order_items (
-          item_name,
-          quantity,
-          unit_price,
-          total,
-          description
-        )
-      `)
-      .eq('id', orderId)
-      .single();
+    let order;
+    
+    // في حالة الاختبار، إنشاء بيانات وهمية
+    if (test) {
+      console.log('Test mode: Creating dummy order data');
+      order = {
+        id: 'test-order-id',
+        order_number: 'ORD-TEST-12345',
+        status: 'pending',
+        total_amount: 1500,
+        paid_amount: 500,
+        delivery_date: new Date(Date.now() + 86400000).toISOString(),
+        notes: 'طلب تجريبي لاختبار نظام الإشعارات',
+        created_at: new Date().toISOString(),
+        customers: {
+          name: 'عميل تجريبي',
+          phone: '+966501234567',
+          whatsapp: '+966501234567'
+        },
+        service_types: {
+          name: 'خدمة تجريبية'
+        },
+        order_items: [
+          {
+            item_name: 'منتج تجريبي 1',
+            quantity: 2,
+            unit_price: 500,
+            total: 1000,
+            description: 'وصف المنتج التجريبي الأول'
+          },
+          {
+            item_name: 'منتج تجريبي 2',
+            quantity: 1,
+            unit_price: 500,
+            total: 500,
+            description: 'وصف المنتج التجريبي الثاني'
+          }
+        ]
+      };
+    } else {
+      // جلب تفاصيل الطلب الحقيقية
+      const { data: fetchedOrder, error: orderError } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          customers (
+            name,
+            phone,
+            whatsapp
+          ),
+          service_types (
+            name
+          ),
+          order_items (
+            item_name,
+            quantity,
+            unit_price,
+            total,
+            description
+          )
+        `)
+        .eq('id', orderId)
+        .single();
 
-    if (orderError || !order) {
-      console.error('Failed to fetch order details:', orderError);
-      return new Response(
-        JSON.stringify({ error: 'Failed to fetch order' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      );
+      if (orderError || !fetchedOrder) {
+        console.error('Failed to fetch order details:', orderError);
+        return new Response(
+          JSON.stringify({ error: 'Failed to fetch order' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        );
+      }
+      
+      order = fetchedOrder;
     }
 
     // تنسيق الحالة
@@ -119,7 +162,7 @@ ${itemsText || 'لا توجد بنود'}
 
 ⏰ تاريخ الإنشاء: ${new Date(order.created_at).toLocaleString('ar-SA')}
 
-يرجى متابعة الطلب والتواصل مع العميل.`;
+${test ? '🧪 *هذه رسالة اختبار*' : 'يرجى متابعة الطلب والتواصل مع العميل.'}`;
 
     // حفظ الرسالة في قاعدة البيانات
     const { data: inserted, error: insertError } = await supabase
@@ -130,7 +173,7 @@ ${itemsText || 'لا توجد بنود'}
         message_type: 'new_order_notification',
         message_content: message,
         status: 'pending',
-        dedupe_key: `new_order_${orderId}_${Date.now()}`
+        dedupe_key: `new_order_${test ? 'test' : orderId}_${Date.now()}`
       })
       .select('id')
       .single();

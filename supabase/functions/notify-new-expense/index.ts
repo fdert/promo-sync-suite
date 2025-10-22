@@ -17,16 +17,9 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { expense_id } = await req.json();
-    
-    if (!expense_id) {
-      return new Response(
-        JSON.stringify({ error: 'expense_id is required' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      );
-    }
+    const { expense_id, test } = await req.json();
 
-    console.log('Processing new expense notification:', expense_id);
+    console.log('Processing new expense notification:', { expense_id, test });
 
     // جلب إعدادات المتابعة
     const { data: settings, error: settingsError } = await supabase
@@ -50,23 +43,54 @@ serve(async (req) => {
       );
     }
 
-    // جلب تفاصيل المصروف
-    const { data: expense, error: expenseError } = await supabase
-      .from('expenses')
-      .select('*')
-      .eq('id', expense_id)
-      .single();
+    let expense;
+    let expenseDate;
+    let createdDate;
+    
+    // في حالة الاختبار، إنشاء بيانات وهمية
+    if (test) {
+      console.log('Test mode: Creating dummy expense data');
+      const now = new Date();
+      expense = {
+        id: 'test-expense-id',
+        expense_type: 'مصروف تجريبي',
+        description: 'مصروف اختبار لنظام الإشعارات',
+        amount: 500.00,
+        expense_date: now.toISOString(),
+        payment_method: 'نقدي',
+        receipt_number: 'TEST-001',
+        notes: 'هذا مصروف تجريبي لاختبار النظام',
+        created_at: now.toISOString()
+      };
+      expenseDate = now.toLocaleDateString('ar-SA');
+      createdDate = now.toLocaleDateString('ar-SA');
+    } else {
+      if (!expense_id) {
+        return new Response(
+          JSON.stringify({ error: 'expense_id is required' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        );
+      }
+      
+      // جلب تفاصيل المصروف الحقيقية
+      const { data: fetchedExpense, error: expenseError } = await supabase
+        .from('expenses')
+        .select('*')
+        .eq('id', expense_id)
+        .single();
 
-    if (expenseError || !expense) {
-      console.error('Failed to fetch expense details:', expenseError);
-      return new Response(
-        JSON.stringify({ error: 'Expense not found' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
-      );
+      if (expenseError || !fetchedExpense) {
+        console.error('Failed to fetch expense details:', expenseError);
+        return new Response(
+          JSON.stringify({ error: 'Expense not found' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
+        );
+      }
+      
+      expense = fetchedExpense;
+      expenseDate = new Date(expense.expense_date).toLocaleDateString('ar-SA');
+      createdDate = new Date(expense.created_at).toLocaleDateString('ar-SA');
     }
-
-    const expenseDate = new Date(expense.expense_date).toLocaleDateString('ar-SA');
-    const createdDate = new Date(expense.created_at).toLocaleDateString('ar-SA');
 
     const message = `💸 *إشعار: تسجيل مصروف جديد*
 
@@ -85,7 +109,9 @@ ${expense.receipt_number ? `• رقم الإيصال: ${expense.receipt_number}
 
 ${expense.notes ? `📌 ملاحظات:\n${expense.notes}\n\n━━━━━━━━━━━━━━━━━━━━\n` : ''}
 📅 تاريخ التسجيل: ${createdDate}
-⏰ الوقت: ${new Date().toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}`;
+⏰ الوقت: ${new Date().toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}
+
+${test ? '\n🧪 *هذه رسالة اختبار*' : ''}`;
 
     const { data: msgInserted, error: msgInsertError } = await supabase
       .from('whatsapp_messages')
@@ -95,7 +121,7 @@ ${expense.notes ? `📌 ملاحظات:\n${expense.notes}\n\n━━━━━━�
         message_type: 'expense_notification',
         message_content: message,
         status: 'pending',
-        dedupe_key: `expense_logged_${expense_id}`
+        dedupe_key: `expense_logged_${test ? 'test' : expense_id}_${Date.now()}`
       })
       .select('id')
       .single();
