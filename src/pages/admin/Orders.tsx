@@ -57,7 +57,7 @@ interface Order {
   description: string;
   status: string;
   priority: string;
-  amount: number;
+  total_amount: number;
   paid_amount: number;
   payment_type?: string;
   due_date: string;
@@ -76,6 +76,8 @@ interface Order {
     total_amount: number;
     description?: string;
   }[];
+  remaining_amount?: number;
+  calculated_paid_amount?: number;
 }
 
 interface Customer {
@@ -236,7 +238,7 @@ const Orders = () => {
           ...order,
           paid_amount: totalPaid,
           calculated_paid_amount: totalPaid,
-          remaining_amount: order.amount - totalPaid
+          remaining_amount: (order.total_amount || 0) - totalPaid
         };
       }));
       
@@ -299,7 +301,7 @@ const Orders = () => {
   const handlePrintBarcodeLabel = async (order: Order) => {
     const customerName = order.customers?.name || 'غير محدد';
     const phoneNumber = order.customers?.whatsapp || order.customers?.phone || 'غير محدد';
-    const totalAmount = order.amount || 0;
+    const totalAmount = order.total_amount || 0;
     const paidAmount = order.paid_amount || 0;
     const paymentStatus = `payment|${totalAmount}|${paidAmount}`;
     
@@ -973,8 +975,8 @@ ${companyName}`;
       if (numberError) throw numberError;
 
       // حساب الضريبة
-      const taxAmount = order.amount * 0.15;
-      const totalAmount = order.amount + taxAmount;
+      const taxAmount = order.total_amount * 0.15;
+      const totalAmount = order.total_amount + taxAmount;
 
       // إنشاء الفاتورة
       const { data: newInvoice, error: invoiceError } = await supabase
@@ -983,7 +985,7 @@ ${companyName}`;
           invoice_number: invoiceNumber,
           customer_id: order.customer_id,
           order_id: order.id,
-          amount: order.amount,
+          amount: order.total_amount,
           tax_amount: taxAmount,
           total_amount: totalAmount,
           status: (order.paid_amount || 0) >= totalAmount ? 'مدفوعة' : 'قيد الانتظار',
@@ -1026,7 +1028,7 @@ ${companyName}`;
             customer_name: order.customers.name,
             customer_phone: order.customers.whatsapp,
             order_number: order.order_number,
-            amount: order.amount,
+            amount: order.total_amount,
             tax_amount: taxAmount,
             total_amount: totalAmount
           }
@@ -1150,7 +1152,7 @@ ${companyName}`;
           description: newOrder.description,
           status: 'جديد',
           priority: newOrder.priority,
-          amount: newOrder.amount,
+          total_amount: newOrder.amount,
           payment_type: newOrder.payment_type,
           payment_notes: newOrder.payment_notes,
           due_date: newOrder.due_date,
@@ -1315,7 +1317,7 @@ ${companyName}`;
           priority: newOrder.priority,
           due_date: newOrder.due_date || null,
           description: newOrder.description,
-          amount: newOrder.amount,
+          total_amount: newOrder.amount,
           payment_type: newOrder.payment_type,
           payment_notes: newOrder.payment_notes,
           updated_at: new Date().toISOString()
@@ -1522,7 +1524,7 @@ ${companyName}`;
       priority: order.priority,
       due_date: order.due_date || '',
       description: order.description || '',
-      amount: order.amount,
+      amount: order.total_amount,
       payment_type: order.payment_type || 'دفع آجل',
       paid_amount: order.paid_amount || 0,
       payment_notes: ''
@@ -1699,9 +1701,9 @@ ${companyName}`;
                     <p><strong>تاريخ الاستحقاق:</strong> {order.due_date ? new Date(order.due_date).toLocaleDateString('ar-SA') : '-'}</p>
                   </div>
                   <div className="space-y-2">
-                    <p><strong>المبلغ الإجمالي:</strong> {Number(order.amount || 0).toLocaleString('ar-SA')} ر.س</p>
-                    <p><strong>المبلغ المدفوع:</strong> {Number(order.paid_amount || 0).toLocaleString()} ر.س</p>
-                    <p><strong>المبلغ المتبقي:</strong> {Number((order.amount || 0) - (order.paid_amount || 0)).toLocaleString()} ر.س</p>
+                    <p><strong>المبلغ الإجمالي:</strong> {Number(order.total_amount || 0).toLocaleString('ar-SA')} ر.س</p>
+                    <p><strong>المبلغ المدفوع:</strong> {Number(order.paid_amount || 0).toLocaleString('ar-SA')} ر.س</p>
+                    <p><strong>المبلغ المتبقي:</strong> {Number((order.total_amount || 0) - (order.paid_amount || 0)).toLocaleString('ar-SA')} ر.س</p>
                   </div>
                 </div>
                 
