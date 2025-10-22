@@ -1422,18 +1422,9 @@ export type Database = {
         Args: { order_id_param: string }
         Returns: Json
       }
-      exec_sql: {
-        Args: { sql: string }
-        Returns: undefined
-      }
-      generate_database_backup: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      generate_order_number: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      exec_sql: { Args: { sql: string }; Returns: undefined }
+      generate_database_backup: { Args: never; Returns: string }
+      generate_order_number: { Args: never; Returns: string }
     }
     Enums: {
       app_role: "admin" | "employee" | "user"
