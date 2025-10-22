@@ -53,20 +53,26 @@ import { cleanPhoneNumber } from "@/lib/utils";
 interface Order {
   id: string;
   order_number: string;
-  service_name: string;
+  service_name?: string;
+  service_type_id?: string;
   description: string;
   status: string;
   priority: string;
   total_amount: number;
   paid_amount: number;
   payment_type?: string;
-  due_date: string;
+  due_date?: string;
+  delivery_date?: string;
   created_at: string;
   customer_id?: string;
   customers?: {
     name: string;
     whatsapp: string;
     phone: string;
+  };
+  service_types?: {
+    id: string;
+    name: string;
   };
   order_items?: {
     id: string;
@@ -207,6 +213,7 @@ const Orders = () => {
         .select(`
           *,
           customers(id, name, phone, whatsapp),
+          service_types(id, name),
           order_items(
             id,
             item_name,
@@ -236,6 +243,8 @@ const Orders = () => {
         
         return {
           ...order,
+          service_name: order.service_types?.name || order.service_name || 'غير محدد',
+          due_date: order.delivery_date,
           paid_amount: totalPaid,
           calculated_paid_amount: totalPaid,
           remaining_amount: (order.total_amount || 0) - totalPaid
@@ -819,9 +828,9 @@ ${companyName}`;
             customer_phone: customerWhatsapp,
             old_status: orderData.status,
             new_status: newStatus,
-            amount: orderData.amount,
+            amount: orderData.total_amount,
             service_name: orderData.service_name,
-            due_date: orderData.due_date,
+            due_date: orderData.delivery_date || orderData.due_date,
             progress: orderData.progress || 0,
             description: orderData.description || '',
             payment_type: orderData.payment_type || 'دفع آجل',
@@ -989,7 +998,7 @@ ${companyName}`;
           tax_amount: taxAmount,
           total_amount: totalAmount,
           status: (order.paid_amount || 0) >= totalAmount ? 'مدفوعة' : 'قيد الانتظار',
-          due_date: order.due_date,
+          due_date: order.delivery_date,
           payment_type: order.payment_type,
           created_by: user?.id
         })
@@ -1155,7 +1164,7 @@ ${companyName}`;
           total_amount: newOrder.amount,
           payment_type: newOrder.payment_type,
           payment_notes: newOrder.payment_notes,
-          due_date: newOrder.due_date,
+          delivery_date: newOrder.due_date,
           created_by: user?.id
         })
         .select()
@@ -1315,7 +1324,7 @@ ${companyName}`;
           customer_id: newOrder.customer_id,
           service_name: newOrder.service_name,
           priority: newOrder.priority,
-          due_date: newOrder.due_date || null,
+          delivery_date: newOrder.due_date || null,
           description: newOrder.description,
           total_amount: newOrder.amount,
           payment_type: newOrder.payment_type,
