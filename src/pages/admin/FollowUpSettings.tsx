@@ -1061,9 +1061,42 @@ const FollowUpSettings = () => {
           {/* الفلاتر */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Filter className="h-5 w-5" />
-                الفلاتر والبحث
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Filter className="h-5 w-5" />
+                  الفلاتر والبحث
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      const { data: { user } } = await supabase.auth.getUser();
+                      if (!user) return;
+                      
+                      const testActions = ['create', 'update', 'delete', 'login', 'view'];
+                      const testResources = ['order', 'customer', 'payment', 'invoice', 'user'];
+                      
+                      for (let i = 0; i < 5; i++) {
+                        await supabase.from('user_activity_logs').insert({
+                          user_id: user.id,
+                          action: testActions[Math.floor(Math.random() * testActions.length)],
+                          details: { test: true, timestamp: new Date().toISOString() },
+                          ip_address: '127.0.0.1',
+                          user_agent: 'Test Browser'
+                        });
+                      }
+                      
+                      toast({ title: "تم إنشاء سجلات اختبار بنجاح" });
+                      fetchActivityLogs();
+                    } catch (error) {
+                      console.error('Error creating test logs:', error);
+                      toast({ title: "خطأ", description: "فشل في إنشاء سجلات الاختبار", variant: "destructive" });
+                    }
+                  }}
+                >
+                  إنشاء سجلات تجريبية
+                </Button>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
