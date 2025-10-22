@@ -226,7 +226,7 @@ ${delayedSection}${delayedSection ? '━━━━━━━━━━━━━━�
       .insert({
         from_number: 'system',
         to_number: toNumber,
-        message_type: 'financial_report',
+        message_type: 'text',
         message_content: finalMessage,
         status: 'pending',
         dedupe_key: isTest ? `daily_report_test_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` : `daily_report_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
@@ -268,19 +268,25 @@ ${delayedSection}${delayedSection ? '━━━━━━━━━━━━━━�
           event: 'whatsapp_message_send',
           data: {
             to: toNumber, // الرقم كما هو في الإعدادات
+            to_e164: toNumber,
+            to_digits: toNumber.replace(/[^\d]/g, ''),
             phone: toNumber.replace(/[^\d]/g, ''), // رقم مُطبع بدون رموز
             phoneNumber: toNumber.replace(/[^\d]/g, ''),
+            phone_e164: toNumber,
+            phone_digits: toNumber.replace(/[^\d]/g, ''),
+            msisdn: toNumber.replace(/[^\d]/g, ''),
             message: finalMessage,
             messageText: finalMessage,
             text: finalMessage,
             type: 'text',
-            message_type: 'financial_report',
+            message_type: 'text',
             timestamp: Math.floor(Date.now() / 1000),
             from_number: 'system',
             // حقول توافق مع مسار إشعار الطلب الجديد (n8n)
             order_id: null,
             order_number: `REPORT-${new Date().toISOString().slice(0,10).replaceAll('-', '')}`,
-            customer_name: 'إدارة المتابعة'
+            customer_name: 'إدارة المتابعة',
+            notification_type: 'financial_report'
           }
         };
 
