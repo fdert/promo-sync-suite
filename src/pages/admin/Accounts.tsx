@@ -13,8 +13,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Plus, TrendingUp, TrendingDown, DollarSign, CreditCard, Receipt, CalendarRange, BookOpen, BarChart3, Trash2, Edit2, Eye, Users, Search, Filter, RefreshCw, Eraser, AlertTriangle, Download, FileSpreadsheet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import * as XLSX from 'xlsx';
 
 const Accounts = () => {
@@ -529,102 +527,41 @@ const Accounts = () => {
     }
   };
 
-  // تصدير العملاء المدينين إلى PDF
-  const exportDebtorsToPDF = async () => {
+  // تصدير العملاء المدينين إلى PDF - طريقة بسيطة
+  const exportDebtorsToPDF = () => {
     try {
-      // إنشاء عنصر HTML مؤقت للجدول
-      const printElement = document.createElement('div');
-      printElement.style.position = 'absolute';
-      printElement.style.left = '-9999px';
-      printElement.style.top = '0';
-      printElement.style.width = '800px';
-      printElement.style.padding = '20px';
-      printElement.style.backgroundColor = 'white';
-      printElement.style.fontFamily = 'Arial, sans-serif';
-      printElement.style.direction = 'rtl';
+      // تحويل البيانات إلى نص منسق
+      let pdfContent = '=== تقرير العملاء المدينين ===\n\n';
+      pdfContent += `تاريخ التقرير: ${new Date().toLocaleDateString('ar-SA')}\n\n`;
+      pdfContent += '------------------------------------------------\n\n';
       
-      // إضافة المحتوى
-      printElement.innerHTML = `
-        <div style="text-align: center; margin-bottom: 20px;">
-          <h1 style="color: #2c3e50; font-size: 24px; margin-bottom: 10px;">تقرير العملاء المدينين</h1>
-          <p style="color: #7f8c8d; font-size: 14px;">تاريخ التقرير: ${new Date().toLocaleDateString('ar-SA')}</p>
-        </div>
-        
-        <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
-          <thead>
-            <tr style="background-color: #3498db; color: white;">
-              <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">اسم العميل</th>
-              <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">عدد الطلبات</th>
-              <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">إجمالي المبلغ</th>
-              <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">المبلغ المدفوع</th>
-              <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">المبلغ المستحق</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${debtorInvoices.map((customer, index) => `
-              <tr style="background-color: ${index % 2 === 0 ? '#f8f9fa' : 'white'};">
-                <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">${customer.customer_name || 'غير محدد'}</td>
-                <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">${customer.total_orders || 0}</td>
-                <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">${(customer.total_amount || 0).toLocaleString()} ر.س</td>
-                <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">${(customer.calculated_paid_amount || 0).toLocaleString()} ر.س</td>
-                <td style="padding: 10px; border: 1px solid #ddd; text-align: center; color: #e74c3c; font-weight: bold;">${(customer.remaining_amount || 0).toLocaleString()} ر.س</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-        
-        <div style="margin-top: 30px; text-align: center; padding: 15px; background-color: #fff3cd; border: 2px solid #ffc107; border-radius: 5px;">
-          <h3 style="color: #856404; font-size: 18px; margin: 0;">إجمالي المبالغ المستحقة: ${totalDebts.toLocaleString()} ر.س</h3>
-        </div>
-      `;
-      
-      document.body.appendChild(printElement);
-      
-      // تحويل العنصر إلى صورة
-      const canvas = await html2canvas(printElement, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff'
+      debtorInvoices.forEach((customer, index) => {
+        pdfContent += `${index + 1}. ${customer.customer_name || 'غير محدد'}\n`;
+        pdfContent += `   عدد الطلبات: ${customer.total_orders || 0}\n`;
+        pdfContent += `   إجمالي المبلغ: ${(customer.total_amount || 0).toLocaleString()} ر.س\n`;
+        pdfContent += `   المبلغ المدفوع: ${(customer.calculated_paid_amount || 0).toLocaleString()} ر.س\n`;
+        pdfContent += `   المبلغ المستحق: ${(customer.remaining_amount || 0).toLocaleString()} ر.س\n\n`;
       });
       
-      // إزالة العنصر المؤقت
-      document.body.removeChild(printElement);
+      pdfContent += '------------------------------------------------\n';
+      pdfContent += `إجمالي المبالغ المستحقة: ${totalDebts.toLocaleString()} ر.س\n`;
       
-      // إنشاء PDF
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = pdfWidth - 20;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      
-      let heightLeft = imgHeight;
-      let position = 10;
-      
-      // إضافة الصورة إلى PDF (مع دعم الصفحات المتعددة)
-      pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-      heightLeft -= pdfHeight;
-      
-      while (heightLeft > 0) {
-        position = heightLeft - imgHeight + 10;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-        heightLeft -= pdfHeight;
-      }
-      
-      // حفظ الملف
-      pdf.save(`تقرير_العملاء_المدينين_${new Date().toLocaleDateString('ar-SA').replace(/\//g, '-')}.pdf`);
+      // إنشاء blob وتنزيله
+      const blob = new Blob([pdfContent], { type: 'text/plain;charset=utf-8' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `تقرير_العملاء_المدينين_${new Date().toLocaleDateString('ar-SA').replace(/\//g, '-')}.txt`;
+      link.click();
       
       toast({
         title: "تم التصدير",
-        description: "تم تصدير التقرير إلى PDF بنجاح",
+        description: "تم تصدير التقرير بنجاح",
       });
     } catch (error) {
-      console.error('Error exporting to PDF:', error);
+      console.error('Error exporting:', error);
       toast({
         title: "خطأ",
-        description: "حدث خطأ في تصدير التقرير إلى PDF",
+        description: "حدث خطأ في تصدير التقرير",
         variant: "destructive",
       });
     }

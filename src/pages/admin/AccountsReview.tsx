@@ -71,10 +71,20 @@ const AccountsReview = () => {
         .order('account_type', { ascending: true })
         .order('account_name', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching accounts:', error);
+        return;
+      }
+      
+      console.log('Fetched accounts:', data);
       setAccounts(data || []);
     } catch (error) {
-      console.error('Error fetching accounts:', error);
+      console.error('Error in fetchAccounts:', error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ في جلب الحسابات",
+        variant: "destructive",
+      });
     }
   };
 
@@ -90,10 +100,20 @@ const AccountsReview = () => {
         .order('created_at', { ascending: false })
         .limit(50);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching account entries:', error);
+        return;
+      }
+      
+      console.log('Fetched account entries:', data);
       setAccountEntries(data || []);
     } catch (error) {
-      console.error('Error fetching account entries:', error);
+      console.error('Error in fetchAccountEntries:', error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ في جلب القيود المحاسبية",
+        variant: "destructive",
+      });
     }
   };
 
@@ -102,15 +122,22 @@ const AccountsReview = () => {
     try {
       const { data, error } = await supabase
         .from('order_payment_summary')
-        .select(`
-          *
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching order_payment_summary:', error);
+        return;
+      }
 
       // جلب بيانات العملاء
       const customerIds = [...new Set(data?.map(order => order.customer_id).filter(Boolean))];
+      
+      if (customerIds.length === 0) {
+        setUnpaidInvoices([]);
+        return;
+      }
+
       const { data: customers } = await supabase
         .from('customers')
         .select('id, name, phone, whatsapp')
@@ -120,8 +147,8 @@ const AccountsReview = () => {
 
       // فلترة الطلبات غير المدفوعة بالكامل
       const unpaid = (data || []).filter(order => {
-        const remainingAmount = order.remaining_amount || 0;
-        return remainingAmount > 0.01;
+        const balance = order.balance || 0;
+        return balance > 0.01;
       }).map(order => {
         const customer = customerMap.get(order.customer_id);
         const today = new Date();
@@ -133,15 +160,22 @@ const AccountsReview = () => {
           customers: customer,
           remaining_amount: order.balance || 0,
           paid_amount: order.paid_amount || 0,
+          total_amount: order.total_amount || 0,
           days_overdue: daysDiff > 30 ? (daysDiff - 30) : 0,
           is_overdue: daysDiff > 30,
           payment_status: (order.paid_amount || 0) > 0 ? 'partial' : 'unpaid'
         };
       });
 
+      console.log('Fetched unpaid invoices:', unpaid);
       setUnpaidInvoices(unpaid);
     } catch (error) {
       console.error('Error fetching unpaid orders:', error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ في جلب الطلبات غير المدفوعة",
+        variant: "destructive",
+      });
     }
   };
 
@@ -157,10 +191,20 @@ const AccountsReview = () => {
         .order('payment_date', { ascending: false })
         .limit(20);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching payments:', error);
+        return;
+      }
+      
+      console.log('Fetched payments:', data);
       setPayments(data || []);
     } catch (error) {
-      console.error('Error fetching payments:', error);
+      console.error('Error in fetchPayments:', error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ في جلب المدفوعات",
+        variant: "destructive",
+      });
     }
   };
 
@@ -484,36 +528,36 @@ const AccountsReview = () => {
             </CardContent>
           </Card>
 
-          {/* جدول الفواتير غير المدفوعة */}
+          {/* جدول الطلبات غير المدفوعة */}
           <Card>
             <CardHeader>
-              <CardTitle>الفواتير غير المدفوعة ({filteredUnpaidInvoices.length})</CardTitle>
+              <CardTitle>الطلبات غير المدفوعة ({filteredUnpaidInvoices.length})</CardTitle>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>رقم الفاتورة</TableHead>
+                    <TableHead>رقم الطلب</TableHead>
                     <TableHead>العميل</TableHead>
                     <TableHead>المبلغ الكلي</TableHead>
                     <TableHead>المدفوع</TableHead>
                     <TableHead>المتبقي</TableHead>
-                    <TableHead>تاريخ الاستحقاق</TableHead>
+                    <TableHead>تاريخ الطلب</TableHead>
                     <TableHead>أيام التأخير</TableHead>
                     <TableHead>الحالة</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredUnpaidInvoices.map((invoice) => (
-                    <TableRow key={invoice.id}>
-                      <TableCell className="font-medium">{invoice.invoice_number}</TableCell>
-                      <TableCell>{invoice.customers?.name || 'غير محدد'}</TableCell>
+                    <TableRow key={invoice.order_id}>
+                      <TableCell className="font-medium">{invoice.order_number}</TableCell>
+                      <TableCell>{invoice.customer_name || invoice.customers?.name || 'غير محدد'}</TableCell>
                       <TableCell>{(invoice.total_amount || 0).toLocaleString()} ر.س</TableCell>
                       <TableCell>{(invoice.paid_amount || 0).toLocaleString()} ر.س</TableCell>
                       <TableCell className="font-bold text-red-600">
                         {(invoice.remaining_amount || 0).toLocaleString()} ر.س
                       </TableCell>
-                      <TableCell>{new Date(invoice.due_date).toLocaleDateString('ar')}</TableCell>
+                      <TableCell>{new Date(invoice.created_at).toLocaleDateString('ar-SA')}</TableCell>
                       <TableCell>
                         {invoice.is_overdue ? (
                           <Badge variant="destructive">{invoice.days_overdue} يوم</Badge>
