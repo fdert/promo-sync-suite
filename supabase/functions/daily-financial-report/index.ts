@@ -312,8 +312,9 @@ ${delayedSection}${delayedSection ? '━━━━━━━━━━━━━━�
           totalPayments,
           totalExpenses,
           netProfit,
-          newOrdersCount,
-          completedOrdersCount
+          newOrdersCount: newOrders?.length || 0,
+          completedOrdersCount,
+          delayedOrdersCount: delayedOrders?.length || 0
         }
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
