@@ -52,6 +52,7 @@ serve(async (req) => {
     const today = new Date();
     const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
     const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59).toISOString();
+    const todayDateStr = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString().slice(0, 10);
 
     // جلب المدفوعات اليومية مع تفاصيل الطلب
     const { data: payments, error: paymentsError } = await supabase
@@ -92,8 +93,7 @@ serve(async (req) => {
       .select(`
         order_number,
         total_amount,
-        customers (name),
-        order_items (item_name, quantity, unit_price)
+        customers (name)
       `)
       .gte('created_at', todayStart)
       .lte('created_at', todayEnd)
@@ -107,7 +107,7 @@ serve(async (req) => {
         delivery_date,
         customers (name)
       `)
-      .lte('delivery_date', todayEnd)
+      .eq('delivery_date', todayDateStr)
       .neq('status', 'completed')
       .neq('status', 'cancelled')
       .order('delivery_date', { ascending: true });
@@ -119,6 +119,19 @@ serve(async (req) => {
       .eq('status', 'completed')
       .gte('updated_at', todayStart)
       .lte('updated_at', todayEnd);
+
+    // جلب تفاصيل الطلبات المكتملة اليوم
+    const { data: completedOrdersToday } = await supabase
+      .from('orders')
+      .select(`
+        order_number,
+        total_amount,
+        customers (name)
+      `)
+      .eq('status', 'completed')
+      .gte('updated_at', todayStart)
+      .lte('updated_at', todayEnd)
+      .order('updated_at', { ascending: true });
     // استخدام رقم الواتساب كما هو (مع الاحتفاظ بعلامة + إن وجدت)
     const toNumber = String(settings.whatsapp_number || '').trim();
 
@@ -168,20 +181,26 @@ serve(async (req) => {
         newOrdersSection += `\n   العميل: ${customerName}`;
         newOrdersSection += `\n   الإجمالي: ${order.total_amount.toFixed(2)} ر.س`;
         
-        if (order.order_items && order.order_items.length > 0) {
-          newOrdersSection += '\n   البنود:';
-          order.order_items.forEach((item: any) => {
-            newOrdersSection += `\n   • ${item.item_name} (${item.quantity} × ${item.unit_price.toFixed(2)})`;
-          });
-        }
         newOrdersSection += '\n';
+      });
+    }
+
+    // بناء قسم الطلبات المكتملة اليوم
+    let completedSection = '';
+    if (completedOrdersToday && completedOrdersToday.length > 0) {
+      completedSection = '\n✅ *الطلبات المكتملة اليوم:*\n';
+      completedOrdersToday.forEach((order: any, index: number) => {
+        const customerName = order.customers?.name || 'غير محدد';
+        completedSection += `\n${index + 1}. طلب: ${order.order_number}`;
+        completedSection += `\n   العميل: ${customerName}`;
+        completedSection += `\n   الإجمالي: ${Number(order.total_amount || 0).toFixed(2)} ر.س\n`;
       });
     }
 
     // بناء قسم الطلبات المتأخرة
     let delayedSection = '';
     if (delayedOrders && delayedOrders.length > 0) {
-      delayedSection = '\n⚠️ *الطلبات المتأخرة (موعد التسليم اليوم):*\n';
+      delayedSection = '\n📅 *طلبات موعد تسليمها اليوم:*\n';
       delayedOrders.forEach((order: any, index: number) => {
         const customerName = order.customers?.name || 'غير محدد';
         const daysDelayed = getDaysDelayed(order.delivery_date);
@@ -215,6 +234,7 @@ serve(async (req) => {
 ${paymentsSection}
 ━━━━━━━━━━━━━━━━━━━━
 ${newOrdersSection}${newOrdersSection ? '━━━━━━━━━━━━━━━━━━━━' : ''}
+${completedSection}${completedSection ? '━━━━━━━━━━━━━━━━━━━━' : ''}
 ${delayedSection}${delayedSection ? '━━━━━━━━━━━━━━━━━━━━' : ''}
 
 ⏰ تم إنشاء التقرير: ${today.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}`;
