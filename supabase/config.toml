@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.send-daily-backup]
 verify_jwt = false
+
+[functions.notify-new-payment]
+verify_jwt = false
