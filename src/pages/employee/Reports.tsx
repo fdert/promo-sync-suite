@@ -173,9 +173,9 @@ const Reports = () => {
       const { data: expensesData, error: expensesError } = await supabase
         .from('expenses')
         .select('*')
-        .gte('date', startDate)
-        .lte('date', endDate)
-        .order('date', { ascending: false });
+        .gte('expense_date', startDate)
+        .lte('expense_date', endDate)
+        .order('expense_date', { ascending: false });
 
       if (expensesError) throw expensesError;
 
