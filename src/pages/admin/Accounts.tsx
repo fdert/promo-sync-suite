@@ -272,15 +272,35 @@ const Accounts = () => {
     }
 
     try {
-      // توليد رقم حساب تلقائياً
-      const accountCount = accounts.length + 1;
-      const accountNumber = `${accountCount.toString().padStart(4, '0')}`;
+      // الحصول على أعلى رقم حساب موجود
+      const { data: existingAccounts, error: fetchError } = await supabase
+        .from('accounts')
+        .select('account_number')
+        .order('account_number', { ascending: false })
+        .limit(1);
+
+      if (fetchError) {
+        console.error('Error fetching accounts:', fetchError);
+        toast({
+          title: "خطأ",
+          description: "حدث خطأ في جلب بيانات الحسابات",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // توليد رقم حساب فريد جديد
+      let accountNumber = '0001';
+      if (existingAccounts && existingAccounts.length > 0) {
+        const lastNumber = parseInt(existingAccounts[0].account_number) || 0;
+        accountNumber = (lastNumber + 1).toString().padStart(4, '0');
+      }
       
       const { error } = await supabase
         .from('accounts')
         .insert({
           account_number: accountNumber,
-          account_name: newAccount.account_name,
+          account_name: newAccount.account_name.trim(),
           account_type: newAccount.account_type,
           balance: 0
         });
@@ -309,6 +329,11 @@ const Accounts = () => {
       fetchAccounts();
     } catch (error) {
       console.error('Error:', error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ غير متوقع",
+        variant: "destructive",
+      });
     }
   };
 
