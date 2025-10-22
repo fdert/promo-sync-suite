@@ -1632,6 +1632,15 @@ export type Database = {
       generate_database_backup: { Args: never; Returns: string }
       generate_order_number: { Args: never; Returns: string }
       generate_print_order_number: { Args: never; Returns: string }
+      log_activity: {
+        Args: {
+          _action: string
+          _details?: Json
+          _resource_id: string
+          _resource_type: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "employee" | "user"
