@@ -188,6 +188,8 @@ const Accounts = () => {
             return paidAmount > 0 && remainingAmount > 0.01;
           } else if (debtorSearch.status === 'unpaid') {
             return paidAmount <= 0.01;
+          } else if (debtorSearch.status === 'debtor') {
+            return remainingAmount > 0.01;
           }
           return remainingAmount > 0.01;
         });
@@ -1706,6 +1708,7 @@ const Accounts = () => {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">جميع الحالات</SelectItem>
+                        <SelectItem value="debtor">مدين</SelectItem>
                         <SelectItem value="partial">مدفوع جزئياً</SelectItem>
                         <SelectItem value="unpaid">غير مدفوع</SelectItem>
                       </SelectContent>
