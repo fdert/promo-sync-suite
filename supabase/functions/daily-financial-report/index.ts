@@ -259,8 +259,8 @@ ${delayedSection}${delayedSection ? '━━━━━━━━━━━━━━�
       }
     }
 
-    // إرسال مباشر عبر follow_up_webhook_url إذا كان موجوداً
-    if (settings.follow_up_webhook_url) {
+    // إرسال مباشر عبر follow_up_webhook_url إذا كان موجوداً (يُعطّل في وضع الاختبار)
+    if (settings.follow_up_webhook_url && !isTest) {
       try {
         console.log('Sending via follow_up_webhook:', settings.follow_up_webhook_url);
         
@@ -308,6 +308,20 @@ ${delayedSection}${delayedSection ? '━━━━━━━━━━━━━━�
       } catch (webhookError) {
         console.error('Error sending via follow_up_webhook:', webhookError);
       }
+    }
+
+    // معالجة قائمة الرسائل عبر القناة القياسية دائماً لضمان الإرسال
+    try {
+      const { error: queueError2 } = await supabase.functions.invoke('process-whatsapp-queue', {
+        body: { action: 'process_pending_messages', source: 'daily-financial-report' }
+      }) as any;
+      if (queueError2) {
+        console.warn('Queue processing error:', queueError2);
+      } else {
+        console.log('Queued WhatsApp message for processing.');
+      }
+    } catch (e) {
+      console.warn('Failed to invoke process-whatsapp-queue:', e);
     }
 
     return new Response(
