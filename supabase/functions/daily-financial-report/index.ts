@@ -226,7 +226,7 @@ ${delayedSection}${delayedSection ? '━━━━━━━━━━━━━━�
       .insert({
         from_number: 'system',
         to_number: toNumber,
-        message_type: 'text',
+        message_type: 'financial_report',
         message_content: finalMessage,
         status: 'pending',
         dedupe_key: isTest ? `daily_report_test_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` : `daily_report_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
@@ -258,7 +258,7 @@ ${delayedSection}${delayedSection ? '━━━━━━━━━━━━━━�
             messageText: finalMessage,
             text: finalMessage,
             type: 'text',
-            message_type: 'daily_financial_report',
+            message_type: 'financial_report',
             timestamp: Math.floor(Date.now() / 1000),
             from_number: 'system',
             // حقول توافق مع مسار إشعار الطلب الجديد (n8n)
