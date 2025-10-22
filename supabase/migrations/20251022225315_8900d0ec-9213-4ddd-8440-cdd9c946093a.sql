@@ -1,0 +1,10 @@
+-- حذف الـ foreign key القديم وإعادة إنشائه للإشارة إلى profiles
+ALTER TABLE public.user_activity_logs
+DROP CONSTRAINT IF EXISTS user_activity_logs_user_id_fkey;
+
+-- إضافة foreign key جديد يشير إلى profiles
+ALTER TABLE public.user_activity_logs
+ADD CONSTRAINT user_activity_logs_user_id_fkey 
+FOREIGN KEY (user_id) 
+REFERENCES public.profiles(id) 
+ON DELETE CASCADE;
