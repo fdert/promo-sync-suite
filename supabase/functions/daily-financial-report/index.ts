@@ -259,8 +259,8 @@ ${delayedSection}${delayedSection ? '━━━━━━━━━━━━━━�
       }
     }
 
-    // إرسال مباشر عبر follow_up_webhook_url إذا كان موجوداً (يُعطّل في وضع الاختبار)
-    if (settings.follow_up_webhook_url && !isTest) {
+    // إرسال مباشر عبر follow_up_webhook_url إذا كان موجوداً (حتى في وضع الاختبار)
+    if (settings.follow_up_webhook_url) {
       try {
         console.log('Sending via follow_up_webhook:', settings.follow_up_webhook_url);
         
@@ -289,6 +289,7 @@ ${delayedSection}${delayedSection ? '━━━━━━━━━━━━━━�
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
+        const respText = await webhookResp.text();
 
         if (webhookResp.ok) {
           console.log('✅ Sent via follow_up_webhook successfully');
