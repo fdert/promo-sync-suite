@@ -474,7 +474,10 @@ const FollowUpSettings = () => {
       let query = supabase
         .from('user_activity_logs')
         .select(`
-          *
+          *,
+          profiles:user_id (
+            full_name
+          )
         `)
         .order('created_at', { ascending: false });
 
@@ -493,8 +496,6 @@ const FollowUpSettings = () => {
       if (actionFilter && actionFilter !== "all") {
         query = query.eq('action', actionFilter);
       }
-
-      // resource_type غير متوفر في user_activity_logs حالياً، لذلك نتخطى الفلترة على مستوى الخادم
 
       const { data, error } = await query.limit(500);
 
@@ -1231,7 +1232,7 @@ const FollowUpSettings = () => {
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <User className="h-4 w-4 text-gray-400" />
-                              {users.find(u => u.id === log.user_id)?.full_name || 'مستخدم غير معروف'}
+                              {log.profiles?.full_name || 'مستخدم غير معروف'}
                             </div>
                           </TableCell>
                           <TableCell>
