@@ -98,22 +98,34 @@ const CustomerPrintOrders = () => {
 
       if (error) throw error;
 
-      // حساب عدد طلبات الطباعة لكل عميل
-      const customersWithPrintCount = await Promise.all(
+      // حساب عدد الطلبات وإجمالي المبيعات لكل عميل
+      const customersWithStats = await Promise.all(
         (data || []).map(async (customer) => {
-          const { data: printOrdersCount } = await supabase
+          // حساب عدد طلبات الطباعة
+          const { count: printOrdersCount } = await supabase
             .from("print_orders")
-            .select("id", { count: "exact" })
+            .select("*", { count: "exact", head: true })
             .eq("orders.customer_id", customer.id);
+
+          // حساب عدد الطلبات وإجمالي المبيعات
+          const { data: ordersData } = await supabase
+            .from("orders")
+            .select("total_amount")
+            .eq("customer_id", customer.id);
+
+          const totalOrders = ordersData?.length || 0;
+          const totalSpent = ordersData?.reduce((sum, order) => sum + (Number(order.total_amount) || 0), 0) || 0;
 
           return {
             ...customer,
-            print_orders_count: printOrdersCount?.length || 0
+            total_orders: totalOrders,
+            total_spent: totalSpent,
+            print_orders_count: printOrdersCount || 0
           };
         })
       );
 
-      setCustomers(customersWithPrintCount);
+      setCustomers(customersWithStats);
     } catch (error) {
       console.error("Error fetching customers:", error);
       toast({
@@ -258,10 +270,10 @@ const CustomerPrintOrders = () => {
                   </div>
                   <div className="flex gap-4 mt-2">
                     <span className="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                      إجمالي الطلبات: {customer.total_orders}
+                      إجمالي الطلبات: {customer.total_orders || 0}
                     </span>
                     <span className="text-sm bg-green-100 text-green-800 px-2 py-1 rounded">
-                      إجمالي المبيعات: {customer.total_spent.toLocaleString()} ر.س
+                      إجمالي المبيعات: {(customer.total_spent || 0).toLocaleString()} ر.س
                     </span>
                   </div>
                 </div>
