@@ -243,6 +243,22 @@ ${delayedSection}${delayedSection ? '━━━━━━━━━━━━━━�
 
     console.log('Daily financial report created successfully');
 
+    // في وضع الاختبار: معالجة قائمة الواتساب فورًا لضمان الإرسال عبر قناة موحّدة
+    if (isTest) {
+      try {
+        const { error: queueError } = await supabase.functions.invoke('process-whatsapp-queue', {
+          body: { action: 'process_pending_messages', source: 'daily-financial-report-test' }
+        }) as any;
+        if (queueError) {
+          console.warn('Queue processing error (test):', queueError);
+        } else {
+          console.log('Queued WhatsApp message for processing (test).');
+        }
+      } catch (e) {
+        console.warn('Failed to invoke process-whatsapp-queue (test):', e);
+      }
+    }
+
     // إرسال مباشر عبر follow_up_webhook_url إذا كان موجوداً
     if (settings.follow_up_webhook_url) {
       try {
