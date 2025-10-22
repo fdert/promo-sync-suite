@@ -174,15 +174,15 @@ const Accounts = () => {
       // تطبيق فلتر البحث في اسم العميل
       if (debtorSearch.customerName) {
         filteredCustomers = filteredCustomers.filter((customer: any) => {
-          return customer.customer_name.toLowerCase().includes(debtorSearch.customerName.toLowerCase());
+          return customer.customer_name?.toLowerCase().includes(debtorSearch.customerName.toLowerCase());
         });
       }
 
       // تطبيق فلتر الحالة
       if (debtorSearch.status !== 'all') {
         filteredCustomers = filteredCustomers.filter((customer: any) => {
-          const remainingAmount = customer.outstanding_balance || 0;
-          const paidAmount = customer.total_paid_amount || 0;
+          const remainingAmount = customer.balance || 0;
+          const paidAmount = customer.paid_amount || 0;
           
           if (debtorSearch.status === 'partial') {
             return paidAmount > 0 && remainingAmount > 0.01;
@@ -200,13 +200,10 @@ const Accounts = () => {
         id: customer.customer_id,
         customer_id: customer.customer_id,
         customer_name: customer.customer_name,
-        total_amount: customer.total_order_amount,
-        calculated_paid_amount: customer.total_paid_amount,
-        remaining_amount: customer.outstanding_balance,
-        total_orders: customer.total_orders,
-        unpaid_orders_count: customer.unpaid_orders_count,
-        earliest_due_date: customer.earliest_due_date,
-        latest_due_date: customer.latest_due_date
+        total_amount: customer.total_amount || 0,
+        calculated_paid_amount: customer.paid_amount || 0,
+        remaining_amount: customer.balance || 0,
+        total_orders: customer.total_orders || 0
       }));
 
       setDebtorInvoices(processedData);
@@ -272,20 +269,24 @@ const Accounts = () => {
     }
 
     try {
+      // توليد رقم حساب تلقائياً
+      const accountCount = accounts.length + 1;
+      const accountNumber = `${accountCount.toString().padStart(4, '0')}`;
+      
       const { error } = await supabase
         .from('accounts')
         .insert({
+          account_number: accountNumber,
           account_name: newAccount.account_name,
           account_type: newAccount.account_type,
-          description: newAccount.description,
-          created_by: (await supabase.auth.getUser()).data.user?.id
+          balance: 0
         });
 
       if (error) {
         console.error('Error adding account:', error);
         toast({
           title: "خطأ",
-          description: "حدث خطأ في إضافة الحساب",
+          description: error.message || "حدث خطأ في إضافة الحساب",
           variant: "destructive",
         });
         return;
@@ -327,17 +328,16 @@ const Accounts = () => {
           reference_type: newEntry.reference_type || 'أخرى',
           reference_id: newEntry.reference_id,
           description: newEntry.description,
-          debit_amount: parseFloat(newEntry.debit_amount) || 0,
-          credit_amount: parseFloat(newEntry.credit_amount) || 0,
-          entry_date: newEntry.entry_date,
-          created_by: (await supabase.auth.getUser()).data.user?.id
+          debit: parseFloat(newEntry.debit_amount) || 0,
+          credit: parseFloat(newEntry.credit_amount) || 0,
+          entry_date: newEntry.entry_date
         });
 
       if (error) {
         console.error('Error adding entry:', error);
         toast({
           title: "خطأ",
-          description: "حدث خطأ في إضافة القيد",
+          description: error.message || "حدث خطأ في إضافة القيد",
           variant: "destructive",
         });
         return;
@@ -377,25 +377,12 @@ const Accounts = () => {
     }
 
     try {
-      const { data: expenseNumber, error: expenseError } = await supabase.rpc('generate_expense_number');
-      
-      if (expenseError) {
-        console.error('Error generating expense number:', expenseError);
-        toast({
-          title: "خطأ",
-          description: "حدث خطأ في إنشاء رقم المصروف",
-          variant: "destructive",
-        });
-        return;
-      }
-      
       const { error } = await supabase
         .from('expenses')
         .insert({
-          expense_number: expenseNumber,
+          expense_type: newExpense.category,
           description: newExpense.description,
           amount: parseFloat(newExpense.amount),
-          category: newExpense.category,
           expense_date: newExpense.expense_date,
           payment_method: newExpense.payment_method,
           notes: newExpense.notes,
@@ -406,7 +393,7 @@ const Accounts = () => {
         console.error('Error adding expense:', error);
         toast({
           title: "خطأ",
-          description: "حدث خطأ في إضافة المصروف",
+          description: error.message || "حدث خطأ في إضافة المصروف",
           variant: "destructive",
         });
         return;
@@ -434,7 +421,7 @@ const Accounts = () => {
 
   // تعديل مصروف
   const handleEditExpense = async () => {
-    if (!editingExpense || !editingExpense.description || !editingExpense.amount || !editingExpense.category) {
+    if (!editingExpense || !editingExpense.description || !editingExpense.amount || !editingExpense.expense_type) {
       toast({
         title: "خطأ",
         description: "يرجى ملء الحقول المطلوبة",
@@ -447,9 +434,9 @@ const Accounts = () => {
       const { error } = await supabase
         .from('expenses')
         .update({
+          expense_type: editingExpense.expense_type,
           description: editingExpense.description,
           amount: parseFloat(editingExpense.amount),
-          category: editingExpense.category,
           expense_date: editingExpense.expense_date,
           payment_method: editingExpense.payment_method,
           notes: editingExpense.notes,
@@ -460,7 +447,7 @@ const Accounts = () => {
         console.error('Error updating expense:', error);
         toast({
           title: "خطأ",
-          description: "حدث خطأ في تحديث المصروف",
+          description: error.message || "حدث خطأ في تحديث المصروف",
           variant: "destructive",
         });
         return;
@@ -1438,16 +1425,16 @@ const Accounts = () => {
                     </div>
                     <div className="text-right">
                       <div className="flex gap-4">
-                        {entry.debit_amount > 0 && (
+                        {entry.debit > 0 && (
                           <div>
                             <p className="text-sm text-muted-foreground">مدين</p>
-                            <p className="font-bold text-red-600">+{entry.debit_amount?.toLocaleString()} ر.س</p>
+                            <p className="font-bold text-red-600">+{entry.debit?.toLocaleString()} ر.س</p>
                           </div>
                         )}
-                        {entry.credit_amount > 0 && (
+                        {entry.credit > 0 && (
                           <div>
                             <p className="text-sm text-muted-foreground">دائن</p>
-                            <p className="font-bold text-green-600">-{entry.credit_amount?.toLocaleString()} ر.س</p>
+                            <p className="font-bold text-green-600">-{entry.credit?.toLocaleString()} ر.س</p>
                           </div>
                         )}
                       </div>
@@ -1573,13 +1560,13 @@ const Accounts = () => {
                       </div>
                       <div>
                         <h3 className="font-medium">{expense.description}</h3>
-                        <p className="text-sm text-muted-foreground">{expense.category} • {expense.date}</p>
+                        <p className="text-sm text-muted-foreground">{expense.expense_type} • {new Date(expense.expense_date).toLocaleDateString('ar-SA')}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="text-right">
                         <p className="font-bold text-lg text-destructive">-{expense.amount?.toLocaleString()} ر.س</p>
-                        <p className="text-sm text-muted-foreground">{expense.expense_number}</p>
+                        <p className="text-sm text-muted-foreground">{new Date(expense.expense_date).toLocaleDateString('ar-SA')}</p>
                       </div>
                       {userRole === 'admin' && (
                         <div className="flex gap-2">
@@ -1753,8 +1740,6 @@ const Accounts = () => {
                     const remainingAmount = customer.remaining_amount || 0;
                     const totalAmount = customer.total_amount || 0;
                     const paidAmount = customer.calculated_paid_amount || 0;
-                    const daysPastDue = customer.latest_due_date ? 
-                      Math.floor((new Date().getTime() - new Date(customer.latest_due_date).getTime()) / (1000 * 60 * 60 * 24)) : 0;
                     
                     return (
                       <div key={customer.id || customer.customer_id} className="flex items-center justify-between p-4 border-b hover:bg-muted/50">
@@ -1765,16 +1750,8 @@ const Accounts = () => {
                           <div>
                             <h3 className="font-medium">{customer.customer_name || 'عميل غير محدد'}</h3>
                             <p className="text-sm text-muted-foreground">
-                              عدد الطلبات: {customer.total_orders || 0} • طلبات غير مدفوعة: {customer.unpaid_orders_count || 0}
+                              عدد الطلبات: {customer.total_orders || 0}
                             </p>
-                            {customer.latest_due_date && (
-                              <p className="text-sm text-muted-foreground">
-                                آخر تاريخ استحقاق: {customer.latest_due_date}
-                                {daysPastDue > 0 && (
-                                  <span className="text-destructive font-medium"> • متأخر {daysPastDue} يوم</span>
-                                )}
-                              </p>
-                            )}
                           </div>
                         </div>
                         
@@ -1997,18 +1974,18 @@ const Accounts = () => {
               </div>
               <div>
                 <Label htmlFor="edit_category">الفئة</Label>
-                <Select value={editingExpense?.category || ''} onValueChange={(value) => setEditingExpense({...editingExpense, category: value})}>
+                <Select value={editingExpense?.expense_type || editingExpense?.category || ''} onValueChange={(value) => setEditingExpense({...editingExpense, expense_type: value, category: value})}>
                   <SelectTrigger>
                     <SelectValue placeholder="اختر الفئة" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="مصروفات إدارية">مصروفات إدارية</SelectItem>
-                    <SelectItem value="مصروفات تشغيلية">مصروفات تشغيلية</SelectItem>
-                    <SelectItem value="مصروفات تسويقية">مصروفات تسويقية</SelectItem>
-                    <SelectItem value="إيجارات">إيجارات</SelectItem>
+                    <SelectItem value="مكتبية">مصروفات مكتبية</SelectItem>
+                    <SelectItem value="تشغيلية">مصروفات تشغيلية</SelectItem>
+                    <SelectItem value="تسويق">تسويق وإعلان</SelectItem>
+                    <SelectItem value="صيانة">صيانة وإصلاح</SelectItem>
+                    <SelectItem value="مواصلات">مواصلات</SelectItem>
                     <SelectItem value="رواتب">رواتب</SelectItem>
                     <SelectItem value="كهرباء وماء">كهرباء وماء</SelectItem>
-                    <SelectItem value="صيانة">صيانة</SelectItem>
                     <SelectItem value="أخرى">أخرى</SelectItem>
                   </SelectContent>
                 </Select>
