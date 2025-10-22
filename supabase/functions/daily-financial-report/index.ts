@@ -250,7 +250,7 @@ ${delayedSection}${delayedSection ? '━━━━━━━━━━━━━━�
             messageText: message,
             text: message,
             type: 'text',
-            message_type: 'daily_financial_report',
+            message_type: 'new_order_notification',
             timestamp: Math.floor(Date.now() / 1000),
             from_number: 'system',
             // حقول توافق مع مسار إشعار الطلب الجديد (n8n)
