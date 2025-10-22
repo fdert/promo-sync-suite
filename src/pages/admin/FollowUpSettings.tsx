@@ -40,6 +40,7 @@ interface FollowUpSettings {
   notify_payment_delay: boolean;
   notify_whatsapp_failure: boolean;
   notify_expense_logged: boolean;
+  notify_payment_logged: boolean;
   daily_financial_report: boolean;
   delivery_delay_days: number;
   payment_delay_days: number;
@@ -74,6 +75,7 @@ const FollowUpSettings = () => {
     notify_payment_delay: true,
     notify_whatsapp_failure: true,
     notify_expense_logged: true,
+    notify_payment_logged: true,
     daily_financial_report: true,
     delivery_delay_days: 1,
     payment_delay_days: 7,
@@ -121,6 +123,7 @@ const FollowUpSettings = () => {
           notify_payment_delay: data.notify_payment_delay,
           notify_whatsapp_failure: data.notify_whatsapp_failure,
           notify_expense_logged: data.notify_expense_logged,
+          notify_payment_logged: data.notify_payment_logged || true,
           daily_financial_report: data.daily_financial_report,
           delivery_delay_days: data.delivery_delay_days,
           payment_delay_days: data.payment_delay_days,
@@ -150,6 +153,7 @@ const FollowUpSettings = () => {
         notify_payment_delay: settings.notify_payment_delay,
         notify_whatsapp_failure: settings.notify_whatsapp_failure,
         notify_expense_logged: settings.notify_expense_logged,
+        notify_payment_logged: settings.notify_payment_logged,
         daily_financial_report: settings.daily_financial_report,
         delivery_delay_days: settings.delivery_delay_days,
         payment_delay_days: settings.payment_delay_days,
@@ -692,6 +696,24 @@ const FollowUpSettings = () => {
                       checked={settings.notify_expense_logged}
                       onCheckedChange={(checked) => 
                         setSettings({ ...settings, notify_expense_logged: checked })
+                      }
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-green-50 to-green-100 border border-green-200 dark:from-green-900/20 dark:to-green-800/20 dark:border-green-700/30">
+                    <div className="flex items-center gap-3">
+                      <DollarSign className="h-5 w-5 text-green-600" />
+                      <div>
+                        <h4 className="font-medium">إشعار تسجيل الدفعات</h4>
+                        <p className="text-sm text-muted-foreground">
+                          إرسال إشعار لفريق المتابعة عند تسجيل دفعة جديدة للطلب
+                        </p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={settings.notify_payment_logged}
+                      onCheckedChange={(checked) => 
+                        setSettings({ ...settings, notify_payment_logged: checked })
                       }
                     />
                   </div>
