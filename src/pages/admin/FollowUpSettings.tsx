@@ -928,7 +928,7 @@ const FollowUpSettings = () => {
                   </div>
 
                   <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-purple-50 to-purple-100 border border-purple-200 dark:from-purple-900/20 dark:to-purple-800/20 dark:border-purple-700/30">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 flex-1">
                       <Activity className="h-5 w-5 text-purple-600" />
                       <div>
                         <h4 className="font-medium">تقرير مالي يومي</h4>
@@ -937,12 +937,35 @@ const FollowUpSettings = () => {
                         </p>
                       </div>
                     </div>
-                    <Switch
-                      checked={settings.daily_financial_report}
-                      onCheckedChange={(checked) => 
-                        setSettings({ ...settings, daily_financial_report: checked })
-                      }
-                    />
+                    <div className="flex items-center gap-2">
+                      {settings.daily_financial_report && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={handleTestFinancialReport}
+                          disabled={isTestingFinancialReport || !settings.whatsapp_number}
+                          className="text-xs"
+                        >
+                          {isTestingFinancialReport ? (
+                            <div className="flex items-center gap-1">
+                              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary"></div>
+                              جاري...
+                            </div>
+                          ) : (
+                            <>
+                              <Zap className="h-3 w-3 ml-1" />
+                              اختبار
+                            </>
+                          )}
+                        </Button>
+                      )}
+                      <Switch
+                        checked={settings.daily_financial_report}
+                        onCheckedChange={(checked) => 
+                          setSettings({ ...settings, daily_financial_report: checked })
+                        }
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -1012,29 +1035,9 @@ const FollowUpSettings = () => {
                     </>
                   )}
                 </Button>
-
-                <Button 
-                  onClick={handleTestFinancialReport} 
-                  disabled={isTestingFinancialReport || !settings.whatsapp_number || !settings.daily_financial_report}
-                  variant="outline"
-                  size="lg"
-                  className="min-w-[180px] border-purple-200 hover:border-purple-300 hover:bg-purple-50 dark:border-purple-700 dark:hover:bg-purple-900/20"
-                >
-                  {isTestingFinancialReport ? (
-                    <div className="flex items-center gap-2">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600"></div>
-                      جاري الإرسال...
-                    </div>
-                  ) : (
-                    <>
-                      <DollarSign className="h-4 w-4 ml-2 text-purple-600" />
-                      اختبار التقرير المالي
-                    </>
-                  )}
-                </Button>
               </div>
               
-              <Button 
+              <Button
                 onClick={handleSave} 
                 disabled={saving}
                 size="lg"
