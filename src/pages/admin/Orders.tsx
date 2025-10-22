@@ -1369,26 +1369,48 @@ ${companyName}`;
   const updateOrder = async () => {
     if (!selectedOrderForEditing) return;
 
+    // التحقق من البيانات المطلوبة
+    if (!newOrder.customer_id) {
+      toast({
+        title: "خطأ",
+        description: "يرجى اختيار العميل",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setLoading(true);
 
+      console.log('🔄 بداية تحديث الطلب...');
+      console.log('البيانات المراد حفظها:', newOrder);
+      console.log('البنود الحالية:', orderItems);
+
       // تحديث بيانات الطلب الأساسية
+      const updateData: any = {
+        customer_id: newOrder.customer_id,
+        service_type_id: newOrder.service_id || null,
+        delivery_date: newOrder.due_date || null,
+        notes: newOrder.description?.trim() || null,
+        total_amount: newOrder.amount || 0,
+        tax: newOrder.tax || 0,
+        discount: newOrder.discount || 0,
+        updated_at: new Date().toISOString()
+      };
+
+      console.log('بيانات التحديث:', updateData);
+
       const { error: orderError } = await supabase
         .from('orders')
-        .update({
-          customer_id: newOrder.customer_id,
-          service_name: newOrder.service_name,
-          priority: newOrder.priority,
-          delivery_date: newOrder.due_date || null,
-          description: newOrder.description,
-          total_amount: newOrder.amount,
-          payment_type: newOrder.payment_type,
-          payment_notes: newOrder.payment_notes,
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', selectedOrderForEditing.id);
 
-      if (orderError) throw orderError;
+      if (orderError) {
+        console.error('❌ خطأ في تحديث الطلب:', orderError);
+        throw orderError;
+      }
+
+      console.log('✅ تم تحديث بيانات الطلب الأساسية');
 
       // حذف البنود القديمة
       const { error: deleteItemsError } = await supabase
@@ -1396,23 +1418,37 @@ ${companyName}`;
         .delete()
         .eq('order_id', selectedOrderForEditing.id);
 
-      if (deleteItemsError) throw deleteItemsError;
+      if (deleteItemsError) {
+        console.error('❌ خطأ في حذف البنود القديمة:', deleteItemsError);
+        throw deleteItemsError;
+      }
+
+      console.log('✅ تم حذف البنود القديمة');
 
       // إضافة البنود الجديدة
-      if (orderItems.length > 0 && orderItems[0].item_name) {
-        const itemsToInsert = orderItems.map(item => ({
+      const validItems = orderItems.filter(item => item.item_name && item.item_name.trim() !== '');
+      
+      if (validItems.length > 0) {
+        const itemsToInsert = validItems.map(item => ({
           order_id: selectedOrderForEditing.id,
           item_name: item.item_name,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-          total: item.total_amount
+          quantity: Number(item.quantity) || 1,
+          unit_price: Number(item.unit_price) || 0,
+          total: Number(item.total_amount) || 0
         }));
+
+        console.log('البنود المراد إدراجها:', itemsToInsert);
 
         const { error: insertItemsError } = await supabase
           .from('order_items')
           .insert(itemsToInsert);
 
-        if (insertItemsError) throw insertItemsError;
+        if (insertItemsError) {
+          console.error('❌ خطأ في إدراج البنود الجديدة:', insertItemsError);
+          throw insertItemsError;
+        }
+
+        console.log('✅ تم إدراج البنود الجديدة بنجاح');
       }
 
       toast({
