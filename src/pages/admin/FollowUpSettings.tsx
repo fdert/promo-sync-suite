@@ -1146,6 +1146,29 @@ const FollowUpSettings = () => {
                         return;
                       }
 
+                      // تأكد من وجود profile للمستخدم
+                      const { data: existingProfile } = await supabase
+                        .from('profiles')
+                        .select('id')
+                        .eq('id', user.id)
+                        .single();
+
+                      if (!existingProfile) {
+                        const { error: profileError } = await supabase
+                          .from('profiles')
+                          .insert({
+                            id: user.id,
+                            email: user.email,
+                            full_name: user.user_metadata?.full_name || user.email
+                          });
+
+                        if (profileError) {
+                          console.error('Error creating profile:', profileError);
+                          toast({ title: "خطأ", description: "فشل في إنشاء الملف الشخصي", variant: "destructive" });
+                          return;
+                        }
+                      }
+
                       const actions = ['create', 'update', 'delete', 'login', 'logout'];
                       const now = new Date();
                       const payload = actions.map((a, idx) => ({
