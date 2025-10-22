@@ -779,8 +779,8 @@ const Invoices = () => {
       ...invoice,
       issue_date: invoice.issue_date ? new Date(invoice.issue_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
       due_date: invoice.due_date ? new Date(invoice.due_date).toISOString().split('T')[0] : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      amount: Number(invoice.amount) || 0,
-      tax_amount: Number(invoice.tax_amount) || 0,
+      subtotal: Number(invoice.total_amount || 0) / 1.15, // المبلغ قبل الضريبة
+      tax: Number(invoice.tax) || 0,
       total_amount: Number(invoice.total_amount) || 0,
       paid_amount: Number(invoice.paid_amount) || 0
     };
@@ -797,8 +797,8 @@ const Invoices = () => {
       customer_id: '',
       issue_date: new Date().toISOString().split('T')[0],
       due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      amount: 0,
-      tax_amount: 0,
+      subtotal: 0,
+      tax: 0,
       total_amount: 0,
       status: 'قيد الانتظار',
       payment_type: 'دفع آجل',
@@ -821,7 +821,7 @@ const Invoices = () => {
         return;
       }
 
-      if (!invoiceData.amount || invoiceData.amount <= 0) {
+      if (!invoiceData.subtotal || invoiceData.subtotal <= 0) {
         toast({
           title: "خطأ",
           description: "يجب إدخال مبلغ صحيح",
@@ -836,11 +836,10 @@ const Invoices = () => {
         customer_id: invoiceData.customer_id,
         issue_date: invoiceData.issue_date,
         due_date: invoiceData.due_date,
-        amount: Number(invoiceData.amount),
-        tax_amount: Number(invoiceData.tax_amount),
+        tax: Number(invoiceData.tax || 0),
+        discount: Number(invoiceData.discount || 0),
         total_amount: Number(invoiceData.total_amount),
         status: invoiceData.status,
-        payment_type: invoiceData.payment_type,
         notes: invoiceData.notes || null,
         order_id: invoiceData.order_id || null
       };
@@ -1446,16 +1445,16 @@ const Invoices = () => {
                 <div className="space-y-2">
                   <Label>المبلغ</Label>
                    <Input
-                     type="text"
-                     value={editingInvoice.amount}
+                     type="number"
+                     value={editingInvoice.subtotal || 0}
                      onChange={(e) => {
-                       const amount = parseFloat(e.target.value) || 0;
-                       const taxAmount = amount * 0.15; // 15% ضريبة القيمة المضافة
+                       const subtotal = parseFloat(e.target.value) || 0;
+                       const tax = subtotal * 0.15; // 15% ضريبة القيمة المضافة
                        setEditingInvoice({
                          ...editingInvoice, 
-                         amount: amount,
-                         tax_amount: taxAmount,
-                         total_amount: amount + taxAmount
+                         subtotal: subtotal,
+                         tax: tax,
+                         total_amount: subtotal + tax
                        });
                      }}
                      placeholder="المبلغ"
@@ -1464,8 +1463,8 @@ const Invoices = () => {
                 <div className="space-y-2">
                   <Label>الضريبة (15%)</Label>
                    <Input
-                     type="text"
-                     value={editingInvoice.tax_amount}
+                     type="number"
+                     value={editingInvoice.tax || 0}
                      readOnly
                      className="bg-muted"
                    />
@@ -1473,8 +1472,8 @@ const Invoices = () => {
                 <div className="space-y-2">
                   <Label>المجموع الكلي</Label>
                    <Input
-                     type="text"
-                     value={editingInvoice.total_amount}
+                     type="number"
+                     value={editingInvoice.total_amount || 0}
                      readOnly
                      className="bg-muted font-bold"
                    />
