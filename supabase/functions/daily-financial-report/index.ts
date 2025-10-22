@@ -268,10 +268,7 @@ ${delayedSection}${delayedSection ? '━━━━━━━━━━━━━━�
           if (messageId) {
             await supabase
               .from('whatsapp_messages')
-              .update({ 
-                status: 'sent', 
-                sent_at: new Date().toISOString() 
-              })
+              .update({ webhook_id: 'follow_up_webhook_ok' })
               .eq('id', messageId);
           }
         } else {
@@ -280,6 +277,26 @@ ${delayedSection}${delayedSection ? '━━━━━━━━━━━━━━�
       } catch (webhookError) {
         console.error('Error sending via follow_up_webhook:', webhookError);
       }
+    }
+
+    // تفعيل الإرسال الداخلي دائماً لضمان الوصول
+    await new Promise(resolve => setTimeout(resolve, 500));
+    console.log('Invoking process-whatsapp-queue to send the message...');
+    try {
+      const { data: queueResult, error: queueError } = await supabase.functions.invoke('process-whatsapp-queue', {
+        body: {
+          action: 'process_pending_messages',
+          timestamp: new Date().toISOString()
+        }
+      });
+
+      if (queueError) {
+        console.error('Error invoking process-whatsapp-queue:', queueError);
+      } else {
+        console.log('process-whatsapp-queue invoked successfully:', queueResult);
+      }
+    } catch (queueInvokeError) {
+      console.error('Failed to invoke process-whatsapp-queue:', queueInvokeError);
     }
 
     return new Response(
