@@ -10,9 +10,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Plus, TrendingUp, TrendingDown, DollarSign, CreditCard, Receipt, CalendarRange, BookOpen, BarChart3, Trash2, Edit2, Eye, Users, Search, Filter, RefreshCw, Eraser, AlertTriangle } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, DollarSign, CreditCard, Receipt, CalendarRange, BookOpen, BarChart3, Trash2, Edit2, Eye, Users, Search, Filter, RefreshCw, Eraser, AlertTriangle, Download, FileSpreadsheet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 
 const Accounts = () => {
   const [accounts, setAccounts] = useState<any[]>([]);
@@ -523,6 +526,126 @@ const Accounts = () => {
       fetchAccounts();
     } catch (error) {
       console.error('Error:', error);
+    }
+  };
+
+  // تصدير العملاء المدينين إلى PDF
+  const exportDebtorsToPDF = () => {
+    try {
+      const doc = new jsPDF();
+      
+      // إضافة خط عربي - استخدام خط افتراضي يدعم العربية
+      doc.setFont('helvetica');
+      doc.setFontSize(16);
+      doc.text('تقرير العملاء المدينين', 105, 15, { align: 'center' });
+      
+      // إضافة تاريخ التقرير
+      doc.setFontSize(10);
+      doc.text(`تاريخ التقرير: ${new Date().toLocaleDateString('ar-SA')}`, 105, 25, { align: 'center' });
+      
+      // تجهيز البيانات للجدول
+      const tableData = debtorInvoices.map(customer => [
+        customer.customer_name || 'غير محدد',
+        (customer.total_orders || 0).toString(),
+        `${(customer.total_amount || 0).toLocaleString()} ر.س`,
+        `${(customer.calculated_paid_amount || 0).toLocaleString()} ر.س`,
+        `${(customer.remaining_amount || 0).toLocaleString()} ر.س`,
+      ]);
+      
+      // إضافة الجدول
+      autoTable(doc, {
+        startY: 35,
+        head: [['اسم العميل', 'عدد الطلبات', 'إجمالي المبلغ', 'المبلغ المدفوع', 'المبلغ المستحق']],
+        body: tableData,
+        styles: { 
+          font: 'helvetica',
+          fontSize: 10,
+          halign: 'center'
+        },
+        headStyles: { 
+          fillColor: [41, 128, 185],
+          textColor: 255,
+          fontStyle: 'bold'
+        },
+        alternateRowStyles: {
+          fillColor: [245, 245, 245]
+        }
+      });
+      
+      // إضافة الملخص في نهاية الصفحة
+      const finalY = (doc as any).lastAutoTable.finalY || 35;
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`إجمالي المبالغ المستحقة: ${totalDebts.toLocaleString()} ر.س`, 105, finalY + 15, { align: 'center' });
+      
+      // حفظ الملف
+      doc.save(`تقرير_العملاء_المدينين_${new Date().toLocaleDateString('ar-SA')}.pdf`);
+      
+      toast({
+        title: "تم التصدير",
+        description: "تم تصدير التقرير إلى PDF بنجاح",
+      });
+    } catch (error) {
+      console.error('Error exporting to PDF:', error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ في تصدير التقرير إلى PDF",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // تصدير العملاء المدينين إلى Excel
+  const exportDebtorsToExcel = () => {
+    try {
+      // تجهيز البيانات
+      const exportData = debtorInvoices.map(customer => ({
+        'اسم العميل': customer.customer_name || 'غير محدد',
+        'عدد الطلبات': customer.total_orders || 0,
+        'إجمالي المبلغ (ر.س)': customer.total_amount || 0,
+        'المبلغ المدفوع (ر.س)': customer.calculated_paid_amount || 0,
+        'المبلغ المستحق (ر.س)': customer.remaining_amount || 0,
+      }));
+      
+      // إضافة صف الملخص
+      exportData.push({
+        'اسم العميل': 'إجمالي المبالغ المستحقة',
+        'عدد الطلبات': '',
+        'إجمالي المبلغ (ر.س)': '',
+        'المبلغ المدفوع (ر.س)': '',
+        'المبلغ المستحق (ر.س)': totalDebts,
+      });
+      
+      // إنشاء ورقة العمل
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      
+      // تعيين عرض الأعمدة
+      ws['!cols'] = [
+        { wch: 30 }, // اسم العميل
+        { wch: 15 }, // عدد الطلبات
+        { wch: 20 }, // إجمالي المبلغ
+        { wch: 20 }, // المبلغ المدفوع
+        { wch: 20 }, // المبلغ المستحق
+      ];
+      
+      // إنشاء المصنف
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'العملاء المدينون');
+      
+      // حفظ الملف
+      XLSX.writeFile(wb, `تقرير_العملاء_المدينين_${new Date().toLocaleDateString('ar-SA')}.xlsx`);
+      
+      toast({
+        title: "تم التصدير",
+        description: "تم تصدير التقرير إلى Excel بنجاح",
+      });
+    } catch (error) {
+      console.error('Error exporting to Excel:', error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ في تصدير التقرير إلى Excel",
+        variant: "destructive",
+      });
     }
   };
 
@@ -1724,6 +1847,24 @@ const Accounts = () => {
                 >
                   <Search className="h-4 w-4" />
                   مسح الفلاتر
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={exportDebtorsToPDF}
+                  className="gap-2"
+                  disabled={debtorInvoices.length === 0}
+                >
+                  <Download className="h-4 w-4" />
+                  تصدير PDF
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={exportDebtorsToExcel}
+                  className="gap-2"
+                  disabled={debtorInvoices.length === 0}
+                >
+                  <FileSpreadsheet className="h-4 w-4" />
+                  تصدير Excel
                 </Button>
               </div>
             </CardContent>
