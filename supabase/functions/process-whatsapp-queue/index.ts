@@ -161,8 +161,14 @@ async function sendToWhatsAppService(message: any): Promise<boolean> {
       .select('*')
       .eq('is_active', true)
       .order('webhook_type', { ascending: true }); // bulk_campaign سيكون أولاً أبجدياً
-    
+
     console.log('📋 Webhooks المتاحة:', webhooks?.map(w => `${w.webhook_name} (${w.webhook_type})`));
+
+    // جلب إعدادات متابعة لتحديد رقم إدارة المتابعة
+    const { data: fuSettings } = await supabase
+      .from('follow_up_settings')
+      .select('whatsapp_number')
+      .single();
 
     if (!webhooks || webhooks.length === 0) {
       console.error('❌ لا يوجد أي webhook نشط في النظام');
@@ -180,13 +186,33 @@ async function sendToWhatsAppService(message: any): Promise<boolean> {
     // اختيار الـ webhook المناسب
     let selectedWebhook = null;
     
-    // أولاً: البحث عن webhook للحملات الجماعية
-    selectedWebhook = webhooks.find(w => w.webhook_type === 'bulk_campaign');
+    // أولوية: إذا كانت الرسالة موجهة لرقم إدارة المتابعة، استخدم ويب هوك الطلبات العادية
+    try {
+      const adminNumber = String(fuSettings?.whatsapp_number || '').replace(/[^\d+]/g, '');
+      const toNumberNormalized = String(message.to_number || '').replace(/[^\d+]/g, '');
+      if (adminNumber && toNumberNormalized) {
+        const adminDigits = adminNumber.replace(/^\+/, '');
+        const toDigits = toNumberNormalized.replace(/^\+/, '');
+        if (toDigits.endsWith(adminDigits)) {
+          selectedWebhook = webhooks.find(w => w.webhook_type === 'outgoing');
+          if (selectedWebhook) {
+            console.log('🏢 الرسالة موجهة لإدارة المتابعة -> استخدام ويب هوك الطلبات العادية (outgoing)');
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('تعذر تطبيع رقم إدارة المتابعة:', e);
+    }
+    
+    // ثانياً: البحث عن webhook للحملات الجماعية
+    if (!selectedWebhook) {
+      selectedWebhook = webhooks.find(w => w.webhook_type === 'bulk_campaign');
+    }
     
     if (selectedWebhook) {
       console.log('✅ تم العثور على ويب هوك الحملات الجماعية');
     } else {
-      // ثانياً: البحث حسب محتوى الرسالة للتقييمات
+      // ثالثاً: البحث حسب محتوى الرسالة للتقييمات
       if (message.message_content?.includes('google.com') || 
           message.message_content?.includes('تقييم') ||
           message.message_content?.includes('جوجل') ||
@@ -200,27 +226,19 @@ async function sendToWhatsAppService(message: any): Promise<boolean> {
         }
       }
       
-      // ثالثاً: البحث عن رسائل التقارير المالية
+      // رابعاً: البحث عن رسائل التقارير المالية
       if (!selectedWebhook && (message.message_content?.includes('تقرير مالي') || 
           message.message_content?.includes('مبلغ مستحق') ||
           message.message_content?.includes('طلبات غير مدفوعة') ||
           message.message_content?.includes('المبلغ المستحق'))) {
-        // استخدام webhook الحملات الجماعية للتقارير المالية
-        selectedWebhook = webhooks.find(w => w.webhook_type === 'bulk_campaign');
+        // استخدام webhook الطلبات العادية للتقرير المالي إذا لم تكن الرسالة لعميل
+        selectedWebhook = webhooks.find(w => w.webhook_type === 'outgoing') || webhooks.find(w => w.webhook_type === 'bulk_campaign');
         if (selectedWebhook) {
-          console.log('💰 استخدام ويب هوك الحملات الجماعية للتقرير المالي');
+          console.log('💰 استخدام ويب هوك مناسب للتقرير المالي');
         }
       }
       
-      // ثالثاً: استخدام webhook الطلبات كبديل
-      if (!selectedWebhook) {
-        selectedWebhook = webhooks.find(w => w.webhook_type === 'outgoing');
-        if (selectedWebhook) {
-          console.log('📤 استخدام ويب هوك الطلبات العادية');
-        }
-      }
-      
-      // رابعاً: استخدام أول webhook متاح
+      // خامساً: استخدام أول webhook متاح
       if (!selectedWebhook) {
         selectedWebhook = webhooks[0];
         console.log(`🔄 استخدام أول webhook متاح: ${selectedWebhook.webhook_name}`);
