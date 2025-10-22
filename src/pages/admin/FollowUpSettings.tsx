@@ -346,7 +346,7 @@ const FollowUpSettings = () => {
 
       // استدعاء دالة التقرير المالي والتي ترسل مباشرة عبر follow_up_webhook إن وُجد
       const { data: reportResult, error: reportError } = await supabase.functions.invoke('daily-financial-report', {
-        body: {}
+        body: { test: true }
       });
       if (reportError) throw reportError;
 
