@@ -1028,6 +1028,201 @@ export type Database = {
           },
         ]
       }
+      print_files: {
+        Row: {
+          approval_date: string | null
+          approved_by: string | null
+          created_at: string | null
+          file_name: string
+          file_path: string
+          file_size: number | null
+          file_type: string | null
+          id: string
+          is_approved: boolean | null
+          mime_type: string | null
+          notes: string | null
+          print_order_id: string | null
+          upload_date: string | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          approval_date?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          is_approved?: boolean | null
+          mime_type?: string | null
+          notes?: string | null
+          print_order_id?: string | null
+          upload_date?: string | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          approval_date?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          is_approved?: boolean | null
+          mime_type?: string | null
+          notes?: string | null
+          print_order_id?: string | null
+          upload_date?: string | null
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "print_files_print_order_id_fkey"
+            columns: ["print_order_id"]
+            isOneToOne: false
+            referencedRelation: "print_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      print_materials: {
+        Row: {
+          color: string | null
+          cost_per_unit: number
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          material_name: string
+          material_type: string
+          thickness: string | null
+          unit_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          color?: string | null
+          cost_per_unit?: number
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          material_name: string
+          material_type: string
+          thickness?: string | null
+          unit_type?: string
+          updated_at?: string | null
+        }
+        Update: {
+          color?: string | null
+          cost_per_unit?: number
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          material_name?: string
+          material_type?: string
+          thickness?: string | null
+          unit_type?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      print_orders: {
+        Row: {
+          actual_cost: number | null
+          created_at: string | null
+          created_by: string | null
+          design_completed_at: string | null
+          design_notes: string | null
+          design_started_at: string | null
+          dimensions_depth: number | null
+          dimensions_height: number | null
+          dimensions_width: number | null
+          estimated_cost: number | null
+          finishing_type: string | null
+          id: string
+          material_id: string | null
+          order_id: string | null
+          print_completed_at: string | null
+          print_order_number: string | null
+          print_started_at: string | null
+          print_type: string | null
+          printing_notes: string | null
+          quantity: number
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          actual_cost?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          design_completed_at?: string | null
+          design_notes?: string | null
+          design_started_at?: string | null
+          dimensions_depth?: number | null
+          dimensions_height?: number | null
+          dimensions_width?: number | null
+          estimated_cost?: number | null
+          finishing_type?: string | null
+          id?: string
+          material_id?: string | null
+          order_id?: string | null
+          print_completed_at?: string | null
+          print_order_number?: string | null
+          print_started_at?: string | null
+          print_type?: string | null
+          printing_notes?: string | null
+          quantity?: number
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          actual_cost?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          design_completed_at?: string | null
+          design_notes?: string | null
+          design_started_at?: string | null
+          dimensions_depth?: number | null
+          dimensions_height?: number | null
+          dimensions_width?: number | null
+          estimated_cost?: number | null
+          finishing_type?: string | null
+          id?: string
+          material_id?: string | null
+          order_id?: string | null
+          print_completed_at?: string | null
+          print_order_number?: string | null
+          print_started_at?: string | null
+          print_type?: string | null
+          printing_notes?: string | null
+          quantity?: number
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "print_orders_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "print_materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "print_orders_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "order_payment_summary"
+            referencedColumns: ["order_id"]
+          },
+          {
+            foreignKeyName: "print_orders_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string | null
@@ -1425,6 +1620,7 @@ export type Database = {
       exec_sql: { Args: { sql: string }; Returns: undefined }
       generate_database_backup: { Args: never; Returns: string }
       generate_order_number: { Args: never; Returns: string }
+      generate_print_order_number: { Args: never; Returns: string }
     }
     Enums: {
       app_role: "admin" | "employee" | "user"
