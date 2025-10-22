@@ -14,7 +14,7 @@ import { Plus, TrendingUp, TrendingDown, DollarSign, CreditCard, Receipt, Calend
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import html2canvas from 'html2canvas';
 import * as XLSX from 'xlsx';
 
 const Accounts = () => {
@@ -530,56 +530,91 @@ const Accounts = () => {
   };
 
   // تصدير العملاء المدينين إلى PDF
-  const exportDebtorsToPDF = () => {
+  const exportDebtorsToPDF = async () => {
     try {
-      const doc = new jsPDF();
+      // إنشاء عنصر HTML مؤقت للجدول
+      const printElement = document.createElement('div');
+      printElement.style.position = 'absolute';
+      printElement.style.left = '-9999px';
+      printElement.style.top = '0';
+      printElement.style.width = '800px';
+      printElement.style.padding = '20px';
+      printElement.style.backgroundColor = 'white';
+      printElement.style.fontFamily = 'Arial, sans-serif';
+      printElement.style.direction = 'rtl';
       
-      // إضافة خط عربي - استخدام خط افتراضي يدعم العربية
-      doc.setFont('helvetica');
-      doc.setFontSize(16);
-      doc.text('تقرير العملاء المدينين', 105, 15, { align: 'center' });
+      // إضافة المحتوى
+      printElement.innerHTML = `
+        <div style="text-align: center; margin-bottom: 20px;">
+          <h1 style="color: #2c3e50; font-size: 24px; margin-bottom: 10px;">تقرير العملاء المدينين</h1>
+          <p style="color: #7f8c8d; font-size: 14px;">تاريخ التقرير: ${new Date().toLocaleDateString('ar-SA')}</p>
+        </div>
+        
+        <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+          <thead>
+            <tr style="background-color: #3498db; color: white;">
+              <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">اسم العميل</th>
+              <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">عدد الطلبات</th>
+              <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">إجمالي المبلغ</th>
+              <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">المبلغ المدفوع</th>
+              <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">المبلغ المستحق</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${debtorInvoices.map((customer, index) => `
+              <tr style="background-color: ${index % 2 === 0 ? '#f8f9fa' : 'white'};">
+                <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">${customer.customer_name || 'غير محدد'}</td>
+                <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">${customer.total_orders || 0}</td>
+                <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">${(customer.total_amount || 0).toLocaleString()} ر.س</td>
+                <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">${(customer.calculated_paid_amount || 0).toLocaleString()} ر.س</td>
+                <td style="padding: 10px; border: 1px solid #ddd; text-align: center; color: #e74c3c; font-weight: bold;">${(customer.remaining_amount || 0).toLocaleString()} ر.س</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        
+        <div style="margin-top: 30px; text-align: center; padding: 15px; background-color: #fff3cd; border: 2px solid #ffc107; border-radius: 5px;">
+          <h3 style="color: #856404; font-size: 18px; margin: 0;">إجمالي المبالغ المستحقة: ${totalDebts.toLocaleString()} ر.س</h3>
+        </div>
+      `;
       
-      // إضافة تاريخ التقرير
-      doc.setFontSize(10);
-      doc.text(`تاريخ التقرير: ${new Date().toLocaleDateString('ar-SA')}`, 105, 25, { align: 'center' });
+      document.body.appendChild(printElement);
       
-      // تجهيز البيانات للجدول
-      const tableData = debtorInvoices.map(customer => [
-        customer.customer_name || 'غير محدد',
-        (customer.total_orders || 0).toString(),
-        `${(customer.total_amount || 0).toLocaleString()} ر.س`,
-        `${(customer.calculated_paid_amount || 0).toLocaleString()} ر.س`,
-        `${(customer.remaining_amount || 0).toLocaleString()} ر.س`,
-      ]);
-      
-      // إضافة الجدول
-      autoTable(doc, {
-        startY: 35,
-        head: [['اسم العميل', 'عدد الطلبات', 'إجمالي المبلغ', 'المبلغ المدفوع', 'المبلغ المستحق']],
-        body: tableData,
-        styles: { 
-          font: 'helvetica',
-          fontSize: 10,
-          halign: 'center'
-        },
-        headStyles: { 
-          fillColor: [41, 128, 185],
-          textColor: 255,
-          fontStyle: 'bold'
-        },
-        alternateRowStyles: {
-          fillColor: [245, 245, 245]
-        }
+      // تحويل العنصر إلى صورة
+      const canvas = await html2canvas(printElement, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff'
       });
       
-      // إضافة الملخص في نهاية الصفحة
-      const finalY = (doc as any).lastAutoTable.finalY || 35;
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text(`إجمالي المبالغ المستحقة: ${totalDebts.toLocaleString()} ر.س`, 105, finalY + 15, { align: 'center' });
+      // إزالة العنصر المؤقت
+      document.body.removeChild(printElement);
+      
+      // إنشاء PDF
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = pdfWidth - 20;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      let heightLeft = imgHeight;
+      let position = 10;
+      
+      // إضافة الصورة إلى PDF (مع دعم الصفحات المتعددة)
+      pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+      heightLeft -= pdfHeight;
+      
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight + 10;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+        heightLeft -= pdfHeight;
+      }
       
       // حفظ الملف
-      doc.save(`تقرير_العملاء_المدينين_${new Date().toLocaleDateString('ar-SA')}.pdf`);
+      pdf.save(`تقرير_العملاء_المدينين_${new Date().toLocaleDateString('ar-SA').replace(/\//g, '-')}.pdf`);
       
       toast({
         title: "تم التصدير",
