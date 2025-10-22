@@ -35,9 +35,11 @@ interface PrintOrder {
   print_completed_at?: string;
   orders: {
     order_number: string;
-    service_name: string;
-    description?: string;
-    amount: number;
+    total_amount: number;
+    notes?: string;
+    service_types?: {
+      name: string;
+    };
   };
   print_materials?: {
     material_name: string;
@@ -146,16 +148,16 @@ const CustomerPrintOrders = () => {
           *,
           orders!inner(
             order_number,
-            service_name,
-            description,
-            amount,
-            customer_id
+            total_amount,
+            notes,
+            customer_id,
+            service_types(name)
           ),
           print_materials(
             material_name,
             material_type
           ),
-          print_files!left(
+          print_files(
             id,
             file_name,
             file_path,
@@ -324,7 +326,7 @@ const CustomerPrintOrders = () => {
                                         طلب أصلي: {order.orders.order_number}
                                       </p>
                                       <p className="text-sm text-muted-foreground">
-                                        الخدمة: {order.orders.service_name}
+                                        الخدمة: {order.orders.service_types?.name || "غير محدد"}
                                       </p>
                                     </div>
                                     <Badge className={`${statusColors[order.status as keyof typeof statusColors]} text-white`}>
@@ -407,7 +409,7 @@ const CustomerPrintOrders = () => {
                             (order.print_files || []).map(file => ({
                               ...file,
                               order_number: order.print_order_number,
-                              order_service: order.orders.service_name
+                              order_service: order.orders.service_types?.name || "غير محدد"
                             }))
                           );
 

@@ -40,8 +40,10 @@ interface PrintOrder {
   created_at: string;
   orders: {
     order_number: string;
-    service_name: string;
     customers: {
+      name: string;
+    };
+    service_types?: {
       name: string;
     };
   };
@@ -182,14 +184,14 @@ const PrintManagement = () => {
           *,
           orders!inner(
             order_number,
-            service_name,
-            customers!inner(name)
+            customers!inner(name),
+            service_types(name)
           ),
           print_materials(
             material_name,
             material_type
           ),
-          print_files!left(
+          print_files(
             id,
             file_name,
             file_path,
@@ -732,7 +734,7 @@ const PrintManagement = () => {
                     </div>
                     <div>
                       <p className="font-medium text-muted-foreground">الخدمة</p>
-                      <p>{order.orders.service_name}</p>
+                      <p>{order.orders.service_types?.name || "غير محدد"}</p>
                     </div>
                     <div>
                       <p className="font-medium text-muted-foreground">العميل</p>

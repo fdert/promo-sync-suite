@@ -34,9 +34,11 @@ interface PrintOrder {
   created_at: string;
   orders: {
     order_number: string;
-    service_name: string;
     customer_id: string;
     customers: {
+      name: string;
+    };
+    service_types?: {
       name: string;
     };
   };
@@ -97,11 +99,11 @@ const PrintOrders = () => {
           *,
           orders!inner(
             order_number,
-            service_name,
             customer_id,
             customers!inner(
               name
-            )
+            ),
+            service_types(name)
           )
         `)
         .order("created_at", { ascending: false });
@@ -248,7 +250,7 @@ const PrintOrders = () => {
                     </TableCell>
                     <TableCell>{order.orders.customers.name}</TableCell>
                     <TableCell>{order.orders.order_number}</TableCell>
-                    <TableCell>{order.orders.service_name}</TableCell>
+                    <TableCell>{order.orders.service_types?.name || "غير محدد"}</TableCell>
                     <TableCell>{order.quantity}</TableCell>
                     <TableCell>{order.estimated_cost} ر.س</TableCell>
                     <TableCell>
@@ -309,7 +311,7 @@ const PrintOrders = () => {
                     </div>
                     <div>
                       <span className="text-muted-foreground">الخدمة: </span>
-                      <span className="font-medium">{selectedOrder.orders.service_name}</span>
+                      <span className="font-medium">{selectedOrder.orders.service_types?.name || "غير محدد"}</span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">الكمية: </span>
