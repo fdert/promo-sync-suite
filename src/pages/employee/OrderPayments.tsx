@@ -196,7 +196,8 @@ const OrderPayments = () => {
 
     setSaving(true);
     try {
-      const { data, error } = await supabase
+      // إضافة الدفعة
+      const { data: paymentData, error: paymentError } = await supabase
         .from('payments')
         .insert({
           order_id: orderId,
@@ -209,9 +210,54 @@ const OrderPayments = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (paymentError) throw paymentError;
 
-      toast.success('تم إضافة الدفعة بنجاح');
+      // إنشاء القيد المحاسبي
+      try {
+        const accountType = paymentForm.payment_type === 'cash' ? 'نقدية' : 
+                           paymentForm.payment_type === 'bank_transfer' ? 'بنك' : 'نقدية';
+        
+        const { data: cashAccount } = await supabase
+          .from('accounts')
+          .select('id')
+          .eq('account_type', accountType)
+          .eq('is_active', true)
+          .limit(1)
+          .single();
+
+        const { data: receivableAccount } = await supabase
+          .from('accounts')
+          .select('id')
+          .eq('account_type', 'ذمم مدينة')
+          .eq('is_active', true)
+          .limit(1)
+          .single();
+
+        if (cashAccount && receivableAccount) {
+          await supabase.from('account_entries').insert([
+            {
+              account_id: cashAccount.id,
+              debit: paymentForm.amount,
+              credit: 0,
+              reference_type: 'payment',
+              reference_id: paymentData.id,
+              description: `دفعة للطلب - ${paymentForm.payment_type === 'cash' ? 'نقداً' : 'تحويل بنكي'}`
+            },
+            {
+              account_id: receivableAccount.id,
+              debit: 0,
+              credit: paymentForm.amount,
+              reference_type: 'payment',
+              reference_id: paymentData.id,
+              description: `دفعة من العميل للطلب`
+            }
+          ]);
+        }
+      } catch (entryError) {
+        console.error('Error creating account entries:', entryError);
+      }
+
+      toast.success('تم إضافة الدفعة والقيد المحاسبي بنجاح');
       setPaymentForm({ amount: 0, payment_type: 'نقدي', notes: '' });
       setShowAddPayment(false);
       

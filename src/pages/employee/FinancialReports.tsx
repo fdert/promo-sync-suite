@@ -300,7 +300,7 @@ const FinancialReports = () => {
       }
 
       // إضافة المصروف إلى قاعدة البيانات
-      const { error } = await supabase
+      const { data: expenseData, error: expenseError } = await supabase
         .from('expenses')
         .insert({
           receipt_number: expenseNumber,
@@ -310,10 +310,57 @@ const FinancialReports = () => {
           expense_date: expenseForm.date,
           payment_method: expenseForm.paymentMethod || null,
           notes: expenseForm.notes || null
-        });
+        })
+        .select()
+        .single();
 
-      if (error) {
-        throw error;
+      if (expenseError) {
+        throw expenseError;
+      }
+
+      // إنشاء القيد المحاسبي
+      try {
+        const { data: expenseAccount } = await supabase
+          .from('accounts')
+          .select('id')
+          .eq('account_type', 'مصروفات')
+          .eq('is_active', true)
+          .limit(1)
+          .single();
+
+        const accountType = expenseForm.paymentMethod === 'cash' ? 'نقدية' : 
+                           expenseForm.paymentMethod === 'bank_transfer' ? 'بنك' : 'نقدية';
+        
+        const { data: cashAccount } = await supabase
+          .from('accounts')
+          .select('id')
+          .eq('account_type', accountType)
+          .eq('is_active', true)
+          .limit(1)
+          .single();
+
+        if (expenseAccount && cashAccount) {
+          await supabase.from('account_entries').insert([
+            {
+              account_id: expenseAccount.id,
+              debit: parseFloat(expenseForm.amount),
+              credit: 0,
+              reference_type: 'expense',
+              reference_id: expenseData.id,
+              description: `مصروف: ${expenseForm.description}`
+            },
+            {
+              account_id: cashAccount.id,
+              debit: 0,
+              credit: parseFloat(expenseForm.amount),
+              reference_type: 'expense',
+              reference_id: expenseData.id,
+              description: `دفع مصروف: ${expenseForm.description}`
+            }
+          ]);
+        }
+      } catch (entryError) {
+        console.error('Error creating account entries:', entryError);
       }
 
       // إعادة تحميل البيانات المالية

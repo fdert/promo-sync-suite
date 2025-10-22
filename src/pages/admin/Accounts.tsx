@@ -405,7 +405,10 @@ const Accounts = () => {
     }
 
     try {
-      const { error } = await supabase
+      const userId = (await supabase.auth.getUser()).data.user?.id;
+      
+      // إضافة المصروف
+      const { data: expenseData, error: expenseError } = await supabase
         .from('expenses')
         .insert({
           expense_type: newExpense.category,
@@ -414,22 +417,71 @@ const Accounts = () => {
           expense_date: newExpense.expense_date,
           payment_method: newExpense.payment_method,
           notes: newExpense.notes,
-          created_by: (await supabase.auth.getUser()).data.user?.id
-        });
+          created_by: userId
+        })
+        .select()
+        .single();
 
-      if (error) {
-        console.error('Error adding expense:', error);
+      if (expenseError) {
+        console.error('Error adding expense:', expenseError);
         toast({
           title: "خطأ",
-          description: error.message || "حدث خطأ في إضافة المصروف",
+          description: expenseError.message || "حدث خطأ في إضافة المصروف",
           variant: "destructive",
         });
         return;
       }
 
+      // إنشاء القيد المحاسبي
+      try {
+        const { data: expenseAccount } = await supabase
+          .from('accounts')
+          .select('id')
+          .eq('account_type', 'مصروفات')
+          .eq('is_active', true)
+          .limit(1)
+          .single();
+
+        const accountType = newExpense.payment_method === 'cash' ? 'نقدية' : 
+                           newExpense.payment_method === 'bank_transfer' ? 'بنك' : 'نقدية';
+        
+        const { data: cashAccount } = await supabase
+          .from('accounts')
+          .select('id')
+          .eq('account_type', accountType)
+          .eq('is_active', true)
+          .limit(1)
+          .single();
+
+        if (expenseAccount && cashAccount) {
+          await supabase.from('account_entries').insert([
+            {
+              account_id: expenseAccount.id,
+              debit: parseFloat(newExpense.amount),
+              credit: 0,
+              reference_type: 'expense',
+              reference_id: expenseData.id,
+              description: `مصروف: ${newExpense.description}`,
+              created_by: userId
+            },
+            {
+              account_id: cashAccount.id,
+              debit: 0,
+              credit: parseFloat(newExpense.amount),
+              reference_type: 'expense',
+              reference_id: expenseData.id,
+              description: `دفع مصروف: ${newExpense.description}`,
+              created_by: userId
+            }
+          ]);
+        }
+      } catch (entryError) {
+        console.error('Error creating account entries:', entryError);
+      }
+
       toast({
         title: "نجح",
-        description: "تم إضافة المصروف بنجاح",
+        description: "تم إضافة المصروف والقيد المحاسبي بنجاح",
       });
 
       setIsAddExpenseOpen(false);

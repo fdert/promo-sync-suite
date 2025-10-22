@@ -308,24 +308,69 @@ const Reports = () => {
     }
 
     try {
-      // توليد رقم المصروف
-      const { data: expenseNumber } = await supabase
-        .rpc('generate_expense_number');
-
-      const { error } = await supabase
+      // إضافة المصروف
+      const { data: expenseData, error: expenseError } = await supabase
         .from('expenses')
         .insert({
-          expense_number: expenseNumber,
+          expense_type: newExpense.category || 'عام',
           description: newExpense.description,
           amount: parseFloat(newExpense.amount),
-          category: newExpense.category,
           payment_method: newExpense.payment_method,
           expense_date: newExpense.expense_date,
           notes: newExpense.notes,
           created_by: user?.id
-        });
+        })
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (expenseError) throw expenseError;
+
+      // إنشاء القيد المحاسبي
+      try {
+        const { data: expenseAccount } = await supabase
+          .from('accounts')
+          .select('id')
+          .eq('account_type', 'مصروفات')
+          .eq('is_active', true)
+          .limit(1)
+          .single();
+
+        const accountType = newExpense.payment_method === 'cash' ? 'نقدية' : 
+                           newExpense.payment_method === 'bank_transfer' ? 'بنك' : 'نقدية';
+        
+        const { data: cashAccount } = await supabase
+          .from('accounts')
+          .select('id')
+          .eq('account_type', accountType)
+          .eq('is_active', true)
+          .limit(1)
+          .single();
+
+        if (expenseAccount && cashAccount) {
+          await supabase.from('account_entries').insert([
+            {
+              account_id: expenseAccount.id,
+              debit: parseFloat(newExpense.amount),
+              credit: 0,
+              reference_type: 'expense',
+              reference_id: expenseData.id,
+              description: `مصروف: ${newExpense.description}`,
+              created_by: user?.id
+            },
+            {
+              account_id: cashAccount.id,
+              debit: 0,
+              credit: parseFloat(newExpense.amount),
+              reference_type: 'expense',
+              reference_id: expenseData.id,
+              description: `دفع مصروف: ${newExpense.description}`,
+              created_by: user?.id
+            }
+          ]);
+        }
+      } catch (entryError) {
+        console.error('Error creating account entries:', entryError);
+      }
 
       setNewExpense({
         description: "",
@@ -340,7 +385,7 @@ const Reports = () => {
 
       toast({
         title: "تم الحفظ",
-        description: "تم إضافة المصروف بنجاح",
+        description: "تم إضافة المصروف والقيد المحاسبي بنجاح",
       });
     } catch (error) {
       console.error('Error adding expense:', error);

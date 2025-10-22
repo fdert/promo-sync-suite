@@ -915,7 +915,8 @@ ${companyName}`;
         return;
       }
 
-      const { error } = await supabase
+      // إضافة الدفعة
+      const { data: paymentData, error: paymentError } = await supabase
         .from('payments')
         .insert({
           order_id: orderId,
@@ -923,13 +924,64 @@ ${companyName}`;
           payment_type: newPayment.payment_type,
           notes: newPayment.notes,
           created_by: user?.id
-        });
+        })
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (paymentError) throw paymentError;
+
+      // إنشاء القيد المحاسبي
+      try {
+        // جلب الحساب المناسب حسب نوع الدفعة
+        const accountType = newPayment.payment_type === 'cash' ? 'نقدية' : 
+                           newPayment.payment_type === 'bank_transfer' ? 'بنك' : 'نقدية';
+        
+        const { data: cashAccount } = await supabase
+          .from('accounts')
+          .select('id')
+          .eq('account_type', accountType)
+          .eq('is_active', true)
+          .limit(1)
+          .single();
+
+        const { data: receivableAccount } = await supabase
+          .from('accounts')
+          .select('id')
+          .eq('account_type', 'ذمم مدينة')
+          .eq('is_active', true)
+          .limit(1)
+          .single();
+
+        if (cashAccount && receivableAccount) {
+          // قيد مدين للصندوق/البنك
+          await supabase.from('account_entries').insert({
+            account_id: cashAccount.id,
+            debit: newPayment.amount,
+            credit: 0,
+            reference_type: 'payment',
+            reference_id: paymentData.id,
+            description: `دفعة للطلب - ${newPayment.payment_type === 'cash' ? 'نقداً' : 'تحويل بنكي'}`,
+            created_by: user?.id
+          });
+
+          // قيد دائن للذمم المدينة
+          await supabase.from('account_entries').insert({
+            account_id: receivableAccount.id,
+            debit: 0,
+            credit: newPayment.amount,
+            reference_type: 'payment',
+            reference_id: paymentData.id,
+            description: `دفعة من العميل للطلب`,
+            created_by: user?.id
+          });
+        }
+      } catch (entryError) {
+        console.error('Error creating account entries:', entryError);
+      }
 
       toast({
         title: "تم إضافة الدفعة",
-        description: "تم إضافة الدفعة بنجاح",
+        description: "تم إضافة الدفعة والقيد المحاسبي بنجاح",
       });
 
       // إعادة تعيين النموذج
