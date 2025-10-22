@@ -41,6 +41,31 @@ serve(async (req) => {
       );
     }
 
+    // وضع الاختبار: إرسال رسالة اختبار مباشرة لتأخير الدفعات
+    try {
+      const body = await req.json();
+      if (body?.test === true) {
+        const msg = `🧪 *هذه رسالة اختبار*\n\n💰 *تنبيه: تأخير في الدفعات*\n\n👤 اسم العميل: اختبار\n📱 رقم الواتساب: ${settings.whatsapp_number}\n\n💵 الرصيد المستحق: 100.00 ريال\n📦 أقدم طلب: TEST-PAY-${new Date().toISOString().slice(0,10).replaceAll('-', '')}\n📅 تاريخ الطلب: ${new Date().toLocaleDateString('ar-SA')}\n⏱️ مر على الطلب: ${settings.payment_delay_days}+ أيام\n\nيرجى المتابعة مع العميل لتحصيل المستحقات.`;
+        const { data: inserted, error: insertErr } = await supabase.from('whatsapp_messages').insert({
+          from_number: 'system',
+          to_number: settings.whatsapp_number,
+          message_type: 'payment_delay_notification',
+          message_content: msg,
+          status: 'pending',
+          dedupe_key: `payment_delay_test_${new Date().toISOString()}_${Math.random().toString(36).slice(2,8)}`
+        }).select('id').single();
+        if (insertErr) { console.error('Failed to insert test payment delay:', insertErr); }
+        if (settings.follow_up_webhook_url) {
+          try {
+            const payload = { event: 'whatsapp_message_send', data: { to: settings.whatsapp_number, phone: settings.whatsapp_number, phoneNumber: settings.whatsapp_number, message: msg, messageText: msg, text: msg, type: 'text', message_type: 'payment_delay_notification', timestamp: Math.floor(Date.now()/1000), from_number: 'system', customer_id: 'test' } };
+            const resp = await fetch(settings.follow_up_webhook_url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            if (resp.ok && inserted?.id) { await supabase.from('whatsapp_messages').update({ status: 'sent', sent_at: new Date().toISOString() }).eq('id', inserted.id); }
+          } catch (e) { console.error('Error sending test via follow_up_webhook:', e); }
+        }
+        return new Response(JSON.stringify({ success: true, message: 'Test payment delay notification sent' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
+      }
+    } catch {}
+
     // البحث عن العملاء الذين لديهم مستحقات متأخرة
     const { data: outstandingBalances, error: balancesError } = await supabase
       .from('customer_outstanding_balances')
@@ -98,6 +123,8 @@ serve(async (req) => {
 
 يرجى المتابعة مع العميل لتحصيل المستحقات.`;
 
+      const dedupeKey = `payment_delay_${customer.customer_id}_${new Date().toISOString().split('T')[0]}`;
+      let msgId: string | null = null;
       const { data: msgInserted, error: msgInsertError } = await supabase
         .from('whatsapp_messages')
         .insert({
@@ -106,10 +133,28 @@ serve(async (req) => {
           message_type: 'payment_delay_notification',
           message_content: message,
           status: 'pending',
-          dedupe_key: `payment_delay_${customer.customer_id}_${new Date().toISOString().split('T')[0]}`
+          dedupe_key: dedupeKey
         })
         .select('id')
         .single();
+
+      if (msgInsertError) {
+        // معالجة التكرار كحالة نجاح مع إعادة الإرسال
+        // @ts-ignore - Supabase error structure
+        if (msgInsertError.code === '23505') {
+          const { data: existing } = await supabase
+            .from('whatsapp_messages')
+            .select('id')
+            .eq('dedupe_key', dedupeKey)
+            .single();
+          msgId = existing?.id || null;
+        } else {
+          console.error('Failed to insert payment delay notification:', msgInsertError);
+          continue;
+        }
+      } else {
+        msgId = msgInserted?.id || null;
+      }
 
       if (msgInsertError) {
         console.error('Failed to insert payment delay notification:', msgInsertError);
@@ -142,14 +187,14 @@ serve(async (req) => {
             body: JSON.stringify(payload)
           });
 
-          if (webhookResp.ok && msgInserted?.id) {
+          if (webhookResp.ok && msgId) {
             await supabase
               .from('whatsapp_messages')
               .update({ 
                 status: 'sent', 
                 sent_at: new Date().toISOString() 
               })
-              .eq('id', msgInserted.id);
+              .eq('id', msgId);
           }
         } catch (webhookError) {
           console.error('Error sending via follow_up_webhook:', webhookError);

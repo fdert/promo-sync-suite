@@ -41,6 +41,46 @@ serve(async (req) => {
       );
     }
 
+    // وضع الاختبار: إرسال رسالة اختبار مباشرة
+    let isTest = false;
+    try {
+      const body = await req.json();
+      isTest = !!body?.test;
+    } catch {}
+
+    if (isTest) {
+      const customerName = 'اختبار';
+      const deliveryDateStr = new Date().toLocaleDateString('ar-SA');
+      const message = `🧪 *هذه رسالة اختبار*\n\n⚠️ *تنبيه: تجاوز فترة التسليم*\n\n📦 رقم الطلب: TEST-DEL-${new Date().toISOString().slice(0,10).replaceAll('-', '')}\n👤 اسم العميل: ${customerName}\n📅 تاريخ التسليم المتوقع: ${deliveryDateStr}\n⏱️ تأخير: ${settings.delivery_delay_days}+ أيام\n\nيرجى المتابعة الفورية مع العميل.`;
+      const { data: msgInserted, error: msgInsertError } = await supabase
+        .from('whatsapp_messages')
+        .insert({
+          from_number: 'system',
+          to_number: settings.whatsapp_number,
+          message_type: 'delivery_delay_notification',
+          message_content: message,
+          status: 'pending',
+          dedupe_key: `delivery_delay_test_${new Date().toISOString()}_${Math.random().toString(36).slice(2,8)}`
+        })
+        .select('id')
+        .single();
+      if (msgInsertError) {
+        console.error('Failed to insert delivery delay test notification:', msgInsertError);
+      }
+      if (settings.follow_up_webhook_url) {
+        try {
+          const payload = { event: 'whatsapp_message_send', data: { to: settings.whatsapp_number, phone: settings.whatsapp_number, phoneNumber: settings.whatsapp_number, message, messageText: message, text: message, type: 'text', message_type: 'delivery_delay_notification', timestamp: Math.floor(Date.now()/1000), from_number: 'system', order_id: 'test', order_number: 'TEST' } };
+          const webhookResp = await fetch(settings.follow_up_webhook_url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+          if (webhookResp.ok && msgInserted?.id) {
+            await supabase.from('whatsapp_messages').update({ status: 'sent', sent_at: new Date().toISOString() }).eq('id', msgInserted.id);
+          }
+        } catch (webhookError) {
+          console.error('Error sending test via follow_up_webhook:', webhookError);
+        }
+      }
+      return new Response(JSON.stringify({ success: true, message: 'Test delivery delay notification sent' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
+    }
+
     // البحث عن الطلبات المتأخرة
     const delayDate = new Date();
     delayDate.setDate(delayDate.getDate() - settings.delivery_delay_days);

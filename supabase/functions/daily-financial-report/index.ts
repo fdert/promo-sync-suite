@@ -17,7 +17,14 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    console.log('Generating daily financial report...');
+    // قراءة وضع الاختبار من جسم الطلب إن وُجد
+    let isTest = false;
+    try {
+      const body = await req.json();
+      isTest = !!body?.test;
+    } catch {}
+
+    console.log('Generating daily financial report...', { isTest });
 
     // جلب إعدادات المتابعة
     const { data: settings, error: settingsError } = await supabase
@@ -33,7 +40,7 @@ serve(async (req) => {
       );
     }
 
-    if (!settings.daily_financial_report || !settings.whatsapp_number) {
+    if ((!settings.daily_financial_report || !settings.whatsapp_number) && !isTest) {
       console.log('Daily financial report is disabled or no WhatsApp number configured');
       return new Response(
         JSON.stringify({ message: 'Report disabled' }),
@@ -212,6 +219,7 @@ ${delayedSection}${delayedSection ? '━━━━━━━━━━━━━━�
 
 ⏰ تم إنشاء التقرير: ${today.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}`;
 
+    const finalMessage = isTest ? `🧪 *هذه رسالة اختبار*\n\n${message}` : message;
     // حفظ التقرير
     const { data: inserted, error: insertError } = await supabase
       .from('whatsapp_messages')
@@ -219,9 +227,9 @@ ${delayedSection}${delayedSection ? '━━━━━━━━━━━━━━�
         from_number: 'system',
         to_number: toNumber,
         message_type: 'text',
-        message_content: message,
+        message_content: finalMessage,
         status: 'pending',
-        dedupe_key: `daily_report_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+        dedupe_key: isTest ? `daily_report_test_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` : `daily_report_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
       })
       .select('id')
       .single();
@@ -246,11 +254,11 @@ ${delayedSection}${delayedSection ? '━━━━━━━━━━━━━━�
             to: toNumber, // الرقم كما هو في الإعدادات
             phone: toNumber.replace(/[^\d]/g, ''), // رقم مُطبع بدون رموز
             phoneNumber: toNumber.replace(/[^\d]/g, ''),
-            message: message,
-            messageText: message,
-            text: message,
+            message: finalMessage,
+            messageText: finalMessage,
+            text: finalMessage,
             type: 'text',
-            message_type: 'new_order_notification',
+            message_type: 'daily_financial_report',
             timestamp: Math.floor(Date.now() / 1000),
             from_number: 'system',
             // حقول توافق مع مسار إشعار الطلب الجديد (n8n)
