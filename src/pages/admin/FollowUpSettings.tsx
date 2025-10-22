@@ -84,6 +84,13 @@ const FollowUpSettings = () => {
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [isTestingFinancialReport, setIsTestingFinancialReport] = useState(false);
+  const [testingNotifications, setTestingNotifications] = useState({
+    new_order: false,
+    delivery_delay: false,
+    payment_delay: false,
+    expense_logged: false,
+    payment_logged: false,
+  });
   
   // Activity logs states
   const [logs, setLogs] = useState<ActivityLog[]>([]);
@@ -359,6 +366,85 @@ const FollowUpSettings = () => {
     }
   };
 
+  const handleTestNotification = async (notificationType: string) => {
+    setTestingNotifications({ ...testingNotifications, [notificationType]: true });
+    
+    try {
+      if (!settings.whatsapp_number) {
+        throw new Error('يرجى إدخال رقم واتساب فريق المتابعة في الإعدادات وحفظه أولاً');
+      }
+
+      let result;
+      switch (notificationType) {
+        case 'new_order':
+          result = await supabase.functions.invoke('notify-new-order', {
+            body: { test: true }
+          });
+          break;
+          
+        case 'delivery_delay':
+          result = await supabase.functions.invoke('notify-delivery-delay', {
+            body: { test: true }
+          });
+          break;
+          
+        case 'payment_delay':
+          result = await supabase.functions.invoke('notify-payment-delay', {
+            body: { test: true }
+          });
+          break;
+          
+        case 'expense_logged':
+          result = await supabase.functions.invoke('notify-new-expense', {
+            body: { 
+              expense_id: 'test',
+              test: true
+            }
+          });
+          break;
+          
+        case 'payment_logged':
+          result = await supabase.functions.invoke('notify-new-payment', {
+            body: { 
+              payment_id: 'test',
+              test: true
+            }
+          });
+          break;
+          
+        default:
+          throw new Error('نوع الإشعار غير معروف');
+      }
+
+      if (result.error) throw result.error;
+
+      toast({
+        title: 'تم إرسال الإشعار بنجاح ✅',
+        description: `تم إرسال ${getNotificationName(notificationType)} عبر الويب هوك`,
+      });
+    } catch (error: any) {
+      console.error('Error testing notification:', error);
+      toast({
+        title: 'فشل إرسال الإشعار ❌',
+        description: error?.message || 'حدث خطأ أثناء إرسال الإشعار',
+        variant: 'destructive',
+      });
+    } finally {
+      setTestingNotifications({ ...testingNotifications, [notificationType]: false });
+    }
+  };
+
+  const getNotificationName = (type: string) => {
+    const names = {
+      new_order: 'إشعار الطلب الجديد',
+      delivery_delay: 'إشعار تأخر التسليم',
+      payment_delay: 'إشعار تأخر الدفع',
+      expense_logged: 'إشعار تسجيل المصروف',
+      payment_logged: 'إشعار تسجيل الدفعة',
+    };
+    return names[type] || 'الإشعار';
+  };
+
   // Activity logs functions
   const fetchUsers = async () => {
     try {
@@ -613,23 +699,46 @@ const FollowUpSettings = () => {
               <CardContent className="space-y-6">
                 <div className="grid gap-4">
                   <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/20">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 flex-1">
                       <Zap className="h-5 w-5 text-primary" />
                       <div>
                         <h4 className="font-medium">إشعار عند إنشاء طلب جديد</h4>
                         <p className="text-sm text-muted-foreground">إرسال إشعار لفريق المتابعة عند إنشاء طلب جديد في النظام</p>
                       </div>
                     </div>
-                    <Switch
-                      checked={settings.notify_new_order}
-                      onCheckedChange={(checked) => 
-                        setSettings({ ...settings, notify_new_order: checked })
-                      }
-                    />
+                    <div className="flex items-center gap-2">
+                      {settings.notify_new_order && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleTestNotification('new_order')}
+                          disabled={testingNotifications.new_order || !settings.whatsapp_number}
+                          className="text-xs"
+                        >
+                          {testingNotifications.new_order ? (
+                            <div className="flex items-center gap-1">
+                              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary"></div>
+                              جاري...
+                            </div>
+                          ) : (
+                            <>
+                              <Zap className="h-3 w-3 ml-1" />
+                              اختبار
+                            </>
+                          )}
+                        </Button>
+                      )}
+                      <Switch
+                        checked={settings.notify_new_order}
+                        onCheckedChange={(checked) => 
+                          setSettings({ ...settings, notify_new_order: checked })
+                        }
+                      />
+                    </div>
                   </div>
 
                   <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-orange-50 to-orange-100 border border-orange-200 dark:from-orange-900/20 dark:to-orange-800/20 dark:border-orange-700/30">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 flex-1">
                       <Clock className="h-5 w-5 text-orange-600" />
                       <div>
                         <h4 className="font-medium">إشعار تجاوز فترة التسليم</h4>
@@ -638,16 +747,39 @@ const FollowUpSettings = () => {
                         </p>
                       </div>
                     </div>
-                    <Switch
-                      checked={settings.notify_delivery_delay}
-                      onCheckedChange={(checked) => 
-                        setSettings({ ...settings, notify_delivery_delay: checked })
-                      }
-                    />
+                    <div className="flex items-center gap-2">
+                      {settings.notify_delivery_delay && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleTestNotification('delivery_delay')}
+                          disabled={testingNotifications.delivery_delay || !settings.whatsapp_number}
+                          className="text-xs"
+                        >
+                          {testingNotifications.delivery_delay ? (
+                            <div className="flex items-center gap-1">
+                              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary"></div>
+                              جاري...
+                            </div>
+                          ) : (
+                            <>
+                              <Zap className="h-3 w-3 ml-1" />
+                              اختبار
+                            </>
+                          )}
+                        </Button>
+                      )}
+                      <Switch
+                        checked={settings.notify_delivery_delay}
+                        onCheckedChange={(checked) => 
+                          setSettings({ ...settings, notify_delivery_delay: checked })
+                        }
+                      />
+                    </div>
                   </div>
 
                   <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-red-50 to-red-100 border border-red-200 dark:from-red-900/20 dark:to-red-800/20 dark:border-red-700/30">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 flex-1">
                       <DollarSign className="h-5 w-5 text-red-600" />
                       <div>
                         <h4 className="font-medium">إشعار تأخير المدفوعات</h4>
@@ -656,12 +788,35 @@ const FollowUpSettings = () => {
                         </p>
                       </div>
                     </div>
-                    <Switch
-                      checked={settings.notify_payment_delay}
-                      onCheckedChange={(checked) => 
-                        setSettings({ ...settings, notify_payment_delay: checked })
-                      }
-                    />
+                    <div className="flex items-center gap-2">
+                      {settings.notify_payment_delay && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleTestNotification('payment_delay')}
+                          disabled={testingNotifications.payment_delay || !settings.whatsapp_number}
+                          className="text-xs"
+                        >
+                          {testingNotifications.payment_delay ? (
+                            <div className="flex items-center gap-1">
+                              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary"></div>
+                              جاري...
+                            </div>
+                          ) : (
+                            <>
+                              <Zap className="h-3 w-3 ml-1" />
+                              اختبار
+                            </>
+                          )}
+                        </Button>
+                      )}
+                      <Switch
+                        checked={settings.notify_payment_delay}
+                        onCheckedChange={(checked) => 
+                          setSettings({ ...settings, notify_payment_delay: checked })
+                        }
+                      />
+                    </div>
                   </div>
 
                   <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-yellow-50 to-yellow-100 border border-yellow-200 dark:from-yellow-900/20 dark:to-yellow-800/20 dark:border-yellow-700/30">
@@ -683,7 +838,7 @@ const FollowUpSettings = () => {
                   </div>
 
                   <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 dark:from-blue-900/20 dark:to-blue-800/20 dark:border-blue-700/30">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 flex-1">
                       <DollarSign className="h-5 w-5 text-blue-600" />
                       <div>
                         <h4 className="font-medium">إشعار تسجيل المصروفات</h4>
@@ -692,16 +847,39 @@ const FollowUpSettings = () => {
                         </p>
                       </div>
                     </div>
-                    <Switch
-                      checked={settings.notify_expense_logged}
-                      onCheckedChange={(checked) => 
-                        setSettings({ ...settings, notify_expense_logged: checked })
-                      }
-                    />
+                    <div className="flex items-center gap-2">
+                      {settings.notify_expense_logged && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleTestNotification('expense_logged')}
+                          disabled={testingNotifications.expense_logged || !settings.whatsapp_number}
+                          className="text-xs"
+                        >
+                          {testingNotifications.expense_logged ? (
+                            <div className="flex items-center gap-1">
+                              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary"></div>
+                              جاري...
+                            </div>
+                          ) : (
+                            <>
+                              <Zap className="h-3 w-3 ml-1" />
+                              اختبار
+                            </>
+                          )}
+                        </Button>
+                      )}
+                      <Switch
+                        checked={settings.notify_expense_logged}
+                        onCheckedChange={(checked) => 
+                          setSettings({ ...settings, notify_expense_logged: checked })
+                        }
+                      />
+                    </div>
                   </div>
 
                   <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-green-50 to-green-100 border border-green-200 dark:from-green-900/20 dark:to-green-800/20 dark:border-green-700/30">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 flex-1">
                       <DollarSign className="h-5 w-5 text-green-600" />
                       <div>
                         <h4 className="font-medium">إشعار تسجيل الدفعات</h4>
@@ -710,12 +888,35 @@ const FollowUpSettings = () => {
                         </p>
                       </div>
                     </div>
-                    <Switch
-                      checked={settings.notify_payment_logged}
-                      onCheckedChange={(checked) => 
-                        setSettings({ ...settings, notify_payment_logged: checked })
-                      }
-                    />
+                    <div className="flex items-center gap-2">
+                      {settings.notify_payment_logged && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleTestNotification('payment_logged')}
+                          disabled={testingNotifications.payment_logged || !settings.whatsapp_number}
+                          className="text-xs"
+                        >
+                          {testingNotifications.payment_logged ? (
+                            <div className="flex items-center gap-1">
+                              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary"></div>
+                              جاري...
+                            </div>
+                          ) : (
+                            <>
+                              <Zap className="h-3 w-3 ml-1" />
+                              اختبار
+                            </>
+                          )}
+                        </Button>
+                      )}
+                      <Switch
+                        checked={settings.notify_payment_logged}
+                        onCheckedChange={(checked) => 
+                          setSettings({ ...settings, notify_payment_logged: checked })
+                        }
+                      />
+                    </div>
                   </div>
 
                   <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-purple-50 to-purple-100 border border-purple-200 dark:from-purple-900/20 dark:to-purple-800/20 dark:border-purple-700/30">
