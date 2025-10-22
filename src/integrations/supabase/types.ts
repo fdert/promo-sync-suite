@@ -1293,6 +1293,8 @@ export type Database = {
           details: Json | null
           id: string
           ip_address: string | null
+          resource_id: string | null
+          resource_type: string | null
           user_agent: string | null
           user_id: string | null
         }
@@ -1302,6 +1304,8 @@ export type Database = {
           details?: Json | null
           id?: string
           ip_address?: string | null
+          resource_id?: string | null
+          resource_type?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -1311,6 +1315,8 @@ export type Database = {
           details?: Json | null
           id?: string
           ip_address?: string | null
+          resource_id?: string | null
+          resource_type?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
