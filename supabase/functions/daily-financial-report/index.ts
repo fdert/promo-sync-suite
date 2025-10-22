@@ -243,9 +243,9 @@ ${delayedSection}${delayedSection ? '━━━━━━━━━━━━━━�
         const payload = {
           event: 'whatsapp_message_send',
           data: {
-            to: toNumber,
-            phone: toNumber,
-            phoneNumber: toNumber,
+            to: toNumber, // الرقم كما هو في الإعدادات
+            phone: toNumber.replace(/[^\d]/g, ''), // رقم مُطبع بدون رموز
+            phoneNumber: toNumber.replace(/[^\d]/g, ''),
             message: message,
             messageText: message,
             text: message,
