@@ -186,6 +186,19 @@ async function sendToWhatsAppService(message: any): Promise<boolean> {
     // اختيار الـ webhook المناسب
     let selectedWebhook = null;
     
+    // اكتشاف ما إذا كانت هذه رسالة تقييم مرتبطة بطلب مكتمل عبر dedupe_key = evaluation:<order_id>
+    const dedupeKey: string = message.dedupe_key || '';
+    const isEvaluationForOrder = dedupeKey.startsWith('evaluation:');
+    let evaluationOrderId: string | null = null;
+    if (isEvaluationForOrder) {
+      try {
+        evaluationOrderId = dedupeKey.split(':')[1] || null;
+        console.log('🧭 تم التعرف على رسالة تقييم لطلب:', evaluationOrderId);
+      } catch (_) {
+        evaluationOrderId = null;
+      }
+    }
+    
     // أولوية: إذا كانت الرسالة موجهة لرقم إدارة المتابعة، استخدم ويب هوك الطلبات العادية
     try {
       const adminNumber = String(fuSettings?.whatsapp_number || '').replace(/[^\d+]/g, '');
@@ -204,15 +217,24 @@ async function sendToWhatsAppService(message: any): Promise<boolean> {
       console.warn('تعذر تطبيع رقم إدارة المتابعة:', e);
     }
     
+    // إذا كانت رسالة تقييم مرتبطة بطلب -> استخدم نفس ويب هوك الطلب المكتمل
+    if (!selectedWebhook && isEvaluationForOrder) {
+      // اختيار ويب هوك outgoing الذي يدعم حالة order_completed إن أمكن
+      selectedWebhook = webhooks.find(w => w.webhook_type === 'outgoing');
+      if (selectedWebhook) {
+        console.log('🔁 استخدام ويب هوك الطلبات العادية (outgoing) لرسالة التقييم المرتبطة بالطلب المكتمل');
+      }
+    }
+    
     // ثانياً: البحث عن webhook للحملات الجماعية
     if (!selectedWebhook) {
       selectedWebhook = webhooks.find(w => w.webhook_type === 'bulk_campaign');
     }
     
     if (selectedWebhook) {
-      console.log('✅ تم العثور على ويب هوك الحملات الجماعية');
+      console.log('✅ تم العثور على ويب هوك الحملات الجماعية/الطلبات');
     } else {
-      // ثالثاً: البحث حسب محتوى الرسالة للتقييمات
+      // ثالثاً: البحث حسب محتوى الرسالة للتقييمات (عام)
       if (message.message_content?.includes('google.com') || 
           message.message_content?.includes('تقييم') ||
           message.message_content?.includes('جوجل') ||
@@ -259,25 +281,88 @@ async function sendToWhatsAppService(message: any): Promise<boolean> {
     }
     console.log(`📡 استخدام ويب هوك: ${webhook.webhook_name} (${webhook.webhook_type})`);
     
-    // إعداد payload للإرسال لـ n8n متماشي مع اختبار الويب هوك
-    const payload = {
-      event: 'whatsapp_message_send',
-      data: {
-        to: message.to_number,
-        phone: message.to_number,
-        phoneNumber: message.to_number,
-        message: message.message_content,
-        messageText: message.message_content,
-        text: message.message_content,
-        type: 'text',
-        message_type: 'text',
+    // إعداد payload للإرسال لـ n8n
+    let payload: any;
+
+    if (isEvaluationForOrder && evaluationOrderId) {
+      console.log('🧱 بناء payload بطريقة إشعارات الطلبات (order_completed) لرسالة التقييم');
+      // جلب تفاصيل الطلب والعميل
+      const { data: order } = await supabase
+        .from('orders')
+        .select(`id, order_number, total_amount, paid_amount, status, delivery_date,
+                 customers:customer_id (name, phone, whatsapp),
+                 service_types:service_type_id (name)`)
+        .eq('id', evaluationOrderId)
+        .single();
+
+      // جلب توكن التقييم
+      const { data: evaluation } = await supabase
+        .from('evaluations')
+        .select('evaluation_token')
+        .eq('order_id', evaluationOrderId)
+        .single();
+
+      const phoneRaw = String(message.to_number || order?.customers?.whatsapp || order?.customers?.phone || '').trim();
+      const toE164 = phoneRaw; // نفترض أنه مخزن بتنسيق دولي
+      const toDigits = phoneRaw.replace(/\D/g, '');
+      const reviewLink = evaluation?.evaluation_token
+        ? `${supabaseUrl}/evaluation/${evaluation.evaluation_token}`
+        : undefined;
+
+      const textMessage = [
+        `🌟 عزيزنا ${order?.customers?.name || ''}، شكراً لثقتك بنا!`,
+        '',
+        `✅ تم اكتمال طلبك رقم: ${order?.order_number || ''}`,
+        reviewLink ? `📝 نرجو تقييم تجربتك: ${reviewLink}` : undefined,
+      ].filter(Boolean).join('\n');
+
+      payload = {
+        notification_type: 'order_completed',
+        type: 'order_completed',
         timestamp: Math.floor(Date.now() / 1000),
-        customer_id: message.customer_id,
-        message_id: message.id,
-        from_number: message.from_number || 'system',
-        test: false
-      }
-    };
+        order_id: order?.id || evaluationOrderId,
+        order_number: order?.order_number,
+        customer_name: order?.customers?.name,
+        to: toE164,
+        to_e164: toE164,
+        to_digits: toDigits,
+        phone: toE164,
+        phone_e164: toE164,
+        phone_digits: toDigits,
+        message: textMessage,
+        messageText: textMessage,
+        text: textMessage,
+        service_name: order?.service_types?.name,
+        amount: String(order?.total_amount ?? ''),
+        paid_amount: String(order?.paid_amount ?? ''),
+        remaining_amount: order && order.total_amount != null && order.paid_amount != null
+          ? String(Number(order.total_amount) - Number(order.paid_amount))
+          : undefined,
+        delivery_date: order?.delivery_date || undefined,
+        evaluation_link: reviewLink
+      };
+
+    } else {
+      // الوضع الافتراضي: إرسال نصي بسيط
+      payload = {
+        event: 'whatsapp_message_send',
+        data: {
+          to: message.to_number,
+          phone: message.to_number,
+          phoneNumber: message.to_number,
+          message: message.message_content,
+          messageText: message.message_content,
+          text: message.message_content,
+          type: 'text',
+          message_type: 'text',
+          timestamp: Math.floor(Date.now() / 1000),
+          customer_id: message.customer_id,
+          message_id: message.id,
+          from_number: message.from_number || 'system',
+          test: false
+        }
+      };
+    }
 
     console.log('إرسال للـ webhook:', webhook.webhook_url);
     console.log('البيانات المرسلة:', JSON.stringify(payload, null, 2));
