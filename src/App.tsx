@@ -158,6 +158,7 @@ const App = () => (
                  </RoleProtectedRoute>
                } />
                <Route path="evaluations" element={<Evaluations />} />
+               <Route path="evaluation-analytics" element={<EvaluationAnalytics />} />
                <Route path="reviews-management" element={
                   <RoleProtectedRoute allowedRoles={['admin', 'manager'] as any}>
                    <ReviewsManagement />

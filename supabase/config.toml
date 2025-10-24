@@ -32,3 +32,6 @@ verify_jwt = false
 
 [functions.notify-new-payment]
 verify_jwt = false
+
+[functions.analyze-evaluations]
+verify_jwt = true

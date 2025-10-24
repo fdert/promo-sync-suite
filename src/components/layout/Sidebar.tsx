@@ -23,6 +23,7 @@ import {
   Send,
   Database as DatabaseIcon,
   Gift,
+  Brain,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -106,9 +107,15 @@ const menuItems = [
   },
   {
     title: "التقييمات",
-    icon: MessageSquare,
+    icon: Star,
     href: "/admin/evaluations",
     allowedRoles: ['admin', 'manager', 'employee'] as UserRole[],
+  },
+  {
+    title: "التحليل الذكي",
+    icon: Brain,
+    href: "/admin/evaluation-analytics",
+    allowedRoles: ['admin', 'manager'] as UserRole[],
   },
   {
     title: "أنواع الخدمات",
