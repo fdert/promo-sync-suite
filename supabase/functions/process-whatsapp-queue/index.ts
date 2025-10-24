@@ -329,6 +329,8 @@ async function sendToWhatsAppService(message: any): Promise<boolean> {
         phone: toE164,
         phone_e164: toE164,
         phone_digits: toDigits,
+        phoneNumber: toE164,
+        msisdn: toDigits,
         message: textMessage,
         messageText: textMessage,
         text: textMessage,
@@ -389,11 +391,10 @@ async function sendToWhatsAppService(message: any): Promise<boolean> {
       // سجل في webhook_logs
       try {
         await supabase.from('webhook_logs').insert({
-          webhook_url: webhook.webhook_url,
-          payload: payload,
+          webhook_setting_id: webhook.id,
+          request_payload: payload,
           response_status: response.status,
           response_body: responseText,
-          webhook_type: webhook.webhook_type,
           created_at: new Date().toISOString()
         });
         console.log('📝 تم تسجيل الويب هوك في قاعدة البيانات');
@@ -410,11 +411,10 @@ async function sendToWhatsAppService(message: any): Promise<boolean> {
       // سجل الخطأ في webhook_logs
       try {
         await supabase.from('webhook_logs').insert({
-          webhook_url: webhook.webhook_url,
-          payload: payload,
+          webhook_setting_id: webhook.id,
+          request_payload: payload,
           response_status: response.status,
           response_body: errorText,
-          webhook_type: webhook.webhook_type,
           error_message: `${response.status} - ${response.statusText}`,
           created_at: new Date().toISOString()
         });
