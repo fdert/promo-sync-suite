@@ -48,6 +48,7 @@ import ReviewsManagement from "./pages/admin/ReviewsManagement";
 import GoogleMapsIntegration from "./pages/admin/GoogleMapsIntegration";
 import BarcodeSettings from "./pages/admin/BarcodeSettings";
 import FollowUpSettings from "./pages/admin/FollowUpSettings";
+import EvaluationAnalytics from "./pages/admin/EvaluationAnalytics";
 import FinancialMovements from "./pages/admin/FinancialMovements";
 import EmployeeFinancialMovements from "./pages/employee/FinancialMovements";
 import PricingCalculatorPage from "./pages/employee/PricingCalculator";

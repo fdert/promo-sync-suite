@@ -398,25 +398,34 @@ export type Database = {
           comment: string | null
           created_at: string | null
           customer_id: string | null
+          evaluation_token: string | null
           id: string
           order_id: string | null
           rating: number | null
+          reminder_sent_at: string | null
+          sent_at: string | null
         }
         Insert: {
           comment?: string | null
           created_at?: string | null
           customer_id?: string | null
+          evaluation_token?: string | null
           id?: string
           order_id?: string | null
           rating?: number | null
+          reminder_sent_at?: string | null
+          sent_at?: string | null
         }
         Update: {
           comment?: string | null
           created_at?: string | null
           customer_id?: string | null
+          evaluation_token?: string | null
           id?: string
           order_id?: string | null
           rating?: number | null
+          reminder_sent_at?: string | null
+          sent_at?: string | null
         }
         Relationships: [
           {
@@ -443,14 +452,14 @@ export type Database = {
           {
             foreignKeyName: "evaluations_order_id_fkey"
             columns: ["order_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "order_payment_summary"
             referencedColumns: ["order_id"]
           },
           {
             foreignKeyName: "evaluations_order_id_fkey"
             columns: ["order_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "orders"
             referencedColumns: ["id"]
           },
@@ -1636,6 +1645,7 @@ export type Database = {
       }
       exec_sql: { Args: { sql: string }; Returns: undefined }
       generate_database_backup: { Args: never; Returns: string }
+      generate_evaluation_token: { Args: never; Returns: string }
       generate_order_number: { Args: never; Returns: string }
       generate_print_order_number: { Args: never; Returns: string }
       log_activity: {
