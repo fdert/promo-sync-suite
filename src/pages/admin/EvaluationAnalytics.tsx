@@ -57,7 +57,7 @@ const EvaluationAnalytics = () => {
           orders!order_id (order_number, total_amount, service_types(name)),
           customers!customer_id (name)
         `)
-        .not('submitted_at', 'is', null)
+        .not('sent_at', 'is', null)
         .not('rating', 'is', null)
         .order('created_at', { ascending: false });
 
