@@ -28,8 +28,8 @@ serve(async (req) => {
       .from('evaluations')
       .select(`
         *,
-        customers (name, whatsapp_number),
-        orders (order_number, service_name)
+        customers (name, whatsapp),
+        orders (order_number)
       `)
       .eq('id', evaluationId)
       .single()
@@ -80,14 +80,14 @@ serve(async (req) => {
     }
 
     // إنشاء رسالة واتساب
-    if (evaluation.customers?.whatsapp_number) {
+    if (evaluation.customers?.whatsapp) {
       const message = `${settings.review_template}\n\n${reviewLink}\n\nشكراً لك على تقييمك الإيجابي لخدماتنا!`
 
       const { error: messageError } = await supabaseClient
         .from('whatsapp_messages')
         .insert({
           from_number: 'system',
-          to_number: evaluation.customers.whatsapp_number,
+          to_number: evaluation.customers.whatsapp,
           message_type: 'text',
           message_content: message,
           status: 'pending',

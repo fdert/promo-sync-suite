@@ -738,9 +738,11 @@ ${data.file_url}
 
     console.log('Sending notification via webhook:', JSON.stringify(messagePayload, null, 2));
 
+    const isForceSend = !!force_send || templateName === 'order_completed' || currentStatus === 'مكتمل';
+
     // فحص التكرار قبل الحفظ/الإرسال: نفس الرقم ونفس المحتوى خلال آخر 10 دقائق
-    // إلا إذا كان force_send = true (من لوحة الموظف عند تغيير الحالة)
-    if (!force_send) {
+    // إلا إذا كان isForceSend = true (من لوحة الموظف عند تغيير الحالة أو حالة مكتمل)
+    if (!isForceSend) {
       try {
         const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
         const { data: existingDup } = await supabase
@@ -770,14 +772,14 @@ ${data.file_url}
         console.log('Duplicate pre-check failed, continuing anyway:', e?.message);
       }
     } else {
-      console.log('Force send enabled, skipping duplicate check');
+      console.log('Force send enabled (includes مكتمل), skipping duplicate check');
     }
 
     console.log('=== Saving message to database first (with dedupe) ===');
 
     const eventOrderId = (typeof order_id !== 'undefined' && order_id) || orderDetails?.id || requestBody?.order_id || 'unknown';
     const dedupeKeyBase = `${type}|${eventOrderId}|${normalizedPhone}`;
-    const dedupeKey = force_send ? `${dedupeKeyBase}|${Date.now()}` : dedupeKeyBase;
+    const dedupeKey = isForceSend ? `${dedupeKeyBase}|${Date.now()}` : dedupeKeyBase;
 
     const { data: savedMessage, error: saveError } = await supabase
       .from('whatsapp_messages')
@@ -800,8 +802,8 @@ ${data.file_url}
     }
 
     if (!savedMessage) {
-      if (force_send) {
-        console.log('Duplicate via dedupe_key but force_send enabled. Proceeding to send.');
+      if (isForceSend) {
+        console.log('Duplicate via dedupe_key but force send enabled (includes مكتمل). Proceeding to send.');
       } else {
         console.log('Duplicate detected via dedupe_key. Skipping webhook send.');
         return new Response(
