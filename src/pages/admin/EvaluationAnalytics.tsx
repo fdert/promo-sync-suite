@@ -54,7 +54,7 @@ const EvaluationAnalytics = () => {
         .from('evaluations')
         .select(`
           *,
-          orders!order_id (order_number, service_name, total_amount),
+          orders!order_id (order_number, total_amount, service_types(name)),
           customers!customer_id (name)
         `)
         .not('submitted_at', 'is', null)
