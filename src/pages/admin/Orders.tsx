@@ -822,6 +822,7 @@ ${companyName}`;
           order_id: orderId,
           source: 'admin_dashboard', // تحديد المصدر
           webhook_preference: 'لوحة الإدارة', // الويب هوك المفضل
+          force_send: true, // إجبار الإرسال حتى لو كانت الرسالة مكررة
           data: {
             order_number: orderData.order_number,
             customer_name: orderData.customers.name,
@@ -848,6 +849,14 @@ ${companyName}`;
             console.error('فشل في إرسال إشعار الواتس:', notificationError);
           } else {
             console.log('تم إرسال إشعار الواتس آب بنجاح');
+          }
+
+          // تشغيل معالج رسائل الواتساب فوراً لضمان الإرسال
+          try {
+            await supabase.functions.invoke('process-whatsapp-queue');
+            console.log('تم تشغيل معالج رسائل الواتساب');
+          } catch (queueError) {
+            console.error('خطأ في تشغيل معالج رسائل الواتساب:', queueError);
           }
         } catch (notificationError) {
           console.error('خطأ في إرسال الإشعار:', notificationError);
@@ -1258,6 +1267,7 @@ ${companyName}`;
           order_id: createdOrder.id,
           source: 'admin_dashboard',
           webhook_preference: 'لوحة الإدارة',
+          force_send: true, // إجبار الإرسال للطلبات الجديدة
           data: {
             order_number: orderNumber,
             customer_name: selectedCustomer.name,
@@ -1283,6 +1293,14 @@ ${companyName}`;
             console.error('فشل في إرسال إشعار الواتس:', notificationError);
           } else {
             console.log('تم إرسال إشعار الواتس آب للطلب الجديد بنجاح');
+          }
+
+          // تشغيل معالج رسائل الواتساب فوراً لضمان الإرسال
+          try {
+            await supabase.functions.invoke('process-whatsapp-queue');
+            console.log('تم تشغيل معالج رسائل الواتساب للطلب الجديد');
+          } catch (queueError) {
+            console.error('خطأ في تشغيل معالج رسائل الواتساب:', queueError);
           }
         } catch (notificationError) {
           console.error('خطأ في إرسال الإشعار للطلب الجديد:', notificationError);
