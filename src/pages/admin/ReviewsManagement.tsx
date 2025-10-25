@@ -32,12 +32,16 @@ interface Evaluation {
   customers?: {
     name: string;
     phone: string;
-    whatsapp_number: string;
+    whatsapp?: string;
   };
   orders?: {
     order_number: string;
-    service_name: string;
   };
+  service_types?: {
+    name: string;
+  };
+  evaluation_token?: string | null;
+  order_id?: string | null;
 }
 
 const ReviewsManagement = () => {
@@ -196,44 +200,58 @@ const ReviewsManagement = () => {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      pending: { label: "قيد المراجعة", variant: "secondary" as const, icon: Clock },
-      approved: { label: "جاهز للإرسال", variant: "default" as const, icon: CheckCircle },
-      sent_to_customer: { label: "تم الإرسال للعميل", variant: "default" as const, icon: Send },
-      published_by_customer: { label: "نشره العميل", variant: "default" as const, icon: ExternalLink },
-      declined: { label: "مرفوض", variant: "destructive" as const, icon: XCircle },
-    };
 
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
-    const Icon = config.icon;
-
-    return (
-      <Badge variant={config.variant} className="flex items-center gap-1">
-        <Icon className="h-3 w-3" />
-        {config.label}
-      </Badge>
-    );
+  // بناء رابط نموذج التقييم على واجهة التطبيق
+  const getEvaluationLink = (token?: string | null) => {
+    if (!token) return null;
+    return `${window.location.origin}/evaluation/${token}`;
   };
 
-  const renderStars = (rating: number) => {
-    return Array.from({ length: 5 }, (_, i) => (
-      <Star
-        key={i}
-        className={`h-4 w-4 ${
-          i < rating ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
-        }`}
-      />
-    ));
+  // توحيد رقم الجوال (إزالة الفراغات والرموز)
+  const normalizePhone = (raw?: string) => (raw ? raw.replace(/[^0-9+]/g, '') : '');
+
+  const copyLink = async (link: string) => {
+    try {
+      await navigator.clipboard.writeText(link);
+      toast({ title: 'تم النسخ', description: 'تم نسخ رابط التقييم' });
+    } catch (e) {
+      toast({ title: 'خطأ', description: 'تعذر نسخ الرابط', variant: 'destructive' });
+    }
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
+  // إرسال رسالة واتساب تحتوي رابط التقييم
+  const sendEvaluationWhatsApp = async (evaluation: Evaluation) => {
+    try {
+      setActionLoading(evaluation.id);
+      const to = normalizePhone(evaluation.customers?.whatsapp || evaluation.customers?.phone);
+      const link = getEvaluationLink(evaluation.evaluation_token);
+
+      if (!to || !link) {
+        toast({ title: 'بيانات ناقصة', description: 'رقم الواتساب أو رابط التقييم غير متوفر', variant: 'destructive' });
+        return;
+      }
+
+      const content = `🌟 عزيزنا العميل، نشكرك على تعاملك معنا\n\n✅ تم اكتمال طلبك رقم: ${evaluation.orders?.order_number || ''}\n\nنرجو تقييم تجربتك عبر الرابط التالي:\n${link}\n\nشاكرين لكم وقتكم`;
+
+      const { error } = await supabase.from('whatsapp_messages').insert({
+        to_number: to,
+        message_type: 'text',
+        message_content: content,
+        status: 'pending',
+        customer_id: (evaluation as any).customer_id || null,
+        dedupe_key: evaluation.order_id ? `evaluation:${evaluation.order_id}` : null,
+      });
+
+      if (error) throw error;
+
+      toast({ title: 'تمت الإضافة', description: 'تمت إضافة رسالة التقييم إلى قائمة الإرسال' });
+    } catch (err) {
+      console.error('Error sending evaluation WhatsApp:', err);
+      toast({ title: 'خطأ', description: 'تعذر إرسال رسالة الواتساب', variant: 'destructive' });
+    } finally {
+      setActionLoading(null);
+    }
+  };
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -312,6 +330,35 @@ const ReviewsManagement = () => {
                   <span>
                     • تم الإرسال: {new Date(evaluation.google_review_sent_at).toLocaleDateString("ar-SA")}
                   </span>
+                )}
+              </div>
+
+              <div className="mt-3 space-y-2">
+                <div className="text-sm">
+                  <span className="font-medium">واتساب العميل:</span>{" "}
+                  <span className="text-muted-foreground">{(evaluation.customers?.whatsapp || evaluation.customers?.phone) || 'غير متوفر'}</span>
+                </div>
+                {getEvaluationLink(evaluation.evaluation_token) && (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-medium">رابط التقييم:</span>
+                    <a
+                      href={getEvaluationLink(evaluation.evaluation_token)!}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary underline break-all"
+                    >
+                      {getEvaluationLink(evaluation.evaluation_token)}
+                    </a>
+                    <Button size="sm" variant="outline" onClick={() => copyLink(getEvaluationLink(evaluation.evaluation_token)!)}>
+                      نسخ الرابط
+                    </Button>
+                    <Button size="sm" onClick={() => sendEvaluationWhatsApp(evaluation)} disabled={actionLoading === evaluation.id}>
+                      {actionLoading === evaluation.id && (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      )}
+                      إرسال واتساب للتقييم
+                    </Button>
+                  </div>
                 )}
               </div>
 
