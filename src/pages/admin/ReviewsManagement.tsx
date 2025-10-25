@@ -247,11 +247,9 @@ const ReviewsManagement = () => {
 
       if (recentMessages && recentMessages.length > 0) {
         toast({ 
-          title: 'تم الإرسال مسبقاً', 
-          description: 'تم إرسال رسالة التقييم لهذا العميل مؤخراً. يرجى الانتظار قبل إعادة الإرسال.',
-          variant: 'destructive'
+          title: 'إعادة إرسال', 
+          description: 'تم الإرسال مسبقاً خلال آخر 30 دقيقة، سيتم إعادة الإرسال الآن.',
         });
-        return;
       }
 
       const code = (evaluation.evaluation_token || evaluation.id || '').slice(-5).toUpperCase();
