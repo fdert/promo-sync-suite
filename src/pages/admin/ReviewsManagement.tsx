@@ -65,8 +65,10 @@ const ReviewsManagement = () => {
         .select(`
           *,
           customers!customer_id (name, phone, whatsapp),
-          orders!order_id (order_number),
-          service_types (name)
+          orders!order_id (
+            order_number,
+            service_types (name)
+          )
         `)
         .order("created_at", { ascending: false });
 
@@ -200,6 +202,28 @@ const ReviewsManagement = () => {
     }
   };
 
+  const renderStars = (rating: number) => {
+    return Array.from({ length: 5 }, (_, i) => (
+      <Star
+        key={i}
+        className={`h-4 w-4 ${
+          i < rating ? "text-yellow-500 fill-yellow-500" : "text-gray-300"
+        }`}
+      />
+    ));
+  };
+
+  const getStatusBadge = (status: string) => {
+    const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+      pending: { label: "قيد المراجعة", variant: "secondary" },
+      approved: { label: "معتمد", variant: "default" },
+      sent_to_customer: { label: "تم الإرسال", variant: "default" },
+      declined: { label: "مرفوض", variant: "destructive" },
+    };
+    const statusInfo = statusMap[status] || { label: status, variant: "outline" };
+    return <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>;
+  };
+
 
   // بناء رابط نموذج التقييم على واجهة التطبيق
   const getEvaluationLink = (token?: string | null) => {
@@ -283,7 +307,7 @@ const ReviewsManagement = () => {
                     {evaluation.customers?.name || "عميل غير محدد"}
                   </CardTitle>
                   <CardDescription>
-                    {evaluation.service_types?.name || 'خدمة غير محددة'} - طلب رقم {evaluation.orders?.order_number}
+                    {evaluation.orders?.service_types?.name || 'خدمة غير محددة'} - طلب رقم {evaluation.orders?.order_number}
                   </CardDescription>
                 </div>
                 {getStatusBadge(evaluation.google_review_status)}

@@ -51,7 +51,10 @@ const Evaluations = () => {
         .from('evaluations')
         .select(`
           *,
-          orders!order_id (order_number, service_name),
+          orders!order_id (
+            order_number,
+            service_types (name)
+          ),
           customers!customer_id (name, phone)
         `)
         .order('created_at', { ascending: false });
@@ -343,7 +346,7 @@ const Evaluations = () => {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <p className="text-sm">{evaluation.orders?.service_name || 'غير محدد'}</p>
+                    <p className="text-sm">{evaluation.orders?.service_types?.name || 'غير محدد'}</p>
                   </TableCell>
                    <TableCell>
                      {evaluation.rating ? (
