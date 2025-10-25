@@ -257,13 +257,18 @@ const ReviewsManagement = () => {
 
       const content = `🌟 عزيزنا العميل، نشكرك على تعاملك معنا\n\n✅ تم اكتمال طلبك رقم: ${evaluation.orders?.order_number || ''}\n\nنرجو تقييم تجربتك عبر الرابط التالي:\n${link}\n\nشاكرين لكم وقتكم`;
 
+      // استخدام dedupe_key فريد مع timestamp للإرسال اليدوي
+      const uniqueDedupeKey = evaluation.order_id 
+        ? `evaluation_manual:${evaluation.order_id}:${Date.now()}` 
+        : null;
+
       const { error } = await supabase.from('whatsapp_messages').insert({
         to_number: to,
         message_type: 'text',
         message_content: content,
         status: 'pending',
         customer_id: (evaluation as any).customer_id || null,
-        dedupe_key: evaluation.order_id ? `evaluation:${evaluation.order_id}` : null,
+        dedupe_key: uniqueDedupeKey,
       });
 
       if (error) throw error;
