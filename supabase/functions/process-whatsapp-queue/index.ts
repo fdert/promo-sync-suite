@@ -11,6 +11,21 @@ const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+// Normalize phone to E.164-like format: keep + and digits only, remove spaces and symbols
+function normalizePhone(input?: string | null) {
+  const raw = String(input || '').trim();
+  if (!raw) return '';
+  // keep leading +, remove everything else that's not digit
+  let cleaned = raw.replace(/[^\d+]/g, '');
+  if (cleaned.startsWith('00')) cleaned = '+' + cleaned.slice(2);
+  if (!cleaned.startsWith('+')) {
+    // if starts with country code (e.g. 966...), still add plus
+    cleaned = '+' + cleaned;
+  }
+  const digits = cleaned.replace(/\D/g, '');
+  return { e164: cleaned, digits };
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -287,13 +302,13 @@ async function sendToWhatsAppService(message: any): Promise<boolean> {
     let payload: any;
 
     if (isEvaluationForOrder && evaluationOrderId) {
-      console.log('🧱 بناء payload بطريقة إشعارات الطلبات (order_completed) لرسالة التقييم');
+      console.log('🧱 بناء payload لرسالة التقييم');
       // جلب تفاصيل الطلب والعميل
       const { data: order } = await supabase
         .from('orders')
         .select(`id, order_number, total_amount, paid_amount, status, delivery_date,
                  customers:customer_id (name, phone, whatsapp),
-                 service_types:service_type_id (name)`)
+                 service_types:service_type_id (name)`) 
         .eq('id', evaluationOrderId)
         .single();
 
@@ -305,8 +320,9 @@ async function sendToWhatsAppService(message: any): Promise<boolean> {
         .single();
 
       const phoneRaw = String(message.to_number || order?.customers?.whatsapp || order?.customers?.phone || '').trim();
-      const toE164 = phoneRaw; // نفترض أنه مخزن بتنسيق دولي
-      const toDigits = phoneRaw.replace(/\D/g, '');
+      const norm = normalizePhone(phoneRaw);
+      const toE164 = norm.e164;
+      const toDigits = norm.digits;
       const reviewLink = evaluation?.evaluation_token
         ? `${supabaseUrl}/evaluation/${evaluation.evaluation_token}`
         : undefined;
@@ -318,48 +334,76 @@ async function sendToWhatsAppService(message: any): Promise<boolean> {
         reviewLink ? `📝 نرجو تقييم تجربتك: ${reviewLink}` : undefined,
       ].filter(Boolean).join('\n');
 
-      payload = {
-        notification_type: 'order_completed',
-        type: 'order_completed',
-        source: 'evaluation_followup',
-        is_evaluation: true,
-        force_send: true,
-        timestamp: Math.floor(Date.now() / 1000),
-        order_id: order?.id || evaluationOrderId,
-        order_number: order?.order_number,
-        customer_name: order?.customers?.name,
-        to: toE164,
-        to_e164: toE164,
-        to_digits: toDigits,
-        phone: toE164,
-        phone_e164: toE164,
-        phone_digits: toDigits,
-        phoneNumber: toE164,
-        msisdn: toDigits,
-        message: textMessage,
-        messageText: textMessage,
-        text: textMessage,
-        service_name: order?.service_types?.name,
-        description: '',
-        amount: String(order?.total_amount ?? '0.00'),
-        paid_amount: String(order?.paid_amount ?? '0.00'),
-        remaining_amount: order && order.total_amount != null && order.paid_amount != null
-          ? String(Number(order.total_amount) - Number(order.paid_amount))
-          : '0.00',
-        payment_type: 'غير محدد',
-        status: String(order?.status || ''),
-        priority: 'متوسطة',
-        start_date: 'سيتم تحديده',
-        due_date: 'سيتم تحديده',
-        delivery_date: order?.delivery_date || undefined,
-        order_items: '',
-        payments_details: 'لا توجد دفعات مسجلة',
-        payments: [],
-        evaluation_link: reviewLink,
-        company_name: '',
-        estimated_time: 'قريباً',
-        progress: '0'
-      };
+      // إذا كان الويب هوك من نوع evaluation نستخدم هيكل order_completed
+      if (webhook.webhook_type === 'evaluation') {
+        payload = {
+          notification_type: 'order_completed',
+          type: 'order_completed',
+          source: 'evaluation_followup',
+          is_evaluation: true,
+          force_send: true,
+          timestamp: Math.floor(Date.now() / 1000),
+          order_id: order?.id || evaluationOrderId,
+          order_number: order?.order_number,
+          customer_name: order?.customers?.name,
+          to: toE164,
+          to_e164: toE164,
+          to_digits: toDigits,
+          phone: toE164,
+          phone_e164: toE164,
+          phone_digits: toDigits,
+          phoneNumber: toE164,
+          msisdn: toDigits,
+          message: textMessage,
+          messageText: textMessage,
+          text: textMessage,
+          service_name: order?.service_types?.name,
+          description: '',
+          amount: String(order?.total_amount ?? '0.00'),
+          paid_amount: String(order?.paid_amount ?? '0.00'),
+          remaining_amount: order && order.total_amount != null && order.paid_amount != null
+            ? String(Number(order.total_amount) - Number(order.paid_amount))
+            : '0.00',
+          payment_type: 'غير محدد',
+          status: String(order?.status || ''),
+          priority: 'متوسطة',
+          start_date: 'سيتم تحديده',
+          due_date: 'سيتم تحديده',
+          delivery_date: order?.delivery_date || undefined,
+          order_items: '',
+          payments_details: 'لا توجد دفعات مسجلة',
+          payments: [],
+          evaluation_link: reviewLink,
+          company_name: '',
+          estimated_time: 'قريباً',
+          progress: '0'
+        };
+      } else {
+        // خلاف ذلك (outgoing أو أي نوع آخر) نستخدم هيكل الإرسال النصي القياسي المتوافق مع سير العمل
+        console.log('↪️ لا يوجد ويب هوك evaluation مفعل، سنستخدم هيكل whatsapp_message_send مع النص المخصص');
+        payload = {
+          event: 'whatsapp_message_send',
+          data: {
+            to: toE164,
+            phone: toE164,
+            phoneNumber: toE164,
+            msisdn: toDigits,
+            message: textMessage,
+            messageText: textMessage,
+            text: textMessage,
+            type: 'text',
+            message_type: 'text',
+            timestamp: Math.floor(Date.now() / 1000),
+            customer_id: message.customer_id,
+            message_id: message.id,
+            from_number: message.from_number || 'system',
+            is_evaluation: true,
+            source: 'evaluation_followup',
+            order_id: order?.id || evaluationOrderId,
+            order_number: order?.order_number
+          }
+        };
+      }
 
     } else {
       // الوضع الافتراضي: إرسال نصي بسيط
