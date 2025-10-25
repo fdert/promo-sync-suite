@@ -319,6 +319,8 @@ async function sendToWhatsAppService(message: any): Promise<boolean> {
       payload = {
         notification_type: 'order_completed',
         type: 'order_completed',
+        source: 'evaluation_followup',
+        force_send: true,
         timestamp: Math.floor(Date.now() / 1000),
         order_id: order?.id || evaluationOrderId,
         order_number: order?.order_number,
@@ -335,13 +337,25 @@ async function sendToWhatsAppService(message: any): Promise<boolean> {
         messageText: textMessage,
         text: textMessage,
         service_name: order?.service_types?.name,
-        amount: String(order?.total_amount ?? ''),
-        paid_amount: String(order?.paid_amount ?? ''),
+        description: '',
+        amount: String(order?.total_amount ?? '0.00'),
+        paid_amount: String(order?.paid_amount ?? '0.00'),
         remaining_amount: order && order.total_amount != null && order.paid_amount != null
           ? String(Number(order.total_amount) - Number(order.paid_amount))
-          : undefined,
+          : '0.00',
+        payment_type: 'غير محدد',
+        status: String(order?.status || ''),
+        priority: 'متوسطة',
+        start_date: 'سيتم تحديده',
+        due_date: 'سيتم تحديده',
         delivery_date: order?.delivery_date || undefined,
-        evaluation_link: reviewLink
+        order_items: '',
+        payments_details: 'لا توجد دفعات مسجلة',
+        payments: [],
+        evaluation_link: reviewLink,
+        company_name: '',
+        estimated_time: 'قريباً',
+        progress: '0'
       };
 
     } else {
