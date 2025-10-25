@@ -232,6 +232,28 @@ const ReviewsManagement = () => {
         return;
       }
 
+      // تحقق من وجود رسالة تم إرسالها مؤخراً (آخر 30 دقيقة)
+      const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+      const { data: recentMessages, error: checkError } = await supabase
+        .from('whatsapp_messages')
+        .select('id, created_at')
+        .eq('to_number', to)
+        .eq('customer_id', evaluation.customer_id)
+        .like('message_content', `%${link}%`)
+        .gte('created_at', thirtyMinutesAgo)
+        .limit(1);
+
+      if (checkError) throw checkError;
+
+      if (recentMessages && recentMessages.length > 0) {
+        toast({ 
+          title: 'تم الإرسال مسبقاً', 
+          description: 'تم إرسال رسالة التقييم لهذا العميل مؤخراً. يرجى الانتظار قبل إعادة الإرسال.',
+          variant: 'destructive'
+        });
+        return;
+      }
+
       const content = `🌟 عزيزنا العميل، نشكرك على تعاملك معنا\n\n✅ تم اكتمال طلبك رقم: ${evaluation.orders?.order_number || ''}\n\nنرجو تقييم تجربتك عبر الرابط التالي:\n${link}\n\nشاكرين لكم وقتكم`;
 
       // استخدام dedupe_key فريد مع timestamp للإرسال اليدوي
