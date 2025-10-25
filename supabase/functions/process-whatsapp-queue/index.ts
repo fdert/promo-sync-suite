@@ -304,6 +304,10 @@ async function sendToWhatsAppService(message: any): Promise<boolean> {
 
     if (isEvaluationForOrder && evaluationOrderId) {
       console.log('🧱 بناء payload لرسالة التقييم');
+      
+      // استخدام محتوى الرسالة الأصلي مباشرة (يحتوي على رمز التقييم)
+      const textMessage = message.message_content;
+      
       // جلب تفاصيل الطلب والعميل
       const { data: order } = await supabase
         .from('orders')
@@ -311,29 +315,12 @@ async function sendToWhatsAppService(message: any): Promise<boolean> {
                  customers:customer_id (name, phone, whatsapp),
                  service_types:service_type_id (name)`) 
         .eq('id', evaluationOrderId)
-        .single();
-
-      // جلب توكن التقييم
-      const { data: evaluation } = await supabase
-        .from('evaluations')
-        .select('evaluation_token')
-        .eq('order_id', evaluationOrderId)
-        .single();
+        .maybeSingle();
 
       const phoneRaw = String(message.to_number || order?.customers?.whatsapp || order?.customers?.phone || '').trim();
       const norm = normalizePhone(phoneRaw);
       const toE164 = norm.e164;
       const toDigits = norm.digits;
-      const reviewLink = evaluation?.evaluation_token
-        ? `${supabaseUrl}/evaluation/${evaluation.evaluation_token}`
-        : undefined;
-
-      const textMessage = [
-        `🌟 عزيزنا ${order?.customers?.name || ''}، شكراً لثقتك بنا!`,
-        '',
-        `✅ تم اكتمال طلبك رقم: ${order?.order_number || ''}`,
-        reviewLink ? `📝 نرجو تقييم تجربتك: ${reviewLink}` : undefined,
-      ].filter(Boolean).join('\n');
 
       // إذا كان الويب هوك من نوع evaluation نستخدم هيكل order_completed
       if (webhook.webhook_type === 'evaluation') {
@@ -379,9 +366,8 @@ async function sendToWhatsAppService(message: any): Promise<boolean> {
           estimated_time: 'قريباً',
           progress: '0'
         };
-      } else {
-        // خلاف ذلك (outgoing أو أي نوع آخر) نستخدم هيكل الإرسال النصي القياسي المتوافق مع سير العمل
-        console.log('↪️ لا يوجد ويب هوك evaluation مفعل، سنستخدم هيكل whatsapp_message_send مع النص المخصص');
+      // خلاف ذلك (outgoing أو أي نوع آخر) نستخدم هيكل الإرسال النصي القياسي المتوافق مع سير العمل
+        console.log('↪️ استخدام هيكل whatsapp_message_send للإرسال');
         payload = {
           event: 'whatsapp_message_send',
           data: {
@@ -399,9 +385,10 @@ async function sendToWhatsAppService(message: any): Promise<boolean> {
             message_id: message.id,
             from_number: message.from_number || 'system',
             is_evaluation: true,
-            source: 'evaluation_followup',
+            source: 'evaluation_manual',
             order_id: order?.id || evaluationOrderId,
-            order_number: order?.order_number
+            order_number: order?.order_number,
+            test: false
           }
         };
       }

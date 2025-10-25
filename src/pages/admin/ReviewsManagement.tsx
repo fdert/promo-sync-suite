@@ -288,21 +288,6 @@ const ReviewsManagement = () => {
     }
   };
 
-  // إرسال عبر واتساب الجهاز (wa.me) كمسار بديل فوري
-  const sendEvaluationViaDevice = (evaluation: Evaluation) => {
-    const toRaw = normalizePhone(evaluation.customers?.whatsapp || evaluation.customers?.phone);
-    const digits = toRaw.replace(/[^\d]/g, '');
-    const link = getEvaluationLink(evaluation.evaluation_token);
-    if (!digits || !link) {
-      toast({ title: 'بيانات ناقصة', description: 'رقم الواتساب أو رابط التقييم غير متوفر', variant: 'destructive' });
-      return;
-    }
-    const code = (evaluation.evaluation_token || evaluation.id || '').slice(-5).toUpperCase();
-    const text = `🌟 عزيزنا العميل، نشكرك على تعاملك معنا\n\n✅ تم اكتمال طلبك رقم: ${evaluation.orders?.order_number || ''}\n\nنرجو تقييم تجربتك عبر الرابط التالي:\n${link}\n\nرمز التقييم: ${code}\n\nشاكرين لكم وقتكم`;
-    const url = `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
-    window.open(url, '_blank');
-  };
-
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center gap-2">
@@ -399,9 +384,6 @@ const ReviewsManagement = () => {
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       )}
                       إرسال واتساب للتقييم
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => sendEvaluationViaDevice(evaluation)}>
-                      إرسال عبر واتساب الجهاز
                     </Button>
                   </div>
                 )}
