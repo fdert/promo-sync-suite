@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,15 +19,12 @@ import { Label } from "@/components/ui/label";
 
 interface Evaluation {
   id: string;
-  rating: number;
-  feedback_text: string;
-  google_review_status: string;
-  google_review_sent_at: string | null;
-  google_review_link: string | null;
-  admin_notes: string | null;
-  approved_by: string | null;
-  approved_at: string | null;
-  created_at: string;
+  rating: number | null;
+  comment: string | null;
+  created_at: string | null;
+  customer_id: string | null;
+  sent_at: string | null;
+  reminder_sent_at: string | null;
   customers?: {
     name: string;
     phone: string;
@@ -36,12 +32,12 @@ interface Evaluation {
   };
   orders?: {
     order_number: string;
+    service_types?: {
+      name: string;
+    };
   };
-  service_types?: {
-    name: string;
-  };
-  evaluation_token?: string | null;
-  order_id?: string | null;
+  evaluation_token: string | null;
+  order_id: string | null;
 }
 
 const ReviewsManagement = () => {
@@ -105,17 +101,14 @@ const ReviewsManagement = () => {
       const { error } = await supabase
         .from("evaluations")
         .update({
-          google_review_status: "approved",
-          approved_by: (await supabase.auth.getUser()).data.user?.id,
-          approved_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
+          sent_at: new Date().toISOString(),
         })
         .eq("id", evaluationId);
 
       if (error) throw error;
 
-      // إرسال رسالة جوجل ماب تلقائياً للتقييمات المعتمدة
-      await sendGoogleReviewToCustomer(evaluationId);
+      // يمكن إضافة منطق إضافي هنا إذا لزم الأمر
+      await fetchEvaluations();
     } catch (error) {
       console.error("Error auto-approving evaluation:", error);
     }
@@ -127,16 +120,11 @@ const ReviewsManagement = () => {
       // إرسال رسالة واتساب للعميل
       await sendGoogleReviewRequest(evaluationId);
 
-      // تحديث الحالة إلى "sent_to_customer"
+      // تحديث حالة الإرسال
       const { error } = await supabase
         .from("evaluations")
         .update({
-          google_review_status: "sent_to_customer",
-          admin_notes: notes,
-          google_review_sent_at: new Date().toISOString(),
-          approved_by: (await supabase.auth.getUser()).data.user?.id,
-          approved_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
+          sent_at: new Date().toISOString(),
         })
         .eq("id", evaluationId);
 
@@ -162,20 +150,10 @@ const ReviewsManagement = () => {
   const declineEvaluation = async (evaluationId: string) => {
     setActionLoading(evaluationId);
     try {
-      const { error } = await supabase
-        .from("evaluations")
-        .update({
-          google_review_status: "declined",
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", evaluationId);
-
-      if (error) throw error;
-
-      await fetchEvaluations();
+      // يمكن إضافة منطق رفض التقييم هنا إذا لزم الأمر
       toast({
         title: "تم الرفض",
-        description: "تم رفض إرسال التقييم لخرائط جوجل",
+        description: "تم رفض إرسال التقييم",
       });
     } catch (error) {
       console.error("Error declining evaluation:", error);
@@ -202,7 +180,8 @@ const ReviewsManagement = () => {
     }
   };
 
-  const renderStars = (rating: number) => {
+  const renderStars = (rating: number | null) => {
+    if (!rating) return null;
     return Array.from({ length: 5 }, (_, i) => (
       <Star
         key={i}
@@ -216,9 +195,7 @@ const ReviewsManagement = () => {
   const getStatusBadge = (status: string) => {
     const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
       pending: { label: "قيد المراجعة", variant: "secondary" },
-      approved: { label: "معتمد", variant: "default" },
-      sent_to_customer: { label: "تم الإرسال", variant: "default" },
-      declined: { label: "مرفوض", variant: "destructive" },
+      sent: { label: "تم الإرسال", variant: "default" },
     };
     const statusInfo = statusMap[status] || { label: status, variant: "outline" };
     return <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>;
@@ -286,19 +263,18 @@ const ReviewsManagement = () => {
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center gap-2">
         <MessageSquare className="h-6 w-6" />
-        <h1 className="text-2xl font-bold">إدارة التقييمات لخرائط جوجل</h1>
+        <h1 className="text-2xl font-bold">إدارة التقييمات</h1>
         <Badge variant="outline" className="ml-2">
           {evaluations.length} تقييم
         </Badge>
       </div>
 
-      {/* إضافة معلومات حول التقييمات */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <h3 className="font-medium text-blue-800 mb-2">معلومات هامة:</h3>
         <ul className="text-sm text-blue-700 space-y-1">
-          <li>• التقييمات المعروضة هنا هي التي تم إرسالها من العملاء</li>
-          <li>• يمكنك مراجعة التقييمات قبل إرسالها لخرائط جوجل</li>
-          <li>• التقييمات العالية (4-5 نجوم) مناسبة للنشر على جوجل</li>
+          <li>• التقييمات المعروضة هنا هي التي تم إرسالها للعملاء</li>
+          <li>• يمكنك إرسال رابط التقييم للعملاء عبر واتساب</li>
+          <li>• بعد ملء العميل للتقييم، يمكنك مراجعته والتعامل معه</li>
         </ul>
       </div>
 
@@ -315,7 +291,9 @@ const ReviewsManagement = () => {
                     {evaluation.orders?.service_types?.name || 'خدمة غير محددة'} - طلب رقم {evaluation.orders?.order_number}
                   </CardDescription>
                 </div>
-                {getStatusBadge(evaluation.google_review_status)}
+                <Badge variant={evaluation.rating ? "default" : "secondary"}>
+                  {evaluation.rating ? "تم التقييم" : "في الانتظار"}
+                </Badge>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -335,29 +313,20 @@ const ReviewsManagement = () => {
                 )}
               </div>
 
-              {evaluation.feedback_text && (
+              {evaluation.comment && (
                 <div>
                   <span className="text-sm font-medium">التعليق:</span>
                   <p className="text-sm text-muted-foreground mt-1">
-                    {evaluation.feedback_text}
-                  </p>
-                </div>
-              )}
-
-              {evaluation.admin_notes && (
-                <div>
-                  <span className="text-sm font-medium">ملاحظات الإدارة:</span>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {evaluation.admin_notes}
+                    {evaluation.comment}
                   </p>
                 </div>
               )}
 
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span>تاريخ التقييم: {new Date(evaluation.created_at).toLocaleDateString("ar-SA")}</span>
-                {evaluation.google_review_sent_at && (
+                <span>تاريخ الإنشاء: {evaluation.created_at ? new Date(evaluation.created_at).toLocaleDateString("ar-SA") : 'غير محدد'}</span>
+                {evaluation.sent_at && (
                   <span>
-                    • تم الإرسال: {new Date(evaluation.google_review_sent_at).toLocaleDateString("ar-SA")}
+                    • تم الإرسال: {new Date(evaluation.sent_at).toLocaleDateString("ar-SA")}
                   </span>
                 )}
               </div>
@@ -374,7 +343,7 @@ const ReviewsManagement = () => {
                       href={getEvaluationLink(evaluation.evaluation_token)!}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-primary underline break-all"
+                      className="text-primary underline break-all text-sm"
                     >
                       {getEvaluationLink(evaluation.evaluation_token)}
                     </a>
@@ -390,90 +359,6 @@ const ReviewsManagement = () => {
                   </div>
                 )}
               </div>
-
-              {/* إظهار أزرار الإجراءات للتقييمات المناسبة */}
-              {(evaluation.google_review_status === "pending" || 
-                (evaluation.rating && evaluation.rating >= 4)) && (
-                <div className="flex gap-2">
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button
-                        size="sm"
-                        disabled={!evaluation.rating}
-                        onClick={() => {
-                          setSelectedEvaluation(evaluation);
-                          setAdminNotes(evaluation.admin_notes || "");
-                        }}
-                      >
-                        <Send className="mr-2 h-4 w-4" />
-                        {evaluation.rating ? "إرسال لخرائط جوجل" : "في انتظار التقييم"}
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>إرسال التقييم لخرائط جوجل</DialogTitle>
-                        <DialogDescription>
-                          سيتم إرسال رابط خرائط جوجل للعميل عبر واتساب
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <div>
-                          <Label htmlFor="admin_notes">ملاحظات إضافية (اختيارية)</Label>
-                          <Textarea
-                            id="admin_notes"
-                            value={adminNotes}
-                            onChange={(e) => setAdminNotes(e.target.value)}
-                            placeholder="أضف أي ملاحظات حول هذا التقييم..."
-                          />
-                        </div>
-                      </div>
-                      <DialogFooter>
-                        <Button
-                          onClick={() => {
-                            if (selectedEvaluation) {
-                              sendGoogleReviewToCustomer(selectedEvaluation.id, adminNotes);
-                            }
-                          }}
-                          disabled={actionLoading === selectedEvaluation?.id}
-                        >
-                          {actionLoading === selectedEvaluation?.id && (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          )}
-                          إرسال للعميل
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={() => declineEvaluation(evaluation.id)}
-                    disabled={actionLoading === evaluation.id || !evaluation.rating}
-                  >
-                    {actionLoading === evaluation.id ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <XCircle className="mr-2 h-4 w-4" />
-                    )}
-                    {evaluation.rating ? "رفض الإرسال" : "غير متاح"}
-                  </Button>
-                </div>
-              )}
-
-              {evaluation.google_review_link && (
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">رابط التقييم:</span>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => window.open(evaluation.google_review_link, "_blank")}
-                  >
-                    <ExternalLink className="mr-2 h-4 w-4" />
-                    فتح الرابط
-                  </Button>
-                </div>
-              )}
             </CardContent>
           </Card>
         ))}
