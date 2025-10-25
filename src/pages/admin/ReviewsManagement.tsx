@@ -256,30 +256,21 @@ const ReviewsManagement = () => {
       const content = `🌟 عزيزنا العميل، نشكرك على تعاملك معنا\n\n✅ تم اكتمال طلبك رقم: ${evaluation.orders?.order_number || ''}\n\nنرجو تقييم تجربتك عبر الرابط التالي:\n${link}\n\nرمز التقييم: ${code}\n\nشاكرين لكم وقتكم`;
 
 
-      // استخدام dedupe_key فريد مع timestamp للإرسال اليدوي
-      const uniqueDedupeKey = evaluation.order_id 
-        ? `evaluation_manual:${evaluation.order_id}:${Date.now()}` 
-        : null;
-
-      // إدراج الرسالة في الطابور دائماً ثم تشغيل المعالج (المسار المُعتمد الذي يعمل مع تحديثات الطلب)
-      const { error } = await supabase.from('whatsapp_messages').insert({
-        from_number: 'system',
-        to_number: to,
-        message_type: 'text',
-        message_content: content,
-        status: 'pending',
-        customer_id: (evaluation as any).customer_id || null,
-        dedupe_key: uniqueDedupeKey,
+      // إرسال مباشر عبر دالة الحافة بدون انتظار الطابور
+      const { error: directErr } = await supabase.functions.invoke('send-evaluation-direct', {
+        body: {
+          to,
+          message: content,
+          evaluation_id: evaluation.id,
+          order_id: evaluation.order_id,
+          customer_id: (evaluation as any).customer_id,
+          source: 'reviews_management'
+        }
       });
 
-      if (error) throw error;
+      if (directErr) throw directErr;
 
-      // تشغيل معالج طابور الواتساب لإرسال الرسائل فوراً
-      await supabase.functions.invoke('process-whatsapp-queue', {
-        body: { source: 'reviews_management', evaluation_id: evaluation.id }
-      });
-
-      toast({ title: 'تمت الإضافة', description: 'تمت إضافة رسالة التقييم إلى قائمة الإرسال وسيتم إرسالها الآن' });
+      toast({ title: 'تم الإرسال', description: 'تم إرسال رسالة التقييم مباشرة عبر الواتساب' });
     } catch (err) {
       console.error('Error sending evaluation WhatsApp:', err);
       toast({ title: 'خطأ', description: 'تعذر إرسال رسالة الواتساب', variant: 'destructive' });
