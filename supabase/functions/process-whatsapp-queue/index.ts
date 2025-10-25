@@ -217,12 +217,14 @@ async function sendToWhatsAppService(message: any): Promise<boolean> {
       console.warn('تعذر تطبيع رقم إدارة المتابعة:', e);
     }
     
-    // إذا كانت رسالة تقييم مرتبطة بطلب -> استخدم نفس ويب هوك الطلب المكتمل
+    // إذا كانت رسالة تقييم مرتبطة بطلب -> استخدم ويب هوك "evaluation" إن توفر، وإلا فالطلبات العادية
     if (!selectedWebhook && isEvaluationForOrder) {
-      // اختيار ويب هوك outgoing الذي يدعم حالة order_completed إن أمكن
-      selectedWebhook = webhooks.find(w => w.webhook_type === 'outgoing');
+      const evalWebhook = webhooks.find(w => w.webhook_type === 'evaluation');
+      selectedWebhook = evalWebhook || webhooks.find(w => w.webhook_type === 'outgoing');
       if (selectedWebhook) {
-        console.log('🔁 استخدام ويب هوك الطلبات العادية (outgoing) لرسالة التقييم المرتبطة بالطلب المكتمل');
+        console.log(evalWebhook
+          ? '🌟 استخدام ويب هوك التقييمات لرسالة التقييم المرتبطة بالطلب المكتمل'
+          : '🔁 استخدام ويب هوك الطلبات العادية (outgoing) لرسالة التقييم المرتبطة بالطلب المكتمل');
       }
     }
     
@@ -320,6 +322,7 @@ async function sendToWhatsAppService(message: any): Promise<boolean> {
         notification_type: 'order_completed',
         type: 'order_completed',
         source: 'evaluation_followup',
+        is_evaluation: true,
         force_send: true,
         timestamp: Math.floor(Date.now() / 1000),
         order_id: order?.id || evaluationOrderId,
