@@ -263,33 +263,25 @@ const ReviewsManagement = () => {
         ? `evaluation_manual:${evaluation.order_id}:${Date.now()}` 
         : null;
 
-      // محاولة الإرسال المباشر عبر الدالة السريعة
-      const direct = await supabase.functions.invoke('send-whatsapp-direct', {
-        body: { phone: to, message: content, customer_name: evaluation.customers?.name }
+      // إدراج الرسالة في الطابور دائماً ثم تشغيل المعالج (المسار المُعتمد الذي يعمل مع تحديثات الطلب)
+      const { error } = await supabase.from('whatsapp_messages').insert({
+        from_number: 'system',
+        to_number: to,
+        message_type: 'text',
+        message_content: content,
+        status: 'pending',
+        customer_id: (evaluation as any).customer_id || null,
+        dedupe_key: uniqueDedupeKey,
       });
 
-      if (direct.error) {
-        // في حال فشل المسار السريع، نعود للمسار القديم (الطابور)
-        const { error } = await supabase.from('whatsapp_messages').insert({
-          to_number: to,
-          message_type: 'text',
-          message_content: content,
-          status: 'pending',
-          customer_id: (evaluation as any).customer_id || null,
-          dedupe_key: uniqueDedupeKey,
-        });
+      if (error) throw error;
 
-        if (error) throw error;
+      // تشغيل معالج طابور الواتساب لإرسال الرسائل فوراً
+      await supabase.functions.invoke('process-whatsapp-queue', {
+        body: { source: 'reviews_management', evaluation_id: evaluation.id }
+      });
 
-        // تشغيل معالج طابور الواتساب لإرسال الرسائل فوراً
-        await supabase.functions.invoke('process-whatsapp-queue', {
-          body: { source: 'reviews_management', evaluation_id: evaluation.id }
-        });
-
-        toast({ title: 'تمت الإضافة', description: 'تمت إضافة رسالة التقييم إلى قائمة الإرسال وسيتم إرسالها الآن' });
-      } else {
-        toast({ title: 'تم الإرسال', description: 'تم إرسال رسالة التقييم مباشرة عبر المسار السريع' });
-      }
+      toast({ title: 'تمت الإضافة', description: 'تمت إضافة رسالة التقييم إلى قائمة الإرسال وسيتم إرسالها الآن' });
     } catch (err) {
       console.error('Error sending evaluation WhatsApp:', err);
       toast({ title: 'خطأ', description: 'تعذر إرسال رسالة الواتساب', variant: 'destructive' });
