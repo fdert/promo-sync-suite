@@ -263,23 +263,33 @@ const ReviewsManagement = () => {
         ? `evaluation_manual:${evaluation.order_id}:${Date.now()}` 
         : null;
 
-      const { error } = await supabase.from('whatsapp_messages').insert({
-        to_number: to,
-        message_type: 'text',
-        message_content: content,
-        status: 'pending',
-        customer_id: (evaluation as any).customer_id || null,
-        dedupe_key: uniqueDedupeKey,
+      // محاولة الإرسال المباشر عبر الدالة السريعة
+      const direct = await supabase.functions.invoke('send-whatsapp-direct', {
+        body: { phone: to, message: content, customer_name: evaluation.customers?.name }
       });
 
-      if (error) throw error;
+      if (direct.error) {
+        // في حال فشل المسار السريع، نعود للمسار القديم (الطابور)
+        const { error } = await supabase.from('whatsapp_messages').insert({
+          to_number: to,
+          message_type: 'text',
+          message_content: content,
+          status: 'pending',
+          customer_id: (evaluation as any).customer_id || null,
+          dedupe_key: uniqueDedupeKey,
+        });
 
-      // تشغيل معالج طابور الواتساب لإرسال الرسائل فوراً
-      await supabase.functions.invoke('process-whatsapp-queue', {
-        body: { source: 'reviews_management', evaluation_id: evaluation.id }
-      });
+        if (error) throw error;
 
-      toast({ title: 'تمت الإضافة', description: 'تمت إضافة رسالة التقييم إلى قائمة الإرسال وسيتم إرسالها الآن' });
+        // تشغيل معالج طابور الواتساب لإرسال الرسائل فوراً
+        await supabase.functions.invoke('process-whatsapp-queue', {
+          body: { source: 'reviews_management', evaluation_id: evaluation.id }
+        });
+
+        toast({ title: 'تمت الإضافة', description: 'تمت إضافة رسالة التقييم إلى قائمة الإرسال وسيتم إرسالها الآن' });
+      } else {
+        toast({ title: 'تم الإرسال', description: 'تم إرسال رسالة التقييم مباشرة عبر المسار السريع' });
+      }
     } catch (err) {
       console.error('Error sending evaluation WhatsApp:', err);
       toast({ title: 'خطأ', description: 'تعذر إرسال رسالة الواتساب', variant: 'destructive' });
