@@ -254,7 +254,9 @@ const ReviewsManagement = () => {
         return;
       }
 
-      const content = `🌟 عزيزنا العميل، نشكرك على تعاملك معنا\n\n✅ تم اكتمال طلبك رقم: ${evaluation.orders?.order_number || ''}\n\nنرجو تقييم تجربتك عبر الرابط التالي:\n${link}\n\nشاكرين لكم وقتكم`;
+      const code = (evaluation.evaluation_token || evaluation.id || '').slice(-5).toUpperCase();
+      const content = `🌟 عزيزنا العميل، نشكرك على تعاملك معنا\n\n✅ تم اكتمال طلبك رقم: ${evaluation.orders?.order_number || ''}\n\nنرجو تقييم تجربتك عبر الرابط التالي:\n${link}\n\nرمز التقييم: ${code}\n\nشاكرين لكم وقتكم`;
+
 
       // استخدام dedupe_key فريد مع timestamp للإرسال اليدوي
       const uniqueDedupeKey = evaluation.order_id 
