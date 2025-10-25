@@ -250,7 +250,12 @@ const ReviewsManagement = () => {
 
       if (error) throw error;
 
-      toast({ title: 'تمت الإضافة', description: 'تمت إضافة رسالة التقييم إلى قائمة الإرسال' });
+      // تشغيل معالج طابور الواتساب لإرسال الرسائل فوراً
+      await supabase.functions.invoke('process-whatsapp-queue', {
+        body: { source: 'reviews_management', evaluation_id: evaluation.id }
+      });
+
+      toast({ title: 'تمت الإضافة', description: 'تمت إضافة رسالة التقييم إلى قائمة الإرسال وسيتم إرسالها الآن' });
     } catch (err) {
       console.error('Error sending evaluation WhatsApp:', err);
       toast({ title: 'خطأ', description: 'تعذر إرسال رسالة الواتساب', variant: 'destructive' });
