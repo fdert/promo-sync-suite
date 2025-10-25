@@ -361,12 +361,12 @@ async function sendToWhatsAppService(message: any): Promise<boolean> {
           order_items: '',
           payments_details: 'لا توجد دفعات مسجلة',
           payments: [],
-          evaluation_link: reviewLink,
           company_name: '',
           estimated_time: 'قريباً',
           progress: '0'
         };
-      // خلاف ذلك (outgoing أو أي نوع آخر) نستخدم هيكل الإرسال النصي القياسي المتوافق مع سير العمل
+      } else {
+        // خلاف ذلك (outgoing أو أي نوع آخر) نستخدم هيكل الإرسال النصي القياسي المتوافق مع سير العمل
         console.log('↪️ استخدام هيكل whatsapp_message_send للإرسال');
         payload = {
           event: 'whatsapp_message_send',
