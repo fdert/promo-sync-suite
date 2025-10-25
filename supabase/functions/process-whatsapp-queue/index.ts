@@ -201,14 +201,15 @@ async function sendToWhatsAppService(message: any): Promise<boolean> {
     // اختيار الـ webhook المناسب
     let selectedWebhook = null;
     
-    // اكتشاف ما إذا كانت هذه رسالة تقييم مرتبطة بطلب مكتمل عبر dedupe_key = evaluation:<order_id>
+    // اكتشاف ما إذا كانت هذه رسالة تقييم مرتبطة بطلب مكتمل عبر dedupe_key = evaluation:<order_id> أو evaluation_manual:<order_id>:<ts>
     const dedupeKey: string = message.dedupe_key || '';
-    const isEvaluationForOrder = dedupeKey.startsWith('evaluation:');
+    const isEvaluationForOrder = dedupeKey.startsWith('evaluation:') || dedupeKey.startsWith('evaluation_manual:');
     let evaluationOrderId: string | null = null;
     if (isEvaluationForOrder) {
       try {
-        evaluationOrderId = dedupeKey.split(':')[1] || null;
-        console.log('🧭 تم التعرف على رسالة تقييم لطلب:', evaluationOrderId);
+        const parts = dedupeKey.split(':');
+        evaluationOrderId = parts[1] || null;
+        console.log('🧭 تم التعرف على رسالة تقييم لطلب:', evaluationOrderId, 'النوع:', parts[0]);
       } catch (_) {
         evaluationOrderId = null;
       }
