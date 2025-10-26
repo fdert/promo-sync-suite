@@ -55,6 +55,8 @@ Deno.serve(async (req) => {
     let finalTo: string = to || '';
     let resolvedOrderId: string | null = order_id || null;
     let resolvedCustomerId: string | null = customer_id || null;
+    let evaluationToken: string | null = null;
+    let orderNumber: string | null = null;
 
     if (!finalTo || !finalMessage) {
       // حاول التحميل من evaluation
@@ -70,6 +72,8 @@ Deno.serve(async (req) => {
         if (ev) {
           resolvedOrderId = resolvedOrderId || ev.order_id || null;
           resolvedCustomerId = resolvedCustomerId || ev.customer_id || null;
+          evaluationToken = ev.evaluation_token || null;
+          orderNumber = ev.orders?.order_number || null;
           const phone = ev.customers?.whatsapp || ev.customers?.phone || '';
           if (!finalTo) finalTo = phone;
           if (!finalMessage && ev.evaluation_token) {
@@ -156,7 +160,8 @@ Deno.serve(async (req) => {
         message: finalMessage,
         messageText: finalMessage,
         text: finalMessage,
-        type: 'text',
+        notification_type: 'evaluation',
+        type: 'evaluation',
         message_type: 'text',
         timestamp: Math.floor(Date.now() / 1000),
         customer_id: resolvedCustomerId,
@@ -165,6 +170,8 @@ Deno.serve(async (req) => {
         is_evaluation: true,
         source,
         order_id: resolvedOrderId,
+        order_number: orderNumber,
+        evaluation_token: evaluationToken,
         test: false,
       }
     } as const;
