@@ -460,7 +460,7 @@ const FinancialReports = () => {
                   إضافة مصروف
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[450px]">
+              <DialogContent className="max-w-[90vw] sm:max-w-[380px]">
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2 text-base">
                     <Receipt className="h-4 w-4" />
@@ -472,7 +472,7 @@ const FinancialReports = () => {
                 </DialogHeader>
                 
                 <div className="grid gap-3 py-3">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                       <Label htmlFor="description">وصف المصروف *</Label>
                       <Input
@@ -498,7 +498,7 @@ const FinancialReports = () => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                       <Label htmlFor="category">فئة المصروف *</Label>
                       <Select value={expenseForm.category} onValueChange={(value) => setExpenseForm({...expenseForm, category: value})}>
