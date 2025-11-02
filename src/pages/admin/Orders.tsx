@@ -2343,7 +2343,7 @@ ${companyName}`;
                     <div className="grid grid-cols-3 gap-4 text-center">
                       <div>
                         <p className="text-xs text-muted-foreground">المبلغ الكلي</p>
-                        <p className="text-lg font-bold text-blue-600">{Number(selectedOrderForPayment.amount || 0).toLocaleString()} ر.س</p>
+                        <p className="text-lg font-bold text-blue-600">{Number(selectedOrderForPayment.total_amount || 0).toLocaleString()} ر.س</p>
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground">المبلغ المدفوع</p>
@@ -2351,7 +2351,7 @@ ${companyName}`;
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground">المبلغ المتبقي</p>
-                        <p className="text-lg font-bold text-red-600">{Number((selectedOrderForPayment.amount || 0) - (selectedOrderForPayment.paid_amount || 0)).toLocaleString()} ر.س</p>
+                        <p className="text-lg font-bold text-red-600">{Number((selectedOrderForPayment.remaining_amount ?? ((selectedOrderForPayment.total_amount || 0) - (selectedOrderForPayment.paid_amount || 0)))).toLocaleString()} ر.س</p>
                       </div>
                     </div>
                   </div>
@@ -2486,9 +2486,9 @@ ${companyName}`;
                       <p><strong>الخدمة:</strong> {selectedOrderForInvoice.service_name}</p>
                     </div>
                     <div>
-                      <p><strong>المبلغ الإجمالي:</strong> {Number(selectedOrderForInvoice.amount || 0).toLocaleString()} ر.س</p>
+                      <p><strong>المبلغ الإجمالي:</strong> {Number(selectedOrderForInvoice.total_amount || 0).toLocaleString()} ر.س</p>
                       <p><strong>المبلغ المدفوع:</strong> {Number(selectedOrderForInvoice.paid_amount || 0).toLocaleString()} ر.س</p>
-                      <p><strong>المبلغ المتبقي:</strong> {Number((selectedOrderForInvoice.amount || 0) - (selectedOrderForInvoice.paid_amount || 0)).toLocaleString()} ر.س</p>
+                      <p><strong>المبلغ المتبقي:</strong> {Number((selectedOrderForInvoice.remaining_amount ?? ((selectedOrderForInvoice.total_amount || 0) - (selectedOrderForInvoice.paid_amount || 0)))).toLocaleString()} ر.س</p>
                     </div>
                   </div>
                   
