@@ -326,11 +326,11 @@ ${payments.slice(0, 5).map(payment =>
       // Get customer WhatsApp number and name
       const { data: customer } = await supabase
         .from('customers')
-        .select('whatsapp_number, phone, name')
+        .select('whatsapp, phone, name')
         .eq('id', selectedCustomerData.customer_id)
         .single();
       
-      if (!customer?.whatsapp_number && !customer?.phone) {
+      if (!customer?.whatsapp && !customer?.phone) {
         toast({
           title: "خطأ",
           description: "لا يوجد رقم واتساب للعميل",
@@ -339,7 +339,7 @@ ${payments.slice(0, 5).map(payment =>
         return;
       }
       
-      const phone = customer.whatsapp_number || customer.phone;
+      const phone = customer.whatsapp || customer.phone;
 
       // إرسال مباشر عبر Edge Function الموثوقة مع اختيار أفضل Webhook
       const { data: functionData, error: functionError } = await supabase.functions.invoke('send-whatsapp-simple', {
@@ -384,11 +384,11 @@ ${payments.slice(0, 5).map(payment =>
       // Get customer WhatsApp number
       const { data: customerData } = await supabase
         .from('customers')
-        .select('whatsapp_number, phone, name')
+        .select('whatsapp, phone, name')
         .eq('id', customer.customer_id)
         .single();
       
-      if (!customerData?.whatsapp_number && !customerData?.phone) {
+      if (!customerData?.whatsapp && !customerData?.phone) {
         toast({
           title: "خطأ",
           description: "لا يوجد رقم واتساب للعميل",
@@ -397,7 +397,7 @@ ${payments.slice(0, 5).map(payment =>
         return;
       }
       
-      const phoneNumber = customerData.whatsapp_number || customerData.phone;
+      const phoneNumber = customerData.whatsapp || customerData.phone;
       
       // إعداد التقرير المالي
       const summary = generateSummary(customer);
