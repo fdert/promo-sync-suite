@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
     }
 
     const { phone, message, webhook_type, strict } = requestData as WhatsAppRequest & { strict?: boolean };
-    const strictRequested = (typeof strict !== 'undefined' ? !!strict : false) || !!webhook_type;
+    const strictRequested = !!strict;
     
     if (!phone || !message) {
       console.error('Missing phone or message in request');
