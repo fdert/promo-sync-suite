@@ -69,24 +69,61 @@ const WebhookSettings = () => {
     try {
       const { data: user } = await supabase.auth.getUser();
       
-      const { data, error } = await supabase
+      // التحقق من وجود webhook من نفس النوع
+      const { data: existing } = await supabase
         .from('webhook_settings')
-        .insert({
-          ...webhookData,
-          created_by: user.user?.id
-        })
-        .select()
-        .single();
+        .select('id')
+        .eq('webhook_type', webhookData.webhook_type)
+        .maybeSingle();
+
+      let data, error;
+
+      if (existing) {
+        // تحديث الـ webhook الموجود
+        const result = await supabase
+          .from('webhook_settings')
+          .update({
+            ...webhookData,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existing.id)
+          .select()
+          .single();
+        
+        data = result.data;
+        error = result.error;
+
+        if (!error) {
+          setWebhookSettings(webhookSettings.map(w => w.id === existing.id ? data : w));
+        }
+      } else {
+        // إضافة webhook جديد
+        const result = await supabase
+          .from('webhook_settings')
+          .insert({
+            ...webhookData,
+            created_by: user.user?.id
+          })
+          .select()
+          .single();
+        
+        data = result.data;
+        error = result.error;
+
+        if (!error) {
+          setWebhookSettings([data, ...webhookSettings]);
+        }
+      }
 
       if (error) {
         throw error;
       }
-
-      setWebhookSettings([data, ...webhookSettings]);
       
       toast({
-        title: "تم الحفظ",
-        description: "تم حفظ إعدادات الويب هوك بنجاح",
+        title: existing ? "تم التحديث" : "تم الحفظ",
+        description: existing 
+          ? "تم تحديث إعدادات الويب هوك بنجاح" 
+          : "تم حفظ إعدادات الويب هوك بنجاح",
       });
 
       return data;
