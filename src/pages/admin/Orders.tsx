@@ -845,10 +845,16 @@ ${companyName}`;
             body: notificationData
           });
 
-          if (notificationError) {
-            console.error('فشل في إرسال إشعار الواتس:', notificationError);
+          if (notificationError || !notificationResult?.success) {
+            console.error('فشل في إرسال إشعار الواتس:', notificationError || notificationResult);
+            toast({
+              title: 'تعذر إرسال الواتس',
+              description: 'فشل الإرسال عبر الويب هوك المتاح. يرجى التحقق من تفعيل الويب هوك بلوحة الإدارة.',
+              variant: 'destructive'
+            });
           } else {
             console.log('تم إرسال إشعار الواتس آب بنجاح');
+            toast({ title: 'تم الإرسال', description: 'تم إرسال إشعار الواتس بنجاح' });
           }
 
           // تشغيل معالج رسائل الواتساب فوراً لضمان الإرسال

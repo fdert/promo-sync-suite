@@ -829,11 +829,13 @@ ${data.file_url}
     
     console.log('Message saved to database with ID:', savedMessage.id);
 
-    // إرسال الرسالة عبر webhook إلى n8n مع headers صحيحة وإعادة المحاولة
+    // إرسال الرسالة عبر webhook إلى n8n مع آلية بديلة عند الفشل
     let response;
     let responseData;
-    let messageStatus = 'failed';
-    
+    let messageStatus: 'sent' | 'failed' = 'failed';
+    let usedWebhookUrl = selectedWebhook.webhook_url;
+    let usedWebhookName = (selectedWebhook as any)?.webhook_name || 'unknown';
+
     try {
       response = await fetch(selectedWebhook.webhook_url, {
         method: 'POST',
@@ -843,30 +845,61 @@ ${data.file_url}
           'User-Agent': 'Supabase-Functions'
         },
         body: JSON.stringify(messagePayload),
-        // إضافة timeout لتجنب انتظار طويل
-        signal: AbortSignal.timeout(30000) // 30 ثانية
+        signal: AbortSignal.timeout(30000)
       });
 
       try {
         responseData = await response.text();
-        console.log('Webhook response status:', response.status);
-        console.log('Webhook response data:', responseData);
+        console.log('Webhook response status (primary):', response.status);
+        console.log('Webhook response data (primary):', responseData);
       } catch (e) {
         responseData = 'Failed to read response';
         console.log('Failed to read webhook response:', e);
       }
 
-      // تحديد حالة الرسالة حسب نجاح أو فشل الويب هوك
       if (response.ok && response.status >= 200 && response.status < 300) {
-        console.log('Webhook sent successfully');
+        console.log('Primary webhook sent successfully');
         messageStatus = 'sent';
       } else {
-        console.error(`Webhook failed with status: ${response.status}`);
-        console.error(`Webhook response: ${responseData}`);
-        messageStatus = 'failed';
+        console.warn(`Primary webhook failed with status: ${response.status}`);
+        console.warn(`Primary webhook response: ${responseData}`);
+
+        // محاولة استخدام ويب هوكات outgoing بديلة غير تجريبية
+        const { data: outgoingList } = await supabase
+          .from('webhook_settings')
+          .select('webhook_url, webhook_type, webhook_name, is_active')
+          .eq('webhook_type', 'outgoing')
+          .eq('is_active', true);
+
+        const isTestUrl = (url?: string) => !!url && url.includes('/webhook-test/');
+        const candidates = (outgoingList || []).filter((w: any) => w.webhook_url && !isTestUrl(w.webhook_url));
+
+        for (const w of candidates) {
+          if (w.webhook_url === selectedWebhook.webhook_url) continue;
+          console.warn('Trying fallback webhook:', w.webhook_name);
+          try {
+            const altRes = await fetch(w.webhook_url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(messagePayload)
+            });
+            const altBody = await altRes.text();
+            console.log('Webhook response (fallback):', altRes.status, altBody);
+            if (altRes.ok) {
+              response = altRes;
+              responseData = altBody;
+              usedWebhookUrl = w.webhook_url;
+              usedWebhookName = w.webhook_name;
+              messageStatus = 'sent';
+              break;
+            }
+          } catch (e) {
+            console.warn('Fallback webhook fetch error:', e?.message);
+          }
+        }
       }
     } catch (fetchError) {
-      console.error('Fetch error:', fetchError);
+      console.error('Fetch error on primary webhook:', fetchError);
       messageStatus = 'failed';
       responseData = `Fetch error: ${fetchError.message}`;
     }
@@ -889,10 +922,12 @@ ${data.file_url}
 
     return new Response(
       JSON.stringify({ 
-        success: true, 
-        message: 'Notification sent successfully',
+        success: messageStatus === 'sent',
+        message: messageStatus === 'sent' ? 'Notification sent successfully' : 'Failed to deliver via available webhooks',
         type: type,
-        customer_phone: customerPhone
+        customer_phone: customerPhone,
+        used_webhook: usedWebhookName,
+        status: messageStatus
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

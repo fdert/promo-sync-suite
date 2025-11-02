@@ -837,10 +837,12 @@ ${publicFileUrl}
           
           console.log('Webhook check for لوحة الموظف :', webhookCheck);
 
-          if (result.error) {
-            console.error('خطأ في إرسال الإشعار:', result.error);
+          if (result.error || !result.data?.success) {
+            console.error('خطأ في إرسال الإشعار:', result.error || result.data);
+            toast({ title: 'تعذر إرسال الواتس', description: 'تحقق من تفعيل الويب هوك.', variant: 'destructive' });
           } else {
             console.log('تم إرسال إشعار الواتس آب بنجاح');
+            toast({ title: 'تم الإرسال', description: 'تم إرسال إشعار الواتس بنجاح' });
           }
         }
       } else {
