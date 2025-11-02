@@ -178,7 +178,7 @@ const WebsiteContent = () => {
       const { data: existingData } = await supabase
         .from('website_settings')
         .select('id')
-        .eq('setting_key', 'website_content')
+        .eq('key', 'website_content')
         .maybeSingle();
 
       let error;
@@ -187,19 +187,18 @@ const WebsiteContent = () => {
         const { error: updateError } = await supabase
           .from('website_settings')
           .update({
-            setting_value: websiteData,
+            value: JSON.stringify(websiteData),
             updated_at: new Date().toISOString()
           })
-          .eq('setting_key', 'website_content');
+          .eq('key', 'website_content');
         error = updateError;
       } else {
         // إدراج سجل جديد
         const { error: insertError } = await supabase
           .from('website_settings')
           .insert({
-            setting_key: 'website_content',
-            setting_value: websiteData,
-            created_by: user.data.user?.id
+            key: 'website_content',
+            value: JSON.stringify(websiteData)
           });
         error = insertError;
       }
@@ -233,8 +232,8 @@ const WebsiteContent = () => {
     try {
       const { data, error } = await supabase
         .from('website_settings')
-        .select('setting_value')
-        .eq('setting_key', 'website_content')
+        .select('value')
+        .eq('key', 'website_content')
         .maybeSingle();
 
       if (error) {
@@ -242,8 +241,8 @@ const WebsiteContent = () => {
         return;
       }
 
-      if (data?.setting_value) {
-        const savedData = data.setting_value as any;
+      if (data?.value) {
+        const savedData = typeof data.value === 'string' ? JSON.parse(data.value) : data.value;
         if (savedData.companyInfo) {
           setCompanyInfo(savedData.companyInfo);
           if (savedData.companyInfo.logo) {
