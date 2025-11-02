@@ -50,9 +50,13 @@ const Auth = () => {
           .eq('key', 'website_content')
           .maybeSingle();
 
-        if (data?.value && typeof data.value === 'object') {
-          const settingValue = data.value as any;
-          const company = settingValue.companyInfo;
+        if (data?.value) {
+          // تحويل النص إلى JSON إذا كانت القيمة نص
+          const settingValue = typeof data.value === 'string' 
+            ? JSON.parse(data.value) 
+            : data.value;
+          
+          const company = settingValue?.companyInfo;
           
           if (company) {
             setCompanyInfo({
