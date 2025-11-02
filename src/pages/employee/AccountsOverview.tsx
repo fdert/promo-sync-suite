@@ -75,8 +75,25 @@ const AccountsOverview = () => {
   const [showSummaryDialog, setShowSummaryDialog] = useState(false);
   const [selectedCustomerData, setSelectedCustomerData] = useState<CustomerBalance | null>(null);
 
+  // Outstanding balance WhatsApp template (from message_templates)
+  const [outstandingTemplate, setOutstandingTemplate] = useState<string | null>(null);
+
   useEffect(() => {
     fetchAccountsReceivableData();
+  }, []);
+
+  // Load template once
+  useEffect(() => {
+    const loadTemplate = async () => {
+      const { data } = await supabase
+        .from('message_templates')
+        .select('content')
+        .eq('name', 'outstanding_balance_report')
+        .eq('is_active', true)
+        .maybeSingle();
+      if (data?.content) setOutstandingTemplate(data.content as string);
+    };
+    loadTemplate();
   }, []);
 
   const fetchAccountsReceivableData = async () => {
@@ -348,7 +365,102 @@ ${index + 1}. *المبلغ:* ${payment.amount.toLocaleString()} ر.س
     return summary.trim();
   };
 
-  // Handle summary actions
+  // Render a template with {{placeholders}}
+  const renderTemplate = (template: string, vars: Record<string, string>) => {
+    return template.replace(/{{\s*(\w+)\s*}}/g, (_, key) => vars[key] ?? '');
+  };
+
+  // Build sections for orders and payments
+  const buildSections = (customer: CustomerBalance) => {
+    const orders = customerOrders[customer.customer_id] || [];
+    const payments = customerPayments[customer.customer_id] || [];
+
+    const unpaidOrdersList = unpaidOrders.filter(order => 
+      order.customer_name === customer.customer_name
+    );
+
+    const ordersSection = unpaidOrdersList.length > 0
+      ? unpaidOrdersList.map((order, index) => `
+${index + 1}. *رقم الطلب:* ${order.order_number}
+   ├─ *إجمالي المبلغ:* ${order.total_amount.toLocaleString()} ر.س
+   ├─ *المبلغ المدفوع:* ${order.paid_amount.toLocaleString()} ر.س
+   ├─ *المبلغ المتبقي:* ${order.remaining_amount.toLocaleString()} ر.س
+   ├─ *تاريخ الاستحقاق:* ${order.due_date ? format(new Date(order.due_date), 'dd/MM/yyyy', { locale: ar }) : 'غير محدد'}
+   ├─ *الحالة:* ${order.status}
+   ${order.days_overdue > 0 ? `└─ ⚠️ *متأخر:* ${order.days_overdue} يوم` : '└─ ✅ *في الموعد*'}
+`).join('\n')
+      : '✅ لا توجد طلبات غير مسددة حالياً';
+
+    const paymentsSection = payments.length > 0
+      ? payments.slice(0, 5).map((payment, index) => `
+${index + 1}. *المبلغ:* ${payment.amount.toLocaleString()} ر.س
+   ├─ *طريقة الدفع:* ${payment.payment_type}
+   └─ *التاريخ:* ${payment.payment_date ? format(new Date(payment.payment_date), 'dd/MM/yyyy', { locale: ar }) : 'غير محدد'}
+`).join('\n')
+      : '';
+
+    return { ordersSection, paymentsSection };
+  };
+
+  // Default template for outstanding balance (used if DB template missing)
+  const defaultOutstandingTemplate = `
+━━━━━━━━━━━━━━━━━━━━━━
+📊 *ملخص الحساب المالي*
+━━━━━━━━━━━━━━━━━━━━━━
+
+🔹 *اسم العميل:* {{customer_name}}
+🔹 *تاريخ التقرير:* {{report_date}}
+
+━━━━━━━━━━━━━━━━━━━━━━
+💰 *الرصيد المالي*
+━━━━━━━━━━━━━━━━━━━━━━
+
+🔴 *إجمالي المبلغ المستحق:* {{total_due}}
+📋 *عدد الطلبات غير المسددة:* {{unpaid_orders_count}}
+⏰ *أقرب تاريخ استحقاق:* {{earliest_due_date}}
+
+━━━━━━━━━━━━━━━━━━━━━━
+📦 *تفاصيل الطلبات غير المسددة*
+━━━━━━━━━━━━━━━━━━━━━━
+
+{{orders_section}}
+
+{{#if payments_section}}
+━━━━━━━━━━━━━━━━━━━━━━
+💳 *آخر المدفوعات (حتى 5)*
+━━━━━━━━━━━━━━━━━━━━━━
+
+{{payments_section}}
+{{/if}}
+
+━━━━━━━━━━━━━━━━━━━━━━
+📞 *للاستفسار أو السداد*
+نرجو التواصل معنا
+━━━━━━━━━━━━━━━━━━━━━━`;
+
+  // Generate summary using template when available
+  const generateOutstandingSummary = (customer: CustomerBalance) => {
+    const { ordersSection, paymentsSection } = buildSections(customer);
+    const vars = {
+      customer_name: customer.customer_name,
+      report_date: format(new Date(), 'dd/MM/yyyy - HH:mm', { locale: ar }),
+      total_due: `${customer.outstanding_balance.toLocaleString()} ر.س`,
+      unpaid_orders_count: String(customer.unpaid_invoices_count),
+      earliest_due_date: customer.earliest_due_date ? format(new Date(customer.earliest_due_date), 'dd/MM/yyyy', { locale: ar }) : 'غير محدد',
+      orders_section: ordersSection,
+      payments_section: paymentsSection
+    } as Record<string, string>;
+
+    // Support a simple {{#if payments_section}} ... {{/if}} block
+    const tpl = (outstandingTemplate || defaultOutstandingTemplate)
+      .replace(/{{#if\s+payments_section}}([\s\S]*?){{\/if}}/g, (_, inner) =>
+        (paymentsSection && paymentsSection.trim().length > 0) ? inner : ''
+      );
+
+    return renderTemplate(tpl, vars).trim();
+  };
+
+
   const handleSendWhatsApp = async () => {
     if (!selectedCustomerData) return;
     
@@ -431,7 +543,7 @@ ${index + 1}. *المبلغ:* ${payment.amount.toLocaleString()} ر.س
       const phoneNumber = customerData.whatsapp || customerData.phone;
       
       // إعداد التقرير المالي
-      const summary = generateSummary(customer);
+      const summary = generateOutstandingSummary(customer);
       
       console.log('📊 التقرير المالي جاهز للإرسال');
       console.log('📱 الرقم المستهدف:', phoneNumber);
@@ -584,7 +696,7 @@ ${index + 1}. *المبلغ:* ${payment.amount.toLocaleString()} ر.س
 
   const openSummaryDialog = (customer: CustomerBalance) => {
     setSelectedCustomerData(customer);
-    setSummaryText(generateSummary(customer));
+    setSummaryText(generateOutstandingSummary(customer));
     setShowSummaryDialog(true);
   };
 
