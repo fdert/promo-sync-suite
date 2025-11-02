@@ -118,16 +118,16 @@ const AccountsOverview = () => {
       const { data: ordersData } = await supabase
         .from('order_payment_summary')
         .select(`
-          id,
+          order_id,
           order_number,
-          amount,
-          calculated_paid_amount,
-          remaining_amount,
-          due_date,
+          total_amount,
+          paid_amount,
+          balance,
+          created_at,
           status,
           customer_id
         `)
-        .gt('remaining_amount', 0);
+        .gt('balance', 0);
 
       // جلب أسماء العملاء
       const customerIds = [...new Set(ordersData?.map(order => order.customer_id).filter(Boolean))];
@@ -139,23 +139,23 @@ const AccountsOverview = () => {
       if (ordersData && customersData) {
         const customerMap = new Map(customersData.map(customer => [customer.id, customer.name]));
         
-        const formattedOrders = ordersData.map(order => {
-          const dueDate = new Date(order.due_date);
-          const today = new Date();
-          const daysOverdue = differenceInDays(today, dueDate);
-          
-          return {
-            order_id: order.id,
-            order_number: order.order_number,
-            customer_name: customerMap.get(order.customer_id) || 'غير محدد',
-            total_amount: order.amount,
-            paid_amount: order.calculated_paid_amount || 0,
-            remaining_amount: order.remaining_amount,
-            due_date: order.due_date,
-            days_overdue: daysOverdue > 0 ? daysOverdue : 0,
-            status: order.status
-          };
-        });
+      const formattedOrders = ordersData.map(order => {
+        const dueDate = order.created_at ? new Date(order.created_at) : null;
+        const today = new Date();
+        const daysOverdue = dueDate ? differenceInDays(today, dueDate) : 0;
+        
+        return {
+          order_id: order.order_id,
+          order_number: order.order_number,
+          customer_name: customerMap.get(order.customer_id) || 'غير محدد',
+          total_amount: order.total_amount,
+          paid_amount: order.paid_amount || 0,
+          remaining_amount: order.balance,
+          due_date: order.created_at || null,
+          days_overdue: daysOverdue > 0 ? daysOverdue : 0,
+          status: order.status
+        };
+      });
         
         setUnpaidOrders(formattedOrders.sort((a, b) => b.days_overdue - a.days_overdue));
       }
@@ -171,7 +171,7 @@ const AccountsOverview = () => {
     try {
       const { data: ordersData } = await supabase
         .from('orders')
-        .select('id, order_number, service_name, amount, status, created_at, due_date, customer_id')
+        .select('id, order_number, total_amount, paid_amount, status, created_at, delivery_date, customer_id')
         .in('customer_id', customerIds)
         .order('created_at', { ascending: false });
 
@@ -493,7 +493,7 @@ ${index + 1}. *المبلغ:* ${payment.amount.toLocaleString()} ر.س
         }
       });
       
-      if (functionError || functionData?.status !== 'sent') {
+      if (functionError || (!functionData?.success && functionData?.status !== 'sent')) {
         console.error('خطأ/فشل في الإرسال عبر الويب هوك:', functionError || functionData);
         toast({
           title: 'خطأ في الإرسال',
@@ -559,7 +559,7 @@ ${index + 1}. *المبلغ:* ${payment.amount.toLocaleString()} ر.س
         }
       });
       
-      if (functionError || functionData?.status !== 'sent') {
+      if (functionError || (!functionData?.success && functionData?.status !== 'sent')) {
         console.error('خطأ في استدعاء/فشل edge function:', functionError || functionData);
         toast({
           title: 'خطأ في الإرسال',
