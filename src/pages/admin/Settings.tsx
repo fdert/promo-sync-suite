@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,9 +9,33 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Settings as SettingsIcon, User, Building2, Bell, Shield, Palette, Database, Paintbrush } from "lucide-react";
+import { Settings as SettingsIcon, User, Building2, Bell, Shield, Palette, Database, Paintbrush, Upload } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const Settings = () => {
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  
+  // Profile data
+  const [profile, setProfile] = useState({
+    full_name: "",
+    email: "",
+    phone: ""
+  });
+  
+  // Company data
+  const [companyData, setCompanyData] = useState({
+    company_name: "",
+    company_logo: "",
+    company_phone: "",
+    company_address: "",
+    tax_number: "",
+    commercial_record: ""
+  });
+  
+  // Settings states
   const [notifications, setNotifications] = useState(true);
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
@@ -23,6 +47,214 @@ const Settings = () => {
   const [successColor, setSuccessColor] = useState("#16a34a");
   const [warningColor, setWarningColor] = useState("#ea580c");
   const [errorColor, setErrorColor] = useState("#dc2626");
+
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const fetchSettings = async () => {
+    try {
+      setLoading(true);
+      
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Fetch profile
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (profileData) {
+        setProfile({
+          full_name: profileData.full_name || "",
+          email: profileData.email || "",
+          phone: profileData.phone || ""
+        });
+      }
+
+      // Fetch company settings from website_settings
+      const { data: websiteData } = await supabase
+        .from('website_settings')
+        .select('value')
+        .eq('key', 'website_content')
+        .maybeSingle();
+
+      if (websiteData?.value && typeof websiteData.value === 'object') {
+        const content = websiteData.value as any;
+        setCompanyData({
+          company_name: content.companyInfo?.name || "",
+          company_logo: content.companyInfo?.logo || "",
+          company_phone: content.contactInfo?.phone || "",
+          company_address: content.contactInfo?.address || "",
+          tax_number: content.companyInfo?.tax_number || "",
+          commercial_record: content.companyInfo?.commercial_record || ""
+        });
+      }
+
+    } catch (error) {
+      console.error('Error fetching settings:', error);
+      toast({
+        title: "خطأ",
+        description: "فشل في جلب الإعدادات",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const saveProfile = async () => {
+    try {
+      setSaving(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: profile.full_name,
+          phone: profile.phone,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "تم الحفظ",
+        description: "تم حفظ بياناتك الشخصية بنجاح",
+      });
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      toast({
+        title: "خطأ",
+        description: "فشل في حفظ البيانات",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const saveCompanyData = async () => {
+    try {
+      setSaving(true);
+
+      // Fetch current website settings
+      const { data: currentData } = await supabase
+        .from('website_settings')
+        .select('value')
+        .eq('key', 'website_content')
+        .maybeSingle();
+
+      const websiteContent = (currentData?.value as any) || {};
+
+      // Update company data
+      const updatedContent = {
+        ...websiteContent,
+        companyInfo: {
+          ...websiteContent.companyInfo,
+          name: companyData.company_name,
+          logo: companyData.company_logo,
+          tax_number: companyData.tax_number,
+          commercial_record: companyData.commercial_record
+        },
+        contactInfo: {
+          ...websiteContent.contactInfo,
+          phone: companyData.company_phone,
+          address: companyData.company_address
+        }
+      };
+
+      const { error } = await supabase
+        .from('website_settings')
+        .update({
+          value: updatedContent,
+          updated_at: new Date().toISOString()
+        })
+        .eq('key', 'website_content');
+
+      if (error) throw error;
+
+      toast({
+        title: "تم الحفظ",
+        description: "تم حفظ بيانات الشركة بنجاح",
+      });
+    } catch (error) {
+      console.error('Error saving company data:', error);
+      toast({
+        title: "خطأ",
+        description: "فشل في حفظ بيانات الشركة",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setSaving(true);
+      
+      const fileExt = file.name.split('.').pop();
+      const fileName = `company-logo-${Date.now()}.${fileExt}`;
+      const filePath = `logos/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('company-assets')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from('company-assets')
+        .getPublicUrl(filePath);
+
+      const publicUrl = urlData.publicUrl;
+      
+      setCompanyData(prev => ({ ...prev, company_logo: publicUrl }));
+
+      toast({
+        title: "تم رفع الشعار",
+        description: "تم رفع شعار الشركة بنجاح",
+      });
+
+    } catch (error) {
+      console.error('Error uploading logo:', error);
+      toast({
+        title: "خطأ",
+        description: "فشل في رفع الشعار",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Avatar upload functionality can be added later
+    toast({
+      title: "قريباً",
+      description: "ميزة رفع الصورة الشخصية ستكون متاحة قريباً",
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">جاري تحميل الإعدادات...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -76,53 +308,65 @@ const Settings = () => {
               <div className="flex items-center gap-6">
                 <Avatar className="h-20 w-20">
                   <AvatarImage src="" />
-                  <AvatarFallback className="text-lg">أح</AvatarFallback>
+                  <AvatarFallback className="text-lg">
+                    {profile.full_name ? profile.full_name.charAt(0) : "أح"}
+                  </AvatarFallback>
                 </Avatar>
                 <div className="space-y-2">
-                  <Button variant="outline">تغيير الصورة</Button>
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarUpload}
+                    className="hidden"
+                    id="avatar-upload"
+                  />
+                  <Label htmlFor="avatar-upload">
+                    <Button variant="outline" type="button" asChild disabled={saving}>
+                      <span className="cursor-pointer">
+                        <Upload className="h-4 w-4 mr-2" />
+                        {saving ? "جاري الرفع..." : "تغيير الصورة"}
+                      </span>
+                    </Button>
+                  </Label>
                   <p className="text-sm text-muted-foreground">JPG, PNG حتى 2MB</p>
                 </div>
               </div>
 
               <div className="grid gap-6 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="firstName">الاسم الأول</Label>
-                  <Input id="firstName" defaultValue="أحمد" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lastName">الاسم الأخير</Label>
-                  <Input id="lastName" defaultValue="محمد" />
+                  <Label htmlFor="full_name">الاسم الكامل</Label>
+                  <Input 
+                    id="full_name" 
+                    value={profile.full_name}
+                    onChange={(e) => setProfile(prev => ({ ...prev, full_name: e.target.value }))}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email">البريد الإلكتروني</Label>
-                  <Input id="email" type="email" defaultValue="ahmed@example.com" />
+                  <Input 
+                    id="email" 
+                    type="email" 
+                    value={profile.email}
+                    disabled
+                    className="bg-muted"
+                  />
+                  <p className="text-xs text-muted-foreground">لا يمكن تغيير البريد الإلكتروني</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="phone">رقم الهاتف</Label>
-                  <Input id="phone" defaultValue="+966 50 123 4567" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="position">المنصب</Label>
-                  <Input id="position" defaultValue="مدير المشاريع" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="department">القسم</Label>
-                  <Select defaultValue="management">
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="management">الإدارة</SelectItem>
-                      <SelectItem value="development">التطوير</SelectItem>
-                      <SelectItem value="design">التصميم</SelectItem>
-                      <SelectItem value="marketing">التسويق</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Input 
+                    id="phone" 
+                    value={profile.phone}
+                    onChange={(e) => setProfile(prev => ({ ...prev, phone: e.target.value }))}
+                    placeholder="+966 50 123 4567"
+                  />
                 </div>
               </div>
 
               <div className="flex justify-end">
-                <Button>حفظ التغييرات</Button>
+                <Button onClick={saveProfile} disabled={saving}>
+                  {saving ? "جاري الحفظ..." : "حفظ التغييرات"}
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -136,66 +380,84 @@ const Settings = () => {
               <CardDescription>معلومات الشركة والعمل</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <Label>شعار الشركة</Label>
+                {companyData.company_logo && (
+                  <div className="mb-4">
+                    <img 
+                      src={companyData.company_logo} 
+                      alt="شعار الشركة" 
+                      className="w-32 h-32 object-contain border rounded-lg"
+                    />
+                  </div>
+                )}
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleLogoUpload}
+                  className="hidden"
+                  id="logo-upload"
+                />
+                <Label htmlFor="logo-upload">
+                  <Button variant="outline" type="button" asChild disabled={saving}>
+                    <span className="cursor-pointer">
+                      <Upload className="h-4 w-4 mr-2" />
+                      {saving ? "جاري الرفع..." : "رفع الشعار"}
+                    </span>
+                  </Button>
+                </Label>
+              </div>
+
               <div className="grid gap-6 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="companyName">اسم الشركة</Label>
-                  <Input id="companyName" defaultValue="شركة الحلول التقنية" />
+                  <Input 
+                    id="companyName" 
+                    value={companyData.company_name}
+                    onChange={(e) => setCompanyData(prev => ({ ...prev, company_name: e.target.value }))}
+                  />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="industry">المجال</Label>
-                  <Select defaultValue="technology">
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="technology">التكنولوجيا</SelectItem>
-                      <SelectItem value="marketing">التسويق</SelectItem>
-                      <SelectItem value="consulting">الاستشارات</SelectItem>
-                      <SelectItem value="design">التصميم</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="companyPhone">رقم الهاتف</Label>
+                  <Input 
+                    id="companyPhone" 
+                    value={companyData.company_phone}
+                    onChange={(e) => setCompanyData(prev => ({ ...prev, company_phone: e.target.value }))}
+                    placeholder="966501234567"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="taxNumber">الرقم الضريبي</Label>
-                  <Input id="taxNumber" defaultValue="300123456789003" />
+                  <Input 
+                    id="taxNumber" 
+                    value={companyData.tax_number}
+                    onChange={(e) => setCompanyData(prev => ({ ...prev, tax_number: e.target.value }))}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="commercialRecord">السجل التجاري</Label>
-                  <Input id="commercialRecord" defaultValue="1010123456" />
+                  <Input 
+                    id="commercialRecord" 
+                    value={companyData.commercial_record}
+                    onChange={(e) => setCompanyData(prev => ({ ...prev, commercial_record: e.target.value }))}
+                  />
                 </div>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="address">العنوان</Label>
-                <Textarea id="address" defaultValue="الرياض، حي النرجس، شارع الأمير سلطان" />
-              </div>
-
-              <div className="grid gap-6 md:grid-cols-3">
-                <div className="space-y-2">
-                  <Label htmlFor="city">المدينة</Label>
-                  <Input id="city" defaultValue="الرياض" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="postalCode">الرمز البريدي</Label>
-                  <Input id="postalCode" defaultValue="12345" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="country">الدولة</Label>
-                  <Select defaultValue="saudi">
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="saudi">المملكة العربية السعودية</SelectItem>
-                      <SelectItem value="uae">الإمارات العربية المتحدة</SelectItem>
-                      <SelectItem value="kuwait">الكويت</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                <Textarea 
+                  id="address" 
+                  value={companyData.company_address}
+                  onChange={(e) => setCompanyData(prev => ({ ...prev, company_address: e.target.value }))}
+                  rows={3}
+                />
               </div>
 
               <div className="flex justify-end">
-                <Button>حفظ بيانات الشركة</Button>
+                <Button onClick={saveCompanyData} disabled={saving}>
+                  {saving ? "جاري الحفظ..." : "حفظ بيانات الشركة"}
+                </Button>
               </div>
             </CardContent>
           </Card>
