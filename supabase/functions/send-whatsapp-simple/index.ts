@@ -98,7 +98,15 @@ Deno.serve(async (req) => {
 
     console.log('🔍 البحث عن ويب هوك التقارير المالية...');
 
-    // جلب ويب هوك التقارير المالية
+    // جلب ويب هوك تقارير العملاء المدينين (الأحدث)
+    const { data: outstandingBalanceWebhook } = await supabase
+      .from('webhook_settings')
+      .select('webhook_url, webhook_type, webhook_name, is_active')
+      .eq('webhook_type', 'outstanding_balance_report')
+      .eq('is_active', true)
+      .maybeSingle();
+
+    // جلب ويب هوك التقارير المالية (القديم)
     const { data: accountSummaryWebhook } = await supabase
       .from('webhook_settings')
       .select('webhook_url, webhook_type, webhook_name, is_active')
@@ -125,17 +133,25 @@ Deno.serve(async (req) => {
     const nonTestOutgoing = (outgoingList || []).filter((w: any) => w.webhook_url && !isTestUrl(w.webhook_url));
 
     // تحديد الأساسي والاحتياطي مع تفضيل عدم استخدام روابط test
-    if (accountSummaryWebhook?.webhook_url && !isTestUrl(accountSummaryWebhook.webhook_url)) {
+    // الأولوية: outstanding_balance_report > account_summary > outgoing
+    if (outstandingBalanceWebhook?.webhook_url && !isTestUrl(outstandingBalanceWebhook.webhook_url)) {
+      primaryWebhook = outstandingBalanceWebhook;
+      fallbackWebhook = accountSummaryWebhook?.webhook_url ? accountSummaryWebhook : (outgoingWebhook?.webhook_url ? outgoingWebhook : null);
+      console.log('✅ استخدام ويب هوك تقارير العملاء المدينين كخيار أساسي:', primaryWebhook.webhook_name);
+    } else if (accountSummaryWebhook?.webhook_url && !isTestUrl(accountSummaryWebhook.webhook_url)) {
       primaryWebhook = accountSummaryWebhook;
       fallbackWebhook = outgoingWebhook?.webhook_url ? outgoingWebhook : null;
       console.log('✅ استخدام ويب هوك التقارير المالية كخيار أساسي:', primaryWebhook.webhook_name);
     } else if (outgoingWebhook?.webhook_url) {
       primaryWebhook = outgoingWebhook;
-      fallbackWebhook = accountSummaryWebhook?.webhook_url ? accountSummaryWebhook : null;
+      fallbackWebhook = accountSummaryWebhook?.webhook_url ? accountSummaryWebhook : (outstandingBalanceWebhook?.webhook_url ? outstandingBalanceWebhook : null);
       console.log('ℹ️ سيتم استخدام outgoing كخيار أساسي (رابط التقارير في وضع test أو غير متوفر):', primaryWebhook.webhook_name);
     } else if (accountSummaryWebhook?.webhook_url) {
       primaryWebhook = accountSummaryWebhook;
       console.log('⚠️ لا يوجد outgoing. سيتم استخدام التقارير المالية كخيار أساسي:', primaryWebhook.webhook_name);
+    } else if (outstandingBalanceWebhook?.webhook_url) {
+      primaryWebhook = outstandingBalanceWebhook;
+      console.log('⚠️ لا يوجد outgoing. سيتم استخدام تقارير العملاء المدينين كخيار أساسي:', primaryWebhook.webhook_name);
     }
 
     console.log('📡 الويب هوك الأساسي:', {
@@ -190,8 +206,8 @@ Deno.serve(async (req) => {
     console.log('Webhook response (primary):', response.status, responseData);
 
     // في حال الفشل مع ويب هوك التقارير المالية، جرّب fallback outgoing إن وجد
-    if (!response.ok && primaryWebhook?.webhook_type === 'account_summary' && fallbackWebhook?.webhook_url && fallbackWebhook.webhook_url !== primaryWebhook.webhook_url) {
-      console.warn('⚠️ فشل الإرسال عبر ويب هوك التقارير المالية. تجربة ويب هوك outgoing كبديل...');
+    if (!response.ok && (primaryWebhook?.webhook_type === 'account_summary' || primaryWebhook?.webhook_type === 'outstanding_balance_report') && fallbackWebhook?.webhook_url && fallbackWebhook.webhook_url !== primaryWebhook.webhook_url) {
+      console.warn('⚠️ فشل الإرسال عبر ويب هوك التقارير المالية. تجربة ويب هوك بديل...');
       usedWebhook = fallbackWebhook;
       response = await fetch(fallbackWebhook.webhook_url, {
         method: 'POST',
