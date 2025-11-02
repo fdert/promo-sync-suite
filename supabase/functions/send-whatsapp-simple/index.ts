@@ -209,11 +209,16 @@ Deno.serve(async (req) => {
       text_body: message
     };
 
-    // تلميح لاختيار القالب الصحيح في n8n عند تقرير المبالغ المدينة
-    if (webhook_type === 'outstanding_balance_report') {
-      (messagePayload as any).event = 'outstanding_balance_report';
-      (messagePayload as any).template = 'outstanding_balance_report';
-      console.log('🏷️ إضافة تلميح القالب: outstanding_balance_report');
+    // إضافة تلميحات اختيار القالب دائمًا عند تمرير webhook_type
+    if (webhook_type) {
+      (messagePayload as any).event = webhook_type;
+      (messagePayload as any).template = webhook_type;
+      (messagePayload as any).webhook_type = webhook_type;
+      (messagePayload as any).template_key = webhook_type;
+      if (webhook_type === 'outstanding_balance_report') {
+        (messagePayload as any).message_category = 'financial_outstanding';
+      }
+      console.log('🏷️ إضافة تلميحات القالب:', webhook_type);
     }
 
     console.log('Sending message payload:', JSON.stringify(messagePayload, null, 2));
