@@ -489,8 +489,7 @@ ${index + 1}. *المبلغ:* ${payment.amount.toLocaleString()} ر.س
         body: {
           phone,
           message: summaryText,
-          webhook_type: 'outstanding_balance_report',
-          strict: true
+          webhook_type: 'outstanding_balance_report'
         }
       });
       
@@ -555,8 +554,7 @@ ${index + 1}. *المبلغ:* ${payment.amount.toLocaleString()} ر.س
         body: {
           phone: phoneNumber,
           message: summary,
-          webhook_type: 'outstanding_balance_report',
-          strict: true
+          webhook_type: 'outstanding_balance_report'
         }
       });
       
