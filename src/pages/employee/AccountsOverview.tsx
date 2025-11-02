@@ -441,11 +441,12 @@ ${index + 1}. *المبلغ:* ${payment.amount.toLocaleString()} ر.س
   // Generate summary using template when available
   const generateOutstandingSummary = (customer: CustomerBalance) => {
     const { ordersSection, paymentsSection } = buildSections(customer);
+    const unpaidCount = unpaidOrders.filter(o => o.customer_name === customer.customer_name).length;
     const vars = {
       customer_name: customer.customer_name,
       report_date: format(new Date(), 'dd/MM/yyyy - HH:mm', { locale: ar }),
       total_due: `${customer.outstanding_balance.toLocaleString()} ر.س`,
-      unpaid_orders_count: String(unpaidOrdersList.length),
+      unpaid_orders_count: String(unpaidCount),
       earliest_due_date: customer.earliest_due_date ? format(new Date(customer.earliest_due_date), 'dd/MM/yyyy', { locale: ar }) : 'غير محدد',
       orders_section: ordersSection,
       payments_section: paymentsSection
