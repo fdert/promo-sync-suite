@@ -39,9 +39,11 @@ const FinancialReports = () => {
     customCategory: '',
     date: new Date().toISOString().split('T')[0],
     paymentMethod: '',
-    notes: ''
+    notes: '',
+    receiptFile: null as File | null
   });
   const [isUploading, setIsUploading] = useState(false);
+  const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
 
   const { toast } = useToast();
 
@@ -282,6 +284,32 @@ const FinancialReports = () => {
         return;
       }
 
+      // رفع صورة الإيصال إذا وجدت
+      let receiptImageUrl = null;
+      if (expenseForm.receiptFile) {
+        const fileExt = expenseForm.receiptFile.name.split('.').pop();
+        const fileName = `expense-${Date.now()}.${fileExt}`;
+        const filePath = `receipts/${fileName}`;
+
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('company-assets')
+          .upload(filePath, expenseForm.receiptFile);
+
+        if (uploadError) {
+          console.error('Error uploading receipt:', uploadError);
+          toast({
+            title: "تحذير",
+            description: "تم حفظ المصروف لكن فشل رفع صورة الإيصال",
+            variant: "destructive",
+          });
+        } else {
+          const { data: urlData } = supabase.storage
+            .from('company-assets')
+            .getPublicUrl(filePath);
+          receiptImageUrl = urlData?.publicUrl;
+        }
+      }
+
       // تحديد فئة المصروف النهائية
       const finalCategory = expenseForm.category === 'other' ? expenseForm.customCategory : 
         expenseCategories.find(cat => cat.value === expenseForm.category)?.label || expenseForm.category;
@@ -307,6 +335,11 @@ const FinancialReports = () => {
         toast({ title: "خطأ", description: "المبلغ غير صالح", variant: "destructive" });
         return;
       }
+      
+      const expenseNotes = receiptImageUrl 
+        ? `${expenseForm.notes}\n[صورة الإيصال: ${receiptImageUrl}]`
+        : expenseForm.notes;
+      
       const { data: expenseData, error: expenseError } = await supabase
         .from('expenses')
         .insert({
@@ -316,7 +349,7 @@ const FinancialReports = () => {
           expense_type: finalCategory,
           expense_date: expenseForm.date,
           payment_method: expenseForm.paymentMethod || null,
-          notes: expenseForm.notes || null
+          notes: expenseNotes || null
         })
         .select()
         .single();
@@ -385,8 +418,10 @@ const FinancialReports = () => {
         customCategory: '',
         date: new Date().toISOString().split('T')[0],
         paymentMethod: '',
-        notes: ''
+        notes: '',
+        receiptFile: null
       });
+      setReceiptPreview(null);
       setIsExpenseDialogOpen(false);
 
       toast({
@@ -531,6 +566,36 @@ const FinancialReports = () => {
                       className="mt-1"
                       rows={3}
                     />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="receipt">صورة الإيصال (اختياري)</Label>
+                    <Input
+                      id="receipt"
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png,image/webp,application/pdf"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setExpenseForm({...expenseForm, receiptFile: file});
+                          if (file.type.startsWith('image/')) {
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              setReceiptPreview(reader.result as string);
+                            };
+                            reader.readAsDataURL(file);
+                          } else {
+                            setReceiptPreview(null);
+                          }
+                        }
+                      }}
+                      className="mt-1"
+                    />
+                    {receiptPreview && (
+                      <div className="mt-2">
+                        <img src={receiptPreview} alt="معاينة الإيصال" className="max-h-32 rounded border" />
+                      </div>
+                    )}
                   </div>
                 </div>
 
