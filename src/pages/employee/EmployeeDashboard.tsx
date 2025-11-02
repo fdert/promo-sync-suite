@@ -45,6 +45,14 @@ interface Order {
   };
 }
 
+interface RecentActivity {
+  id: string;
+  type: string;
+  description: string;
+  timestamp: string;
+  icon: string;
+}
+
 const EmployeeDashboard = () => {
   const { user } = useAuth();
   const [stats, setStats] = useState<DashboardStats>({
@@ -61,6 +69,7 @@ const EmployeeDashboard = () => {
   const [showWelcome, setShowWelcome] = useState(true);
   const [dueTodayOrders, setDueTodayOrders] = useState<Order[]>([]);
   const [incompleteOrders, setIncompleteOrders] = useState<Order[]>([]);
+  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -128,6 +137,67 @@ const EmployeeDashboard = () => {
 
         setDueTodayOrders(dueTodayData || []);
         setIncompleteOrders(incompleteData || []);
+
+        // جلب النشاطات الحديثة
+        const activities: RecentActivity[] = [];
+
+        // جلب آخر 3 طلبات
+        const { data: recentOrders } = await supabase
+          .from('orders')
+          .select('id, order_number, created_at, status, customers(name)')
+          .eq('created_by', user.id)
+          .order('created_at', { ascending: false })
+          .limit(3);
+
+        recentOrders?.forEach((order) => {
+          activities.push({
+            id: order.id,
+            type: 'order',
+            description: `تم إضافة طلب ${order.order_number} للعميل ${order.customers?.name}`,
+            timestamp: order.created_at,
+            icon: 'order'
+          });
+        });
+
+        // جلب آخر 3 مدفوعات
+        const { data: recentPayments } = await supabase
+          .from('payments')
+          .select('id, amount, created_at, orders(order_number, customers(name))')
+          .eq('created_by', user.id)
+          .order('created_at', { ascending: false })
+          .limit(3);
+
+        recentPayments?.forEach((payment: any) => {
+          activities.push({
+            id: payment.id,
+            type: 'payment',
+            description: `تم تسجيل دفعة ${payment.amount} ر.س للطلب ${payment.orders?.order_number}`,
+            timestamp: payment.created_at,
+            icon: 'payment'
+          });
+        });
+
+        // جلب آخر 3 عملاء
+        const { data: recentCustomers } = await supabase
+          .from('customers')
+          .select('id, name, created_at')
+          .eq('created_by', user.id)
+          .order('created_at', { ascending: false })
+          .limit(3);
+
+        recentCustomers?.forEach((customer) => {
+          activities.push({
+            id: customer.id,
+            type: 'customer',
+            description: `تم إضافة عميل جديد: ${customer.name}`,
+            timestamp: customer.created_at,
+            icon: 'customer'
+          });
+        });
+
+        // ترتيب النشاطات حسب التاريخ
+        activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        setRecentActivities(activities.slice(0, 5));
 
         setStats({
           totalCustomers: customersCount || 0,
@@ -348,11 +418,42 @@ const EmployeeDashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2 text-sm">
-              <p className="text-muted-foreground">
-                أحدث الأنشطة ستظهر هنا...
-              </p>
-            </div>
+            {recentActivities.length > 0 ? (
+              <div className="space-y-3">
+                {recentActivities.map((activity) => (
+                  <div key={activity.id} className="flex items-start gap-3 p-2 rounded-lg bg-muted/50">
+                    <div className="flex-shrink-0 mt-1">
+                      {activity.icon === 'order' && (
+                        <ClipboardList className="h-4 w-4 text-blue-600" />
+                      )}
+                      {activity.icon === 'payment' && (
+                        <FileText className="h-4 w-4 text-green-600" />
+                      )}
+                      {activity.icon === 'customer' && (
+                        <Users className="h-4 w-4 text-purple-600" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-foreground">{activity.description}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {new Date(activity.timestamp).toLocaleString('ar-SA', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-4">
+                <MessageSquare className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">لا توجد أنشطة حديثة</p>
+              </div>
+            )}
           </CardContent>
         </Card>
         </div>
