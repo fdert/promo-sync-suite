@@ -82,8 +82,10 @@ const Settings = () => {
         .eq('key', 'website_content')
         .maybeSingle();
 
-      if (websiteData?.value && typeof websiteData.value === 'object') {
-        const content = websiteData.value as any;
+      if (websiteData?.value) {
+        const content = typeof websiteData.value === 'string'
+          ? JSON.parse(websiteData.value)
+          : (websiteData.value as any);
         setCompanyData({
           company_name: content.companyInfo?.name || "",
           company_logo: content.companyInfo?.logo || "",
@@ -150,7 +152,10 @@ const Settings = () => {
         .eq('key', 'website_content')
         .maybeSingle();
 
-      const websiteContent = (currentData?.value as any) || {};
+      const websiteContentRaw = currentData?.value;
+      const websiteContent = websiteContentRaw
+        ? (typeof websiteContentRaw === 'string' ? JSON.parse(websiteContentRaw) : websiteContentRaw)
+        : {};
 
       // Update company data
       const updatedContent = {
@@ -172,7 +177,7 @@ const Settings = () => {
       const { error } = await supabase
         .from('website_settings')
         .update({
-          value: updatedContent,
+          value: JSON.stringify(updatedContent),
           updated_at: new Date().toISOString()
         })
         .eq('key', 'website_content');
