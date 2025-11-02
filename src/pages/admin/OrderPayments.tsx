@@ -80,9 +80,9 @@ const OrderPayments = () => {
             customer_name: customerData.name || 'غير محدد',
             customer_phone: customerData.phone || '',
             service_name: orderData.service_name || '',
-            amount: orderData.amount || 0,
-            calculated_paid_amount: orderData.calculated_paid_amount || 0,
-            remaining_amount: orderData.remaining_amount || 0
+            amount: orderData.total_amount || 0,
+            calculated_paid_amount: orderData.paid_amount || 0,
+            remaining_amount: orderData.balance || 0
           });
         }
       }
