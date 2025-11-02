@@ -445,7 +445,7 @@ ${index + 1}. *المبلغ:* ${payment.amount.toLocaleString()} ر.س
       customer_name: customer.customer_name,
       report_date: format(new Date(), 'dd/MM/yyyy - HH:mm', { locale: ar }),
       total_due: `${customer.outstanding_balance.toLocaleString()} ر.س`,
-      unpaid_orders_count: String(customer.unpaid_invoices_count),
+      unpaid_orders_count: String(unpaidOrdersList.length),
       earliest_due_date: customer.earliest_due_date ? format(new Date(customer.earliest_due_date), 'dd/MM/yyyy', { locale: ar }) : 'غير محدد',
       orders_section: ordersSection,
       payments_section: paymentsSection
