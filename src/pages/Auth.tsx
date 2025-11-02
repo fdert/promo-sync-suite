@@ -44,11 +44,18 @@ const Auth = () => {
   useEffect(() => {
     const loadCompanyData = async () => {
       try {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('website_settings')
           .select('value')
           .eq('key', 'website_content')
           .maybeSingle();
+
+        console.log('📊 جلب بيانات website_content:', { data, error });
+
+        if (error) {
+          console.error('❌ خطأ في جلب البيانات:', error);
+          return;
+        }
 
         if (data?.value) {
           // تحويل النص إلى JSON إذا كانت القيمة نص
@@ -56,18 +63,25 @@ const Auth = () => {
             ? JSON.parse(data.value) 
             : data.value;
           
+          console.log('✅ البيانات المحللة:', settingValue);
+          
           const company = settingValue?.companyInfo;
           
+          console.log('🏢 بيانات الشركة:', company);
+          
           if (company) {
-            setCompanyInfo({
+            const newCompanyInfo = {
               name: company.name || "وكالة ابداع واحتراف للدعاية والاعلان",
               tagline: company.tagline || "نبني الأحلام بالإبداع والاحتراف",
               logo: company.logo || "https://gcuqfxacnbxdldsbmgvf.supabase.co/storage/v1/object/public/logos/logo-1754189656106.jpg"
-            });
+            };
+            
+            console.log('🎨 تحديث معلومات الشركة:', newCompanyInfo);
+            setCompanyInfo(newCompanyInfo);
           }
         }
       } catch (error) {
-        console.error('خطأ في تحميل بيانات الشركة:', error);
+        console.error('💥 خطأ في تحميل بيانات الشركة:', error);
       }
     };
 
@@ -233,7 +247,12 @@ const Auth = () => {
                   alt="شعار الشركة"
                   className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 object-contain rounded-xl sm:rounded-2xl bg-white p-2 sm:p-3 shadow-xl sm:shadow-2xl ring-2 sm:ring-4 ring-primary/10"
                   onError={(e) => {
-                    console.error('خطأ في تحميل الشعار:', e);
+                    console.error('❌ خطأ في تحميل الشعار:', companyInfo.logo);
+                    console.log('🔄 محاولة استخدام الشعار الاحتياطي');
+                    e.currentTarget.style.display = 'none';
+                  }}
+                  onLoad={() => {
+                    console.log('✅ تم تحميل الشعار بنجاح:', companyInfo.logo);
                   }}
                 />
               </div>
