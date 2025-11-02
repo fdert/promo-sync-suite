@@ -270,11 +270,16 @@ async function sendToWhatsAppService(message: any): Promise<boolean> {
       if (!selectedWebhook && (message.message_content?.includes('تقرير مالي') || 
           message.message_content?.includes('مبلغ مستحق') ||
           message.message_content?.includes('طلبات غير مدفوعة') ||
-          message.message_content?.includes('المبلغ المستحق'))) {
-        // استخدام webhook الطلبات العادية للتقرير المالي إذا لم تكن الرسالة لعميل
-        selectedWebhook = webhooks.find(w => w.webhook_type === 'outgoing') || webhooks.find(w => w.webhook_type === 'bulk_campaign');
+          message.message_content?.includes('المبلغ المستحق') ||
+          message.message_content?.includes('ملخص الحساب المالي'))) {
+        // أولوية لاستخدام ويب هوك العملاء المدينين إن توفر
+        selectedWebhook = webhooks.find(w => w.webhook_type === 'outstanding_balance_report')
+          || webhooks.find(w => w.webhook_type === 'outgoing')
+          || webhooks.find(w => w.webhook_type === 'bulk_campaign');
         if (selectedWebhook) {
-          console.log('💰 استخدام ويب هوك مناسب للتقرير المالي');
+          console.log(selectedWebhook.webhook_type === 'outstanding_balance_report'
+            ? '💰 استخدام ويب هوك العملاء المدينين للتقرير المالي'
+            : '💰 استخدام ويب هوك مناسب للتقرير المالي');
         }
       }
       

@@ -112,6 +112,20 @@ Deno.serve(async (req) => {
       if (requestedWebhook?.webhook_url) {
         primaryWebhook = requestedWebhook;
         console.log('✅ تم العثور على الويب هوك المطلوب:', primaryWebhook.webhook_name);
+      } else {
+        console.warn('❌ لم يتم العثور على ويب هوك مطابق لنوع:', webhook_type);
+        if (strictRequested) {
+          return new Response(
+            JSON.stringify({ 
+              error: 'Specified webhook type not configured',
+              details: webhook_type 
+            }),
+            { 
+              status: 400, 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            }
+          );
+        }
       }
     }
 
@@ -194,6 +208,13 @@ Deno.serve(async (req) => {
       text_body: message
     };
 
+    // تلميح لاختيار القالب الصحيح في n8n عند تقرير المبالغ المدينة
+    if (webhook_type === 'outstanding_balance_report') {
+      (messagePayload as any).event = 'outstanding_balance_report';
+      (messagePayload as any).template = 'outstanding_balance_report';
+      console.log('🏷️ إضافة تلميح القالب: outstanding_balance_report');
+    }
+
     console.log('Sending message payload:', JSON.stringify(messagePayload, null, 2));
 
     // إرسال الرسالة عبر webhook (مع آلية بديلة عند الفشل)
@@ -244,12 +265,13 @@ Deno.serve(async (req) => {
     const newStatus = response.ok ? 'sent' : 'failed';
 
     // تحديث حالة الرسالة
+    const updateData: any = { status: newStatus };
+    if (newStatus === 'sent') {
+      updateData.sent_at = new Date().toISOString();
+    }
     const { error: updateError } = await supabase
       .from('whatsapp_messages')
-      .update({ 
-        status: newStatus,
-        replied_at: new Date().toISOString()
-      })
+      .update(updateData)
       .eq('id', messageData.id);
 
     if (updateError) {
