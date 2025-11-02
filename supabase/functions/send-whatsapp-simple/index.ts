@@ -45,6 +45,7 @@ Deno.serve(async (req) => {
     }
 
     const { phone, message, webhook_type } = requestData;
+    const strictRequested = !!webhook_type;
     
     if (!phone || !message) {
       console.error('Missing phone or message in request');
@@ -206,8 +207,8 @@ Deno.serve(async (req) => {
     let responseData = await response.text();
     console.log('Webhook response (primary):', response.status, responseData);
 
-    // في حال الفشل مع ويب هوك التقارير المالية، جرّب fallback outgoing إن وجد
-    if (!response.ok && primaryWebhook?.webhook_type === 'account_summary' && fallbackWebhook?.webhook_url && fallbackWebhook.webhook_url !== primaryWebhook.webhook_url) {
+    // في حال الفشل مع ويب هوك التقارير المالية، جرّب fallback outgoing إن وجد (غير مفعّل عند تحديد نوع ويب هوك محدد)
+    if (!strictRequested && !response.ok && primaryWebhook?.webhook_type === 'account_summary' && fallbackWebhook?.webhook_url && fallbackWebhook.webhook_url !== primaryWebhook.webhook_url) {
       console.warn('⚠️ فشل الإرسال عبر ويب هوك التقارير المالية. تجربة ويب هوك outgoing كبديل...');
       usedWebhook = fallbackWebhook;
       response = await fetch(fallbackWebhook.webhook_url, {
@@ -219,8 +220,8 @@ Deno.serve(async (req) => {
       console.log('Webhook response (fallback):', response.status, responseData);
     }
 
-    // إذا مازال فاشلاً، جرّب بقية الويبهوكات البديلة
-    if (!response.ok && Array.isArray(fallbackWebhooks)) {
+    // إذا مازال فاشلاً، جرّب بقية الويبهوكات البديلة (معطّل عند تحديد نوع ويب هوك محدد)
+    if (!strictRequested && !response.ok && Array.isArray(fallbackWebhooks)) {
       for (const w of fallbackWebhooks) {
         if (w.webhook_url === usedWebhook?.webhook_url) continue;
         console.warn('🔁 تجربة ويب هوك بديل:', w.webhook_name);
