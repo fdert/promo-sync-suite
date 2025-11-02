@@ -258,15 +258,28 @@ const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
 
     const fetchCompanyInfo = async () => {
       try {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('website_settings')
           .select('value')
           .eq('key', 'website_content')
           .maybeSingle();
 
-        if (data?.value && typeof data.value === 'object') {
-          const websiteContent = data.value as any;
-          setCompanyInfo(websiteContent.companyInfo);
+        if (error) {
+          console.error('Error fetching company info:', error);
+          return;
+        }
+
+        if (data?.value) {
+          // تحويل النص إلى JSON إذا كانت القيمة نص
+          const websiteContent = typeof data.value === 'string'
+            ? JSON.parse(data.value)
+            : data.value;
+          
+          setCompanyInfo(websiteContent?.companyInfo || {
+            name: "وكالة الإبداع",
+            logo: "",
+            subtitle: "للدعاية والإعلان"
+          });
         }
       } catch (error) {
         console.error('Error fetching company info:', error);
@@ -288,20 +301,43 @@ const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
       <div className="p-4 border-b border-border">
         <div className="flex items-center justify-between">
           {!collapsed && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               {companyInfo?.logo ? (
-                <img src={companyInfo.logo} alt="شعار الشركة" className="w-8 h-8 object-contain rounded" />
+                <div className="w-10 h-10 rounded-lg overflow-hidden bg-white shadow-sm p-1">
+                  <img 
+                    src={companyInfo.logo} 
+                    alt="شعار الشركة" 
+                    className="w-full h-full object-contain"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                </div>
               ) : (
-                <div className="w-8 h-8 bg-gradient-to-r from-primary to-accent rounded-lg flex items-center justify-center">
-                  <Palette className="h-5 w-5 text-white" />
+                <div className="w-10 h-10 bg-gradient-to-r from-primary to-accent rounded-lg flex items-center justify-center shadow-sm">
+                  <Palette className="h-6 w-6 text-white" />
                 </div>
               )}
               <div>
-                <h2 className="text-sm font-bold text-foreground">
+                <h2 className="text-sm font-bold text-foreground leading-tight">
                   {companyInfo?.name || "وكالة الإبداع"}
                 </h2>
-                <p className="text-xs text-muted-foreground">للدعاية والإعلان</p>
+                <p className="text-xs text-muted-foreground">
+                  {companyInfo?.subtitle || "للدعاية والإعلان"}
+                </p>
               </div>
+            </div>
+          )}
+          {collapsed && companyInfo?.logo && (
+            <div className="w-8 h-8 rounded-lg overflow-hidden bg-white shadow-sm p-1 mx-auto">
+              <img 
+                src={companyInfo.logo} 
+                alt="شعار الشركة" 
+                className="w-full h-full object-contain"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
             </div>
           )}
           <Button
