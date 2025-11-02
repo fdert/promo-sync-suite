@@ -21,6 +21,38 @@ import {
 const Dashboard = () => {
   const navigate = useNavigate();
 
+  // جلب بيانات الوكالة من قاعدة البيانات
+  const { data: companyData } = useQuery({
+    queryKey: ['company-info'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('website_settings')
+        .select('value')
+        .eq('key', 'website_content')
+        .maybeSingle();
+      
+      if (error) throw error;
+      
+      if (data?.value) {
+        const content = typeof data.value === 'string' 
+          ? JSON.parse(data.value) 
+          : data.value;
+        
+        return {
+          name: content?.companyInfo?.name || "وكالة الدعاية والإعلان",
+          logo: content?.companyInfo?.logo || "",
+          tagline: content?.companyInfo?.tagline || "نبني الأحلام بالإبداع والاحتراف"
+        };
+      }
+      
+      return {
+        name: "وكالة الدعاية والإعلان",
+        logo: "",
+        tagline: "نبني الأحلام بالإبداع والاحتراف"
+      };
+    }
+  });
+
   // جلب إحصائيات العملاء
   const { data: customersStats } = useQuery({
     queryKey: ['customers-stats'],
@@ -175,10 +207,28 @@ const Dashboard = () => {
     <div className="space-y-6">
       {/* الترحيب */}
       <div className="bg-gradient-to-r from-primary to-accent rounded-xl p-6 text-white">
-        <h1 className="text-2xl font-bold mb-2">مرحباً بك في لوحة الإدارة</h1>
-        <p className="text-white/90">
-          إدارة شاملة لجميع أعمال وكالة الدعاية والإعلان
-        </p>
+        <div className="flex items-center gap-4 mb-4">
+          {companyData?.logo && (
+            <div className="bg-white rounded-lg p-2 shadow-lg">
+              <img 
+                src={companyData.logo} 
+                alt="شعار الوكالة" 
+                className="w-12 h-12 object-contain"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            </div>
+          )}
+          <div>
+            <h1 className="text-2xl font-bold">
+              مرحباً بك في {companyData?.name || "لوحة الإدارة"}
+            </h1>
+            <p className="text-white/90">
+              {companyData?.tagline || "إدارة شاملة لجميع أعمال وكالة الدعاية والإعلان"}
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* الإحصائيات */}
