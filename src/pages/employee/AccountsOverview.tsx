@@ -371,12 +371,11 @@ ${index + 1}. *المبلغ:* ${payment.amount.toLocaleString()} ر.س
       
       const phone = customer.whatsapp || customer.phone;
 
-      // إرسال عبر ويب هوك العملاء المدينين المخصص
+      // إرسال مباشر عبر Edge Function الموثوقة مع اختيار أفضل Webhook
       const { data: functionData, error: functionError } = await supabase.functions.invoke('send-whatsapp-simple', {
         body: {
           phone,
-          message: summaryText,
-          webhook_type: 'outstanding_balance_report' // تحديد نوع الويب هوك المطلوب
+          message: summaryText
         }
       });
       

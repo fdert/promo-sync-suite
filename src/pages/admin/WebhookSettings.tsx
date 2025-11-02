@@ -19,8 +19,7 @@ import {
   Clock,
   FileText,
   ClipboardList,
-  Eye,
-  Users
+  Eye
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -70,61 +69,24 @@ const WebhookSettings = () => {
     try {
       const { data: user } = await supabase.auth.getUser();
       
-      // التحقق من وجود webhook من نفس النوع
-      const { data: existing } = await supabase
+      const { data, error } = await supabase
         .from('webhook_settings')
-        .select('id')
-        .eq('webhook_type', webhookData.webhook_type)
-        .maybeSingle();
-
-      let data, error;
-
-      if (existing) {
-        // تحديث الـ webhook الموجود
-        const result = await supabase
-          .from('webhook_settings')
-          .update({
-            ...webhookData,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', existing.id)
-          .select()
-          .single();
-        
-        data = result.data;
-        error = result.error;
-
-        if (!error) {
-          setWebhookSettings(webhookSettings.map(w => w.id === existing.id ? data : w));
-        }
-      } else {
-        // إضافة webhook جديد
-        const result = await supabase
-          .from('webhook_settings')
-          .insert({
-            ...webhookData,
-            created_by: user.user?.id
-          })
-          .select()
-          .single();
-        
-        data = result.data;
-        error = result.error;
-
-        if (!error) {
-          setWebhookSettings([data, ...webhookSettings]);
-        }
-      }
+        .insert({
+          ...webhookData,
+          created_by: user.user?.id
+        })
+        .select()
+        .single();
 
       if (error) {
         throw error;
       }
+
+      setWebhookSettings([data, ...webhookSettings]);
       
       toast({
-        title: existing ? "تم التحديث" : "تم الحفظ",
-        description: existing 
-          ? "تم تحديث إعدادات الويب هوك بنجاح" 
-          : "تم حفظ إعدادات الويب هوك بنجاح",
+        title: "تم الحفظ",
+        description: "تم حفظ إعدادات الويب هوك بنجاح",
       });
 
       return data;
@@ -619,7 +581,7 @@ const WebhookSettings = () => {
       </div>
 
       <Tabs defaultValue="whatsapp" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-8">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="whatsapp" className="gap-2">
             <MessageSquare className="h-4 w-4" />
             واتساب
@@ -643,10 +605,6 @@ const WebhookSettings = () => {
           <TabsTrigger value="proof" className="gap-2">
             <Eye className="h-4 w-4" />
             البروفة
-          </TabsTrigger>
-          <TabsTrigger value="outstanding" className="gap-2">
-            <Users className="h-4 w-4" />
-            العملاء المدينون
           </TabsTrigger>
           <TabsTrigger value="logs" className="gap-2">
             <Webhook className="h-4 w-4" />
@@ -810,42 +768,6 @@ const WebhookSettings = () => {
                 loading={loading}
                 webhookType="proof"
               />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Outstanding Balance Reports Webhooks */}
-        <TabsContent value="outstanding">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                ويب هوك تقارير العملاء المدينين
-              </CardTitle>
-              <CardDescription>
-                إضافة وإدارة ويب هوك لإرسال تقارير المبالغ المستحقة للعملاء المدينين
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="p-4 bg-muted/50 rounded-lg border border-border">
-                  <h4 className="font-medium mb-2 text-sm">📊 معلومات التقرير</h4>
-                  <ul className="text-sm text-muted-foreground space-y-1">
-                    <li>• يتم إرسال تقارير مفصلة عن حالة حسابات العملاء المدينين</li>
-                    <li>• يشمل التقرير: رقم الطلب، المبلغ الإجمالي، المبلغ المدفوع، المتبقي</li>
-                    <li>• يتم إرسال التقرير عبر واتساب للعميل مباشرة</li>
-                    <li>• يمكن استخدام هذا الويب هوك من صفحة العملاء المدينين في لوحة الموظف</li>
-                  </ul>
-                </div>
-                <WebhookManagement 
-                  webhookSettings={webhookSettings.filter(w => w.webhook_type === 'outstanding_balance_report')}
-                  onSave={saveWebhookSetting}
-                  onUpdate={updateWebhookSetting}
-                  onTest={testWebhook}
-                  loading={loading}
-                  webhookType="outstanding_balance_report"
-                />
-              </div>
             </CardContent>
           </Card>
         </TabsContent>
