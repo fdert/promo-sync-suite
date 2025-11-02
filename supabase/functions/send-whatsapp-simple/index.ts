@@ -8,6 +8,7 @@ const corsHeaders = {
 interface WhatsAppRequest {
   phone: string;
   message: string;
+  webhook_type?: string;
 }
 
 Deno.serve(async (req) => {
@@ -43,7 +44,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { phone, message } = requestData;
+    const { phone, message, webhook_type } = requestData;
     
     if (!phone || !message) {
       console.error('Missing phone or message in request');
@@ -92,51 +93,67 @@ Deno.serve(async (req) => {
 
     console.log('Message queued successfully:', messageData.id);
 
-    // البحث عن webhook settings مع الأولوية للتقارير المالية + تهيئة بديل
+    // البحث عن webhook settings مع أولوية للويب هوك المحدد
     let primaryWebhook: any = null;
     let fallbackWebhook: any = null;
 
-    console.log('🔍 البحث عن ويب هوك التقارير المالية...');
+    console.log('🔍 نوع الويب هوك المطلوب:', webhook_type || 'غير محدد');
 
-    // جلب ويب هوك التقارير المالية
-    const { data: accountSummaryWebhook } = await supabase
+    // إذا تم تحديد webhook_type، ابحث عنه أولاً
+    if (webhook_type) {
+      const { data: requestedWebhook } = await supabase
+        .from('webhook_settings')
+        .select('webhook_url, webhook_type, webhook_name, is_active')
+        .eq('webhook_type', webhook_type)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (requestedWebhook?.webhook_url) {
+        primaryWebhook = requestedWebhook;
+        console.log('✅ تم العثور على الويب هوك المطلوب:', primaryWebhook.webhook_name);
+      }
+    }
+
+    // إذا لم يتم العثور على ويب هوك محدد، استخدم الترتيب الافتراضي
+    if (!primaryWebhook) {
+      console.log('🔍 البحث عن ويب هوك بديل...');
+
+      // جلب ويب هوك التقارير المالية
+      const { data: accountSummaryWebhook } = await supabase
+        .from('webhook_settings')
+        .select('webhook_url, webhook_type, webhook_name, is_active')
+        .eq('webhook_type', 'account_summary')
+        .eq('is_active', true)
+        .maybeSingle();
+
+      // جلب ويب هوك الإرسال العام (outgoing)
+      const { data: outgoingWebhook } = await supabase
+        .from('webhook_settings')
+        .select('webhook_url, webhook_type, webhook_name, is_active')
+        .eq('webhook_type', 'outgoing')
+        .eq('is_active', true)
+        .maybeSingle();
+
+      // تحديد الأساسي والاحتياطي
+      if (accountSummaryWebhook?.webhook_url) {
+        primaryWebhook = accountSummaryWebhook;
+        fallbackWebhook = outgoingWebhook?.webhook_url ? outgoingWebhook : null;
+        console.log('✅ استخدام ويب هوك التقارير المالية كخيار أساسي:', primaryWebhook.webhook_name);
+      } else if (outgoingWebhook?.webhook_url) {
+        primaryWebhook = outgoingWebhook;
+        console.log('ℹ️ سيتم استخدام outgoing كخيار أساسي:', primaryWebhook.webhook_name);
+      }
+    }
+
+    // جلب قائمة ويبهوكات بديلة للمحاولة عند الفشل
+    const { data: allActiveWebhooks } = await supabase
       .from('webhook_settings')
       .select('webhook_url, webhook_type, webhook_name, is_active')
-      .eq('webhook_type', 'account_summary')
-      .eq('is_active', true)
-      .maybeSingle();
-
-    // جلب ويب هوك الإرسال العام (outgoing)
-    const { data: outgoingWebhook } = await supabase
-      .from('webhook_settings')
-      .select('webhook_url, webhook_type, webhook_name, is_active')
-      .eq('webhook_type', 'outgoing')
-      .eq('is_active', true)
-      .maybeSingle();
-
-    // قائمة بكل ويبهوكات الإرسال العامة لتجربة عدة مسارات عند الفشل
-    const { data: outgoingList } = await supabase
-      .from('webhook_settings')
-      .select('webhook_url, webhook_type, webhook_name, is_active')
-      .eq('webhook_type', 'outgoing')
       .eq('is_active', true);
 
-    const isTestUrl = (url?: string) => !!url && url.includes('/webhook-test/');
-    const nonTestOutgoing = (outgoingList || []).filter((w: any) => w.webhook_url && !isTestUrl(w.webhook_url));
-
-    // تحديد الأساسي والاحتياطي مع تفضيل عدم استخدام روابط test
-    if (accountSummaryWebhook?.webhook_url && !isTestUrl(accountSummaryWebhook.webhook_url)) {
-      primaryWebhook = accountSummaryWebhook;
-      fallbackWebhook = outgoingWebhook?.webhook_url ? outgoingWebhook : null;
-      console.log('✅ استخدام ويب هوك التقارير المالية كخيار أساسي:', primaryWebhook.webhook_name);
-    } else if (outgoingWebhook?.webhook_url) {
-      primaryWebhook = outgoingWebhook;
-      fallbackWebhook = accountSummaryWebhook?.webhook_url ? accountSummaryWebhook : null;
-      console.log('ℹ️ سيتم استخدام outgoing كخيار أساسي (رابط التقارير في وضع test أو غير متوفر):', primaryWebhook.webhook_name);
-    } else if (accountSummaryWebhook?.webhook_url) {
-      primaryWebhook = accountSummaryWebhook;
-      console.log('⚠️ لا يوجد outgoing. سيتم استخدام التقارير المالية كخيار أساسي:', primaryWebhook.webhook_name);
-    }
+    const fallbackWebhooks = (allActiveWebhooks || []).filter((w: any) => 
+      w.webhook_url && w.webhook_url !== primaryWebhook?.webhook_url
+    );
 
     console.log('📡 الويب هوك الأساسي:', {
       name: primaryWebhook?.webhook_name,
@@ -202,9 +219,9 @@ Deno.serve(async (req) => {
       console.log('Webhook response (fallback):', response.status, responseData);
     }
 
-    // إذا مازال فاشلاً، جرّب بقية ويبهوكات outgoing غير التجريبية
-    if (!response.ok && Array.isArray(nonTestOutgoing)) {
-      for (const w of nonTestOutgoing) {
+    // إذا مازال فاشلاً، جرّب بقية الويبهوكات البديلة
+    if (!response.ok && Array.isArray(fallbackWebhooks)) {
+      for (const w of fallbackWebhooks) {
         if (w.webhook_url === usedWebhook?.webhook_url) continue;
         console.warn('🔁 تجربة ويب هوك بديل:', w.webhook_name);
         const altRes = await fetch(w.webhook_url, {
