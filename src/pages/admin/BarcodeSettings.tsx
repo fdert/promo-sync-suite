@@ -81,8 +81,8 @@ const BarcodeSettings = () => {
       const { data, error } = await supabase
         .from('barcode_label_settings')
         .select('*')
-        .eq('is_active', true)
-        .single();
+        .limit(1)
+        .maybeSingle();
 
       if (error && error.code !== 'PGRST116') {
         throw error;
@@ -110,17 +110,17 @@ const BarcodeSettings = () => {
     try {
       const { data, error } = await supabase
         .from('website_settings')
-        .select('setting_value')
-        .eq('setting_key', 'website_content')
-        .single();
+        .select('value')
+        .eq('key', 'website_content')
+        .maybeSingle();
 
       if (error) {
         console.error('Error fetching website settings:', error);
         return;
       }
 
-      if (data?.setting_value && typeof data.setting_value === 'object') {
-        const websiteContent = data.setting_value as any;
+      if (data?.value && typeof data.value === 'object') {
+        const websiteContent = data.value as any;
         const companyInfo = websiteContent.companyInfo;
         const contactInfo = websiteContent.contactInfo;
         
@@ -244,12 +244,12 @@ const BarcodeSettings = () => {
       // جلب الإعدادات الحالية
       const { data: currentData } = await supabase
         .from('website_settings')
-        .select('setting_value')
-        .eq('setting_key', 'website_content')
-        .single();
+        .select('value')
+        .eq('key', 'website_content')
+        .maybeSingle();
 
-      if (currentData?.setting_value) {
-        const websiteContent = currentData.setting_value as any;
+      if (currentData?.value) {
+        const websiteContent = currentData.value as any;
         
         // تحديث معلومات الشركة
         const updatedContent = {
@@ -269,10 +269,10 @@ const BarcodeSettings = () => {
         const { error } = await supabase
           .from('website_settings')
           .update({ 
-            setting_value: updatedContent,
+            value: updatedContent,
             updated_at: new Date().toISOString()
           })
-          .eq('setting_key', 'website_content');
+          .eq('key', 'website_content');
 
         if (error) {
           console.error('Error updating website settings:', error);
