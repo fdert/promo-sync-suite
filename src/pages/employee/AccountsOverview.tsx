@@ -294,28 +294,58 @@ const AccountsOverview = () => {
     const orders = customerOrders[customer.customer_id] || [];
     const payments = customerPayments[customer.customer_id] || [];
     
+    // حساب الطلبات غير المدفوعة بالكامل والمبالغ المتبقية
+    const unpaidOrdersList = unpaidOrders.filter(order => 
+      order.customer_name === customer.customer_name
+    );
+    
     const summary = `
- تقرير مالي للعميل: ${customer.customer_name}
- 
- جملة المبالغ المستحقة: ${customer.outstanding_balance.toLocaleString()} ر.س
- عدد الطلبات غير المدفوعة: ${customer.unpaid_invoices_count}
- أقرب تاريخ استحقاق: ${customer.earliest_due_date ? format(new Date(customer.earliest_due_date), 'dd/MM/yyyy', { locale: ar }) : 'غير محدد'}
-  آخر تاريخ استحقاق: ${customer.latest_due_date ? format(new Date(customer.latest_due_date), 'dd/MM/yyyy', { locale: ar }) : 'غير محدد'}
-  
-آخر ${Math.min(5, orders.length)} طلبات:
-${orders.slice(0, 5).map(order => 
-  `- طلب رقم: ${order.order_number} | الخدمة: ${order.service_name} | المبلغ: ${order.amount.toLocaleString()} ر.س | الحالة: ${order.status}`
-).join('\n')}
+━━━━━━━━━━━━━━━━━━━━━━
+📊 *ملخص الحساب المالي*
+━━━━━━━━━━━━━━━━━━━━━━
 
-آخر ${Math.min(5, payments.length)} مدفوعات:
-${payments.slice(0, 5).map(payment => 
-  `- مبلغ: ${payment.amount.toLocaleString()} ر.س | نوع الدفع: ${payment.payment_type} | التاريخ: ${payment.payment_date ? format(new Date(payment.payment_date), 'dd/MM/yyyy', { locale: ar }) : 'غير محدد'}`
-).join('\n')}
+🔹 *اسم العميل:* ${customer.customer_name}
+🔹 *تاريخ التقرير:* ${format(new Date(), 'dd/MM/yyyy - HH:mm', { locale: ar })}
 
-تاريخ التقرير: ${format(new Date(), 'dd/MM/yyyy HH:mm', { locale: ar })}
+━━━━━━━━━━━━━━━━━━━━━━
+💰 *الرصيد المالي*
+━━━━━━━━━━━━━━━━━━━━━━
+
+🔴 *إجمالي المبلغ المستحق:* ${customer.outstanding_balance.toLocaleString()} ر.س
+📋 *عدد الطلبات غير المسددة:* ${customer.unpaid_invoices_count}
+⏰ *أقرب تاريخ استحقاق:* ${customer.earliest_due_date ? format(new Date(customer.earliest_due_date), 'dd/MM/yyyy', { locale: ar }) : 'غير محدد'}
+
+━━━━━━━━━━━━━━━━━━━━━━
+📦 *تفاصيل الطلبات غير المسددة*
+━━━━━━━━━━━━━━━━━━━━━━
+
+${unpaidOrdersList.length > 0 ? unpaidOrdersList.map((order, index) => `
+${index + 1}. *رقم الطلب:* ${order.order_number}
+   ├─ *إجمالي المبلغ:* ${order.total_amount.toLocaleString()} ر.س
+   ├─ *المبلغ المدفوع:* ${order.paid_amount.toLocaleString()} ر.س
+   ├─ *المبلغ المتبقي:* ${order.remaining_amount.toLocaleString()} ر.س
+   ├─ *تاريخ الاستحقاق:* ${order.due_date ? format(new Date(order.due_date), 'dd/MM/yyyy', { locale: ar }) : 'غير محدد'}
+   ├─ *الحالة:* ${order.status}
+   ${order.days_overdue > 0 ? `└─ ⚠️ *متأخر:* ${order.days_overdue} يوم` : '└─ ✅ *في الموعد*'}
+`).join('\n') : '✅ لا توجد طلبات غير مسددة حالياً'}
+
+${payments.length > 0 ? `━━━━━━━━━━━━━━━━━━━━━━
+💳 *آخر المدفوعات (${Math.min(5, payments.length)})*
+━━━━━━━━━━━━━━━━━━━━━━
+
+${payments.slice(0, 5).map((payment, index) => `
+${index + 1}. *المبلغ:* ${payment.amount.toLocaleString()} ر.س
+   ├─ *طريقة الدفع:* ${payment.payment_type}
+   └─ *التاريخ:* ${payment.payment_date ? format(new Date(payment.payment_date), 'dd/MM/yyyy', { locale: ar }) : 'غير محدد'}
+`).join('\n')}` : ''}
+
+━━━━━━━━━━━━━━━━━━━━━━
+📞 *للاستفسار أو السداد*
+نرجو التواصل معنا
+━━━━━━━━━━━━━━━━━━━━━━
 `;
     
-    return summary;
+    return summary.trim();
   };
 
   // Handle summary actions
