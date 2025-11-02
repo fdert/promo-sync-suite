@@ -460,18 +460,18 @@ const FinancialReports = () => {
                   إضافة مصروف
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[600px]">
+              <DialogContent className="sm:max-w-[450px]">
                 <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2">
-                    <Receipt className="h-5 w-5" />
+                  <DialogTitle className="flex items-center gap-2 text-base">
+                    <Receipt className="h-4 w-4" />
                     إضافة مصروف جديد
                   </DialogTitle>
-                  <DialogDescription>
+                  <DialogDescription className="text-sm">
                     قم بإدخال تفاصيل المصروف الجديد
                   </DialogDescription>
                 </DialogHeader>
                 
-                <div className="grid gap-4 py-4">
+                <div className="grid gap-3 py-3">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="description">وصف المصروف *</Label>
