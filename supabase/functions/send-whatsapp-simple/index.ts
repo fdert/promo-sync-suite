@@ -9,6 +9,7 @@ interface WhatsAppRequest {
   phone: string;
   message: string;
   webhook_type?: string;
+  strict?: boolean;
 }
 
 Deno.serve(async (req) => {
@@ -44,8 +45,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { phone, message, webhook_type } = requestData;
-    const strictRequested = !!webhook_type;
+    const { phone, message, webhook_type, strict } = requestData as WhatsAppRequest & { strict?: boolean };
+    const strictRequested = (typeof strict !== 'undefined' ? !!strict : false) || !!webhook_type;
     
     if (!phone || !message) {
       console.error('Missing phone or message in request');
