@@ -47,7 +47,65 @@ const MessageTemplates = () => {
 
   useEffect(() => {
     fetchTemplates();
+    createDefaultTemplatesIfNeeded();
   }, []);
+
+  // Create default templates if they don't exist
+  const createDefaultTemplatesIfNeeded = async () => {
+    try {
+      // Check if outstanding_balance_report template exists
+      const { data: existing } = await supabase
+        .from('message_templates')
+        .select('id')
+        .eq('name', 'outstanding_balance_report')
+        .maybeSingle();
+
+      if (!existing) {
+        // Create the template
+        await supabase
+          .from('message_templates')
+          .insert({
+            name: 'outstanding_balance_report',
+            content: `━━━━━━━━━━━━━━━━━━━━━━
+📊 *ملخص الحساب المالي*
+━━━━━━━━━━━━━━━━━━━━━━
+
+🔹 *اسم العميل:* {{customer_name}}
+🔹 *تاريخ التقرير:* {{report_date}}
+
+━━━━━━━━━━━━━━━━━━━━━━
+💰 *الرصيد المالي*
+━━━━━━━━━━━━━━━━━━━━━━
+
+🔴 *إجمالي المبلغ المستحق:* {{total_due}}
+📋 *عدد الطلبات غير المسددة:* {{unpaid_orders_count}}
+⏰ *أقرب تاريخ استحقاق:* {{earliest_due_date}}
+
+━━━━━━━━━━━━━━━━━━━━━━
+📦 *تفاصيل الطلبات غير المسددة*
+━━━━━━━━━━━━━━━━━━━━━━
+
+{{orders_section}}
+
+━━━━━━━━━━━━━━━━━━━━━━
+💳 *آخر المدفوعات*
+━━━━━━━━━━━━━━━━━━━━━━
+
+{{payments_section}}
+
+━━━━━━━━━━━━━━━━━━━━━━
+📞 *للاستفسار أو السداد*
+نرجو التواصل معنا
+━━━━━━━━━━━━━━━━━━━━━━`,
+            is_active: true
+          });
+        
+        console.log('✅ تم إنشاء قالب العملاء المدينين بنجاح');
+      }
+    } catch (error) {
+      console.error('Error creating default templates:', error);
+    }
+  };
 
   useEffect(() => {
     filterTemplates();
