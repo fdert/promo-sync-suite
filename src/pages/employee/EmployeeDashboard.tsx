@@ -118,14 +118,13 @@ const EmployeeDashboard = () => {
           .neq('status', 'مكتمل')
           .order('created_at', { ascending: false });
 
-        // جلب الطلبات غير المكتملة
+        // جلب جميع الطلبات غير المكتملة
         const { data: incompleteData, count: incompleteCount } = await supabase
           .from('orders')
           .select('*, customers(name)', { count: 'exact' })
           .eq('created_by', user.id)
           .in('status', ['جديد', 'قيد التنفيذ'])
-          .order('delivery_date', { ascending: true })
-          .limit(5);
+          .order('delivery_date', { ascending: true });
 
         setDueTodayOrders(dueTodayData || []);
         setIncompleteOrders(incompleteData || []);
@@ -219,8 +218,8 @@ const EmployeeDashboard = () => {
                     <ClipboardList className="h-5 w-5" />
                     مهام قيد التنفيذ ({stats.incompleteTasks})
                   </p>
-                  <div className="space-y-2">
-                    {incompleteOrders.slice(0, 3).map((order) => (
+                  <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                    {incompleteOrders.map((order) => (
                       <div key={order.id} className="bg-background/70 p-2 rounded text-sm">
                         <p className="font-medium text-foreground">
                           {order.order_number} - {order.customers?.name}
@@ -235,9 +234,6 @@ const EmployeeDashboard = () => {
                         </div>
                       </div>
                     ))}
-                    {incompleteOrders.length > 3 && (
-                      <p className="text-xs text-muted-foreground">+{incompleteOrders.length - 3} طلبات أخرى</p>
-                    )}
                   </div>
                 </div>
               )}
