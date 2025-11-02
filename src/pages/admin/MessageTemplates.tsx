@@ -16,10 +16,10 @@ import { useToast } from "@/hooks/use-toast";
 
 interface MessageTemplate {
   id: string;
-  template_name: string;
-  template_content: string;
-  template_type: string;
+  name: string;
+  content: string;
   is_active: boolean;
+  variables?: any;
   created_at: string;
   updated_at: string;
 }
@@ -27,42 +27,23 @@ interface MessageTemplate {
 const MessageTemplates = () => {
   const [templates, setTemplates] = useState<MessageTemplate[]>([]);
   const [filteredTemplates, setFilteredTemplates] = useState<MessageTemplate[]>([]);
-  const [selectedType, setSelectedType] = useState<string>("all");
+  const [searchTerm, setSearchTerm] = useState<string>("");
   const [editingTemplate, setEditingTemplate] = useState<MessageTemplate | null>(null);
   const [newTemplate, setNewTemplate] = useState({
-    template_name: "",
-    template_content: "",
-    template_type: "general"
+    name: "",
+    content: ""
   });
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  const templateTypes = [
-    { value: "order", label: "الطلبات" },
-    { value: "invoice", label: "الفواتير" },
-    { value: "general", label: "عام" },
-    { value: "quick_reply", label: "رد سريع" }
+  const availableVariables = [
+    "customer_name", "customer_phone", "order_number", "order_status",
+    "total_due", "unpaid_orders_count", "earliest_due_date", "report_date",
+    "orders_section", "payments_section", "invoice_number", "amount",
+    "due_date", "payment_date", "remaining_amount", "paid_amount",
+    "service_name", "company_name", "date", "time"
   ];
-
-  const availableVariables = {
-    order: [
-      "customer_name", "customer_phone", "order_number", "progress", "amount", 
-      "due_date", "service_name", "estimated_time", "paid_amount",
-      "remaining_amount", "payment_type", "payment_notes", "status",
-      "order_items", "order_items_count", "order_items_total", "priority",
-      "description", "start_date", "completion_date"
-    ],
-    invoice: [
-      "customer_name", "customer_phone", "invoice_number", "amount", "due_date", 
-      "payment_date", "status", "paid_amount", "remaining_amount",
-      "payment_type", "invoice_items", "invoice_items_count", "total_amount",
-      "tax_amount", "issue_date", "notes"
-    ],
-    general: [
-      "customer_name", "customer_phone", "company_name", "date", "time"
-    ]
-  };
 
   useEffect(() => {
     fetchTemplates();
@@ -70,15 +51,14 @@ const MessageTemplates = () => {
 
   useEffect(() => {
     filterTemplates();
-  }, [templates, selectedType]);
+  }, [templates, searchTerm]);
 
   const fetchTemplates = async () => {
     try {
       const { data, error } = await supabase
         .from('message_templates')
         .select('*')
-        .order('template_type', { ascending: true })
-        .order('template_name', { ascending: true });
+        .order('name', { ascending: true });
 
       if (error) throw error;
       setTemplates(data || []);
@@ -95,10 +75,15 @@ const MessageTemplates = () => {
   };
 
   const filterTemplates = () => {
-    if (selectedType === "all") {
+    if (!searchTerm) {
       setFilteredTemplates(templates);
     } else {
-      setFilteredTemplates(templates.filter(t => t.template_type === selectedType));
+      setFilteredTemplates(
+        templates.filter(t => 
+          t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          t.content.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      );
     }
   };
 
@@ -109,8 +94,7 @@ const MessageTemplates = () => {
         const { error } = await supabase
           .from('message_templates')
           .update({
-            template_content: editingTemplate.template_content,
-            template_type: editingTemplate.template_type,
+            content: editingTemplate.content,
             updated_at: new Date().toISOString()
           })
           .eq('id', editingTemplate.id);
@@ -126,9 +110,8 @@ const MessageTemplates = () => {
         const { error } = await supabase
           .from('message_templates')
           .insert([{
-            template_name: newTemplate.template_name,
-            template_content: newTemplate.template_content,
-            template_type: newTemplate.template_type,
+            name: newTemplate.name,
+            content: newTemplate.content,
             is_active: true
           }]);
 
@@ -140,9 +123,8 @@ const MessageTemplates = () => {
         });
 
         setNewTemplate({
-          template_name: "",
-          template_content: "",
-          template_type: "general"
+          name: "",
+          content: ""
         });
       }
 
@@ -170,22 +152,21 @@ const MessageTemplates = () => {
     if (isEditing && editingTemplate) {
       setEditingTemplate({
         ...editingTemplate,
-        template_content: editingTemplate.template_content + variableText
+        content: editingTemplate.content + variableText
       });
     } else {
       setNewTemplate({
         ...newTemplate,
-        template_content: newTemplate.template_content + variableText
+        content: newTemplate.content + variableText
       });
     }
   };
 
   const previewMessage = (template: MessageTemplate) => {
-    let preview = template.template_content;
-    const variables = availableVariables[template.template_type as keyof typeof availableVariables] || [];
+    let preview = template.content;
     
     // استبدال المتغيرات بقيم تجريبية
-    variables.forEach(variable => {
+    availableVariables.forEach(variable => {
       const regex = new RegExp(`{{${variable}}}`, 'g');
       switch (variable) {
         case 'customer_name':
@@ -197,80 +178,47 @@ const MessageTemplates = () => {
         case 'order_number':
           preview = preview.replace(regex, 'ORD-001');
           break;
+        case 'order_status':
+          preview = preview.replace(regex, 'قيد التنفيذ');
+          break;
+        case 'total_due':
+          preview = preview.replace(regex, '1,500 ر.س');
+          break;
+        case 'unpaid_orders_count':
+          preview = preview.replace(regex, '3');
+          break;
+        case 'earliest_due_date':
+          preview = preview.replace(regex, '15/02/2024');
+          break;
+        case 'report_date':
+          preview = preview.replace(regex, '01/02/2024 - 14:30');
+          break;
+        case 'orders_section':
+          preview = preview.replace(regex, '1. رقم الطلب: ORD-001\n   المبلغ: 500 ر.س\n2. رقم الطلب: ORD-002\n   المبلغ: 1000 ر.س');
+          break;
+        case 'payments_section':
+          preview = preview.replace(regex, '1. المبلغ: 300 ر.س - نقدي - 20/01/2024\n2. المبلغ: 200 ر.س - تحويل - 15/01/2024');
+          break;
         case 'invoice_number':
           preview = preview.replace(regex, 'INV-001');
           break;
         case 'amount':
-          preview = preview.replace(regex, '1,500.00 ر.س');
-          break;
-        case 'total_amount':
-          preview = preview.replace(regex, '1,650.00 ر.س');
+          preview = preview.replace(regex, '1,500 ر.س');
           break;
         case 'paid_amount':
-          preview = preview.replace(regex, '1,000.00 ر.س');
+          preview = preview.replace(regex, '1,000 ر.س');
           break;
         case 'remaining_amount':
-          preview = preview.replace(regex, '500.00 ر.س');
-          break;
-        case 'tax_amount':
-          preview = preview.replace(regex, '150.00 ر.س');
-          break;
-        case 'payment_type':
-          preview = preview.replace(regex, 'تحويل بنكي');
-          break;
-        case 'payment_notes':
-          preview = preview.replace(regex, 'تم الدفع جزئياً');
-          break;
-        case 'status':
-          preview = preview.replace(regex, 'قيد التنفيذ');
-          break;
-        case 'priority':
-          preview = preview.replace(regex, 'عالية');
-          break;
-        case 'description':
-          preview = preview.replace(regex, 'تصميم شعار احترافي للشركة');
-          break;
-        case 'notes':
-          preview = preview.replace(regex, 'ملاحظات إضافية حول الطلب');
-          break;
-        case 'order_items':
-          preview = preview.replace(regex, '1. تصميم شعار - الكمية: 1 - السعر: 500.00 ر.س\n2. تطوير موقع - الكمية: 1 - السعر: 1000.00 ر.س');
-          break;
-        case 'order_items_count':
-          preview = preview.replace(regex, '2');
-          break;
-        case 'order_items_total':
-          preview = preview.replace(regex, '1,500.00 ر.س');
-          break;
-        case 'invoice_items':
-          preview = preview.replace(regex, '1. تصميم شعار - الكمية: 1 - السعر: 500.00 ر.س\n2. تطوير موقع - الكمية: 1 - السعر: 1000.00 ر.س');
-          break;
-        case 'invoice_items_count':
-          preview = preview.replace(regex, '2');
-          break;
-        case 'progress':
-          preview = preview.replace(regex, '75%');
+          preview = preview.replace(regex, '500 ر.س');
           break;
         case 'due_date':
-          preview = preview.replace(regex, '2024-02-15');
-          break;
-        case 'issue_date':
-          preview = preview.replace(regex, '2024-02-01');
+          preview = preview.replace(regex, '15/02/2024');
           break;
         case 'payment_date':
-          preview = preview.replace(regex, '2024-02-01');
-          break;
-        case 'start_date':
-          preview = preview.replace(regex, '2024-01-20');
-          break;
-        case 'completion_date':
-          preview = preview.replace(regex, '2024-02-15');
+          preview = preview.replace(regex, '01/02/2024');
           break;
         case 'service_name':
           preview = preview.replace(regex, 'تصميم شعار');
-          break;
-        case 'estimated_time':
-          preview = preview.replace(regex, '5 أيام');
           break;
         case 'company_name':
           preview = preview.replace(regex, 'شركة المثال');
@@ -304,13 +252,12 @@ const MessageTemplates = () => {
         </div>
         
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
+            <DialogTrigger asChild>
             <Button onClick={() => {
               setEditingTemplate(null);
               setNewTemplate({
-                template_name: "",
-                template_content: "",
-                template_type: "general"
+                name: "",
+                content: ""
               });
             }}>
               <Plus className="h-4 w-4 mr-2" />
@@ -328,7 +275,7 @@ const MessageTemplates = () => {
               </DialogDescription>
             </DialogHeader>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6">
               {/* نموذج التعديل */}
               <div className="space-y-4">
                 {!editingTemplate && (
@@ -336,95 +283,58 @@ const MessageTemplates = () => {
                     <Label htmlFor="template_name">اسم القالب</Label>
                     <Input
                       id="template_name"
-                      value={newTemplate.template_name}
+                      value={newTemplate.name}
                       onChange={(e) => setNewTemplate({
                         ...newTemplate,
-                        template_name: e.target.value
+                        name: e.target.value
                       })}
-                      placeholder="مثال: order_reminder"
+                      placeholder="مثال: outstanding_balance_report"
                     />
                   </div>
                 )}
 
                 <div>
-                  <Label htmlFor="template_type">نوع القالب</Label>
-                  <Select
-                    value={editingTemplate ? editingTemplate.template_type : newTemplate.template_type}
-                    onValueChange={(value) => {
-                      if (editingTemplate) {
-                        setEditingTemplate({
-                          ...editingTemplate,
-                          template_type: value
-                        });
-                      } else {
-                        setNewTemplate({
-                          ...newTemplate,
-                          template_type: value
-                        });
-                      }
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {templateTypes.map(type => (
-                        <SelectItem key={type.value} value={type.value}>
-                          {type.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
                   <Label htmlFor="template_content">محتوى الرسالة</Label>
                   <Textarea
                     id="template_content"
-                    value={editingTemplate ? editingTemplate.template_content : newTemplate.template_content}
+                    value={editingTemplate ? editingTemplate.content : newTemplate.content}
                     onChange={(e) => {
                       if (editingTemplate) {
                         setEditingTemplate({
                           ...editingTemplate,
-                          template_content: e.target.value
+                          content: e.target.value
                         });
                       } else {
                         setNewTemplate({
                           ...newTemplate,
-                          template_content: e.target.value
+                          content: e.target.value
                         });
                       }
                     }}
                     placeholder="اكتب محتوى الرسالة هنا واستخدم المتغيرات مثل {{customer_name}}"
-                    rows={6}
+                    rows={12}
                   />
                 </div>
-              </div>
 
-              {/* المتغيرات المتاحة */}
-              <div className="space-y-4">
+                {/* المتغيرات المتاحة */}
                 <div>
                   <Label>المتغيرات المتاحة</Label>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-muted-foreground mb-2">
                     اضغط على أي متغير لإضافته إلى الرسالة
                   </p>
-                </div>
-
-                <div className="space-y-2">
-                  {availableVariables[
-                    (editingTemplate ? editingTemplate.template_type : newTemplate.template_type) as keyof typeof availableVariables
-                  ]?.map(variable => (
-                    <Button
-                      key={variable}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => insertVariable(variable, !!editingTemplate)}
-                      className="mr-2 mb-2"
-                    >
-                      <Copy className="h-3 w-3 mr-1" />
-                      {`{{${variable}}}`}
-                    </Button>
-                  ))}
+                  <div className="flex flex-wrap gap-2">
+                    {availableVariables.map(variable => (
+                      <Button
+                        key={variable}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => insertVariable(variable, !!editingTemplate)}
+                      >
+                        <Copy className="h-3 w-3 mr-1" />
+                        {`{{${variable}}}`}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
 
                 {/* معاينة الرسالة */}
@@ -433,14 +343,13 @@ const MessageTemplates = () => {
                     <Eye className="h-4 w-4 inline mr-1" />
                     معاينة الرسالة
                   </Label>
-                  <p className="text-sm bg-background p-3 rounded border">
+                  <p className="text-sm bg-background p-3 rounded border whitespace-pre-wrap">
                     {editingTemplate 
                       ? previewMessage(editingTemplate)
                       : previewMessage({
                           id: '',
-                          template_name: newTemplate.template_name,
-                          template_content: newTemplate.template_content,
-                          template_type: newTemplate.template_type,
+                          name: newTemplate.name,
+                          content: newTemplate.content,
                           is_active: true,
                           created_at: '',
                           updated_at: ''
@@ -464,25 +373,21 @@ const MessageTemplates = () => {
         </Dialog>
       </div>
 
-      {/* فلترة القوالب */}
+      {/* بحث وفلترة القوالب */}
       <Card>
         <CardHeader>
-          <CardTitle>فلترة القوالب</CardTitle>
+          <CardTitle>بحث في القوالب</CardTitle>
         </CardHeader>
         <CardContent>
-          <Select value={selectedType} onValueChange={setSelectedType}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="اختر نوع القالب" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">جميع القوالب</SelectItem>
-              {templateTypes.map(type => (
-                <SelectItem key={type.value} value={type.value}>
-                  {type.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex gap-4">
+            <div className="flex-1">
+              <Input
+                placeholder="ابحث في القوالب بالاسم أو المحتوى..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -499,7 +404,6 @@ const MessageTemplates = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>اسم القالب</TableHead>
-                <TableHead>النوع</TableHead>
                 <TableHead>محتوى الرسالة</TableHead>
                 <TableHead>الحالة</TableHead>
                 <TableHead>الإجراءات</TableHead>
@@ -509,17 +413,12 @@ const MessageTemplates = () => {
               {filteredTemplates.map((template) => (
                 <TableRow key={template.id}>
                   <TableCell className="font-medium">
-                    {template.template_name}
+                    {template.name}
                   </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">
-                      {templateTypes.find(t => t.value === template.template_type)?.label || template.template_type}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="max-w-xs">
+                  <TableCell className="max-w-md">
                     <div className="truncate">
-                      {template.template_content.substring(0, 100)}
-                      {template.template_content.length > 100 && "..."}
+                      {template.content.substring(0, 150)}
+                      {template.content.length > 150 && "..."}
                     </div>
                   </TableCell>
                   <TableCell>
