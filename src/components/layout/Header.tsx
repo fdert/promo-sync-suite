@@ -92,12 +92,20 @@ const Header = ({ onMenuClick, title }: HeaderProps) => {
             </span>
           </Button>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <User className="h-5 w-5" />
-              </Button>
-            </DropdownMenuTrigger>
+          <div className="flex items-center gap-2">
+            <div className="hidden md:flex flex-col items-end">
+              <p className="text-sm font-medium text-foreground">
+                {user?.user_metadata?.full_name || "المستخدم"}
+              </p>
+              <p className="text-xs text-muted-foreground">{user?.email}</p>
+            </div>
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <User className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>
                 <div>
@@ -117,7 +125,8 @@ const Header = ({ onMenuClick, title }: HeaderProps) => {
                 تسجيل الخروج
               </DropdownMenuItem>
             </DropdownMenuContent>
-          </DropdownMenu>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
     </header>
