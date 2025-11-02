@@ -273,7 +273,7 @@ Deno.serve(async (req) => {
       .from('whatsapp_messages')
       .update({ 
         status: newStatus,
-        replied_at: new Date().toISOString()
+        sent_at: response.ok ? new Date().toISOString() : null
       })
       .eq('id', messageData.id);
 
