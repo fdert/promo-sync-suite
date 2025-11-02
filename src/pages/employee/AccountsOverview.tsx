@@ -375,7 +375,8 @@ ${index + 1}. *المبلغ:* ${payment.amount.toLocaleString()} ر.س
       const { data: functionData, error: functionError } = await supabase.functions.invoke('send-whatsapp-simple', {
         body: {
           phone,
-          message: summaryText
+          message: summaryText,
+          webhook_type: 'outstanding_balance_report'
         }
       });
       
@@ -435,11 +436,12 @@ ${index + 1}. *المبلغ:* ${payment.amount.toLocaleString()} ر.س
       console.log('📊 التقرير المالي جاهز للإرسال');
       console.log('📱 الرقم المستهدف:', phoneNumber);
       
-      // استدعاء edge function الجديد المبسط
+      // استدعاء edge function مع تحديد نوع الويب هوك للعملاء المدينين
       const { data: functionData, error: functionError } = await supabase.functions.invoke('send-whatsapp-simple', {
         body: {
           phone: phoneNumber,
-          message: summary
+          message: summary,
+          webhook_type: 'outstanding_balance_report'
         }
       });
       
