@@ -228,6 +228,33 @@ Deno.serve(async (req) => {
     let responseData = await response.text();
     console.log('Webhook response (primary):', response.status, responseData);
 
+    // If a specific webhook_type was requested, do NOT fallback to any other webhook
+    if (strictRequested && !response.ok) {
+      console.error('Requested webhook failed. Skipping fallbacks by request.', {
+        requestedType: webhook_type,
+        primaryType: primaryWebhook?.webhook_type,
+        status: response.status,
+        body: responseData
+      });
+      // Update message as failed and return error
+      const { error: updateErrStrict } = await supabase
+        .from('whatsapp_messages')
+        .update({ status: 'failed' })
+        .eq('id', messageData.id);
+      if (updateErrStrict) console.error('Failed to mark message failed:', updateErrStrict);
+
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: 'فشل إرسال الرسالة عبر الويب هوك المطلوب',
+          messageId: messageData.id,
+          status: 'failed',
+          usedWebhook: primaryWebhook?.webhook_type || 'unknown'
+        }),
+        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // في حال الفشل مع ويب هوك التقارير المالية، جرّب fallback outgoing إن وجد (غير مفعّل عند تحديد نوع ويب هوك محدد)
     if (!strictRequested && !response.ok && primaryWebhook?.webhook_type === 'account_summary' && fallbackWebhook?.webhook_url && fallbackWebhook.webhook_url !== primaryWebhook.webhook_url) {
       console.warn('⚠️ فشل الإرسال عبر ويب هوك التقارير المالية. تجربة ويب هوك outgoing كبديل...');
