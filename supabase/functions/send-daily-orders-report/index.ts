@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.0";
 import { Resend } from "npm:resend@2.0.0";
-import * as XLSX from "https://cdn.sheetjs.com/xlsx-0.20.1/package/xlsx.mjs";
+import * as XLSX from "https://esm.sh/xlsx@0.18.5";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
@@ -195,8 +195,17 @@ const handler = async (req: Request): Promise<Response> => {
     const currentDate = new Date().toISOString().split('T')[0];
     const filename = `orders-report-${currentDate}.xlsx`;
 
-    // Convert to base64
-    const excelBase64 = btoa(String.fromCharCode(...new Uint8Array(excelBuffer)));
+    // Convert to base64 safely (handles large files)
+    const uint8Array = new Uint8Array(excelBuffer);
+    let binaryString = '';
+    const chunkSize = 8192; // Process in chunks to avoid stack overflow
+    
+    for (let i = 0; i < uint8Array.length; i += chunkSize) {
+      const chunk = uint8Array.slice(i, i + chunkSize);
+      binaryString += String.fromCharCode.apply(null, Array.from(chunk));
+    }
+    
+    const excelBase64 = btoa(binaryString);
 
     // Calculate statistics
     const totalOrders = orders.length;
