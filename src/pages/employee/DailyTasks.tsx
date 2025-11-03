@@ -51,10 +51,7 @@ const DailyTasks = () => {
     
     try {
       setLoading(true);
-      // استخدام التوقيت المحلي السعودي بدلاً من UTC
-      const today = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Riyadh' }))
-        .toISOString()
-        .split('T')[0];
+      const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh' }).format(new Date());
       
       // جلب طلبات الموظف المسجل دخوله فقط بتاريخ اليوم (استبعاد المكتملة والجاهزة)
       const { data, error } = await supabase
@@ -337,7 +334,7 @@ const DailyTasks = () => {
       <header>
         <h1 className="text-3xl font-bold">المهام اليومية</h1>
         <p className="text-muted-foreground mt-2">
-          الطلبات المطلوب تسليمها اليوم {new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Riyadh' })).toLocaleDateString('ar-SA')}
+          الطلبات المطلوب تسليمها اليوم {new Date().toLocaleDateString('ar-SA', { timeZone: 'Asia/Riyadh' })}
         </p>
       </header>
 
