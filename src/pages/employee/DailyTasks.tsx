@@ -390,6 +390,7 @@ const DailyTasks = () => {
                   <TableHead>المسؤول</TableHead>
                   <TableHead>المبلغ</TableHead>
                   <TableHead>الحالة</TableHead>
+                  <TableHead>حالة الإنجاز</TableHead>
                   <TableHead>تاريخ التسليم</TableHead>
                   <TableHead>إجراءات</TableHead>
                 </TableRow>
@@ -397,13 +398,13 @@ const DailyTasks = () => {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center">
+                    <TableCell colSpan={9} className="text-center">
                       جارِ التحميل...
                     </TableCell>
                   </TableRow>
                 ) : tasks.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center">
+                    <TableCell colSpan={9} className="text-center">
                       لا توجد مهام مطلوب تسليمها اليوم
                     </TableCell>
                   </TableRow>
@@ -418,6 +419,13 @@ const DailyTasks = () => {
                       </TableCell>
                       <TableCell>{task.total_amount.toFixed(2)} ر.س</TableCell>
                       <TableCell>{getStatusBadge(task.status)}</TableCell>
+                      <TableCell>
+                        {task.status === 'completed' || task.status === 'ready_for_delivery' ? (
+                          <Badge variant="default" className="bg-green-600">✓ تم الإنجاز</Badge>
+                        ) : (
+                          <Badge variant="destructive">✗ لم ينجز</Badge>
+                        )}
+                      </TableCell>
                       <TableCell>
                         {new Date(task.delivery_date).toLocaleDateString('ar-SA')}
                       </TableCell>
