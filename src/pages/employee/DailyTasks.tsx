@@ -137,6 +137,13 @@ const DailyTasks = () => {
     }
 
     try {
+      // جلب بيانات الموظف الحالي (الذي قام بنقل المهمة)
+      const { data: currentEmployeeData } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user?.id)
+        .single();
+
       // تحديث الطلب ونقله للموظف الجديد
       const { error: updateError } = await supabase
         .from('orders')
@@ -166,14 +173,38 @@ const DailyTasks = () => {
       // إرسال إشعار واتساب للموظف الجديد
       const employeePhone = employeeData?.phone;
       if (employeePhone && orderData) {
-        await supabase.from('whatsapp_messages').insert({
-          to_number: employeePhone,
-          message_type: 'text',
-          message_content: `📋 تم تعيين مهمة جديدة لك\n\n` +
+        // جلب قالب رسالة نقل المهمة
+        const { data: templateData } = await supabase
+          .from('message_templates')
+          .select('content')
+          .eq('name', 'task_transfer')
+          .eq('is_active', true)
+          .single();
+
+        let messageContent = '';
+        
+        if (templateData?.content) {
+          // استخدام القالب مع استبدال المتغيرات
+          messageContent = templateData.content
+            .replace('{{employee_name}}', employeeData.full_name || 'الموظف')
+            .replace('{{order_number}}', orderData.order_number)
+            .replace('{{customer_name}}', orderData.customers?.name || 'غير محدد')
+            .replace('{{delivery_date}}', new Date(orderData.delivery_date).toLocaleDateString('ar-SA'))
+            .replace('{{transferred_by}}', currentEmployeeData?.full_name || 'المدير');
+        } else {
+          // رسالة افتراضية في حال عدم وجود قالب
+          messageContent = `📋 تم تعيين مهمة جديدة لك\n\n` +
             `🔢 رقم الطلب: ${orderData.order_number}\n` +
             `👤 العميل: ${orderData.customers?.name || 'غير محدد'}\n` +
-            `📅 تاريخ التسليم: ${new Date(orderData.delivery_date).toLocaleDateString('ar-SA')}\n\n` +
-            `يرجى متابعة الطلب وإنجازه في الوقت المحدد.`,
+            `📅 تاريخ التسليم: ${new Date(orderData.delivery_date).toLocaleDateString('ar-SA')}\n` +
+            `📤 تم النقل بواسطة: ${currentEmployeeData?.full_name || 'المدير'}\n\n` +
+            `يرجى متابعة الطلب وإنجازه في الوقت المحدد.`;
+        }
+
+        await supabase.from('whatsapp_messages').insert({
+          to_number: employeePhone,
+          message_type: 'task_transfer',
+          message_content: messageContent,
           status: 'pending',
           is_reply: false,
         });
@@ -181,7 +212,7 @@ const DailyTasks = () => {
 
       toast({
         title: 'تم نقل المهمة بنجاح',
-        description: `تم نقل المهمة إلى ${employeeData?.full_name || 'الموظف المحدد'}`,
+        description: `تم نقل المهمة إلى ${employeeData?.full_name || 'الموظف المحدد'} وإرسال إشعار واتساب`,
       });
 
       setTransferDialogOpen(false);

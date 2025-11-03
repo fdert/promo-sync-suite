@@ -244,7 +244,18 @@ async function sendToWhatsAppService(message: any): Promise<boolean> {
       }
     }
     
-    // ثانياً: البحث عن webhook للحملات الجماعية
+    // ثانياً: إذا كانت رسالة نقل مهمة، استخدام ويب هوك نقل المهام
+    if (!selectedWebhook && message.message_type === 'task_transfer') {
+      selectedWebhook = webhooks.find(w => w.webhook_type === 'task_transfer') 
+        || webhooks.find(w => w.webhook_type === 'outgoing');
+      if (selectedWebhook) {
+        console.log(selectedWebhook.webhook_type === 'task_transfer'
+          ? '📋 استخدام ويب هوك نقل المهام'
+          : '🔁 استخدام ويب هوك الطلبات العادية لنقل المهمة');
+      }
+    }
+    
+    // ثالثاً: البحث عن webhook للحملات الجماعية
     if (!selectedWebhook) {
       selectedWebhook = webhooks.find(w => w.webhook_type === 'bulk_campaign');
     }
