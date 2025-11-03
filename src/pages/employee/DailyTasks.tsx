@@ -40,6 +40,7 @@ const DailyTasks = () => {
   const [selectedTask, setSelectedTask] = useState<string | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<string>('');
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+  const [todayDate, setTodayDate] = useState<string>('');
   const [stats, setStats] = useState({
     total: 0,
     completed: 0,
@@ -52,8 +53,9 @@ const DailyTasks = () => {
     try {
       setLoading(true);
       const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh' }).format(new Date());
+      setTodayDate(today);
       
-      // جلب طلبات الموظف: طلبات اليوم غير المنجزة + الطلبات المتأخرة قيد التنفيذ
+      // جلب طلبات الموظف: طلبات اليوم غير المنجزة + جميع الطلبات المتأخرة غير المكتملة
       const { data, error } = await supabase
         .from('orders')
         .select(`
@@ -68,7 +70,9 @@ const DailyTasks = () => {
           service_types (name)
         `)
         .eq('created_by', user.id)
-        .or(`and(delivery_date.eq.${today},status.neq.مكتمل,status.neq.جاهز للتسليم),and(delivery_date.lt.${today},status.eq.قيد التنفيذ)`)
+        .lte('delivery_date', today)
+        .neq('status', 'مكتمل')
+        .neq('status', 'جاهز للتسليم')
         .order('delivery_date', { ascending: true })
         .order('created_at', { ascending: false });
 
@@ -331,9 +335,9 @@ const DailyTasks = () => {
   return (
     <main role="main" aria-label="المهام اليومية" className="space-y-6">
       <header>
-        <h1 className="text-3xl font-bold">المهام اليومية</h1>
+        <h1 className="text-3xl font-bold">المهام اليومية والمتأخرة</h1>
         <p className="text-muted-foreground mt-2">
-          الطلبات المطلوب تسليمها اليوم {new Date().toLocaleDateString('ar-SA', { timeZone: 'Asia/Riyadh' })}
+          الطلبات المطلوب تسليمها اليوم وما قبله {new Date().toLocaleDateString('ar-SA', { timeZone: 'Asia/Riyadh' })}
         </p>
       </header>
 
@@ -406,7 +410,7 @@ const DailyTasks = () => {
                 ) : tasks.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={9} className="text-center">
-                      لا توجد مهام مطلوب تسليمها اليوم
+                      لا توجد مهام غير منجزة
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -428,7 +432,12 @@ const DailyTasks = () => {
                         )}
                       </TableCell>
                       <TableCell>
-                        {new Date(task.delivery_date).toLocaleDateString('ar-SA')}
+                        <div className="flex items-center gap-2">
+                          {new Date(task.delivery_date).toLocaleDateString('ar-SA')}
+                          {task.delivery_date < todayDate && (
+                            <Badge variant="destructive" className="text-xs">متأخر</Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Dialog open={transferDialogOpen && selectedTask === task.id} onOpenChange={(open) => {
