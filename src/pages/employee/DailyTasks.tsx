@@ -201,13 +201,44 @@ const DailyTasks = () => {
             `يرجى متابعة الطلب وإنجازه في الوقت المحدد.`;
         }
 
-        await supabase.from('whatsapp_messages').insert({
-          to_number: employeePhone,
-          message_type: 'task_transfer',
-          message_content: messageContent,
-          status: 'pending',
-          is_reply: false,
-        });
+        const { data: insertedMessage, error: insertError } = await supabase
+          .from('whatsapp_messages')
+          .insert({
+            to_number: employeePhone,
+            message_type: 'task_transfer',
+            message_content: messageContent,
+            status: 'pending',
+            is_reply: false,
+          })
+          .select()
+          .single();
+
+        if (insertError) {
+          console.error('خطأ في إدراج رسالة الواتساب:', insertError);
+        } else if (insertedMessage) {
+          console.log('✅ تم إدراج رسالة واتساب:', insertedMessage.id);
+          
+          // معالجة الرسالة فوراً عبر process-whatsapp-queue
+          try {
+            const { data: queueData, error: queueError } = await supabase.functions.invoke(
+              'process-whatsapp-queue',
+              {
+                body: {
+                  source: 'task_transfer',
+                  message_id: insertedMessage.id
+                }
+              }
+            );
+
+            if (queueError) {
+              console.error('خطأ في معالجة طابور الواتساب:', queueError);
+            } else {
+              console.log('✅ تم معالجة رسالة الواتساب بنجاح:', queueData);
+            }
+          } catch (queueErr) {
+            console.error('خطأ في استدعاء معالج الواتساب:', queueErr);
+          }
+        }
       }
 
       toast({
