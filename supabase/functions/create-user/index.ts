@@ -23,7 +23,7 @@ serve(async (req) => {
       }
     );
 
-    const { email, password, name, role, permissions } = await req.json();
+    const { email, password, name, phone, role, permissions } = await req.json();
 
     // التحقق من البيانات المطلوبة
     if (!email || !name || !role) {
@@ -73,7 +73,14 @@ serve(async (req) => {
         // تحديث الاسم إن لم يكن موجوداً
         if (!existingProfile.full_name && name) {
           await supabaseClient.from('profiles')
-            .update({ full_name: name })
+            .update({ 
+              full_name: name,
+              phone: phone || null
+            })
+            .eq('id', existingUserId);
+        } else if (phone) {
+          await supabaseClient.from('profiles')
+            .update({ phone })
             .eq('id', existingUserId);
         }
 
@@ -131,6 +138,7 @@ serve(async (req) => {
         id: userId,
         full_name: name,
         email: email,
+        phone: phone || null,
         status: 'active'
       });
 

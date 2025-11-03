@@ -23,6 +23,7 @@ const Users = () => {
     name: "",
     email: "",
     password: "",
+    phone: "",
     role: "",
     permissions: []
   });
@@ -73,6 +74,7 @@ const Users = () => {
             id: profile.id,
             name: profile.full_name || 'غير محدد',
             email: profile.email || 'غير محدد',
+            phone: profile.phone || '',
             role: roleData?.role || 'user',
             status: profile.status || 'pending',
             lastLogin: 'غير متوفر',
@@ -319,6 +321,7 @@ const Users = () => {
           email: newUser.email,
           password: newUser.password || undefined,
           name: newUser.name,
+          phone: newUser.phone || undefined,
           role: newUser.role,
           permissions: newUser.permissions
         }
@@ -357,7 +360,7 @@ const Users = () => {
       // إعادة جلب البيانات
       await fetchUsers();
       
-      setNewUser({ name: "", email: "", password: "", role: "", permissions: [] });
+      setNewUser({ name: "", email: "", password: "", phone: "", role: "", permissions: [] });
       setIsAddUserOpen(false);
       
       const successMessage = data?.user?.temporaryPassword 
@@ -457,6 +460,7 @@ const Users = () => {
       name: user.name,
       email: user.email,
       password: "",
+      phone: user.phone || "",
       role: user.role,
       permissions: user.permissions
     });
@@ -523,6 +527,7 @@ const Users = () => {
         .from('profiles')
         .update({ 
           full_name: newUser.name,
+          phone: newUser.phone || null,
           status: 'active' // تفعيل المستخدم بعد التحديث
         })
         .eq('id', editingUser.id);
@@ -538,7 +543,7 @@ const Users = () => {
       // إعادة جلب البيانات
       await fetchUsers();
       
-      setNewUser({ name: "", email: "", password: "", role: "", permissions: [] });
+      setNewUser({ name: "", email: "", password: "", phone: "", role: "", permissions: [] });
       setIsEditUserOpen(false);
       setEditingUser(null);
       
@@ -625,6 +630,18 @@ const Users = () => {
                   onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
                   placeholder="أدخل كلمة المرور"
                 />
+              </div>
+              <div className="space-y-2">
+                <Label>رقم الواتساب</Label>
+                <Input
+                  type="tel"
+                  value={newUser.phone}
+                  onChange={(e) => setNewUser({ ...newUser, phone: e.target.value })}
+                  placeholder="مثال: 966500000000"
+                />
+                <p className="text-xs text-muted-foreground">
+                  سيتم استخدام هذا الرقم لإرسال إشعارات الواتساب
+                </p>
               </div>
               <div className="space-y-2">
                 <Label>الدور الوظيفي</Label>
@@ -749,6 +766,18 @@ const Users = () => {
                   onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
                   placeholder="اتركها فارغة للاحتفاظ بالحالية"
                 />
+              </div>
+              <div className="space-y-2">
+                <Label>رقم الواتساب</Label>
+                <Input
+                  type="tel"
+                  value={newUser.phone}
+                  onChange={(e) => setNewUser({ ...newUser, phone: e.target.value })}
+                  placeholder="مثال: 966500000000"
+                />
+                <p className="text-xs text-muted-foreground">
+                  سيتم استخدام هذا الرقم لإرسال إشعارات الواتساب
+                </p>
               </div>
               <div className="space-y-2">
                 <Label>الدور الوظيفي</Label>
@@ -892,6 +921,7 @@ const Users = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>المستخدم</TableHead>
+                <TableHead>رقم الواتساب</TableHead>
                 <TableHead>الدور</TableHead>
                 <TableHead>الحالة</TableHead>
                 <TableHead>آخر دخول</TableHead>
@@ -906,6 +936,11 @@ const Users = () => {
                     <div>
                       <div className="font-medium">{user.name}</div>
                       <div className="text-sm text-muted-foreground">{user.email}</div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-sm">
+                      {user.phone || <span className="text-muted-foreground">غير محدد</span>}
                     </div>
                   </TableCell>
                   <TableCell>{getRoleBadge(user.role)}</TableCell>
