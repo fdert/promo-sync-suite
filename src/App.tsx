@@ -65,6 +65,7 @@ import ElectronicInvoiceSettings from "./pages/admin/ElectronicInvoiceSettings";
 import BackupManagement from "./pages/admin/BackupManagement";
 import LoyaltyManagement from "./pages/employee/LoyaltyManagement";
 import LoyaltySettings from "./pages/admin/LoyaltySettings";
+import EmployeeTasks from "./pages/employee/Tasks";
 
 const queryClient = new QueryClient();
 
@@ -90,6 +91,7 @@ const App = () => (
               <Route index element={<EmployeeDashboard />} />
               <Route path="customers" element={<EmployeeCustomers />} />
               <Route path="orders" element={<EmployeeOrders />} />
+              <Route path="tasks" element={<EmployeeTasks />} />
               <Route path="service-types" element={<EmployeeServiceTypes />} />
               <Route path="invoices" element={<EmployeeInvoices />} />
               <Route path="print-orders" element={<EmployeePrintOrders />} />

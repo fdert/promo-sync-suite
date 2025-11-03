@@ -16,6 +16,7 @@ import {
   Send,
   CreditCard,
   Gift,
+  CheckSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -47,6 +48,12 @@ const employeeMenuItems = [
     title: "الطلبات",
     icon: ClipboardList,
     href: "/employee/orders",
+    allowedRoles: ['employee'] as UserRole[],
+  },
+  {
+    title: "المهام",
+    icon: CheckSquare,
+    href: "/employee/tasks",
     allowedRoles: ['employee'] as UserRole[],
   },
   {
