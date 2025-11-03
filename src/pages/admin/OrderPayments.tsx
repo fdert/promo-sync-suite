@@ -60,8 +60,8 @@ const OrderPayments = () => {
       const { data: orderData, error: orderError } = await supabase
         .from('order_payment_summary')
         .select('*')
-        .eq('id', orderId)
-        .single();
+        .eq('order_id', orderId)
+        .maybeSingle();
 
       if (orderError) throw orderError;
 
@@ -75,7 +75,7 @@ const OrderPayments = () => {
 
         if (customerData) {
           setOrderDetails({
-            id: orderData.id,
+            id: orderData.order_id,
             order_number: orderData.order_number || '',
             customer_name: customerData.name || 'غير محدد',
             customer_phone: customerData.phone || '',
