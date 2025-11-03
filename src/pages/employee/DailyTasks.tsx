@@ -6,7 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { CheckCircle2, Clock, AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { CheckCircle2, Clock, AlertCircle, UserPlus } from 'lucide-react';
 
 interface DailyTask {
   id: string;
@@ -17,6 +20,14 @@ interface DailyTask {
   delivery_date: string;
   total_amount: number;
   created_at: string;
+  created_by: string;
+}
+
+interface Employee {
+  id: string;
+  full_name: string;
+  email: string;
+  phone: string;
 }
 
 const DailyTasks = () => {
@@ -24,6 +35,10 @@ const DailyTasks = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [tasks, setTasks] = useState<DailyTask[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [selectedTask, setSelectedTask] = useState<string | null>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<string>('');
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [stats, setStats] = useState({
     total: 0,
     completed: 0,
@@ -65,6 +80,7 @@ const DailyTasks = () => {
         delivery_date: order.delivery_date,
         total_amount: order.total_amount || 0,
         created_at: order.created_at,
+        created_by: order.created_by,
       })) || [];
 
       setTasks(formattedTasks);
@@ -95,9 +111,97 @@ const DailyTasks = () => {
     }
   };
 
+  const fetchEmployees = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, email, phone')
+        .neq('id', user?.id || '');
+
+      if (error) throw error;
+
+      setEmployees(data || []);
+    } catch (error: any) {
+      console.error('Error loading employees:', error);
+    }
+  };
+
+  const handleTransferTask = async () => {
+    if (!selectedTask || !selectedEmployee) {
+      toast({
+        title: 'خطأ',
+        description: 'يرجى اختيار موظف لنقل المهمة إليه',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      // تحديث الطلب ونقله للموظف الجديد
+      const { error: updateError } = await supabase
+        .from('orders')
+        .update({ created_by: selectedEmployee })
+        .eq('id', selectedTask);
+
+      if (updateError) throw updateError;
+
+      // جلب بيانات الموظف الجديد لإرسال إشعار واتساب
+      const { data: employeeData } = await supabase
+        .from('profiles')
+        .select('full_name, phone')
+        .eq('id', selectedEmployee)
+        .single();
+
+      // جلب بيانات الطلب
+      const { data: orderData } = await supabase
+        .from('orders')
+        .select(`
+          order_number,
+          delivery_date,
+          customers (name)
+        `)
+        .eq('id', selectedTask)
+        .single();
+
+      // إرسال إشعار واتساب للموظف الجديد
+      const employeePhone = employeeData?.phone;
+      if (employeePhone && orderData) {
+        await supabase.from('whatsapp_messages').insert({
+          to_number: employeePhone,
+          message_type: 'text',
+          message_content: `📋 تم تعيين مهمة جديدة لك\n\n` +
+            `🔢 رقم الطلب: ${orderData.order_number}\n` +
+            `👤 العميل: ${orderData.customers?.name || 'غير محدد'}\n` +
+            `📅 تاريخ التسليم: ${new Date(orderData.delivery_date).toLocaleDateString('ar-SA')}\n\n` +
+            `يرجى متابعة الطلب وإنجازه في الوقت المحدد.`,
+          status: 'pending',
+          is_reply: false,
+        });
+      }
+
+      toast({
+        title: 'تم نقل المهمة بنجاح',
+        description: `تم نقل المهمة إلى ${employeeData?.full_name || 'الموظف المحدد'}`,
+      });
+
+      setTransferDialogOpen(false);
+      setSelectedTask(null);
+      setSelectedEmployee('');
+      fetchDailyTasks();
+    } catch (error: any) {
+      console.error('Error transferring task:', error);
+      toast({
+        title: 'خطأ في نقل المهمة',
+        description: error?.message || 'تعذر نقل المهمة',
+        variant: 'destructive',
+      });
+    }
+  };
+
   useEffect(() => {
     document.title = 'المهام اليومية | لوحة الموظف';
     fetchDailyTasks();
+    fetchEmployees();
 
     // الاشتراك في التحديثات الفورية
     const channel = supabase
@@ -198,6 +302,7 @@ const DailyTasks = () => {
                   <TableHead>المبلغ</TableHead>
                   <TableHead>الحالة</TableHead>
                   <TableHead>تاريخ التسليم</TableHead>
+                  <TableHead>إجراءات</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -209,7 +314,7 @@ const DailyTasks = () => {
                   </TableRow>
                 ) : tasks.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center">
+                    <TableCell colSpan={7} className="text-center">
                       لا توجد مهام مطلوب تسليمها اليوم
                     </TableCell>
                   </TableRow>
@@ -223,6 +328,66 @@ const DailyTasks = () => {
                       <TableCell>{getStatusBadge(task.status)}</TableCell>
                       <TableCell>
                         {new Date(task.delivery_date).toLocaleDateString('ar-SA')}
+                      </TableCell>
+                      <TableCell>
+                        <Dialog open={transferDialogOpen && selectedTask === task.id} onOpenChange={(open) => {
+                          setTransferDialogOpen(open);
+                          if (!open) {
+                            setSelectedTask(null);
+                            setSelectedEmployee('');
+                          }
+                        }}>
+                          <DialogTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedTask(task.id);
+                                setTransferDialogOpen(true);
+                              }}
+                            >
+                              <UserPlus className="h-4 w-4 ml-2" />
+                              نقل المهمة
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>نقل المهمة إلى موظف آخر</DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-4 py-4">
+                              <div className="space-y-2">
+                                <label className="text-sm font-medium">اختر الموظف</label>
+                                <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="اختر موظف..." />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {employees.map((emp) => (
+                                      <SelectItem key={emp.id} value={emp.id}>
+                                        {emp.full_name || emp.email}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="outline"
+                                  onClick={() => {
+                                    setTransferDialogOpen(false);
+                                    setSelectedTask(null);
+                                    setSelectedEmployee('');
+                                  }}
+                                >
+                                  إلغاء
+                                </Button>
+                                <Button onClick={handleTransferTask}>
+                                  نقل المهمة
+                                </Button>
+                              </div>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
                       </TableCell>
                     </TableRow>
                   ))
