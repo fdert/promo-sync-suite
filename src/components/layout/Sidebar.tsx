@@ -64,6 +64,12 @@ const menuItems = [
     allowedRoles: ['admin', 'manager', 'employee'] as UserRole[],
   },
   {
+    title: "متابعة المهام اليومية",
+    icon: Activity,
+    href: "/admin/tasks-monitor",
+    allowedRoles: ['admin', 'manager'] as UserRole[],
+  },
+  {
     title: "الفواتير",
     icon: FileText,
     href: "/admin/invoices",

@@ -66,6 +66,8 @@ import BackupManagement from "./pages/admin/BackupManagement";
 import LoyaltyManagement from "./pages/employee/LoyaltyManagement";
 import LoyaltySettings from "./pages/admin/LoyaltySettings";
 import EmployeeTasks from "./pages/employee/Tasks";
+import DailyTasks from "./pages/employee/DailyTasks";
+import TasksMonitor from "./pages/admin/TasksMonitor";
 
 const queryClient = new QueryClient();
 
@@ -92,6 +94,7 @@ const App = () => (
               <Route path="customers" element={<EmployeeCustomers />} />
               <Route path="orders" element={<EmployeeOrders />} />
               <Route path="tasks" element={<EmployeeTasks />} />
+              <Route path="daily-tasks" element={<DailyTasks />} />
               <Route path="service-types" element={<EmployeeServiceTypes />} />
               <Route path="invoices" element={<EmployeeInvoices />} />
               <Route path="print-orders" element={<EmployeePrintOrders />} />
@@ -118,6 +121,7 @@ const App = () => (
               <Route path="users" element={<Users />} />
               <Route path="customers" element={<Customers />} />
               <Route path="orders" element={<Orders />} />
+              <Route path="tasks-monitor" element={<TasksMonitor />} />
               <Route path="invoices" element={<Invoices />} />
               <Route path="accounts" element={<Accounts />} />
               <Route path="financial-integration" element={<FinancialIntegration />} />

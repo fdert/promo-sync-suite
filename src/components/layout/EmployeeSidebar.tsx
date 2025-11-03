@@ -51,6 +51,12 @@ const employeeMenuItems = [
     allowedRoles: ['employee'] as UserRole[],
   },
   {
+    title: "المهام اليومية",
+    icon: CheckSquare,
+    href: "/employee/daily-tasks",
+    allowedRoles: ['employee'] as UserRole[],
+  },
+  {
     title: "أنواع الخدمات",
     icon: Settings,
     href: "/employee/service-types",
