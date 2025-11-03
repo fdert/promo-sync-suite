@@ -437,7 +437,7 @@ ${orderItemsText || 'لا توجد بنود محددة'}
           break;
 
         case 'order_confirmed':
-          message = `${data.customer_name}، تم تأكيد طلبك رقم ${data.order_number}. بدأ العمل على مشروعك وسيتم إنجازه خلال ${data.estimated_days || 'قريباً'}.`;
+          message = `${data.customer_name}، تم تأكيد طلبك رقم ${data.order_number}. بدأ العمل على مشروعك وسيتم إنجازه خلال ${data.estimated_days || 'قريباً'}.${deliveryDateText}`;
           customerPhone = data.customer_phone;
           customerName = data.customer_name;
           break;
@@ -464,7 +464,7 @@ ${orderItemsText || 'لا توجد بنود محددة'}
           break;
 
         case 'order_cancelled':
-          message = `عزيزي ${data.customer_name}، تم إلغاء طلبك رقم ${data.order_number}. للاستفسار يرجى التواصل معنا.`;
+          message = `عزيزي ${data.customer_name}، تم إلغاء طلبك رقم ${data.order_number}.${deliveryDateText} للاستفسار يرجى التواصل معنا.`;
           customerPhone = data.customer_phone;
           customerName = data.customer_name;
           break;
@@ -484,7 +484,7 @@ ${orderItemsText || 'لا توجد بنود محددة'}
           break;
 
         case 'order_under_review':
-          message = `${data.customer_name}، طلبك رقم ${data.order_number} قيد المراجعة حالياً. سيتم التواصل معك قريباً لتأكيد التفاصيل.`;
+          message = `${data.customer_name}، طلبك رقم ${data.order_number} قيد المراجعة حالياً.${deliveryDateText} سيتم التواصل معك قريباً لتأكيد التفاصيل.`;
           customerPhone = data.customer_phone;
           customerName = data.customer_name;
           break;
@@ -495,7 +495,7 @@ ${orderItemsText || 'لا توجد بنود محددة'}
 📋 *تفاصيل الطلب:*
 • رقم الطلب: ${data.order_number}
 • العميل: ${data.customer_name}
-• الخدمة: ${data.service_name}
+• الخدمة: ${data.service_name}${deliveryDateText}
 ${data.order_items_text || ''}
 
 📸 *لاستعراض البروفة:*
@@ -528,7 +528,7 @@ ${data.file_url}
             customerPhone = data.customer_phone;
             customerName = data.customer_name;
           }
-          message = `${customerName}، تم تحديث طلبك رقم ${data.order_number}.`;
+          message = `${customerName}، تم تحديث طلبك رقم ${data.order_number}.${deliveryDateText}`;
           break;
       }
       }
