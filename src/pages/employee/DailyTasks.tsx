@@ -201,10 +201,16 @@ const DailyTasks = () => {
             `يرجى متابعة الطلب وإنجازه في الوقت المحدد.`;
         }
 
+        const normalizedPhone = employeePhone.startsWith('+')
+          ? employeePhone
+          : (employeePhone.startsWith('966')
+              ? `+${employeePhone}`
+              : employeePhone.replace(/^0/, '+966'));
+
         const { data: insertedMessage, error: insertError } = await supabase
           .from('whatsapp_messages')
           .insert({
-            to_number: employeePhone,
+            to_number: normalizedPhone,
             message_type: 'task_transfer',
             message_content: messageContent,
             status: 'pending',
