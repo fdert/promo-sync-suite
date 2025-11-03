@@ -323,12 +323,17 @@ Deno.serve(async (req) => {
           // استخدام المبلغ المتبقي المحسوب مسبقاً
           remainingAmount = (orderDetails.remaining_amount || 0).toString();
           
-          // تنسيق التواريخ
+          // تنسيق التواريخ - استخدام delivery_date كبديل إذا لم تتوفر التواريخ الأخرى
           if (orderDetails.start_date) {
             startDate = new Date(orderDetails.start_date).toLocaleDateString('ar-SA');
+          } else if (orderDetails.delivery_date) {
+            startDate = new Date(orderDetails.delivery_date).toLocaleDateString('ar-SA');
           }
+          
           if (orderDetails.due_date) {
             dueDate = new Date(orderDetails.due_date).toLocaleDateString('ar-SA');
+          } else if (orderDetails.delivery_date) {
+            dueDate = new Date(orderDetails.delivery_date).toLocaleDateString('ar-SA');
           }
           
           description = orderDetails.description || 'غير محدد';
