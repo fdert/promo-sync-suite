@@ -360,6 +360,12 @@ Deno.serve(async (req) => {
         let deliveryDate = 'غير محدد';
         if (orderDetails?.delivery_date) {
           deliveryDate = new Date(orderDetails.delivery_date).toLocaleDateString('ar-SA');
+        } else if (data?.delivery_date) {
+          try {
+            deliveryDate = new Date(data.delivery_date).toLocaleDateString('ar-SA');
+          } catch (_) {
+            // ignore parse errors
+          }
         }
         
         // الحصول على اسم الخدمة
@@ -543,6 +549,25 @@ ${data.file_url}
     }
     
     // التحقق من أن البيانات مكتملة
+    // تأكيد تضمين تاريخ التسليم إذا كان متوفراً ولم يُذكر ضمن النص
+    try {
+      const deliveryRegex = /تاريخ\s+التسليم/;
+      const hasDeliveryMention = deliveryRegex.test(message);
+      // لاحظ: deliveryDate قد يكون عُيّن في مسار القالب أعلاه
+      // إن لم يكن متاحاً هنا، نحاول استنتاجه مرة أخرى من orderDetails أو data
+      let ensuredDelivery = '';
+      if (orderDetails?.delivery_date) {
+        ensuredDelivery = new Date(orderDetails.delivery_date).toLocaleDateString('ar-SA');
+      } else if (data?.delivery_date) {
+        ensuredDelivery = new Date(data.delivery_date).toLocaleDateString('ar-SA');
+      }
+      if (ensuredDelivery && !hasDeliveryMention) {
+        message += `\n\n📅 تاريخ التسليم: ${ensuredDelivery}`;
+      }
+    } catch (_) {
+      // تجاهل أي أخطاء تحقق طفيفة
+    }
+
     console.log('Final values before sending:', { 
       customerPhone, 
       customerName, 
