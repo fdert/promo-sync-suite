@@ -19,7 +19,8 @@ import {
   Clock,
   FileText,
   ClipboardList,
-  Eye
+  Eye,
+  ArrowRightLeft
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -581,7 +582,7 @@ const WebhookSettings = () => {
       </div>
 
       <Tabs defaultValue="whatsapp" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-7">
+        <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="whatsapp" className="gap-2">
             <MessageSquare className="h-4 w-4" />
             واتساب
@@ -593,6 +594,10 @@ const WebhookSettings = () => {
           <TabsTrigger value="orders" className="gap-2">
             <ClipboardList className="h-4 w-4" />
             الطلبات
+          </TabsTrigger>
+          <TabsTrigger value="task-transfer" className="gap-2">
+            <ArrowRightLeft className="h-4 w-4" />
+            نقل المهام
           </TabsTrigger>
           <TabsTrigger value="evaluations" className="gap-2">
             <Webhook className="h-4 w-4" />
@@ -692,6 +697,31 @@ const WebhookSettings = () => {
                 onTest={testWebhook}
                 loading={loading}
                 webhookType="outgoing"
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Task Transfer Webhooks */}
+        <TabsContent value="task-transfer">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ArrowRightLeft className="h-5 w-5" />
+                ويب هوك نقل المهام
+              </CardTitle>
+              <CardDescription>
+                إضافة وإدارة ويب هوك لإرسال إشعارات واتساب عند نقل المهام للموظفين
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <WebhookManagement 
+                webhookSettings={webhookSettings.filter(w => w.webhook_type === 'task_transfer')}
+                onSave={saveWebhookSetting}
+                onUpdate={updateWebhookSetting}
+                onTest={testWebhook}
+                loading={loading}
+                webhookType="task_transfer"
               />
             </CardContent>
           </Card>
