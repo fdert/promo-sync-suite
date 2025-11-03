@@ -55,6 +55,12 @@ const DailyTasks = () => {
       const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh' }).format(new Date());
       setTodayDate(today);
       
+      console.log('🔍 المهام اليومية - معلومات الجلب:', {
+        userId: user.id,
+        today: today,
+        timezone: 'Asia/Riyadh'
+      });
+      
       // جلب طلبات الموظف: طلبات اليوم غير المنجزة + جميع الطلبات المتأخرة غير المكتملة
       const { data, error } = await supabase
         .from('orders')
@@ -77,6 +83,15 @@ const DailyTasks = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+
+      console.log('📊 نتائج الجلب:', {
+        recordsFound: data?.length || 0,
+        orders: data?.map(o => ({
+          orderNumber: o.order_number,
+          status: o.status,
+          deliveryDate: o.delivery_date
+        }))
+      });
 
       // جلب أسماء المسؤولين (created_by) من جدول profiles بدون علاقات مباشرة
       const createdByIds = Array.from(
@@ -109,6 +124,17 @@ const DailyTasks = () => {
       }));
 
       setTasks(formattedTasks);
+
+      console.log('✅ المهام النهائية:', {
+        total: formattedTasks.length,
+        tasks: formattedTasks.map(t => ({
+          orderNumber: t.order_number,
+          customer: t.customer_name,
+          status: t.status,
+          deliveryDate: t.delivery_date,
+          isOverdue: t.delivery_date < today
+        }))
+      });
 
       // حساب الإحصائيات
       const completed = formattedTasks.filter(
