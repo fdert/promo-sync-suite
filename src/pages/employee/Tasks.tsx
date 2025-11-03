@@ -36,35 +36,7 @@ const EmployeeTasks = () => {
     try {
       setLoading(true);
       
-      // التحقق من وجود الجدول أولاً
-      const { data: tableCheck, error: tableError } = await supabase
-        .from('information_schema.tables' as any)
-        .select('table_name')
-        .eq('table_schema', 'public')
-        .eq('table_name', 'employee_tasks')
-        .maybeSingle();
-
-      if (tableError) {
-        console.error('Error checking table:', tableError);
-        toast({
-          title: 'خطأ في الاتصال',
-          description: 'تعذر الاتصال بقاعدة البيانات',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      if (!tableCheck) {
-        toast({
-          title: 'الجدول غير موجود',
-          description: 'جدول المهام غير موجود في قاعدة البيانات. يرجى إنشاؤه أولاً.',
-          variant: 'destructive',
-        });
-        setTasks([]);
-        return;
-      }
-
-      // جلب المهام
+      // محاولة جلب المهام مباشرة
       const { data, error } = await supabase
         .from('employee_tasks' as any)
         .select('*')
@@ -73,8 +45,8 @@ const EmployeeTasks = () => {
       if (error) {
         if (error.code === 'PGRST205') {
           toast({
-            title: 'الجدول غير موجود',
-            description: 'جدول المهام غير موجود. يرجى إنشاؤه في SQL Editor.',
+            title: 'جدول المهام غير موجود',
+            description: 'يرجى إنشاء جدول employee_tasks في SQL Editor أولاً',
             variant: 'destructive',
           });
           setTasks([]);
@@ -84,6 +56,13 @@ const EmployeeTasks = () => {
       }
       
       setTasks(((data as unknown) as EmployeeTask[]) ?? []);
+      
+      if (!data || data.length === 0) {
+        toast({
+          title: 'لا توجد مهام',
+          description: 'لم يتم العثور على أي مهام حالياً',
+        });
+      }
     } catch (error: any) {
       console.error('Error loading tasks:', error);
       toast({
