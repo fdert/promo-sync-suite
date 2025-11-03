@@ -17,9 +17,11 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // الحصول على التاريخ الحالي بصيغة YYYY-MM-DD
-    const today = new Date().toISOString().split('T')[0];
-    console.log(`📅 تاريخ اليوم: ${today}`);
+    // استخدام التوقيت السعودي
+    const today = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Riyadh' }))
+      .toISOString()
+      .split('T')[0];
+    console.log(`📅 تاريخ اليوم بتوقيت السعودية: ${today}`);
 
     // جلب الطلبات التي تاريخ تسليمها اليوم
     const { data: todayOrders, error: fetchError } = await supabase

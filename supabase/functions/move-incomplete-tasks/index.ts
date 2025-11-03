@@ -18,8 +18,9 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // الحصول على تاريخ اليوم السابق
-    const yesterday = new Date();
+    // الحصول على تاريخ اليوم السابق بتوقيت السعودية
+    const riyadhTime = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Riyadh' }));
+    const yesterday = new Date(riyadhTime);
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayDate = yesterday.toISOString().split('T')[0];
 
@@ -51,8 +52,8 @@ Deno.serve(async (req) => {
 
     console.log(`📦 تم العثور على ${incompleteTasks.length} مهمة غير منجزة`);
 
-    // تحديث تاريخ التسليم لليوم الحالي
-    const today = new Date().toISOString().split('T')[0];
+    // تحديث تاريخ التسليم لليوم الحالي بتوقيت السعودية
+    const today = riyadhTime.toISOString().split('T')[0];
     const taskIds = incompleteTasks.map(task => task.id);
 
     const { error: updateError } = await supabase
