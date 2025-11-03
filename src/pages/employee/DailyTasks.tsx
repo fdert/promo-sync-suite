@@ -69,7 +69,8 @@ const DailyTasks = () => {
         `)
         .eq('created_by', user.id)
         .eq('delivery_date', today)
-        .not('status', 'in', '(completed,ready_for_delivery)')
+        .neq('status', 'مكتمل')
+        .neq('status', 'جاهز للتسليم')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -108,10 +109,10 @@ const DailyTasks = () => {
 
       // حساب الإحصائيات
       const completed = formattedTasks.filter(
-        t => t.status === 'completed' || t.status === 'ready_for_delivery'
+        t => t.status === 'مكتمل' || t.status === 'جاهز للتسليم'
       ).length;
       const pending = formattedTasks.filter(
-        t => t.status !== 'completed' && t.status !== 'ready_for_delivery'
+        t => t.status !== 'مكتمل' && t.status !== 'جاهز للتسليم'
       ).length;
 
       setStats({
@@ -421,7 +422,7 @@ const DailyTasks = () => {
                       <TableCell>{task.total_amount.toFixed(2)} ر.س</TableCell>
                       <TableCell>{getStatusBadge(task.status)}</TableCell>
                       <TableCell>
-                        {task.status === 'completed' || task.status === 'ready_for_delivery' ? (
+                        {task.status === 'مكتمل' || task.status === 'جاهز للتسليم' ? (
                           <Badge variant="default" className="bg-green-600">✓ تم الإنجاز</Badge>
                         ) : (
                           <Badge variant="destructive">✗ لم ينجز</Badge>
