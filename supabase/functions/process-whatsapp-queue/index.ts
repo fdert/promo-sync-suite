@@ -301,6 +301,15 @@ async function sendToWhatsAppService(message: any): Promise<boolean> {
       }
     }
 
+    // Fallback: avoid test endpoints for task_transfer
+    if (selectedWebhook && selectedWebhook.webhook_type === 'task_transfer' && String(selectedWebhook.webhook_url || '').includes('webhook-test')) {
+      const fallback = webhooks.find(w => w.webhook_type === 'outgoing');
+      if (fallback) {
+        console.log('⚠️ task_transfer يستخدم رابط اختبار، سيتم استخدام ويب هوك الطلبات العادية بدلاً منه');
+        selectedWebhook = fallback;
+      }
+    }
+
     const webhook = selectedWebhook;
 
     if (webhookError) {
@@ -411,12 +420,16 @@ async function sendToWhatsAppService(message: any): Promise<boolean> {
 
     } else {
       // الوضع الافتراضي: إرسال نصي بسيط
+      const normDef = normalizePhone(String(message.to_number || ''));
+      const toE164Def = normDef.e164;
+      const toDigitsDef = normDef.digits;
       payload = {
         event: 'whatsapp_message_send',
         data: {
-          to: message.to_number,
-          phone: message.to_number,
-          phoneNumber: message.to_number,
+          to: toE164Def,
+          phone: toE164Def,
+          phoneNumber: toE164Def,
+          msisdn: toDigitsDef,
           message: message.message_content,
           messageText: message.message_content,
           text: message.message_content,
@@ -438,11 +451,15 @@ async function sendToWhatsAppService(message: any): Promise<boolean> {
     console.log('🔗 بدء اختبار الاتصال مع الويب هوك...');
 
     // إرسال للـ webhook
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (webhook.secret_key) {
+      headers['Authorization'] = `Bearer ${webhook.secret_key}`;
+    }
     const response = await fetch(webhook.webhook_url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify(payload)
     });
 
