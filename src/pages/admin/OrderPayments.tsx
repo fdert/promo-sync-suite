@@ -128,7 +128,65 @@ const OrderPayments = () => {
           .eq('id', editingPayment.id);
 
         if (error) throw error;
-        toast.success('تم تحديث الدفعة بنجاح');
+
+        // حذف القيود المحاسبية القديمة
+        await supabase
+          .from('account_entries')
+          .delete()
+          .eq('reference_type', 'payment')
+          .eq('reference_id', editingPayment.id);
+
+        // إنشاء القيود المحاسبية الجديدة
+        try {
+          const accountType = newPayment.payment_type === 'cash' ? 'نقدية' : 
+                             newPayment.payment_type === 'bank_transfer' ? 'بنك' :
+                             newPayment.payment_type === 'card' ? 'الشبكة' : 'نقدية';
+          
+          const { data: cashAccount } = await supabase
+            .from('accounts')
+            .select('id')
+            .eq('account_type', accountType)
+            .eq('is_active', true)
+            .limit(1)
+            .single();
+
+          const { data: receivableAccount } = await supabase
+            .from('accounts')
+            .select('id')
+            .eq('account_type', 'ذمم مدينة')
+            .eq('is_active', true)
+            .limit(1)
+            .single();
+
+          if (cashAccount && receivableAccount) {
+            const paymentTypeLabel = newPayment.payment_type === 'cash' ? 'نقداً' : 
+                                     newPayment.payment_type === 'bank_transfer' ? 'تحويل بنكي' :
+                                     newPayment.payment_type === 'card' ? 'الشبكة' : 'نقداً';
+            
+            await supabase.from('account_entries').insert([
+              {
+                account_id: cashAccount.id,
+                debit: parseFloat(newPayment.amount),
+                credit: 0,
+                reference_type: 'payment',
+                reference_id: editingPayment.id,
+                description: `دفعة للطلب - ${paymentTypeLabel}`
+              },
+              {
+                account_id: receivableAccount.id,
+                debit: 0,
+                credit: parseFloat(newPayment.amount),
+                reference_type: 'payment',
+                reference_id: editingPayment.id,
+                description: `دفعة من العميل للطلب`
+              }
+            ]);
+          }
+        } catch (entryError) {
+          console.error('Error updating account entries:', entryError);
+        }
+
+        toast.success('تم تحديث الدفعة والقيود المحاسبية بنجاح');
       } else {
         // إضافة دفعة جديدة
         const { data: paymentData, error: paymentError } = await supabase
