@@ -21,6 +21,7 @@ interface DailyTask {
   total_amount: number;
   created_at: string;
   created_by: string;
+  assigned_to?: string;
 }
 
 interface Employee {
@@ -52,6 +53,7 @@ const DailyTasks = () => {
       setLoading(true);
       const today = new Date().toISOString().split('T')[0];
       
+      // جلب جميع الطلبات بتاريخ اليوم (ليس فقط طلبات الموظف الحالي)
       const { data, error } = await supabase
         .from('orders')
         .select(`
@@ -63,9 +65,9 @@ const DailyTasks = () => {
           created_at,
           created_by,
           customers (name),
-          service_types (name)
+          service_types (name),
+          profiles:created_by (full_name)
         `)
-        .eq('created_by', user.id)
         .eq('delivery_date', today)
         .order('created_at', { ascending: false });
 
@@ -81,6 +83,7 @@ const DailyTasks = () => {
         total_amount: order.total_amount || 0,
         created_at: order.created_at,
         created_by: order.created_by,
+        assigned_to: order.profiles?.full_name || 'غير محدد',
       })) || [];
 
       setTasks(formattedTasks);
@@ -367,6 +370,7 @@ const DailyTasks = () => {
                   <TableHead>رقم الطلب</TableHead>
                   <TableHead>العميل</TableHead>
                   <TableHead>نوع الخدمة</TableHead>
+                  <TableHead>المسؤول</TableHead>
                   <TableHead>المبلغ</TableHead>
                   <TableHead>الحالة</TableHead>
                   <TableHead>تاريخ التسليم</TableHead>
@@ -376,13 +380,13 @@ const DailyTasks = () => {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center">
+                    <TableCell colSpan={8} className="text-center">
                       جارِ التحميل...
                     </TableCell>
                   </TableRow>
                 ) : tasks.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center">
+                    <TableCell colSpan={8} className="text-center">
                       لا توجد مهام مطلوب تسليمها اليوم
                     </TableCell>
                   </TableRow>
@@ -392,6 +396,9 @@ const DailyTasks = () => {
                       <TableCell className="font-medium">{task.order_number}</TableCell>
                       <TableCell>{task.customer_name}</TableCell>
                       <TableCell>{task.service_type}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">{task.assigned_to}</Badge>
+                      </TableCell>
                       <TableCell>{task.total_amount.toFixed(2)} ر.س</TableCell>
                       <TableCell>{getStatusBadge(task.status)}</TableCell>
                       <TableCell>
