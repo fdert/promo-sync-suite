@@ -68,6 +68,7 @@ import LoyaltySettings from "./pages/admin/LoyaltySettings";
 import EmployeeTasks from "./pages/employee/Tasks";
 import DailyTasks from "./pages/employee/DailyTasks";
 import TasksMonitor from "./pages/admin/TasksMonitor";
+import UserActivityLogs from "./pages/admin/UserActivityLogs";
 
 const queryClient = new QueryClient();
 
@@ -119,6 +120,7 @@ const App = () => (
             }>
               <Route index element={<Dashboard />} />
               <Route path="users" element={<Users />} />
+              <Route path="user-activity-logs" element={<UserActivityLogs />} />
               <Route path="customers" element={<Customers />} />
               <Route path="orders" element={<Orders />} />
               <Route path="tasks-monitor" element={<TasksMonitor />} />
