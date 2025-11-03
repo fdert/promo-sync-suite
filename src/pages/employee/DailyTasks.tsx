@@ -53,7 +53,7 @@ const DailyTasks = () => {
       setLoading(true);
       const today = new Date().toISOString().split('T')[0];
       
-      // جلب طلبات الموظف المسجل دخوله فقط بتاريخ اليوم
+      // جلب طلبات الموظف المسجل دخوله فقط بتاريخ اليوم (استبعاد المكتملة والجاهزة)
       const { data, error } = await supabase
         .from('orders')
         .select(`
@@ -69,6 +69,7 @@ const DailyTasks = () => {
         `)
         .eq('created_by', user.id)
         .eq('delivery_date', today)
+        .not('status', 'in', '(completed,ready_for_delivery)')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
