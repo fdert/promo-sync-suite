@@ -53,7 +53,7 @@ const DailyTasks = () => {
       setLoading(true);
       const today = new Date().toISOString().split('T')[0];
       
-      // جلب جميع الطلبات بتاريخ اليوم (ليس فقط طلبات الموظف الحالي)
+      // جلب طلبات الموظف المسجل دخوله فقط بتاريخ اليوم
       const { data, error } = await supabase
         .from('orders')
         .select(`
@@ -68,6 +68,7 @@ const DailyTasks = () => {
           service_types (name),
           profiles:created_by (full_name)
         `)
+        .eq('created_by', user.id)
         .eq('delivery_date', today)
         .order('created_at', { ascending: false });
 
