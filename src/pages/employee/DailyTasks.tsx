@@ -53,7 +53,7 @@ const DailyTasks = () => {
       setLoading(true);
       const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh' }).format(new Date());
       
-      // جلب طلبات الموظف المسجل دخوله فقط بتاريخ اليوم (استبعاد المكتملة والجاهزة)
+      // جلب طلبات الموظف: طلبات اليوم غير المنجزة + الطلبات المتأخرة قيد التنفيذ
       const { data, error } = await supabase
         .from('orders')
         .select(`
@@ -68,9 +68,8 @@ const DailyTasks = () => {
           service_types (name)
         `)
         .eq('created_by', user.id)
-        .eq('delivery_date', today)
-        .neq('status', 'مكتمل')
-        .neq('status', 'جاهز للتسليم')
+        .or(`and(delivery_date.eq.${today},status.neq.مكتمل,status.neq.جاهز للتسليم),and(delivery_date.lt.${today},status.eq.قيد التنفيذ)`)
+        .order('delivery_date', { ascending: true })
         .order('created_at', { ascending: false });
 
       if (error) throw error;
