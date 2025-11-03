@@ -65,8 +65,7 @@ const DailyTasks = () => {
           created_at,
           created_by,
           customers (name),
-          service_types (name),
-          profiles:created_by (full_name)
+          service_types (name)
         `)
         .eq('created_by', user.id)
         .eq('delivery_date', today)
@@ -74,7 +73,24 @@ const DailyTasks = () => {
 
       if (error) throw error;
 
-      const formattedTasks = data?.map((order: any) => ({
+      // جلب أسماء المسؤولين (created_by) من جدول profiles بدون علاقات مباشرة
+      const createdByIds = Array.from(
+        new Set((data || []).map((o: any) => o.created_by).filter(Boolean))
+      );
+
+      let profilesMap: Record<string, string> = {};
+      if (createdByIds.length > 0) {
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('id, full_name')
+          .in('id', createdByIds);
+
+        profilesMap = Object.fromEntries(
+          (profilesData || []).map((p: any) => [p.id, p.full_name || 'غير محدد'])
+        );
+      }
+
+      const formattedTasks = (data || []).map((order: any) => ({
         id: order.id,
         order_number: order.order_number || 'غير محدد',
         customer_name: order.customers?.name || 'غير محدد',
@@ -84,8 +100,8 @@ const DailyTasks = () => {
         total_amount: order.total_amount || 0,
         created_at: order.created_at,
         created_by: order.created_by,
-        assigned_to: order.profiles?.full_name || 'غير محدد',
-      })) || [];
+        assigned_to: profilesMap[order.created_by] || 'غير محدد',
+      }));
 
       setTasks(formattedTasks);
 
