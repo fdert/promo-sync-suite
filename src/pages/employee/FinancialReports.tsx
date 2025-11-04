@@ -291,23 +291,30 @@ const FinancialReports = () => {
         const fileName = `expense-${Date.now()}.${fileExt}`;
         const filePath = `receipts/${fileName}`;
 
-        const { data: uploadData, error: uploadError } = await supabase.storage
+        const { error: uploadError } = await supabase.storage
           .from('company-assets')
-          .upload(filePath, expenseForm.receiptFile);
+          .upload(filePath, expenseForm.receiptFile, {
+            cacheControl: '3600',
+            upsert: false
+          });
 
         if (uploadError) {
           console.error('Error uploading receipt:', uploadError);
           toast({
-            title: "تحذير",
-            description: "تم حفظ المصروف لكن فشل رفع صورة الإيصال",
+            title: "خطأ في رفع الصورة",
+            description: uploadError.message || "فشل رفع صورة الإيصال",
             variant: "destructive",
           });
-        } else {
-          const { data: urlData } = supabase.storage
-            .from('company-assets')
-            .getPublicUrl(filePath);
-          receiptImageUrl = urlData?.publicUrl;
+          setIsUploading(false);
+          return;
         }
+
+        // الحصول على رابط الصورة العام
+        const { data: urlData } = supabase.storage
+          .from('company-assets')
+          .getPublicUrl(filePath);
+        
+        receiptImageUrl = urlData.publicUrl;
       }
 
       // تحديد فئة المصروف النهائية
@@ -333,12 +340,9 @@ const FinancialReports = () => {
       const amountNum = Number(expenseForm.amount);
       if (!isFinite(amountNum) || amountNum <= 0) {
         toast({ title: "خطأ", description: "المبلغ غير صالح", variant: "destructive" });
+        setIsUploading(false);
         return;
       }
-      
-      const expenseNotes = receiptImageUrl 
-        ? `${expenseForm.notes}\n[صورة الإيصال: ${receiptImageUrl}]`
-        : expenseForm.notes;
       
       const { data: expenseData, error: expenseError } = await supabase
         .from('expenses')
@@ -347,9 +351,10 @@ const FinancialReports = () => {
           description: expenseForm.description.trim(),
           amount: amountNum,
           expense_type: finalCategory,
+          receipt_image_url: receiptImageUrl,
           expense_date: expenseForm.date,
           payment_method: expenseForm.paymentMethod || null,
-          notes: expenseNotes || null
+          notes: expenseForm.notes || null
         })
         .select()
         .single();
@@ -894,6 +899,21 @@ const FinancialReports = () => {
                                   {expense.payment_method || 'غير محدد'}
                                 </span>
                               </div>
+                              
+                              {expense.receipt_image_url && (
+                                <div>
+                                  <span className="text-xs text-muted-foreground font-medium block mb-1">صورة الإيصال:</span>
+                                  <a 
+                                    href={expense.receipt_image_url} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-2 text-sm text-primary hover:underline bg-muted/20 p-2 rounded"
+                                  >
+                                    <FileText className="h-4 w-4" />
+                                    عرض الإيصال
+                                  </a>
+                                </div>
+                              )}
                               
                               <div>
                                 <span className="text-xs text-muted-foreground font-medium block mb-1">ملاحظات إضافية:</span>

@@ -9,7 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CheckCircle2, Clock, AlertCircle, UserPlus, Send, Plus, Check, X } from 'lucide-react';
+import { CheckCircle2, Clock, AlertCircle, UserPlus, Send } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -55,12 +55,6 @@ const DailyTasks = () => {
     pending: 0,
   });
   const [sendingTest, setSendingTest] = useState(false);
-  const [addTaskDialogOpen, setAddTaskDialogOpen] = useState(false);
-  const [newTask, setNewTask] = useState({
-    title: '',
-    description: '',
-    due_date: new Date().toISOString().split('T')[0],
-  });
 
   const fetchDailyTasks = async () => {
     if (!user) return;
@@ -99,20 +93,8 @@ const DailyTasks = () => {
 
       if (error) throw error;
 
-      // جلب المهام الشخصية للموظف
-      const { data: employeeTasks, error: tasksError } = await supabase
-        .from('employee_tasks')
-        .select('*')
-        .eq('employee_id', user.id)
-        .eq('due_date', today);
-
-      if (tasksError) {
-        console.error('Error fetching employee tasks:', tasksError);
-      }
-
       console.log('📊 نتائج الجلب:', {
-        ordersCount: data?.length || 0,
-        tasksCount: employeeTasks?.length || 0
+        ordersCount: data?.length || 0
       });
 
       // جلب أسماء المسؤولين (created_by) من جدول profiles بدون علاقات مباشرة
@@ -146,37 +128,23 @@ const DailyTasks = () => {
         is_manual: false,
       }));
 
-      // تنسيق المهام الشخصية
-      const formattedTasks = (employeeTasks || []).map((task: any) => ({
-        id: task.id,
-        title: task.title,
-        description: task.description || '',
-        due_date: task.due_date,
-        is_completed: task.is_completed,
-        is_manual: true,
-        assigned_to: 'أنت',
-      }));
-
-      // دمج الطلبات والمهام
-      const allTasks = [...formattedOrders, ...formattedTasks];
-      setTasks(allTasks);
+      setTasks(formattedOrders);
 
       console.log('✅ المهام النهائية:', {
-        total: allTasks.length,
-        orders: formattedOrders.length,
-        manualTasks: formattedTasks.length
+        total: formattedOrders.length,
+        orders: formattedOrders.length
       });
 
       // حساب الإحصائيات
-      const completed = allTasks.filter(
-        t => t.is_manual ? t.is_completed : (t.status === 'مكتمل' || t.status === 'جاهز للتسليم')
+      const completed = formattedOrders.filter(
+        t => t.status === 'مكتمل' || t.status === 'جاهز للتسليم'
       ).length;
-      const pending = allTasks.filter(
-        t => t.is_manual ? !t.is_completed : (t.status !== 'مكتمل' && t.status !== 'جاهز للتسليم')
+      const pending = formattedOrders.filter(
+        t => t.status !== 'مكتمل' && t.status !== 'جاهز للتسليم'
       ).length;
 
       setStats({
-        total: allTasks.length,
+        total: formattedOrders.length,
         completed,
         pending,
       });
@@ -205,80 +173,6 @@ const DailyTasks = () => {
       setEmployees(data || []);
     } catch (error: any) {
       console.error('Error loading employees:', error);
-    }
-  };
-
-  const handleAddTask = async () => {
-    if (!newTask.title.trim() || !user?.id) {
-      toast({
-        title: 'خطأ',
-        description: 'يرجى إدخال عنوان المهمة',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from('employee_tasks')
-        .insert([
-          {
-            employee_id: user.id,
-            title: newTask.title,
-            description: newTask.description,
-            due_date: newTask.due_date,
-          }
-        ]);
-
-      if (error) throw error;
-
-      toast({
-        title: 'تم بنجاح',
-        description: 'تم إضافة المهمة بنجاح',
-      });
-
-      setAddTaskDialogOpen(false);
-      setNewTask({
-        title: '',
-        description: '',
-        due_date: new Date().toISOString().split('T')[0],
-      });
-      fetchDailyTasks();
-    } catch (error) {
-      console.error('Error adding task:', error);
-      toast({
-        title: 'خطأ',
-        description: 'حدث خطأ في إضافة المهمة',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleToggleTaskCompletion = async (taskId: string, currentStatus: boolean) => {
-    try {
-      const { error } = await supabase
-        .from('employee_tasks')
-        .update({ 
-          is_completed: !currentStatus,
-          completed_at: !currentStatus ? new Date().toISOString() : null,
-        })
-        .eq('id', taskId);
-
-      if (error) throw error;
-
-      toast({
-        title: 'تم التحديث',
-        description: !currentStatus ? 'تم وضع علامة على المهمة كمنجزة' : 'تم إلغاء علامة الإنجاز',
-      });
-
-      fetchDailyTasks();
-    } catch (error) {
-      console.error('Error toggling task:', error);
-      toast({
-        title: 'خطأ',
-        description: 'حدث خطأ في تحديث المهمة',
-        variant: 'destructive',
-      });
     }
   };
 
@@ -510,13 +404,6 @@ const DailyTasks = () => {
         </div>
         <div className="flex gap-2">
           <Button
-            onClick={() => setAddTaskDialogOpen(true)}
-            variant="default"
-          >
-            <Plus className="ml-2 h-4 w-4" />
-            إضافة مهمة شخصية
-          </Button>
-          <Button 
             onClick={handleSendTestNotification}
             disabled={sendingTest}
             variant="outline"
@@ -656,25 +543,6 @@ const DailyTasks = () => {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {task.is_manual ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleToggleTaskCompletion(task.id, task.is_completed!)}
-                          >
-                            {task.is_completed ? (
-                              <>
-                                <X className="ml-1 h-4 w-4" />
-                                إلغاء الإنجاز
-                              </>
-                            ) : (
-                              <>
-                                <Check className="ml-1 h-4 w-4" />
-                                وضع علامة كمنجز
-                              </>
-                            )}
-                          </Button>
-                        ) : (
                         <Dialog open={transferDialogOpen && selectedTask === task.id} onOpenChange={(open) => {
                           setTransferDialogOpen(open);
                           if (!open) {
@@ -733,7 +601,6 @@ const DailyTasks = () => {
                             </div>
                           </DialogContent>
                         </Dialog>
-                        )}
                       </TableCell>
                     </TableRow>
                   ))
@@ -743,53 +610,6 @@ const DailyTasks = () => {
           </div>
         </CardContent>
       </Card>
-
-      {/* Dialog لإضافة مهمة شخصية */}
-      <Dialog open={addTaskDialogOpen} onOpenChange={setAddTaskDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>إضافة مهمة شخصية</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="title">عنوان المهمة *</Label>
-              <Input
-                id="title"
-                value={newTask.title}
-                onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-                placeholder="أدخل عنوان المهمة"
-              />
-            </div>
-            <div>
-              <Label htmlFor="description">الوصف</Label>
-              <Textarea
-                id="description"
-                value={newTask.description}
-                onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
-                placeholder="أدخل وصف المهمة (اختياري)"
-                rows={3}
-              />
-            </div>
-            <div>
-              <Label htmlFor="due_date">تاريخ الإنجاز</Label>
-              <Input
-                id="due_date"
-                type="date"
-                value={newTask.due_date}
-                onChange={(e) => setNewTask({ ...newTask, due_date: e.target.value })}
-              />
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setAddTaskDialogOpen(false)}>
-                إلغاء
-              </Button>
-              <Button onClick={handleAddTask}>
-                إضافة المهمة
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </main>
   );
 };
