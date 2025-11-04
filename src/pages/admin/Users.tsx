@@ -522,18 +522,24 @@ const Users = () => {
     }
 
     try {
-      // تحديث البيانات الشخصية
+      // تحديث البيانات الشخصية في جدول profiles
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ 
           full_name: newUser.name,
+          email: newUser.email,
           phone: newUser.phone || null,
-          status: 'active' // تفعيل المستخدم بعد التحديث
+          status: 'active'
         })
         .eq('id', editingUser.id);
 
       if (profileError) {
         console.error('Error updating profile:', profileError);
+        toast({
+          title: "خطأ",
+          description: `خطأ في تحديث البيانات: ${profileError.message}`,
+          variant: "destructive",
+        });
         return;
       }
 
@@ -549,7 +555,7 @@ const Users = () => {
       
       toast({
         title: "تم تحديث المستخدم",
-        description: "تم تحديث بيانات المستخدم وتفعيله بنجاح",
+        description: "تم تحديث بيانات المستخدم بنجاح",
       });
     } catch (error) {
       console.error('Error updating user:', error);
