@@ -9,7 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CheckCircle2, Clock, AlertCircle, UserPlus } from 'lucide-react';
+import { CheckCircle2, Clock, AlertCircle, UserPlus, Send } from 'lucide-react';
 
 interface DailyTask {
   id: string;
@@ -46,6 +46,7 @@ const DailyTasks = () => {
     completed: 0,
     pending: 0,
   });
+  const [sendingTest, setSendingTest] = useState(false);
 
   const fetchDailyTasks = async () => {
     if (!user) return;
@@ -174,6 +175,31 @@ const DailyTasks = () => {
       setEmployees(data || []);
     } catch (error: any) {
       console.error('Error loading employees:', error);
+    }
+  };
+
+  const handleSendTestNotification = async () => {
+    setSendingTest(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-daily-tasks-notification', {
+        body: {}
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'تم إرسال الإشعار بنجاح',
+        description: `تم إرسال ${data?.notificationsSent || 0} إشعار للموظفين بمهامهم اليومية`,
+      });
+    } catch (error: any) {
+      console.error('Error sending test notification:', error);
+      toast({
+        title: 'خطأ في إرسال الإشعار',
+        description: error?.message || 'تعذر إرسال إشعار الاختبار',
+        variant: 'destructive',
+      });
+    } finally {
+      setSendingTest(false);
     }
   };
 
@@ -360,11 +386,21 @@ const DailyTasks = () => {
 
   return (
     <main role="main" aria-label="المهام اليومية" className="space-y-6">
-      <header>
-        <h1 className="text-3xl font-bold">المهام اليومية والمتأخرة</h1>
-        <p className="text-muted-foreground mt-2">
-          الطلبات المطلوب تسليمها اليوم وما قبله {new Date().toLocaleDateString('ar-SA', { timeZone: 'Asia/Riyadh' })}
-        </p>
+      <header className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">المهام اليومية والمتأخرة</h1>
+          <p className="text-muted-foreground mt-2">
+            الطلبات المطلوب تسليمها اليوم وما قبله {new Date().toLocaleDateString('ar-SA', { timeZone: 'Asia/Riyadh' })}
+          </p>
+        </div>
+        <Button 
+          onClick={handleSendTestNotification}
+          disabled={sendingTest}
+          className="gap-2"
+        >
+          <Send className="h-4 w-4" />
+          {sendingTest ? 'جاري الإرسال...' : 'إرسال إشعار اختبار'}
+        </Button>
       </header>
 
       <Separator />
