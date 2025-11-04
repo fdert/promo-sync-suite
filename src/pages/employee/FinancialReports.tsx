@@ -349,7 +349,7 @@ const FinancialReports = () => {
       
       // في حال عدم وجود عمود receipt_image_url سنحفظ الرابط داخل الملاحظات
       const notesWithReceipt = receiptImageUrl
-        ? `${expenseForm.notes ? expenseForm.notes + '\n' : ''}[صورة الإيصال: ${receiptImageUrl}]`
+        ? `${expenseForm.notes ? expenseForm.notes + '\n' : ''}صورة الإيصال: ${receiptImageUrl}`
         : (expenseForm.notes || null);
       
       const { data: expenseData, error: expenseError } = await supabase
@@ -916,12 +916,11 @@ const FinancialReports = () => {
                                     size="sm"
                                     onClick={() => {
                                       // الحصول على الرابط من الحقل أو من الملاحظات
-                                      const fallbackFromNotes = (expense.notes || '').match(/https?:\/\/[^\s\]]+/)?.[0] || '';
+                                      const fallbackFromNotes = (expense.notes || '').match(/https?:\/\/[^\s\]\)\}"']+/)?.[0] || '';
                                       let cleanUrl = String(expense.receipt_image_url || fallbackFromNotes)
                                         .trim()
-                                        .replace(/[\[\]\(\)"']/g, '');
-                                      // إزالة أي أقواس مربعة في نهاية الرابط
-                                      cleanUrl = cleanUrl.replace(/\]+$/, '');
+                                        .replace(/[\[\]\(\)"']+$/g, '')  // إزالة أي أقواس أو علامات ترقيم من النهاية
+                                        .replace(/^[\[\]\(\)"']+/g, ''); // إزالة أي أقواس أو علامات ترقيم من البداية
                                       
                                       if (!cleanUrl) return;
                                       // إذا كان الرابط نسبياً، قم بإنشاء الرابط الكامل
