@@ -45,22 +45,27 @@ const TasksMonitor = () => {
       // جلب بيانات المهام اليومية لكل موظف
       const { data: ordersData, error: ordersError } = await supabase
         .from('orders')
-        .select(`
-          id,
-          status,
-          created_by,
-          profiles!orders_created_by_fkey (full_name)
-        `)
+        .select('id, status, created_by')
         .eq('delivery_date', today);
 
       if (ordersError) throw ordersError;
+
+      // جلب بيانات الموظفين
+      const employeeIds = [...new Set(ordersData?.map((o: any) => o.created_by).filter(Boolean))];
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', employeeIds);
+
+      // إنشاء خريطة للموظفين
+      const profilesMap = new Map(profilesData?.map((p: any) => [p.id, p.full_name]) || []);
 
       // تجميع البيانات حسب الموظف
       const employeeMap = new Map<string, EmployeeTask>();
       
       ordersData?.forEach((order: any) => {
         const employeeId = order.created_by;
-        const employeeName = order.profiles?.full_name || 'غير محدد';
+        const employeeName = profilesMap.get(employeeId) || 'غير محدد';
         const isCompleted = order.status === 'completed' || order.status === 'ready_for_delivery';
 
         if (!employeeMap.has(employeeId)) {
