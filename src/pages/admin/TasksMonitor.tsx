@@ -5,8 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { CheckCircle2, Clock, AlertCircle, TrendingUp, Users } from 'lucide-react';
+import { CheckCircle2, Clock, AlertCircle, TrendingUp, Users, Eye } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 
 interface EmployeeTask {
   employee_id: string;
@@ -25,6 +27,15 @@ interface DailyStats {
   total_employees: number;
 }
 
+interface OrderTask {
+  id: string;
+  order_number: string;
+  customer_name: string;
+  status: string;
+  total_amount: number;
+  created_at: string;
+}
+
 const TasksMonitor = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
@@ -36,6 +47,9 @@ const TasksMonitor = () => {
     completion_rate: 0,
     total_employees: 0,
   });
+  const [selectedEmployee, setSelectedEmployee] = useState<EmployeeTask | null>(null);
+  const [employeeOrders, setEmployeeOrders] = useState<OrderTask[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
 
   const fetchTasksData = async () => {
     try {
@@ -148,6 +162,73 @@ const TasksMonitor = () => {
     };
   }, []);
 
+  const fetchEmployeeOrders = async (employeeId: string, employeeName: string) => {
+    try {
+      setLoadingOrders(true);
+      const today = new Date().toISOString().split('T')[0];
+
+      const { data: ordersData, error } = await supabase
+        .from('orders')
+        .select(`
+          id,
+          order_number,
+          status,
+          total_amount,
+          created_at,
+          customers (name)
+        `)
+        .eq('delivery_date', today)
+        .eq('created_by', employeeId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const formattedOrders: OrderTask[] = ordersData?.map((order: any) => ({
+        id: order.id,
+        order_number: order.order_number || 'غير محدد',
+        customer_name: order.customers?.name || 'غير محدد',
+        status: order.status,
+        total_amount: order.total_amount || 0,
+        created_at: order.created_at,
+      })) || [];
+
+      setEmployeeOrders(formattedOrders);
+    } catch (error: any) {
+      console.error('Error loading employee orders:', error);
+      toast({
+        title: 'خطأ',
+        description: 'تعذر جلب تفاصيل مهام الموظف',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoadingOrders(false);
+    }
+  };
+
+  const handleEmployeeClick = (employee: EmployeeTask) => {
+    setSelectedEmployee(employee);
+    fetchEmployeeOrders(employee.employee_id, employee.employee_name);
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'completed':
+      case 'مكتمل':
+        return <Badge className="bg-green-600">مكتمل</Badge>;
+      case 'ready_for_delivery':
+      case 'جاهز للتسليم':
+        return <Badge className="bg-blue-600">جاهز للتسليم</Badge>;
+      case 'in_progress':
+      case 'قيد التنفيذ':
+        return <Badge className="bg-yellow-600">قيد التنفيذ</Badge>;
+      case 'pending':
+      case 'قيد الانتظار':
+        return <Badge variant="outline">قيد الانتظار</Badge>;
+      default:
+        return <Badge>{status}</Badge>;
+    }
+  };
+
   const getPerformanceBadge = (rate: number) => {
     if (rate >= 80) return <Badge className="bg-green-600">ممتاز</Badge>;
     if (rate >= 60) return <Badge className="bg-blue-600">جيد</Badge>;
@@ -259,8 +340,16 @@ const TasksMonitor = () => {
                   employeeTasks
                     .sort((a, b) => b.completion_rate - a.completion_rate)
                     .map((employee) => (
-                      <TableRow key={employee.employee_id}>
-                        <TableCell className="font-medium">{employee.employee_name}</TableCell>
+                      <TableRow key={employee.employee_id} className="cursor-pointer hover:bg-muted/50">
+                        <TableCell className="font-medium">
+                          <Button
+                            variant="link"
+                            className="p-0 h-auto font-medium text-primary hover:underline"
+                            onClick={() => handleEmployeeClick(employee)}
+                          >
+                            {employee.employee_name}
+                          </Button>
+                        </TableCell>
                         <TableCell>{employee.total_tasks}</TableCell>
                         <TableCell className="text-green-600 font-semibold">
                           {employee.completed_tasks}
@@ -283,6 +372,59 @@ const TasksMonitor = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Dialog تفاصيل مهام الموظف */}
+      <Dialog open={!!selectedEmployee} onOpenChange={() => setSelectedEmployee(null)}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl">
+              تفاصيل مهام: {selectedEmployee?.employee_name}
+            </DialogTitle>
+            <div className="flex gap-4 mt-2 text-sm text-muted-foreground">
+              <span>إجمالي المهام: {selectedEmployee?.total_tasks}</span>
+              <span className="text-green-600">المنجزة: {selectedEmployee?.completed_tasks}</span>
+              <span className="text-orange-600">المتبقية: {selectedEmployee?.pending_tasks}</span>
+              <span>معدل الإنجاز: {selectedEmployee?.completion_rate}%</span>
+            </div>
+          </DialogHeader>
+
+          <div className="mt-4">
+            {loadingOrders ? (
+              <div className="text-center py-8">جاري التحميل...</div>
+            ) : employeeOrders.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">لا توجد مهام</div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>رقم الطلب</TableHead>
+                    <TableHead>العميل</TableHead>
+                    <TableHead>الحالة</TableHead>
+                    <TableHead>المبلغ</TableHead>
+                    <TableHead>وقت الإنشاء</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {employeeOrders.map((order) => (
+                    <TableRow key={order.id}>
+                      <TableCell className="font-medium">{order.order_number}</TableCell>
+                      <TableCell>{order.customer_name}</TableCell>
+                      <TableCell>{getStatusBadge(order.status)}</TableCell>
+                      <TableCell>{order.total_amount.toFixed(2)} ريال</TableCell>
+                      <TableCell>
+                        {new Date(order.created_at).toLocaleString('ar-SA', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 };
