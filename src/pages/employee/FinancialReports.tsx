@@ -1175,14 +1175,31 @@ const FinancialReports = () => {
           <div className="space-y-4">
             {viewReceiptUrl && (
               <>
-                <div className="border rounded-lg overflow-hidden bg-muted/10 min-h-[400px]">
+                {/* عرض الرابط للتأكد */}
+                <div className="text-xs text-muted-foreground bg-muted p-2 rounded break-all">
+                  <strong>الرابط:</strong> {viewReceiptUrl}
+                </div>
+                
+                <div className="border rounded-lg overflow-hidden bg-muted/10 min-h-[400px] flex items-center justify-center">
                   {viewReceiptUrl.toLowerCase().endsWith('.pdf') ? (
-                    // عرض PDF
-                    <iframe
-                      src={viewReceiptUrl}
-                      className="w-full h-[70vh]"
-                      title="PDF الإيصال"
-                    />
+                    // عرض معلومات PDF مع أزرار
+                    <div className="text-center p-8 space-y-4">
+                      <FileText className="h-16 w-16 mx-auto text-primary" />
+                      <p className="text-lg font-medium">ملف PDF</p>
+                      <p className="text-sm text-muted-foreground">
+                        لا يمكن عرض ملفات PDF داخل المتصفح بسبب قيود الأمان
+                      </p>
+                      <div className="flex gap-2 justify-center mt-4">
+                        <Button
+                          onClick={() => {
+                            window.open(viewReceiptUrl, '_blank', 'noopener,noreferrer');
+                          }}
+                        >
+                          <FileText className="h-4 w-4 mr-2" />
+                          فتح PDF في تبويب جديد
+                        </Button>
+                      </div>
+                    </div>
                   ) : (
                     // عرض صورة
                     <img 
@@ -1193,28 +1210,19 @@ const FinancialReports = () => {
                       onError={(e) => {
                         console.error('فشل تحميل المرفق:', viewReceiptUrl);
                         e.currentTarget.style.display = 'none';
-                        const errorMsg = document.createElement('div');
-                        errorMsg.className = 'text-center text-muted-foreground p-8';
-                        errorMsg.innerHTML = `
+                        const errorDiv = document.createElement('div');
+                        errorDiv.className = 'text-center text-destructive p-8';
+                        errorDiv.innerHTML = `
                           <p class="text-lg mb-2">⚠️ فشل في تحميل المرفق</p>
-                          <p class="text-sm break-all">الرابط: ${viewReceiptUrl}</p>
-                          <p class="text-xs mt-2">تحقق من صلاحيات الوصول إلى التخزين</p>
+                          <p class="text-sm break-all mb-2">الرابط: ${viewReceiptUrl}</p>
+                          <p class="text-xs">تحقق من صلاحيات الوصول إلى التخزين</p>
                         `;
-                        e.currentTarget.parentElement?.appendChild(errorMsg);
+                        e.currentTarget.parentElement?.appendChild(errorDiv);
                       }}
                     />
                   )}
                 </div>
                 <div className="flex gap-2 justify-end">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      window.open(viewReceiptUrl, '_blank', 'noopener,noreferrer');
-                    }}
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    فتح في تبويب جديد
-                  </Button>
                   <Button
                     variant="outline"
                     onClick={() => {
