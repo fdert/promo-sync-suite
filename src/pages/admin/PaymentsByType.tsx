@@ -26,7 +26,7 @@ interface RecentPayment {
   payment_type: string;
   payment_date: string;
   customer_name?: string;
-  invoice_number?: string;
+  order_number?: string;
 }
 
 const PaymentsByType = () => {
@@ -331,6 +331,125 @@ const PaymentsByType = () => {
     });
   };
 
+  // تصدير آخر المدفوعات إلى Excel
+  const exportRecentPaymentsToExcel = () => {
+    const paymentsToExport = dateFilter.period === 'all' ? recentPayments : filteredPayments;
+    
+    // إنشاء محتوى CSV
+    let csvContent = "التاريخ,نوع الدفع,العميل,رقم الطلب,المبلغ (ر.س)\n";
+    
+    paymentsToExport.forEach((payment) => {
+      const date = format(new Date(payment.payment_date), 'dd/MM/yyyy');
+      csvContent += `${date},${payment.payment_type},${payment.customer_name || 'غير محدد'},${payment.order_number || '-'},${payment.amount}\n`;
+    });
+    
+    const totalAmount = paymentsToExport.reduce((sum, p) => sum + p.amount, 0);
+    csvContent += `\nالإجمالي,,,${totalAmount}\n`;
+    
+    // تحميل الملف
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `آخر_المدفوعات_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast({
+      title: "تم التصدير",
+      description: "تم تصدير آخر المدفوعات بصيغة Excel بنجاح",
+    });
+  };
+
+  // تصدير آخر المدفوعات إلى PDF
+  const exportRecentPaymentsToPDF = () => {
+    const paymentsToExport = dateFilter.period === 'all' ? recentPayments : filteredPayments;
+    const totalAmount = paymentsToExport.reduce((sum, p) => sum + p.amount, 0);
+    
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(`
+        <html dir="rtl">
+          <head>
+            <title>تقرير آخر المدفوعات</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 20px; direction: rtl; }
+              .header { text-align: center; margin-bottom: 30px; }
+              .company-name { font-size: 24px; font-weight: bold; color: #1f2937; }
+              .report-title { font-size: 18px; color: #6b7280; margin-top: 10px; }
+              .date-info { font-size: 14px; color: #9ca3af; margin-top: 5px; }
+              table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+              th, td { border: 1px solid #e5e7eb; padding: 10px; text-align: center; }
+              th { background-color: #f3f4f6; font-weight: bold; }
+              .total-row { background-color: #fef3c7; font-weight: bold; }
+              .badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+              .badge-cash { background-color: #dcfce7; color: #166534; }
+              .badge-bank { background-color: #dbeafe; color: #1e40af; }
+              .badge-network { background-color: #f3e8ff; color: #6b21a8; }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <div class="company-name">وكالة الإبداع للدعاية والإعلان</div>
+              <div class="report-title">تقرير آخر المدفوعات</div>
+              <div class="date-info">
+                تاريخ التقرير: ${format(new Date(), 'dd/MM/yyyy')} - 
+                ${dateFilter.period === 'all' ? 'جميع المدفوعات' : 
+                  dateFilter.period === 'today' ? 'مدفوعات اليوم' :
+                  dateFilter.period === 'this_month' ? 'مدفوعات هذا الشهر' :
+                  dateFilter.period === 'this_year' ? 'مدفوعات هذا العام' :
+                  `من ${dateFilter.startDate} إلى ${dateFilter.endDate}`}
+              </div>
+            </div>
+            
+            <table>
+              <thead>
+                <tr>
+                  <th>التاريخ</th>
+                  <th>نوع الدفع</th>
+                  <th>العميل</th>
+                  <th>رقم الطلب</th>
+                  <th>المبلغ (ر.س)</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${paymentsToExport.map((payment) => {
+                  const badgeClass = payment.payment_type === 'نقدي' ? 'badge-cash' :
+                                   payment.payment_type === 'تحويل بنكي' ? 'badge-bank' : 'badge-network';
+                  return `
+                    <tr>
+                      <td>${format(new Date(payment.payment_date), 'dd/MM/yyyy')}</td>
+                      <td><span class="badge ${badgeClass}">${payment.payment_type}</span></td>
+                      <td>${payment.customer_name || 'غير محدد'}</td>
+                      <td>${payment.order_number || '-'}</td>
+                      <td>${payment.amount.toLocaleString()}</td>
+                    </tr>
+                  `;
+                }).join('')}
+                <tr class="total-row">
+                  <td colspan="4"><strong>الإجمالي</strong></td>
+                  <td><strong>${totalAmount.toLocaleString()}</strong></td>
+                </tr>
+              </tbody>
+            </table>
+            
+            <div style="margin-top: 20px; text-align: center; color: #6b7280;">
+              عدد المعاملات: ${paymentsToExport.length} معاملة | إجمالي المبلغ: ${totalAmount.toLocaleString()} ر.س
+            </div>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.print();
+    }
+    
+    toast({
+      title: "تم التصدير",
+      description: "تم فتح نافذة الطباعة لحفظ تقرير آخر المدفوعات كـ PDF",
+    });
+  };
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -507,16 +626,30 @@ const PaymentsByType = () => {
       {/* آخر المدفوعات أو المدفوعات المفلترة */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CalendarIcon className="h-5 w-5" />
-            {dateFilter.period === 'all' ? 'آخر المدفوعات' : 'المدفوعات المفلترة'}
-          </CardTitle>
-          <CardDescription>
-            {dateFilter.period === 'all' 
-              ? `آخر ${recentPayments.slice(0, 20).length} مدفوعة تم استلامها`
-              : `${filteredPayments.length} مدفوعة في الفترة المحددة`
-            }
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <CalendarIcon className="h-5 w-5" />
+                {dateFilter.period === 'all' ? 'آخر المدفوعات' : 'المدفوعات المفلترة'}
+              </CardTitle>
+              <CardDescription>
+                {dateFilter.period === 'all' 
+                  ? `آخر ${recentPayments.slice(0, 20).length} مدفوعة تم استلامها`
+                  : `${filteredPayments.length} مدفوعة في الفترة المحددة`
+                }
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button onClick={exportRecentPaymentsToExcel} variant="outline" size="sm" className="gap-2">
+                <FileSpreadsheet className="h-4 w-4" />
+                Excel
+              </Button>
+              <Button onClick={exportRecentPaymentsToPDF} variant="outline" size="sm" className="gap-2">
+                <FileText className="h-4 w-4" />
+                PDF
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -544,7 +677,7 @@ const PaymentsByType = () => {
                     </Badge>
                   </TableCell>
                   <TableCell>{payment.customer_name || 'غير محدد'}</TableCell>
-                  <TableCell>{payment.invoice_number || '-'}</TableCell>
+                  <TableCell>{payment.order_number || '-'}</TableCell>
                   <TableCell className="text-right font-medium">
                     {payment.amount.toLocaleString()} ر.س
                   </TableCell>
