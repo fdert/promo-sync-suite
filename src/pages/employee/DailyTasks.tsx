@@ -9,19 +9,27 @@ import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CheckCircle2, Clock, AlertCircle, UserPlus, Send } from 'lucide-react';
+import { CheckCircle2, Clock, AlertCircle, UserPlus, Send, Plus, Check, X } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 
 interface DailyTask {
   id: string;
-  order_number: string;
-  customer_name: string;
-  service_type: string;
-  status: string;
-  delivery_date: string;
-  total_amount: number;
-  created_at: string;
-  created_by: string;
+  order_number?: string;
+  customer_name?: string;
+  service_type?: string;
+  status?: string;
+  delivery_date?: string;
+  total_amount?: number;
+  created_at?: string;
+  created_by?: string;
   assigned_to?: string;
+  title?: string;
+  description?: string;
+  due_date?: string;
+  is_completed?: boolean;
+  is_manual?: boolean;
 }
 
 interface Employee {
@@ -47,6 +55,12 @@ const DailyTasks = () => {
     pending: 0,
   });
   const [sendingTest, setSendingTest] = useState(false);
+  const [addTaskDialogOpen, setAddTaskDialogOpen] = useState(false);
+  const [newTask, setNewTask] = useState({
+    title: '',
+    description: '',
+    due_date: new Date().toISOString().split('T')[0],
+  });
 
   const fetchDailyTasks = async () => {
     if (!user) return;
@@ -85,13 +99,20 @@ const DailyTasks = () => {
 
       if (error) throw error;
 
+      // جلب المهام الشخصية للموظف
+      const { data: employeeTasks, error: tasksError } = await supabase
+        .from('employee_tasks')
+        .select('*')
+        .eq('employee_id', user.id)
+        .eq('due_date', today);
+
+      if (tasksError) {
+        console.error('Error fetching employee tasks:', tasksError);
+      }
+
       console.log('📊 نتائج الجلب:', {
-        recordsFound: data?.length || 0,
-        orders: data?.map(o => ({
-          orderNumber: o.order_number,
-          status: o.status,
-          deliveryDate: o.delivery_date
-        }))
+        ordersCount: data?.length || 0,
+        tasksCount: employeeTasks?.length || 0
       });
 
       // جلب أسماء المسؤولين (created_by) من جدول profiles بدون علاقات مباشرة
@@ -111,7 +132,7 @@ const DailyTasks = () => {
         );
       }
 
-      const formattedTasks = (data || []).map((order: any) => ({
+      const formattedOrders = (data || []).map((order: any) => ({
         id: order.id,
         order_number: order.order_number || 'غير محدد',
         customer_name: order.customers?.name || 'غير محدد',
@@ -122,31 +143,40 @@ const DailyTasks = () => {
         created_at: order.created_at,
         created_by: order.created_by,
         assigned_to: profilesMap[order.created_by] || 'غير محدد',
+        is_manual: false,
       }));
 
-      setTasks(formattedTasks);
+      // تنسيق المهام الشخصية
+      const formattedTasks = (employeeTasks || []).map((task: any) => ({
+        id: task.id,
+        title: task.title,
+        description: task.description || '',
+        due_date: task.due_date,
+        is_completed: task.is_completed,
+        is_manual: true,
+        assigned_to: 'أنت',
+      }));
+
+      // دمج الطلبات والمهام
+      const allTasks = [...formattedOrders, ...formattedTasks];
+      setTasks(allTasks);
 
       console.log('✅ المهام النهائية:', {
-        total: formattedTasks.length,
-        tasks: formattedTasks.map(t => ({
-          orderNumber: t.order_number,
-          customer: t.customer_name,
-          status: t.status,
-          deliveryDate: t.delivery_date,
-          isOverdue: t.delivery_date < today
-        }))
+        total: allTasks.length,
+        orders: formattedOrders.length,
+        manualTasks: formattedTasks.length
       });
 
       // حساب الإحصائيات
-      const completed = formattedTasks.filter(
-        t => t.status === 'مكتمل' || t.status === 'جاهز للتسليم'
+      const completed = allTasks.filter(
+        t => t.is_manual ? t.is_completed : (t.status === 'مكتمل' || t.status === 'جاهز للتسليم')
       ).length;
-      const pending = formattedTasks.filter(
-        t => t.status !== 'مكتمل' && t.status !== 'جاهز للتسليم'
+      const pending = allTasks.filter(
+        t => t.is_manual ? !t.is_completed : (t.status !== 'مكتمل' && t.status !== 'جاهز للتسليم')
       ).length;
 
       setStats({
-        total: formattedTasks.length,
+        total: allTasks.length,
         completed,
         pending,
       });
@@ -175,6 +205,80 @@ const DailyTasks = () => {
       setEmployees(data || []);
     } catch (error: any) {
       console.error('Error loading employees:', error);
+    }
+  };
+
+  const handleAddTask = async () => {
+    if (!newTask.title.trim() || !user?.id) {
+      toast({
+        title: 'خطأ',
+        description: 'يرجى إدخال عنوان المهمة',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('employee_tasks')
+        .insert([
+          {
+            employee_id: user.id,
+            title: newTask.title,
+            description: newTask.description,
+            due_date: newTask.due_date,
+          }
+        ]);
+
+      if (error) throw error;
+
+      toast({
+        title: 'تم بنجاح',
+        description: 'تم إضافة المهمة بنجاح',
+      });
+
+      setAddTaskDialogOpen(false);
+      setNewTask({
+        title: '',
+        description: '',
+        due_date: new Date().toISOString().split('T')[0],
+      });
+      fetchDailyTasks();
+    } catch (error) {
+      console.error('Error adding task:', error);
+      toast({
+        title: 'خطأ',
+        description: 'حدث خطأ في إضافة المهمة',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleToggleTaskCompletion = async (taskId: string, currentStatus: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('employee_tasks')
+        .update({ 
+          is_completed: !currentStatus,
+          completed_at: !currentStatus ? new Date().toISOString() : null,
+        })
+        .eq('id', taskId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'تم التحديث',
+        description: !currentStatus ? 'تم وضع علامة على المهمة كمنجزة' : 'تم إلغاء علامة الإنجاز',
+      });
+
+      fetchDailyTasks();
+    } catch (error) {
+      console.error('Error toggling task:', error);
+      toast({
+        title: 'خطأ',
+        description: 'حدث خطأ في تحديث المهمة',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -362,6 +466,17 @@ const DailyTasks = () => {
           fetchDailyTasks();
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'employee_tasks',
+        },
+        () => {
+          fetchDailyTasks();
+        }
+      )
       .subscribe();
 
     return () => {
@@ -393,14 +508,24 @@ const DailyTasks = () => {
             الطلبات المطلوب تسليمها اليوم وما قبله {new Date().toLocaleDateString('ar-SA', { timeZone: 'Asia/Riyadh' })}
           </p>
         </div>
-        <Button 
-          onClick={handleSendTestNotification}
-          disabled={sendingTest}
-          className="gap-2"
-        >
-          <Send className="h-4 w-4" />
-          {sendingTest ? 'جاري الإرسال...' : 'إرسال إشعار اختبار'}
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={() => setAddTaskDialogOpen(true)}
+            variant="default"
+          >
+            <Plus className="ml-2 h-4 w-4" />
+            إضافة مهمة شخصية
+          </Button>
+          <Button 
+            onClick={handleSendTestNotification}
+            disabled={sendingTest}
+            variant="outline"
+            className="gap-2"
+          >
+            <Send className="h-4 w-4" />
+            {sendingTest ? 'جاري الإرسال...' : 'إرسال إشعار اختبار'}
+          </Button>
+        </div>
       </header>
 
       <Separator />
@@ -451,7 +576,8 @@ const DailyTasks = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>رقم الطلب</TableHead>
+                  <TableHead>النوع</TableHead>
+                  <TableHead>التفاصيل</TableHead>
                   <TableHead>العميل</TableHead>
                   <TableHead>نوع الخدمة</TableHead>
                   <TableHead>المسؤول</TableHead>
@@ -465,43 +591,90 @@ const DailyTasks = () => {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center">
+                    <TableCell colSpan={10} className="text-center">
                       جارِ التحميل...
                     </TableCell>
                   </TableRow>
                 ) : tasks.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center">
+                    <TableCell colSpan={10} className="text-center">
                       لا توجد مهام غير منجزة
                     </TableCell>
                   </TableRow>
                 ) : (
                   tasks.map((task) => (
                     <TableRow key={task.id}>
-                      <TableCell className="font-medium">{task.order_number}</TableCell>
-                      <TableCell>{task.customer_name}</TableCell>
-                      <TableCell>{task.service_type}</TableCell>
+                      <TableCell>
+                        {task.is_manual ? (
+                          <Badge variant="secondary">مهمة شخصية</Badge>
+                        ) : (
+                          <Badge variant="outline">طلب</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {task.is_manual ? (
+                          <div>
+                            <div className="font-medium">{task.title}</div>
+                            {task.description && (
+                              <div className="text-sm text-muted-foreground">{task.description}</div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="font-medium">{task.order_number}</span>
+                        )}
+                      </TableCell>
+                      <TableCell>{task.is_manual ? '-' : task.customer_name}</TableCell>
+                      <TableCell>{task.is_manual ? '-' : task.service_type}</TableCell>
                       <TableCell>
                         <Badge variant="secondary">{task.assigned_to}</Badge>
                       </TableCell>
-                      <TableCell>{task.total_amount.toFixed(2)} ر.س</TableCell>
-                      <TableCell>{getStatusBadge(task.status)}</TableCell>
+                      <TableCell>{task.is_manual ? '-' : `${task.total_amount?.toFixed(2)} ر.س`}</TableCell>
                       <TableCell>
-                        {task.status === 'مكتمل' || task.status === 'جاهز للتسليم' ? (
-                          <Badge variant="default" className="bg-green-600">✓ تم الإنجاز</Badge>
+                        {task.is_manual ? '-' : getStatusBadge(task.status!)}
+                      </TableCell>
+                      <TableCell>
+                        {task.is_manual ? (
+                          <Badge variant={task.is_completed ? 'default' : 'destructive'} className={task.is_completed ? 'bg-green-600' : ''}>
+                            {task.is_completed ? '✓ تم الإنجاز' : '✗ لم ينجز'}
+                          </Badge>
                         ) : (
-                          <Badge variant="destructive">✗ لم ينجز</Badge>
+                          <>
+                            {task.status === 'مكتمل' || task.status === 'جاهز للتسليم' ? (
+                              <Badge variant="default" className="bg-green-600">✓ تم الإنجاز</Badge>
+                            ) : (
+                              <Badge variant="destructive">✗ لم ينجز</Badge>
+                            )}
+                          </>
                         )}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          {new Date(task.delivery_date).toLocaleDateString('ar-SA')}
-                          {task.delivery_date < todayDate && (
+                          {new Date(task.is_manual ? task.due_date! : task.delivery_date!).toLocaleDateString('ar-SA')}
+                          {!task.is_manual && task.delivery_date && task.delivery_date < todayDate && (
                             <Badge variant="destructive" className="text-xs">متأخر</Badge>
                           )}
                         </div>
                       </TableCell>
                       <TableCell>
+                        {task.is_manual ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleToggleTaskCompletion(task.id, task.is_completed!)}
+                          >
+                            {task.is_completed ? (
+                              <>
+                                <X className="ml-1 h-4 w-4" />
+                                إلغاء الإنجاز
+                              </>
+                            ) : (
+                              <>
+                                <Check className="ml-1 h-4 w-4" />
+                                وضع علامة كمنجز
+                              </>
+                            )}
+                          </Button>
+                        ) : (
                         <Dialog open={transferDialogOpen && selectedTask === task.id} onOpenChange={(open) => {
                           setTransferDialogOpen(open);
                           if (!open) {
@@ -560,6 +733,7 @@ const DailyTasks = () => {
                             </div>
                           </DialogContent>
                         </Dialog>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))
@@ -569,6 +743,53 @@ const DailyTasks = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Dialog لإضافة مهمة شخصية */}
+      <Dialog open={addTaskDialogOpen} onOpenChange={setAddTaskDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>إضافة مهمة شخصية</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="title">عنوان المهمة *</Label>
+              <Input
+                id="title"
+                value={newTask.title}
+                onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+                placeholder="أدخل عنوان المهمة"
+              />
+            </div>
+            <div>
+              <Label htmlFor="description">الوصف</Label>
+              <Textarea
+                id="description"
+                value={newTask.description}
+                onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+                placeholder="أدخل وصف المهمة (اختياري)"
+                rows={3}
+              />
+            </div>
+            <div>
+              <Label htmlFor="due_date">تاريخ الإنجاز</Label>
+              <Input
+                id="due_date"
+                type="date"
+                value={newTask.due_date}
+                onChange={(e) => setNewTask({ ...newTask, due_date: e.target.value })}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setAddTaskDialogOpen(false)}>
+                إلغاء
+              </Button>
+              <Button onClick={handleAddTask}>
+                إضافة المهمة
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 };
