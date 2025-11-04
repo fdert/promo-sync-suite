@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
+import * as XLSX from 'xlsx';
 
 interface PaymentSummary {
   payment_type: string;
@@ -341,31 +342,39 @@ const PaymentsByType = () => {
     const networkTotal = paymentsToExport.filter(p => p.payment_type === 'card' || p.payment_type === 'الشبكة').reduce((sum, p) => sum + p.amount, 0);
     const totalAmount = paymentsToExport.reduce((sum, p) => sum + p.amount, 0);
     
-    // إنشاء محتوى CSV
-    let csvContent = "التاريخ,نوع الدفع,العميل,رقم الطلب,المبلغ (ر.س)\n";
+    // تحضير بيانات الجدول الرئيسي
+    const mainData = paymentsToExport.map((payment) => ({
+      'التاريخ': format(new Date(payment.payment_date), 'dd/MM/yyyy'),
+      'نوع الدفع': payment.payment_type,
+      'العميل': payment.customer_name || 'غير محدد',
+      'رقم الطلب': payment.order_number || '-',
+      'المبلغ (ر.س)': payment.amount
+    }));
     
-    paymentsToExport.forEach((payment) => {
-      const date = format(new Date(payment.payment_date), 'dd/MM/yyyy');
-      csvContent += `${date},${payment.payment_type},${payment.customer_name || 'غير محدد'},${payment.order_number || '-'},${payment.amount}\n`;
-    });
+    // تحضير بيانات البيان الإجمالي
+    const summaryData = [
+      {},
+      { 'التاريخ': 'بيان إجمالي المدفوعات حسب النوع:' },
+      {},
+      { 'التاريخ': 'نوع الدفع', 'نوع الدفع': 'المبلغ (ر.س)' },
+      { 'التاريخ': 'نقدي', 'نوع الدفع': cashTotal },
+      { 'التاريخ': 'تحويل بنكي', 'نوع الدفع': bankTotal },
+      { 'التاريخ': 'الشبكة', 'نوع الدفع': networkTotal },
+      { 'التاريخ': 'الإجمالي الكلي', 'نوع الدفع': totalAmount }
+    ];
     
-    // إضافة البيان الإجمالي
-    csvContent += `\n\nبيان إجمالي المدفوعات حسب النوع:\n`;
-    csvContent += `نوع الدفع,المبلغ (ر.س)\n`;
-    csvContent += `نقدي,${cashTotal}\n`;
-    csvContent += `تحويل بنكي,${bankTotal}\n`;
-    csvContent += `الشبكة,${networkTotal}\n`;
-    csvContent += `الإجمالي الكلي,${totalAmount}\n`;
+    // دمج البيانات
+    const allData = [...mainData, ...summaryData];
     
-    // تحميل الملف
-    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `آخر_المدفوعات_${format(new Date(), 'yyyy-MM-dd')}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // إنشاء ورقة العمل
+    const worksheet = XLSX.utils.json_to_sheet(allData);
+    
+    // إنشاء كتاب العمل
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'آخر المدفوعات');
+    
+    // تصدير الملف
+    XLSX.writeFile(workbook, `آخر_المدفوعات_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
     
     toast({
       title: "تم التصدير",
