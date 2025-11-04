@@ -345,6 +345,11 @@ const FinancialReports = () => {
         return;
       }
       
+      // في حال عدم وجود عمود receipt_image_url سنحفظ الرابط داخل الملاحظات
+      const notesWithReceipt = receiptImageUrl
+        ? `${expenseForm.notes ? expenseForm.notes + '\n' : ''}[صورة الإيصال: ${receiptImageUrl}]`
+        : (expenseForm.notes || null);
+      
       const { data: expenseData, error: expenseError } = await supabase
         .from('expenses')
         .insert({
@@ -352,13 +357,13 @@ const FinancialReports = () => {
           description: expenseForm.description.trim(),
           amount: amountNum,
           expense_type: finalCategory,
-          receipt_image_url: receiptImageUrl,
+          // لا نرسل receipt_image_url لتجنب فشل الحفظ إذا كان العمود غير موجود
           expense_date: expenseForm.date,
           payment_method: expenseForm.paymentMethod || null,
-          notes: expenseForm.notes || null
+          notes: notesWithReceipt
         })
         .select()
-        .single();
+        .maybeSingle();
 
       if (expenseError) {
         throw expenseError;
@@ -901,20 +906,22 @@ const FinancialReports = () => {
                                 </span>
                               </div>
                               
-                              {expense.receipt_image_url && (
+                              {(expense.receipt_image_url || /https?:\/\//.test(expense.notes || '')) && (
                                 <div>
                                   <span className="text-xs text-muted-foreground font-medium block mb-1">صورة الإيصال:</span>
                                   <Button
                                     variant="outline"
                                     size="sm"
                                     onClick={() => {
-                                      // تنظيف الرابط من جميع الأقواس والرموز الزائدة
-                                      let cleanUrl = String(expense.receipt_image_url || '')
+                                      // الحصول على الرابط من الحقل أو من الملاحظات
+                                      const fallbackFromNotes = (expense.notes || '').match(/https?:\/\/[^\s\]]+/)?.[0] || '';
+                                      let cleanUrl = String(expense.receipt_image_url || fallbackFromNotes)
                                         .trim()
-                                        .replace(/[\[\]\(\)\"']/g, ''); // إزالة الأقواس والمسافات والعلامات
-                                      // إزالة أي أقواس مربعة زائدة في نهاية الرابط
+                                        .replace(/[\[\]\(\)"']/g, '');
+                                      // إزالة أي أقواس مربعة في نهاية الرابط
                                       cleanUrl = cleanUrl.replace(/\]+$/, '');
                                       
+                                      if (!cleanUrl) return;
                                       // إذا كان الرابط نسبياً، قم بإنشاء الرابط الكامل
                                       if (!cleanUrl.startsWith('http')) {
                                         cleanUrl = `https://pqrzkfpowjutylegdcxj.supabase.co/storage/v1/object/public/company-assets/${cleanUrl.replace(/^\//, '')}`;
