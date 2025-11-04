@@ -907,8 +907,12 @@ const FinancialReports = () => {
                                     variant="outline"
                                     size="sm"
                                     onClick={() => {
-                                      const cleanUrl = expense.receipt_image_url.replace(/[\[\]]/g, '');
-                                      window.open(cleanUrl, '_blank', 'noopener,noreferrer');
+                                      const raw = String(expense.receipt_image_url || '');
+                                      const cleaned = raw.trim().replace(/^["'\[\(]+/, '').replace(/["'\]\)]+$/, '');
+                                      const finalUrl = cleaned.startsWith('http')
+                                        ? cleaned
+                                        : `https://pqrzkfpowjutylegdcxj.supabase.co/storage/v1/object/public/company-assets/${cleaned.replace(/^\//, '')}`;
+                                      window.open(finalUrl, '_blank', 'noopener,noreferrer');
                                     }}
                                     className="inline-flex items-center gap-2 text-sm"
                                   >
