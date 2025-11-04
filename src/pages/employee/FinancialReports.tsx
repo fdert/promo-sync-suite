@@ -1168,18 +1168,30 @@ const FinancialReports = () => {
               <Receipt className="h-5 w-5" />
               صورة الإيصال
             </DialogTitle>
+            <DialogDescription>
+              معاينة صورة الإيصال المرفقة مع المصروف
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             {viewReceiptUrl && (
               <>
-                <div className="border rounded-lg overflow-hidden bg-muted/10">
+                <div className="border rounded-lg overflow-hidden bg-muted/10 min-h-[200px] flex items-center justify-center">
                   <img 
                     src={viewReceiptUrl} 
                     alt="صورة الإيصال" 
                     className="w-full h-auto object-contain max-h-[70vh]"
+                    loading="lazy"
                     onError={(e) => {
-                      e.currentTarget.src = '';
-                      e.currentTarget.alt = 'فشل في تحميل الصورة';
+                      console.error('فشل تحميل الصورة:', viewReceiptUrl);
+                      e.currentTarget.style.display = 'none';
+                      const errorMsg = document.createElement('div');
+                      errorMsg.className = 'text-center text-muted-foreground p-8';
+                      errorMsg.innerHTML = `
+                        <p class="text-lg mb-2">⚠️ فشل في تحميل الصورة</p>
+                        <p class="text-sm">الرابط: ${viewReceiptUrl}</p>
+                        <p class="text-xs mt-2">تحقق من صلاحيات الوصول إلى التخزين</p>
+                      `;
+                      e.currentTarget.parentElement?.appendChild(errorMsg);
                     }}
                   />
                 </div>
@@ -1187,17 +1199,11 @@ const FinancialReports = () => {
                   <Button
                     variant="outline"
                     onClick={() => {
-                      const link = document.createElement('a');
-                      link.href = viewReceiptUrl;
-                      link.download = `receipt-${Date.now()}.jpg`;
-                      link.target = '_blank';
-                      document.body.appendChild(link);
-                      link.click();
-                      document.body.removeChild(link);
+                      window.open(viewReceiptUrl, '_blank', 'noopener,noreferrer');
                     }}
                   >
-                    <Download className="h-4 w-4 mr-2" />
-                    تحميل الصورة
+                    <FileText className="h-4 w-4 mr-2" />
+                    فتح في تبويب جديد
                   </Button>
                   <Button onClick={() => setIsViewReceiptOpen(false)}>
                     إغلاق
