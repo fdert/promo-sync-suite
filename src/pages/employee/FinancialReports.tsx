@@ -903,15 +903,18 @@ const FinancialReports = () => {
                               {expense.receipt_image_url && (
                                 <div>
                                   <span className="text-xs text-muted-foreground font-medium block mb-1">صورة الإيصال:</span>
-                                  <a 
-                                    href={expense.receipt_image_url} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-2 text-sm text-primary hover:underline bg-muted/20 p-2 rounded"
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      const cleanUrl = expense.receipt_image_url.replace(/[\[\]]/g, '');
+                                      window.open(cleanUrl, '_blank', 'noopener,noreferrer');
+                                    }}
+                                    className="inline-flex items-center gap-2 text-sm"
                                   >
                                     <FileText className="h-4 w-4" />
-                                    عرض الإيصال
-                                  </a>
+                                    عرض المرفق
+                                  </Button>
                                 </div>
                               )}
                               
