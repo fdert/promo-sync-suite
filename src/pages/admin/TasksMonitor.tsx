@@ -56,11 +56,12 @@ const TasksMonitor = () => {
       setLoading(true);
       const today = new Date().toISOString().split('T')[0];
 
-      // جلب بيانات المهام اليومية لكل موظف
+      // جلب بيانات المهام اليومية (قيد التنفيذ + المنجزة)
       const { data: ordersData, error: ordersError } = await supabase
         .from('orders')
         .select('id, status, created_by')
-        .eq('delivery_date', today);
+        .eq('delivery_date', today)
+        .in('status', ['in_progress', 'قيد التنفيذ', 'completed', 'مكتمل', 'جاهز للتسليم']);
 
       if (ordersError) throw ordersError;
 
@@ -80,7 +81,7 @@ const TasksMonitor = () => {
       ordersData?.forEach((order: any) => {
         const employeeId = order.created_by;
         const employeeName = profilesMap.get(employeeId) || 'غير محدد';
-        const isCompleted = order.status === 'completed' || order.status === 'ready_for_delivery';
+        const isCompleted = order.status === 'completed' || order.status === 'مكتمل' || order.status === 'جاهز للتسليم';
 
         if (!employeeMap.has(employeeId)) {
           employeeMap.set(employeeId, {
@@ -179,6 +180,7 @@ const TasksMonitor = () => {
         `)
         .eq('delivery_date', today)
         .eq('created_by', employeeId)
+        .in('status', ['in_progress', 'قيد التنفيذ', 'completed', 'مكتمل', 'جاهز للتسليم'])
         .order('created_at', { ascending: false });
 
       if (error) throw error;
