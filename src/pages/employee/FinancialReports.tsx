@@ -108,6 +108,18 @@ const FinancialReports = () => {
     return { start, end };
   };
 
+  // تنظيف الروابط من أي أقواس أو رموز زائدة وضبط الروابط النسبية
+  const normalizeReceiptUrl = (raw: string): string => {
+    if (!raw) return '';
+    let url = String(raw).trim();
+    // إزالة الأقواس والعلامات من البداية والنهاية
+    url = url.replace(/^[\s\[\]\(\)"']+/, '').replace(/[\s\[\]\(\)"']+$/, '');
+    // إزالة الأقواس المشفرة في نهاية الرابط
+    url = url.replace(/(%5D|%29)+$/gi, '').replace(/^(%5B|%28)+/gi, '');
+    // توحيد المسارات المكررة
+    url = url.replace(/\/+/g, '/');
+    return url;
+  };
   // جلب الحسابات
   const fetchAccounts = async () => {
     try {
@@ -917,16 +929,15 @@ const FinancialReports = () => {
                                     onClick={() => {
                                       // الحصول على الرابط من الحقل أو من الملاحظات
                                       const fallbackFromNotes = (expense.notes || '').match(/https?:\/\/[^\s\]\)\}"']+/)?.[0] || '';
-                                      let cleanUrl = String(expense.receipt_image_url || fallbackFromNotes)
-                                        .trim()
-                                        .replace(/[\[\]\(\)"']+$/g, '')  // إزالة أي أقواس أو علامات ترقيم من النهاية
-                                        .replace(/^[\[\]\(\)"']+/g, ''); // إزالة أي أقواس أو علامات ترقيم من البداية
+                                      const rawUrl = String(expense.receipt_image_url || fallbackFromNotes);
+                                      let cleanUrl = normalizeReceiptUrl(rawUrl);
                                       
                                       if (!cleanUrl) return;
                                       // إذا كان الرابط نسبياً، قم بإنشاء الرابط الكامل
                                       if (!cleanUrl.startsWith('http')) {
-                                        cleanUrl = `https://pqrzkfpowjutylegdcxj.supabase.co/storage/v1/object/public/company-assets/${cleanUrl.replace(/^\//, '')}`;
+                                        cleanUrl = `https://pqrzkfpowjutylegdcxj.supabase.co/storage/v1/object/public/company-assets/${cleanUrl.replace(/^\/+/, '')}`;
                                       }
+                                      cleanUrl = normalizeReceiptUrl(cleanUrl);
                                       
                                       // إذا كان الملف PDF، افتحه مباشرة في تبويب جديد
                                       if (cleanUrl.toLowerCase().endsWith('.pdf')) {
