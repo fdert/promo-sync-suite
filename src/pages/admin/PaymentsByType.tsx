@@ -69,6 +69,12 @@ const PaymentsByType = () => {
       filtered = filtered.filter(payment => 
         payment.payment_date.startsWith(thisMonth)
       );
+    } else if (dateFilter.period === 'last_month') {
+      const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const lastMonthStr = format(lastMonth, 'yyyy-MM');
+      filtered = filtered.filter(payment => 
+        payment.payment_date.startsWith(lastMonthStr)
+      );
     } else if (dateFilter.period === 'this_year') {
       const thisYear = format(now, 'yyyy');
       filtered = filtered.filter(payment => 
@@ -274,6 +280,7 @@ const PaymentsByType = () => {
                 تاريخ التقرير: ${format(new Date(), 'dd/MM/yyyy')} - 
                 الفترة: ${dateFilter.period === 'today' ? 'اليوم' : 
                          dateFilter.period === 'this_month' ? 'هذا الشهر' :
+                         dateFilter.period === 'last_month' ? 'الشهر السابق' :
                          dateFilter.period === 'this_year' ? 'هذا العام' :
                          dateFilter.period === 'custom' ? `من ${dateFilter.startDate} إلى ${dateFilter.endDate}` :
                          'جميع الفترات'}
@@ -429,6 +436,7 @@ const PaymentsByType = () => {
                 ${dateFilter.period === 'all' ? 'جميع المدفوعات' : 
                   dateFilter.period === 'today' ? 'مدفوعات اليوم' :
                   dateFilter.period === 'this_month' ? 'مدفوعات هذا الشهر' :
+                  dateFilter.period === 'last_month' ? 'مدفوعات الشهر السابق' :
                   dateFilter.period === 'this_year' ? 'مدفوعات هذا العام' :
                   `من ${dateFilter.startDate} إلى ${dateFilter.endDate}`}
               </div>
@@ -563,6 +571,7 @@ const PaymentsByType = () => {
                   <SelectItem value="all">جميع الفترات</SelectItem>
                   <SelectItem value="today">اليوم</SelectItem>
                   <SelectItem value="this_month">هذا الشهر</SelectItem>
+                  <SelectItem value="last_month">الشهر السابق</SelectItem>
                   <SelectItem value="this_year">هذا العام</SelectItem>
                   <SelectItem value="custom">فترة مخصصة</SelectItem>
                 </SelectContent>
