@@ -335,6 +335,12 @@ const PaymentsByType = () => {
   const exportRecentPaymentsToExcel = () => {
     const paymentsToExport = dateFilter.period === 'all' ? recentPayments : filteredPayments;
     
+    // حساب المبالغ حسب نوع الدفع
+    const cashTotal = paymentsToExport.filter(p => p.payment_type === 'نقدي').reduce((sum, p) => sum + p.amount, 0);
+    const bankTotal = paymentsToExport.filter(p => p.payment_type === 'تحويل بنكي').reduce((sum, p) => sum + p.amount, 0);
+    const networkTotal = paymentsToExport.filter(p => p.payment_type === 'الشبكة').reduce((sum, p) => sum + p.amount, 0);
+    const totalAmount = paymentsToExport.reduce((sum, p) => sum + p.amount, 0);
+    
     // إنشاء محتوى CSV
     let csvContent = "التاريخ,نوع الدفع,العميل,رقم الطلب,المبلغ (ر.س)\n";
     
@@ -343,8 +349,13 @@ const PaymentsByType = () => {
       csvContent += `${date},${payment.payment_type},${payment.customer_name || 'غير محدد'},${payment.order_number || '-'},${payment.amount}\n`;
     });
     
-    const totalAmount = paymentsToExport.reduce((sum, p) => sum + p.amount, 0);
-    csvContent += `\nالإجمالي,,,${totalAmount}\n`;
+    // إضافة البيان الإجمالي
+    csvContent += `\n\nبيان إجمالي المدفوعات حسب النوع:\n`;
+    csvContent += `نوع الدفع,المبلغ (ر.س)\n`;
+    csvContent += `نقدي,${cashTotal}\n`;
+    csvContent += `تحويل بنكي,${bankTotal}\n`;
+    csvContent += `الشبكة,${networkTotal}\n`;
+    csvContent += `الإجمالي الكلي,${totalAmount}\n`;
     
     // تحميل الملف
     const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -365,6 +376,11 @@ const PaymentsByType = () => {
   // تصدير آخر المدفوعات إلى PDF
   const exportRecentPaymentsToPDF = () => {
     const paymentsToExport = dateFilter.period === 'all' ? recentPayments : filteredPayments;
+    
+    // حساب المبالغ حسب نوع الدفع
+    const cashTotal = paymentsToExport.filter(p => p.payment_type === 'نقدي').reduce((sum, p) => sum + p.amount, 0);
+    const bankTotal = paymentsToExport.filter(p => p.payment_type === 'تحويل بنكي').reduce((sum, p) => sum + p.amount, 0);
+    const networkTotal = paymentsToExport.filter(p => p.payment_type === 'الشبكة').reduce((sum, p) => sum + p.amount, 0);
     const totalAmount = paymentsToExport.reduce((sum, p) => sum + p.amount, 0);
     
     const printWindow = window.open('', '_blank');
@@ -383,6 +399,12 @@ const PaymentsByType = () => {
               th, td { border: 1px solid #e5e7eb; padding: 10px; text-align: center; }
               th { background-color: #f3f4f6; font-weight: bold; }
               .total-row { background-color: #fef3c7; font-weight: bold; }
+              .summary-section { margin-top: 30px; background-color: #f0f9ff; padding: 20px; border-radius: 8px; }
+              .summary-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #1f2937; }
+              .summary-table { width: 100%; border-collapse: collapse; }
+              .summary-table td { padding: 10px; border: 1px solid #e5e7eb; }
+              .summary-table .label { background-color: #f9fafb; font-weight: bold; width: 60%; }
+              .summary-table .value { text-align: left; font-size: 16px; }
               .badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 12px; }
               .badge-cash { background-color: #dcfce7; color: #166534; }
               .badge-bank { background-color: #dbeafe; color: #1e40af; }
@@ -428,14 +450,36 @@ const PaymentsByType = () => {
                   `;
                 }).join('')}
                 <tr class="total-row">
-                  <td colspan="4"><strong>الإجمالي</strong></td>
+                  <td colspan="4"><strong>الإجمالي الكلي</strong></td>
                   <td><strong>${totalAmount.toLocaleString()}</strong></td>
                 </tr>
               </tbody>
             </table>
             
+            <div class="summary-section">
+              <div class="summary-title">بيان إجمالي المدفوعات حسب النوع:</div>
+              <table class="summary-table">
+                <tr>
+                  <td class="label">💵 المدفوعات النقدية (كاش)</td>
+                  <td class="value"><strong>${cashTotal.toLocaleString()} ر.س</strong></td>
+                </tr>
+                <tr>
+                  <td class="label">🏦 التحويلات البنكية</td>
+                  <td class="value"><strong>${bankTotal.toLocaleString()} ر.س</strong></td>
+                </tr>
+                <tr>
+                  <td class="label">💳 مدفوعات الشبكة</td>
+                  <td class="value"><strong>${networkTotal.toLocaleString()} ر.س</strong></td>
+                </tr>
+                <tr style="background-color: #fef3c7;">
+                  <td class="label">📊 الإجمالي الكلي</td>
+                  <td class="value"><strong style="font-size: 18px; color: #1f2937;">${totalAmount.toLocaleString()} ر.س</strong></td>
+                </tr>
+              </table>
+            </div>
+            
             <div style="margin-top: 20px; text-align: center; color: #6b7280;">
-              عدد المعاملات: ${paymentsToExport.length} معاملة | إجمالي المبلغ: ${totalAmount.toLocaleString()} ر.س
+              عدد المعاملات: ${paymentsToExport.length} معاملة
             </div>
           </body>
         </html>
