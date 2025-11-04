@@ -29,20 +29,16 @@ Deno.serve(async (req) => {
       .select(`
         id,
         order_number,
-        customer_name,
-        service_name,
         status,
         delivery_date,
-        start_date,
-        responsible_employee_id,
-        profiles:responsible_employee_id (
-          id,
-          full_name,
-          phone_number
-        )
+        created_by,
+        customers (name),
+        service_types (name)
       `)
       .eq('delivery_date', todayDate)
-      .not('status', 'in', '("completed","cancelled","ready_for_delivery")');
+      .neq('status', 'مكتمل')
+      .neq('status', 'جاهز للتسليم')
+      .neq('status', 'ملغي');
 
     if (tasksError) {
       console.error('Error fetching tasks:', tasksError);
@@ -58,11 +54,11 @@ Deno.serve(async (req) => {
       );
     }
 
-    // تجميع المهام حسب الموظف
+    // تجميع المهام حسب الموظف المسؤول (created_by)
     const tasksByEmployee = new Map<string, any[]>();
     
     for (const task of tasks) {
-      const employeeId = task.responsible_employee_id;
+      const employeeId = task.created_by;
       if (!employeeId) continue;
 
       if (!tasksByEmployee.has(employeeId)) {
@@ -72,6 +68,20 @@ Deno.serve(async (req) => {
     }
 
     console.log(`Tasks grouped for ${tasksByEmployee.size} employees`);
+
+    // جلب معلومات الموظفين
+    const employeeIds = Array.from(tasksByEmployee.keys());
+    const { data: employees, error: employeesError } = await supabase
+      .from('profiles')
+      .select('id, full_name, phone')
+      .in('id', employeeIds);
+
+    if (employeesError) {
+      console.error('Error fetching employees:', employeesError);
+      throw employeesError;
+    }
+
+    const employeesMap = new Map(employees?.map(emp => [emp.id, emp]) || []);
 
     // رسائل تحفيزية متنوعة
     const motivationalMessages = [
@@ -89,9 +99,9 @@ Deno.serve(async (req) => {
 
     // إرسال الإشعارات لكل موظف
     for (const [employeeId, employeeTasks] of tasksByEmployee.entries()) {
-      const employee = employeeTasks[0].profiles;
+      const employee = employeesMap.get(employeeId);
       
-      if (!employee?.phone_number) {
+      if (!employee?.phone) {
         console.log(`No phone number for employee ${employeeId}`);
         notificationsFailed++;
         continue;
@@ -122,23 +132,23 @@ Deno.serve(async (req) => {
 
       employeeTasks.forEach((task, index) => {
         const statusEmoji = {
-          'order_confirmed': '✅',
-          'in_production': '⚙️',
+          'pending': '⏳',
+          'قيد الانتظار': '⏳',
+          'قيد التنفيذ': '⚙️',
+          'in_progress': '⚙️',
+          'قيد المراجعة': '🔍',
           'under_review': '🔍',
+          'تصميم أولي': '🎨',
           'design_proof': '🎨'
         }[task.status] || '📋';
 
-        const statusText = {
-          'order_confirmed': 'مؤكد',
-          'in_production': 'قيد التنفيذ',
-          'under_review': 'قيد المراجعة',
-          'design_proof': 'تصميم أولي'
-        }[task.status] || task.status;
+        const serviceName = task.service_types?.name || 'خدمة غير محددة';
+        const customerName = task.customers?.name || 'عميل غير محدد';
 
-        message += `${index + 1}. ${statusEmoji} *${task.service_name || 'خدمة'}*\n`;
+        message += `${index + 1}. ${statusEmoji} *${serviceName}*\n`;
         message += `   📦 طلب رقم: ${task.order_number}\n`;
-        message += `   👤 العميل: ${task.customer_name}\n`;
-        message += `   📊 الحالة: ${statusText}\n\n`;
+        message += `   👤 العميل: ${customerName}\n`;
+        message += `   📊 الحالة: ${task.status}\n\n`;
       });
 
       message += `\n━━━━━━━━━━━━━━━\n`;
@@ -154,7 +164,7 @@ Deno.serve(async (req) => {
         .from('whatsapp_messages')
         .insert({
           from_number: 'system',
-          to_number: employee.phone_number,
+          to_number: employee.phone,
           message_type: 'text',
           message_content: message,
           status: 'pending',
@@ -172,7 +182,7 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      console.log(`Notification sent to ${employee.full_name} (${employee.phone_number})`);
+      console.log(`Notification sent to ${employee.full_name} (${employee.phone})`);
       notificationsSent++;
     }
 
