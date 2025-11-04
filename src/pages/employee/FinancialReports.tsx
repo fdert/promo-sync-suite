@@ -315,7 +315,7 @@ const FinancialReports = () => {
           .getPublicUrl(filePath);
         
         // تنظيف الرابط من أي أقواس أو رموز إضافية
-        receiptImageUrl = urlData.publicUrl.replace(/[\[\]()]/g, '').trim();
+        receiptImageUrl = urlData.publicUrl.replace(/[\[\]\(\)"']/g, '').trim();
       }
 
       // تحديد فئة المصروف النهائية
@@ -911,7 +911,9 @@ const FinancialReports = () => {
                                       // تنظيف الرابط من جميع الأقواس والرموز الزائدة
                                       let cleanUrl = String(expense.receipt_image_url || '')
                                         .trim()
-                                        .replace(/[\[\]()'"]/g, ''); // إزالة الأقواس والمسافات والعلامات
+                                        .replace(/[\[\]\(\)\"']/g, ''); // إزالة الأقواس والمسافات والعلامات
+                                      // إزالة أي أقواس مربعة زائدة في نهاية الرابط
+                                      cleanUrl = cleanUrl.replace(/\]+$/, '');
                                       
                                       // إذا كان الرابط نسبياً، قم بإنشاء الرابط الكامل
                                       if (!cleanUrl.startsWith('http')) {
