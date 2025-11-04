@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { TrendingUp, TrendingDown, BarChart3, DollarSign, CalendarRange, FileText, Search, Download, Plus, Receipt } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { convertPdfToImage } from "@/lib/pdf-to-image";
 
 const FinancialReports = () => {
   const [loading, setLoading] = useState(true);
@@ -46,6 +47,8 @@ const FinancialReports = () => {
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
   const [viewReceiptUrl, setViewReceiptUrl] = useState<string | null>(null);
   const [isViewReceiptOpen, setIsViewReceiptOpen] = useState(false);
+  const [convertedPdfImage, setConvertedPdfImage] = useState<string | null>(null);
+  const [isConvertingPdf, setIsConvertingPdf] = useState(false);
 
   const { toast } = useToast();
 
@@ -224,6 +227,33 @@ const FinancialReports = () => {
     fetchFinancialData();
     fetchExpenses();
   }, [dateFilter]);
+
+  // تحويل PDF إلى صورة عند فتح المودال
+  useEffect(() => {
+    const convertPdf = async () => {
+      if (isViewReceiptOpen && viewReceiptUrl && viewReceiptUrl.toLowerCase().endsWith('.pdf')) {
+        setIsConvertingPdf(true);
+        setConvertedPdfImage(null);
+        try {
+          const imageDataUrl = await convertPdfToImage(viewReceiptUrl, 1, 2);
+          setConvertedPdfImage(imageDataUrl);
+        } catch (error) {
+          console.error('فشل تحويل PDF إلى صورة:', error);
+          toast({
+            title: "خطأ",
+            description: "فشل تحويل ملف PDF إلى صورة. يرجى المحاولة مرة أخرى.",
+            variant: "destructive"
+          });
+        } finally {
+          setIsConvertingPdf(false);
+        }
+      } else {
+        setConvertedPdfImage(null);
+      }
+    };
+
+    convertPdf();
+  }, [isViewReceiptOpen, viewReceiptUrl]);
 
   // تجميع الحسابات حسب النوع
   const accountsByType = accounts.reduce((acc: Record<string, any[]>, account) => {
@@ -1175,31 +1205,35 @@ const FinancialReports = () => {
           <div className="space-y-4">
             {viewReceiptUrl && (
               <>
-                <div className="border rounded-lg overflow-hidden bg-muted/10 min-h-[500px]">
+                <div className="border rounded-lg overflow-hidden bg-muted/10 min-h-[500px] flex items-center justify-center">
                   {viewReceiptUrl.toLowerCase().endsWith('.pdf') ? (
-                    // عرض PDF باستخدام object tag
-                    <object
-                      data={viewReceiptUrl}
-                      type="application/pdf"
-                      className="w-full h-[70vh]"
-                      aria-label="إيصال المصروف PDF"
-                    >
-                      <div className="flex flex-col items-center justify-center h-[70vh] p-8 space-y-4">
-                        <FileText className="h-16 w-16 text-primary" />
-                        <p className="text-lg font-medium">ملف PDF</p>
-                        <p className="text-sm text-muted-foreground text-center">
-                          متصفحك لا يدعم عرض ملفات PDF
-                        </p>
+                    // عرض PDF محول إلى صورة
+                    isConvertingPdf ? (
+                      <div className="flex flex-col items-center justify-center p-8 space-y-4">
+                        <FileText className="h-16 w-16 text-primary animate-pulse" />
+                        <p className="text-lg font-medium">جاري تحويل PDF...</p>
+                        <p className="text-sm text-muted-foreground">يرجى الانتظار</p>
+                      </div>
+                    ) : convertedPdfImage ? (
+                      <img 
+                        src={convertedPdfImage} 
+                        alt="معاينة PDF" 
+                        className="w-full h-auto max-h-[70vh] object-contain"
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center p-8 space-y-4">
+                        <FileText className="h-16 w-16 text-destructive" />
+                        <p className="text-lg font-medium">فشل تحويل PDF</p>
                         <Button
                           onClick={() => {
                             window.open(viewReceiptUrl, '_blank', 'noopener,noreferrer');
                           }}
                         >
                           <FileText className="h-4 w-4 mr-2" />
-                          فتح في تبويب جديد
+                          فتح PDF في تبويب جديد
                         </Button>
                       </div>
-                    </object>
+                    )
                   ) : (
                     // عرض صورة
                     <img 
