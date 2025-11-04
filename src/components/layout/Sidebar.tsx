@@ -40,6 +40,13 @@ type UserRole = Database['public']['Enums']['app_role'];
 
 const menuItems = [
   {
+    title: "لوحة تحكم Supabase",
+    icon: DatabaseIcon,
+    href: "https://supabase.com/dashboard/project/pqrzkfpowjutylegdcxj",
+    allowedRoles: ['admin'] as UserRole[],
+    external: true,
+  },
+  {
     title: "الرئيسية",
     icon: Home,
     href: "/admin",
@@ -367,21 +374,37 @@ const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
         <ul className="space-y-1">
           {filteredMenuItems.map((item) => (
             <li key={item.href}>
-              <NavLink
-                to={item.href}
-                className={({ isActive }) =>
-                  cn(
+              {(item as any).external ? (
+                <a
+                  href={item.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={cn(
                     "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:bg-muted group",
-                    isActive
-                      ? "bg-primary text-primary-foreground shadow-md"
-                      : "text-muted-foreground hover:text-foreground",
+                    "text-muted-foreground hover:text-foreground hover:bg-primary/10",
                     collapsed && "justify-center"
-                  )
-                }
-              >
-                <item.icon className="h-5 w-5 flex-shrink-0" />
-                {!collapsed && <span>{item.title}</span>}
-              </NavLink>
+                  )}
+                >
+                  <item.icon className="h-5 w-5 flex-shrink-0" />
+                  {!collapsed && <span>{item.title}</span>}
+                </a>
+              ) : (
+                <NavLink
+                  to={item.href}
+                  className={({ isActive }) =>
+                    cn(
+                      "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:bg-muted group",
+                      isActive
+                        ? "bg-primary text-primary-foreground shadow-md"
+                        : "text-muted-foreground hover:text-foreground",
+                      collapsed && "justify-center"
+                    )
+                  }
+                >
+                  <item.icon className="h-5 w-5 flex-shrink-0" />
+                  {!collapsed && <span>{item.title}</span>}
+                </NavLink>
+              )}
             </li>
           ))}
         </ul>
