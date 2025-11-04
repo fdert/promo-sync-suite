@@ -44,6 +44,8 @@ const FinancialReports = () => {
   });
   const [isUploading, setIsUploading] = useState(false);
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
+  const [viewReceiptUrl, setViewReceiptUrl] = useState<string | null>(null);
+  const [isViewReceiptOpen, setIsViewReceiptOpen] = useState(false);
 
   const { toast } = useToast();
 
@@ -927,7 +929,8 @@ const FinancialReports = () => {
                                         cleanUrl = `https://pqrzkfpowjutylegdcxj.supabase.co/storage/v1/object/public/company-assets/${cleanUrl.replace(/^\//, '')}`;
                                       }
                                       
-                                      window.open(cleanUrl, '_blank', 'noopener,noreferrer');
+                                      setViewReceiptUrl(cleanUrl);
+                                      setIsViewReceiptOpen(true);
                                     }}
                                     className="inline-flex items-center gap-2 text-sm"
                                   >
@@ -1156,6 +1159,55 @@ const FinancialReports = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Dialog لعرض صورة الإيصال */}
+      <Dialog open={isViewReceiptOpen} onOpenChange={setIsViewReceiptOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Receipt className="h-5 w-5" />
+              صورة الإيصال
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {viewReceiptUrl && (
+              <>
+                <div className="border rounded-lg overflow-hidden bg-muted/10">
+                  <img 
+                    src={viewReceiptUrl} 
+                    alt="صورة الإيصال" 
+                    className="w-full h-auto object-contain max-h-[70vh]"
+                    onError={(e) => {
+                      e.currentTarget.src = '';
+                      e.currentTarget.alt = 'فشل في تحميل الصورة';
+                    }}
+                  />
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      const link = document.createElement('a');
+                      link.href = viewReceiptUrl;
+                      link.download = `receipt-${Date.now()}.jpg`;
+                      link.target = '_blank';
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                    }}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    تحميل الصورة
+                  </Button>
+                  <Button onClick={() => setIsViewReceiptOpen(false)}>
+                    إغلاق
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
