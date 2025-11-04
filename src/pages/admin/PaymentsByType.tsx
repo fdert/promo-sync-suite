@@ -335,10 +335,10 @@ const PaymentsByType = () => {
   const exportRecentPaymentsToExcel = () => {
     const paymentsToExport = dateFilter.period === 'all' ? recentPayments : filteredPayments;
     
-    // حساب المبالغ حسب نوع الدفع
-    const cashTotal = paymentsToExport.filter(p => p.payment_type === 'نقدي').reduce((sum, p) => sum + p.amount, 0);
-    const bankTotal = paymentsToExport.filter(p => p.payment_type === 'تحويل بنكي').reduce((sum, p) => sum + p.amount, 0);
-    const networkTotal = paymentsToExport.filter(p => p.payment_type === 'الشبكة').reduce((sum, p) => sum + p.amount, 0);
+    // حساب المبالغ حسب نوع الدفع (باستخدام القيم الإنجليزية من قاعدة البيانات)
+    const cashTotal = paymentsToExport.filter(p => p.payment_type === 'cash' || p.payment_type === 'نقدي').reduce((sum, p) => sum + p.amount, 0);
+    const bankTotal = paymentsToExport.filter(p => p.payment_type === 'bank_transfer' || p.payment_type === 'تحويل بنكي').reduce((sum, p) => sum + p.amount, 0);
+    const networkTotal = paymentsToExport.filter(p => p.payment_type === 'card' || p.payment_type === 'الشبكة').reduce((sum, p) => sum + p.amount, 0);
     const totalAmount = paymentsToExport.reduce((sum, p) => sum + p.amount, 0);
     
     // إنشاء محتوى CSV
@@ -377,10 +377,10 @@ const PaymentsByType = () => {
   const exportRecentPaymentsToPDF = () => {
     const paymentsToExport = dateFilter.period === 'all' ? recentPayments : filteredPayments;
     
-    // حساب المبالغ حسب نوع الدفع
-    const cashTotal = paymentsToExport.filter(p => p.payment_type === 'نقدي').reduce((sum, p) => sum + p.amount, 0);
-    const bankTotal = paymentsToExport.filter(p => p.payment_type === 'تحويل بنكي').reduce((sum, p) => sum + p.amount, 0);
-    const networkTotal = paymentsToExport.filter(p => p.payment_type === 'الشبكة').reduce((sum, p) => sum + p.amount, 0);
+    // حساب المبالغ حسب نوع الدفع (باستخدام القيم الإنجليزية من قاعدة البيانات)
+    const cashTotal = paymentsToExport.filter(p => p.payment_type === 'cash' || p.payment_type === 'نقدي').reduce((sum, p) => sum + p.amount, 0);
+    const bankTotal = paymentsToExport.filter(p => p.payment_type === 'bank_transfer' || p.payment_type === 'تحويل بنكي').reduce((sum, p) => sum + p.amount, 0);
+    const networkTotal = paymentsToExport.filter(p => p.payment_type === 'card' || p.payment_type === 'الشبكة').reduce((sum, p) => sum + p.amount, 0);
     const totalAmount = paymentsToExport.reduce((sum, p) => sum + p.amount, 0);
     
     const printWindow = window.open('', '_blank');
