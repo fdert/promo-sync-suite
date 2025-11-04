@@ -116,8 +116,6 @@ const FinancialReports = () => {
     url = url.replace(/^[\s\[\]\(\)"']+/, '').replace(/[\s\[\]\(\)"']+$/, '');
     // إزالة الأقواس المشفرة في نهاية الرابط
     url = url.replace(/(%5D|%29)+$/gi, '').replace(/^(%5B|%28)+/gi, '');
-    // توحيد المسارات المكررة
-    url = url.replace(/\/+/g, '/');
     return url;
   };
   // جلب الحسابات
