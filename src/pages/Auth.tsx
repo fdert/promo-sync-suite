@@ -30,6 +30,8 @@ const Auth = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [retryCount, setRetryCount] = useState(0);
+  const [isRetrying, setIsRetrying] = useState(false);
   const [companyInfo, setCompanyInfo] = useState({
     name: "وكالة ابداع واحتراف للدعاية والاعلان",
     tagline: "نبني الأحلام بالإبداع والاحتراف",
@@ -119,45 +121,72 @@ const Auth = () => {
     }
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-
-    if (!loginForm.email || !loginForm.password) {
-      setError("يرجى ملء جميع الحقول");
-      setLoading(false);
-      return;
-    }
-
-    console.log('🔐 محاولة تسجيل الدخول للبريد:', loginForm.email);
+  const handleLoginWithRetry = async (attempt: number = 1): Promise<void> => {
+    console.log(`🔐 محاولة تسجيل الدخول رقم ${attempt} للبريد:`, loginForm.email);
 
     const { error } = await signIn(loginForm.email, loginForm.password);
     
     if (error) {
       console.error('❌ خطأ في تسجيل الدخول:', error);
       
-      // معالجة أنواع الأخطاء المختلفة
-      if (error.message.includes('Invalid login credentials')) {
-        setError("البريد الإلكتروني أو كلمة المرور غير صحيحة");
+      // التحقق من أخطاء الخادم (5xx)
+      const isServerError = error.message.includes('upstream') || 
+                           error.message.includes('503') ||
+                           error.message.includes('502') ||
+                           error.message.includes('500') ||
+                           error.status === 503 ||
+                           error.status === 502;
+      
+      if (isServerError && attempt < 4) {
+        // إعادة محاولة مع exponential backoff
+        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 8000); // 1s, 2s, 4s, max 8s
+        setIsRetrying(true);
+        setRetryCount(attempt);
+        setError(`⏳ الخدمة متعطلة مؤقتاً. جاري إعادة المحاولة (${attempt}/3)...`);
+        
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return handleLoginWithRetry(attempt + 1);
+      } else if (isServerError) {
+        setError("❌ خادم Supabase متعطل حالياً. يرجى المحاولة بعد دقائق");
+      } else if (error.message.includes('Invalid login credentials')) {
+        setError("❌ البريد الإلكتروني أو كلمة المرور غير صحيحة");
       } else if (error.message.includes('Email not confirmed')) {
-        setError("يرجى تأكيد بريدك الإلكتروني أولاً");
+        setError("⚠️ يرجى تأكيد بريدك الإلكتروني أولاً");
       } else if (error.message.includes('User not found')) {
-        setError("هذا الحساب غير موجود");
+        setError("❌ هذا الحساب غير موجود");
       } else if (error.message.includes('Too many requests')) {
-        setError("محاولات كثيرة. يرجى المحاولة بعد قليل");
+        setError("⏸️ محاولات كثيرة. يرجى المحاولة بعد قليل");
       } else {
-        setError(`خطأ في تسجيل الدخول: ${error.message}`);
+        setError(`❌ خطأ: ${error.message}`);
       }
+      
+      setIsRetrying(false);
+      setRetryCount(0);
     } else {
       console.log('✅ تم تسجيل الدخول بنجاح');
+      setIsRetrying(false);
+      setRetryCount(0);
       toast({
-        title: "تم تسجيل الدخول بنجاح",
+        title: "✅ تم تسجيل الدخول بنجاح",
         description: "مرحباً بك في النظام"
       });
-      // التوجيه سيتم تلقائياً من خلال useEffect
     }
-    
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    setRetryCount(0);
+    setIsRetrying(false);
+
+    if (!loginForm.email || !loginForm.password) {
+      setError("⚠️ يرجى ملء جميع الحقول");
+      setLoading(false);
+      return;
+    }
+
+    await handleLoginWithRetry(1);
     setLoading(false);
   };
 
@@ -311,9 +340,9 @@ const Auth = () => {
             </TabsList>
             
             {error && (
-              <Alert variant="destructive" className="mt-4 sm:mt-6 border-destructive/20 bg-destructive/5 mx-2 sm:mx-0">
-                <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5" />
-                <AlertDescription className="text-xs sm:text-sm font-medium leading-relaxed">{error}</AlertDescription>
+              <Alert variant={isRetrying ? "default" : "destructive"} className="mt-4 sm:mt-6 border-destructive/20 bg-destructive/5 mx-2 sm:mx-0">
+                <AlertCircle className={`h-4 w-4 sm:h-5 sm:w-5 ${isRetrying ? 'animate-spin' : ''}`} />
+                <AlertDescription className="text-xs sm:text-sm font-medium leading-relaxed whitespace-pre-line">{error}</AlertDescription>
               </Alert>
             )}
 
@@ -353,7 +382,7 @@ const Auth = () => {
                 </div>
                 
                 <Button type="submit" className="w-full h-12 text-base font-bold rounded-xl bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 transition-all duration-200 shadow-lg hover:shadow-xl" disabled={loading}>
-                  {loading ? "جاري تسجيل الدخول..." : "تسجيل الدخول"}
+                  {isRetrying ? `⏳ إعادة المحاولة (${retryCount}/3)...` : loading ? "جاري تسجيل الدخول..." : "تسجيل الدخول"}
                 </Button>
               </form>
             </TabsContent>
