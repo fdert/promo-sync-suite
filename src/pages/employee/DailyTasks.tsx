@@ -9,10 +9,11 @@ import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CheckCircle2, Clock, AlertCircle, UserPlus, Send } from 'lucide-react';
+import { CheckCircle2, Clock, AlertCircle, UserPlus, Send, Plus, Pencil } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { z } from 'zod';
 
 interface DailyTask {
   id: string;
@@ -32,6 +33,19 @@ interface DailyTask {
   is_manual?: boolean;
 }
 
+interface PersonalTask {
+  id: string;
+  title: string;
+  description?: string | null;
+  task_type: 'follow_up' | 'delivery' | 'collection' | 'other';
+  task_date: string;
+  task_time?: string | null;
+  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
+  created_by?: string | null;
+  assigned_to?: string | null;
+  order_id?: string | null;
+}
+
 interface Employee {
   id: string;
   full_name: string;
@@ -39,11 +53,20 @@ interface Employee {
   phone: string;
 }
 
+const taskSchema = z.object({
+  title: z.string().trim().min(1, 'العنوان مطلوب').max(200, 'العنوان طويل جداً'),
+  description: z.string().trim().max(500, 'الوصف طويل جداً').optional(),
+  task_type: z.enum(['follow_up', 'delivery', 'collection', 'other']),
+  task_date: z.string().min(1, 'التاريخ مطلوب'),
+  task_time: z.string().optional(),
+});
+
 const DailyTasks = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [tasks, setTasks] = useState<DailyTask[]>([]);
+  const [personalTasks, setPersonalTasks] = useState<PersonalTask[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [selectedTask, setSelectedTask] = useState<string | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<string>('');
@@ -55,6 +78,16 @@ const DailyTasks = () => {
     pending: 0,
   });
   const [sendingTest, setSendingTest] = useState(false);
+  const [isAddTaskDialogOpen, setIsAddTaskDialogOpen] = useState(false);
+  const [isEditTaskDialogOpen, setIsEditTaskDialogOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<PersonalTask | null>(null);
+  const [taskFormData, setTaskFormData] = useState({
+    title: '',
+    description: '',
+    task_type: 'other' as 'follow_up' | 'delivery' | 'collection' | 'other',
+    task_date: new Date().toISOString().split('T')[0],
+    task_time: '',
+  });
 
   const fetchDailyTasks = async () => {
     if (!user) return;
@@ -143,6 +176,21 @@ const DailyTasks = () => {
         t => t.status !== 'مكتمل' && t.status !== 'جاهز للتسليم'
       ).length;
 
+      // جلب المهام الخاصة من employee_tasks
+      const { data: personalTasksData, error: personalTasksError } = await supabase
+        .from('employee_tasks' as any)
+        .select('*')
+        .eq('created_by', user.id)
+        .is('order_id', null)
+        .order('task_date', { ascending: true })
+        .order('task_time', { ascending: true });
+
+      if (personalTasksError) {
+        console.error('خطأ في جلب المهام الخاصة:', personalTasksError);
+      } else {
+        setPersonalTasks((personalTasksData as any) || []);
+      }
+
       setStats({
         total: formattedOrders.length,
         completed,
@@ -198,6 +246,97 @@ const DailyTasks = () => {
       });
     } finally {
       setSendingTest(false);
+    }
+  };
+
+  const handleAddPersonalTask = async () => {
+    try {
+      const validatedData = taskSchema.parse(taskFormData);
+      
+      if (!user) {
+        toast({
+          title: 'خطأ',
+          description: 'يجب تسجيل الدخول أولاً',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const { error } = await supabase
+        .from('employee_tasks' as any)
+        .insert([{
+          title: validatedData.title,
+          description: validatedData.description || null,
+          task_type: validatedData.task_type,
+          task_date: validatedData.task_date,
+          task_time: validatedData.task_time || null,
+          created_by: user.id,
+          assigned_to: user.id,
+          status: 'pending',
+          order_id: null,
+        }]);
+
+      if (error) throw error;
+
+      toast({
+        title: 'تم إضافة المهمة',
+        description: 'تم إضافة المهمة الخاصة بنجاح',
+      });
+
+      setIsAddTaskDialogOpen(false);
+      setTaskFormData({
+        title: '',
+        description: '',
+        task_type: 'other',
+        task_date: new Date().toISOString().split('T')[0],
+        task_time: '',
+      });
+      fetchDailyTasks();
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        toast({
+          title: 'خطأ في البيانات',
+          description: error.errors[0].message,
+          variant: 'destructive',
+        });
+      } else {
+        console.error('Error adding personal task:', error);
+        toast({
+          title: 'خطأ في إضافة المهمة',
+          description: error?.message || 'تعذر إضافة المهمة',
+          variant: 'destructive',
+        });
+      }
+    }
+  };
+
+  const handleUpdateTaskStatus = async (taskId: string, newStatus: 'pending' | 'in_progress' | 'completed' | 'cancelled') => {
+    try {
+      const { error } = await supabase
+        .from('employee_tasks' as any)
+        .update({
+          status: newStatus,
+          completed_at: newStatus === 'completed' ? new Date().toISOString() : null,
+        })
+        .eq('id', taskId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'تم تحديث الحالة',
+        description: 'تم تحديث حالة المهمة بنجاح',
+      });
+
+      fetchDailyTasks();
+      setIsEditTaskDialogOpen(false);
+      setEditingTask(null);
+    } catch (error: any) {
+      console.error('Error updating task:', error);
+      toast({
+        title: 'خطأ في التحديث',
+        description: error?.message || 'تعذر تحديث المهمة',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -403,6 +542,87 @@ const DailyTasks = () => {
           </p>
         </div>
         <div className="flex gap-2">
+          <Dialog open={isAddTaskDialogOpen} onOpenChange={setIsAddTaskDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="gap-2">
+                <Plus className="h-4 w-4" />
+                إضافة مهمة خاصة
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>إضافة مهمة خاصة جديدة</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="title">العنوان *</Label>
+                  <Input
+                    id="title"
+                    value={taskFormData.title}
+                    onChange={(e) => setTaskFormData({ ...taskFormData, title: e.target.value })}
+                    placeholder="عنوان المهمة"
+                    maxLength={200}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="description">الوصف</Label>
+                  <Textarea
+                    id="description"
+                    value={taskFormData.description}
+                    onChange={(e) => setTaskFormData({ ...taskFormData, description: e.target.value })}
+                    placeholder="وصف المهمة (اختياري)"
+                    rows={3}
+                    maxLength={500}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="task_type">نوع المهمة</Label>
+                  <Select
+                    value={taskFormData.task_type}
+                    onValueChange={(value: any) => setTaskFormData({ ...taskFormData, task_type: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="follow_up">متابعة</SelectItem>
+                      <SelectItem value="delivery">تسليم</SelectItem>
+                      <SelectItem value="collection">تحصيل</SelectItem>
+                      <SelectItem value="other">أخرى</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="task_date">تاريخ الإنجاز *</Label>
+                    <Input
+                      id="task_date"
+                      type="date"
+                      value={taskFormData.task_date}
+                      onChange={(e) => setTaskFormData({ ...taskFormData, task_date: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="task_time">وقت الإنجاز</Label>
+                    <Input
+                      id="task_time"
+                      type="time"
+                      value={taskFormData.task_time}
+                      onChange={(e) => setTaskFormData({ ...taskFormData, task_time: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setIsAddTaskDialogOpen(false)}>
+                    إلغاء
+                  </Button>
+                  <Button onClick={handleAddPersonalTask}>
+                    حفظ
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
           <Button
             onClick={handleSendTestNotification}
             disabled={sendingTest}
@@ -453,10 +673,77 @@ const DailyTasks = () => {
         </Card>
       </div>
 
-      {/* جدول المهام */}
+      {/* المهام الخاصة */}
+      {personalTasks.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>المهام الخاصة</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>العنوان</TableHead>
+                    <TableHead>النوع</TableHead>
+                    <TableHead>التاريخ</TableHead>
+                    <TableHead>الوقت</TableHead>
+                    <TableHead>الحالة</TableHead>
+                    <TableHead>إجراءات</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {personalTasks.map((task) => (
+                    <TableRow key={task.id}>
+                      <TableCell>
+                        <div className="font-medium">{task.title}</div>
+                        {task.description && (
+                          <div className="text-xs text-muted-foreground mt-1">{task.description}</div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {task.task_type === 'follow_up' ? 'متابعة' :
+                         task.task_type === 'delivery' ? 'تسليم' :
+                         task.task_type === 'collection' ? 'تحصيل' : 'أخرى'}
+                      </TableCell>
+                      <TableCell>{task.task_date}</TableCell>
+                      <TableCell>{task.task_time || '-'}</TableCell>
+                      <TableCell>
+                        <Badge variant={
+                          task.status === 'completed' ? 'default' :
+                          task.status === 'in_progress' ? 'secondary' :
+                          task.status === 'cancelled' ? 'destructive' : 'outline'
+                        }>
+                          {task.status === 'pending' ? 'قيد الانتظار' :
+                           task.status === 'in_progress' ? 'جارِ التنفيذ' :
+                           task.status === 'completed' ? 'مكتملة' : 'ملغاة'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setEditingTask(task);
+                            setIsEditTaskDialogOpen(true);
+                          }}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* جدول المهام اليومية (الطلبات) */}
       <Card>
         <CardHeader>
-          <CardTitle>قائمة المهام اليومية</CardTitle>
+          <CardTitle>قائمة المهام اليومية (الطلبات)</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -610,6 +897,40 @@ const DailyTasks = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* دايلوج تعديل حالة المهمة الخاصة */}
+      <Dialog open={isEditTaskDialogOpen} onOpenChange={setIsEditTaskDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>تحديث حالة المهمة</DialogTitle>
+          </DialogHeader>
+          {editingTask && (
+            <div className="space-y-4">
+              <div>
+                <Label>العنوان</Label>
+                <div className="p-2 bg-muted rounded text-sm">{editingTask.title}</div>
+              </div>
+              <div>
+                <Label htmlFor="status">الحالة</Label>
+                <Select
+                  defaultValue={editingTask.status}
+                  onValueChange={(value: any) => handleUpdateTaskStatus(editingTask.id, value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">قيد الانتظار</SelectItem>
+                    <SelectItem value="in_progress">جارِ التنفيذ</SelectItem>
+                    <SelectItem value="completed">مكتملة</SelectItem>
+                    <SelectItem value="cancelled">ملغاة</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </main>
   );
 };
