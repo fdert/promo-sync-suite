@@ -130,11 +130,27 @@ const Auth = () => {
       return;
     }
 
+    console.log('🔐 محاولة تسجيل الدخول للبريد:', loginForm.email);
+
     const { error } = await signIn(loginForm.email, loginForm.password);
     
     if (error) {
-      setError("بيانات تسجيل الدخول غير صحيحة");
+      console.error('❌ خطأ في تسجيل الدخول:', error);
+      
+      // معالجة أنواع الأخطاء المختلفة
+      if (error.message.includes('Invalid login credentials')) {
+        setError("البريد الإلكتروني أو كلمة المرور غير صحيحة");
+      } else if (error.message.includes('Email not confirmed')) {
+        setError("يرجى تأكيد بريدك الإلكتروني أولاً");
+      } else if (error.message.includes('User not found')) {
+        setError("هذا الحساب غير موجود");
+      } else if (error.message.includes('Too many requests')) {
+        setError("محاولات كثيرة. يرجى المحاولة بعد قليل");
+      } else {
+        setError(`خطأ في تسجيل الدخول: ${error.message}`);
+      }
     } else {
+      console.log('✅ تم تسجيل الدخول بنجاح');
       toast({
         title: "تم تسجيل الدخول بنجاح",
         description: "مرحباً بك في النظام"
