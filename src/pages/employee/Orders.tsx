@@ -853,8 +853,8 @@ ${publicFileUrl}
               priority: orderData.priority || 'متوسطة',
               due_date: orderData.due_date,
               start_date: (orderData as any).start_date || null,
-              evaluation_link: evaluationLink,
-              evaluation_code: evaluationCode
+              evaluation_link: evaluationLink || '',
+              evaluation_code: evaluationCode || ''
             }
           };
 
@@ -862,10 +862,13 @@ ${publicFileUrl}
           console.log('Order ID:', orderId);
           console.log('New Status:', status);
           console.log('Notification Type:', notificationType);
+          console.log('Evaluation Link:', evaluationLink);
+          console.log('Evaluation Code:', evaluationCode);
           console.log('Order Data:', orderData);
           console.log('Customer Phone:', customerWhatsapp);
           console.log('Source: employee_dashboard');
-          console.log('Webhook preference: لوحة الموظف ');
+          console.log('Webhook preference: لوحة الموظف');
+          console.log('Full notification data:', JSON.stringify(notificationData, null, 2));
           
           const result = await supabase.functions.invoke('send-order-notifications', {
             body: notificationData

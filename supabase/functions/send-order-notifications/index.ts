@@ -395,6 +395,11 @@ Deno.serve(async (req) => {
           'payments_details': paymentsDetailsText || 'لا توجد دفعات مسجلة',
           'payments': paymentsDetailsText || 'لا توجد دفعات مسجلة'
         };
+        
+        console.log('=== Replacement Variables ===');
+        console.log('evaluation_link:', data.evaluation_link);
+        console.log('evaluation_code:', data.evaluation_code);
+        console.log('All replacements:', JSON.stringify(replacements, null, 2));
 
         // استبدال جميع المتغيرات في الرسالة
         Object.keys(replacements).forEach(key => {
