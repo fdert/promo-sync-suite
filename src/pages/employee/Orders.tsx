@@ -784,12 +784,58 @@ ${publicFileUrl}
           const paidAmount = payments?.reduce((sum, payment) => sum + (payment.amount || 0), 0) || 0;
           const remainingAmount = (orderData.total_amount || 0) - paidAmount;
 
+          // إذا كانت الحالة "مكتمل"، نحتاج إلى إنشاء/جلب رابط التقييم أولاً
+          let evaluationLink = null;
+          let evaluationCode = null;
+          
+          if (status === 'مكتمل') {
+            try {
+              // التحقق من وجود evaluation للطلب
+              const { data: existingEvaluation } = await supabase
+                .from('evaluations')
+                .select('id, evaluation_token')
+                .eq('order_id', orderId)
+                .maybeSingle();
+
+              let evaluationToken;
+              
+              if (!existingEvaluation) {
+                // إنشاء evaluation جديد
+                const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+                const { data: newEvaluation, error: createError } = await supabase
+                  .from('evaluations')
+                  .insert({
+                    order_id: orderId,
+                    customer_id: orderData.customer_id,
+                    evaluation_token: token
+                  })
+                  .select('evaluation_token')
+                  .single();
+
+                if (!createError && newEvaluation) {
+                  evaluationToken = newEvaluation.evaluation_token;
+                  console.log('✅ تم إنشاء تقييم جديد');
+                }
+              } else {
+                evaluationToken = existingEvaluation.evaluation_token;
+                console.log('✅ استخدام تقييم موجود');
+              }
+
+              if (evaluationToken) {
+                evaluationLink = `${window.location.origin}/evaluation/${evaluationToken}`;
+                evaluationCode = evaluationToken.slice(-5).toUpperCase();
+              }
+            } catch (error) {
+              console.error('خطأ في إعداد رابط التقييم:', error);
+            }
+          }
+
           const notificationData = {
             type: notificationType,
             order_id: orderId,
-            source: 'employee_dashboard', // تحديد المصدر
-            webhook_preference: 'لوحة الموظف', // الويب هوك المفضل
-            force_send: true, // إجبار الإرسال حتى لو كانت الرسالة مكررة
+            source: 'employee_dashboard',
+            webhook_preference: 'لوحة الموظف',
+            force_send: true,
             data: {
               order_number: orderData.order_number,
               customer_name: orderData.customers.name,
@@ -806,7 +852,9 @@ ${publicFileUrl}
               status: status,
               priority: orderData.priority || 'متوسطة',
               due_date: orderData.due_date,
-              start_date: (orderData as any).start_date || null
+              start_date: (orderData as any).start_date || null,
+              evaluation_link: evaluationLink,
+              evaluation_code: evaluationCode
             }
           };
 
@@ -841,91 +889,19 @@ ${publicFileUrl}
             console.error('خطأ في إرسال الإشعار:', result.error);
           } else {
             console.log('تم إرسال إشعار الواتس آب بنجاح');
+            
+            // إذا كانت الحالة "مكتمل" وتم إرسال رابط التقييم، نحدث sent_at
+            if (status === 'مكتمل' && evaluationLink) {
+              await supabase
+                .from('evaluations')
+                .update({ sent_at: new Date().toISOString() })
+                .eq('order_id', orderId);
+              console.log('✅ تم تحديث حالة إرسال التقييم');
+            }
           }
         }
       } else {
         console.log('لا يوجد رقم واتس آب للعميل');
-      }
-
-      // إرسال رابط التقييم تلقائياً عند تحديث الحالة إلى "مكتمل"
-      if (status === 'مكتمل') {
-        console.log('🌟 الطلب أصبح مكتملاً - إنشاء وإرسال رابط التقييم...');
-        
-        try {
-          // إنشاء أو جلب evaluation للطلب
-          const { data: existingEvaluation, error: checkError } = await supabase
-            .from('evaluations')
-            .select('*')
-            .eq('order_id', orderId)
-            .maybeSingle();
-
-          let evaluationId = existingEvaluation?.id;
-          let evaluationToken = existingEvaluation?.token;
-
-          if (!existingEvaluation) {
-            // إنشاء evaluation جديد
-            const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-            const { data: newEvaluation, error: createError } = await supabase
-              .from('evaluations')
-              .insert({
-                order_id: orderId,
-                customer_id: orderData.customer_id,
-                token: token,
-                status: 'pending'
-              })
-              .select()
-              .single();
-
-            if (createError) {
-              console.error('خطأ في إنشاء التقييم:', createError);
-              throw createError;
-            }
-
-            evaluationId = newEvaluation.id;
-            evaluationToken = token;
-            console.log('✅ تم إنشاء التقييم:', evaluationId);
-          } else {
-            console.log('✅ التقييم موجود بالفعل:', evaluationId);
-          }
-
-          // إرسال رابط التقييم عبر واتساب
-          if (customerWhatsapp && evaluationId) {
-            const evaluationLink = `${window.location.origin}/evaluation/${evaluationToken}`;
-            const evaluationCode = evaluationToken?.slice(-5).toUpperCase();
-            
-            const message = `🌟 عزيزنا العميل، نشكرك على تعاملك معنا\n\n✅ تم اكتمال طلبك رقم: ${orderData.order_number}\n\nنرجو تقييم تجربتك عبر الرابط التالي:\n${evaluationLink}\n\nرمز التقييم: ${evaluationCode}\n\nشاكرين لكم وقتكم`;
-
-            console.log('📨 إرسال رابط التقييم...');
-            
-            const { data: evalResult, error: evalError } = await supabase.functions.invoke('send-evaluation-direct', {
-              body: {
-                to: customerWhatsapp,
-                message: message,
-                evaluation_id: evaluationId,
-                order_id: orderId,
-                customer_id: orderData.customer_id,
-                source: 'order_completion'
-              }
-            });
-
-            if (evalError) {
-              console.error('❌ خطأ في إرسال رابط التقييم:', evalError);
-            } else {
-              console.log('✅ تم إرسال رابط التقييم بنجاح');
-              
-              // تحديث حالة التقييم
-              await supabase
-                .from('evaluations')
-                .update({ 
-                  sent_at: new Date().toISOString(),
-                  status: 'sent'
-                })
-                .eq('id', evaluationId);
-            }
-          }
-        } catch (evalError) {
-          console.error('❌ خطأ عام في إرسال التقييم:', evalError);
-        }
       }
 
       toast({

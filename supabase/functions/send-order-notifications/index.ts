@@ -390,7 +390,8 @@ Deno.serve(async (req) => {
           'priority': data.priority || 'متوسطة',
           'estimated_time': data.estimated_days || 'قريباً',
           'company_name': companyName,
-          'evaluation_link': `https://e5a7747a-0935-46df-9ea9-1308e76636dc.lovableproject.com/evaluation/${order_id}`,
+          'evaluation_link': data.evaluation_link || '',
+          'evaluation_code': data.evaluation_code || '',
           'payments_details': paymentsDetailsText || 'لا توجد دفعات مسجلة',
           'payments': paymentsDetailsText || 'لا توجد دفعات مسجلة'
         };
