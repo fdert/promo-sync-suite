@@ -224,8 +224,26 @@ const ReviewsManagement = () => {
   const sendEvaluationWhatsApp = async (evaluation: Evaluation) => {
     try {
       setActionLoading(evaluation.id);
+      
+      // جلب token محدث من قاعدة البيانات للتأكد من صحته
+      const { data: freshEval, error: fetchError } = await supabase
+        .from('evaluations')
+        .select('evaluation_token')
+        .eq('id', evaluation.id)
+        .single();
+      
+      if (fetchError) throw fetchError;
+      
       const to = normalizePhone(evaluation.customers?.whatsapp || evaluation.customers?.phone);
-      const link = getEvaluationLink(evaluation.evaluation_token);
+      const correctToken = freshEval?.evaluation_token || evaluation.evaluation_token;
+      const link = getEvaluationLink(correctToken);
+
+      console.log('🔍 Sending evaluation:', {
+        evaluation_id: evaluation.id,
+        token_from_cache: evaluation.evaluation_token,
+        token_from_db: correctToken,
+        link: link
+      });
 
       if (!to || !link) {
         toast({ title: 'بيانات ناقصة', description: 'رقم الواتساب أو رابط التقييم غير متوفر', variant: 'destructive' });
@@ -252,7 +270,7 @@ const ReviewsManagement = () => {
         });
       }
 
-      const code = (evaluation.evaluation_token || evaluation.id || '').slice(-5).toUpperCase();
+      const code = (correctToken || evaluation.id || '').slice(-5).toUpperCase();
       const content = `🌟 عزيزنا العميل، نشكرك على تعاملك معنا\n\n✅ تم اكتمال طلبك رقم: ${evaluation.orders?.order_number || ''}\n\nنرجو تقييم تجربتك عبر الرابط التالي:\n${link}\n\nرمز التقييم: ${code}\n\nشاكرين لكم وقتكم`;
 
 
@@ -270,7 +288,16 @@ const ReviewsManagement = () => {
 
       if (directErr) throw directErr;
 
+      // تحديث sent_at
+      await supabase
+        .from('evaluations')
+        .update({ sent_at: new Date().toISOString() })
+        .eq('id', evaluation.id);
+
       toast({ title: 'تم الإرسال', description: 'تم إرسال رسالة التقييم مباشرة عبر الواتساب' });
+      
+      // إعادة تحميل التقييمات لتحديث الواجهة
+      fetchEvaluations();
     } catch (err) {
       console.error('Error sending evaluation WhatsApp:', err);
       toast({ title: 'خطأ', description: 'تعذر إرسال رسالة الواتساب', variant: 'destructive' });
