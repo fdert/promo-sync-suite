@@ -844,7 +844,88 @@ ${publicFileUrl}
           }
         }
       } else {
-      console.log('لا يوجد رقم واتس آب للعميل');
+        console.log('لا يوجد رقم واتس آب للعميل');
+      }
+
+      // إرسال رابط التقييم تلقائياً عند تحديث الحالة إلى "مكتمل"
+      if (status === 'مكتمل') {
+        console.log('🌟 الطلب أصبح مكتملاً - إنشاء وإرسال رابط التقييم...');
+        
+        try {
+          // إنشاء أو جلب evaluation للطلب
+          const { data: existingEvaluation, error: checkError } = await supabase
+            .from('evaluations')
+            .select('*')
+            .eq('order_id', orderId)
+            .maybeSingle();
+
+          let evaluationId = existingEvaluation?.id;
+          let evaluationToken = existingEvaluation?.token;
+
+          if (!existingEvaluation) {
+            // إنشاء evaluation جديد
+            const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+            const { data: newEvaluation, error: createError } = await supabase
+              .from('evaluations')
+              .insert({
+                order_id: orderId,
+                customer_id: orderData.customer_id,
+                token: token,
+                status: 'pending'
+              })
+              .select()
+              .single();
+
+            if (createError) {
+              console.error('خطأ في إنشاء التقييم:', createError);
+              throw createError;
+            }
+
+            evaluationId = newEvaluation.id;
+            evaluationToken = token;
+            console.log('✅ تم إنشاء التقييم:', evaluationId);
+          } else {
+            console.log('✅ التقييم موجود بالفعل:', evaluationId);
+          }
+
+          // إرسال رابط التقييم عبر واتساب
+          if (customerWhatsapp && evaluationId) {
+            const evaluationLink = `${window.location.origin}/evaluation/${evaluationToken}`;
+            const evaluationCode = evaluationToken?.slice(-5).toUpperCase();
+            
+            const message = `🌟 عزيزنا العميل، نشكرك على تعاملك معنا\n\n✅ تم اكتمال طلبك رقم: ${orderData.order_number}\n\nنرجو تقييم تجربتك عبر الرابط التالي:\n${evaluationLink}\n\nرمز التقييم: ${evaluationCode}\n\nشاكرين لكم وقتكم`;
+
+            console.log('📨 إرسال رابط التقييم...');
+            
+            const { data: evalResult, error: evalError } = await supabase.functions.invoke('send-evaluation-direct', {
+              body: {
+                to: customerWhatsapp,
+                message: message,
+                evaluation_id: evaluationId,
+                order_id: orderId,
+                customer_id: orderData.customer_id,
+                source: 'order_completion'
+              }
+            });
+
+            if (evalError) {
+              console.error('❌ خطأ في إرسال رابط التقييم:', evalError);
+            } else {
+              console.log('✅ تم إرسال رابط التقييم بنجاح');
+              
+              // تحديث حالة التقييم
+              await supabase
+                .from('evaluations')
+                .update({ 
+                  sent_at: new Date().toISOString(),
+                  status: 'sent'
+                })
+                .eq('id', evaluationId);
+            }
+          }
+        } catch (evalError) {
+          console.error('❌ خطأ عام في إرسال التقييم:', evalError);
+        }
       }
 
       toast({
