@@ -817,6 +817,43 @@ ${companyName}`;
             notificationType = 'status_update'; // للحالات الأخرى
         }
 
+        // إذا كانت الحالة "مكتمل"، جهّز رابط ورمز التقييم
+        let evaluationLink: string | null = null;
+        let evaluationCode: string | null = null;
+        if (newStatus === 'مكتمل') {
+          try {
+            const { data: existingEvaluation } = await supabase
+              .from('evaluations')
+              .select('id, evaluation_token')
+              .eq('order_id', orderId)
+              .maybeSingle();
+
+            let evaluationToken: string | undefined;
+            if (!existingEvaluation) {
+              const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+              const { data: newEvaluation } = await supabase
+                .from('evaluations')
+                .insert({
+                  order_id: orderId,
+                  customer_id: orderData.customer_id,
+                  evaluation_token: token
+                })
+                .select('evaluation_token')
+                .single();
+              evaluationToken = newEvaluation?.evaluation_token;
+            } else {
+              evaluationToken = existingEvaluation.evaluation_token;
+            }
+
+            if (evaluationToken) {
+              evaluationLink = `${window.location.origin}/evaluation/${evaluationToken}`;
+              evaluationCode = evaluationToken.slice(-5).toUpperCase();
+            }
+          } catch (e) {
+            console.error('خطأ في تجهيز رابط التقييم (لوحة الإدارة):', e);
+          }
+        }
+
         const notificationData = {
           type: notificationType,
           order_id: orderId,
@@ -836,7 +873,9 @@ ${companyName}`;
             description: orderData.description || '',
             payment_type: orderData.payment_type || 'دفع آجل',
             priority: orderData.priority || 'متوسطة',
-            start_date: orderData.start_date || null
+            start_date: orderData.start_date || null,
+            evaluation_link: evaluationLink || '',
+            evaluation_code: evaluationCode || ''
           }
         };
 

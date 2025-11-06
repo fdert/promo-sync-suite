@@ -419,6 +419,18 @@ Deno.serve(async (req) => {
         if (!hasExactDetails && !message.includes(detailsText)) {
           message += `\n\n💰 الدفعات:\n${detailsText}`;
         }
+
+        // إضافة رابط التقييم تلقائياً إذا كان القالب لا يحتويه
+        const evalLink = replacements['evaluation_link'];
+        const evalCode = replacements['evaluation_code'];
+        if (templateName === 'order_completed' && evalLink) {
+          const linkAlreadyInMessage = message.includes(evalLink);
+          const hasEvalPlaceholder = /{{\s*evaluation_link\s*}}/i.test(templateData.content || '');
+          if (!linkAlreadyInMessage && !hasEvalPlaceholder) {
+            const ratingText = `\n\n⭐ تقييمك يهمنا!\nنرجو التقييم عبر الرابط:\n${evalLink}` + (evalCode ? `\n🔢 رمز التقييم: ${evalCode}` : '');
+            message += ratingText;
+          }
+        }
       } else {
       console.log('No template found, using fallback messages');
       
