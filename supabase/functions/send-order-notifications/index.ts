@@ -468,7 +468,10 @@ ${orderItemsText || 'لا توجد بنود محددة'}
 
         case 'order_completed':
           const paymentsText2 = paymentsDetailsText ? `\n\n💰 الدفعات:\n${paymentsDetailsText}` : '\n\n💰 الدفعات:\nلا توجد دفعات مسجلة';
-          message = `تهانينا ${data.customer_name}! تم إنجاز طلبك رقم ${data.order_number} بنجاح. يمكنك الآن مراجعة النتائج. نشكرك لثقتك بخدماتنا!${deliveryDateText}\n\n📊 الملخص المالي:\nقيمة الطلب: ${totalAmountNum} ر.س\nمدفوع: ${paidAmountNum} ر.س\nالمتبقي: ${remainingAmountNum} ر.س${paymentsText2}`;
+          const ratingText = data.evaluation_link
+            ? `\n\n⭐ تقييمك يهمنا!\nنرجو التقييم عبر الرابط:\n${data.evaluation_link}` + (data.evaluation_code ? `\n🔢 رمز التقييم: ${data.evaluation_code}` : '')
+            : '';
+          message = `تهانينا ${data.customer_name}! تم إنجاز طلبك رقم ${data.order_number} بنجاح. يمكنك الآن مراجعة النتائج. نشكرك لثقتك بخدماتنا!${deliveryDateText}\n\n📊 الملخص المالي:\nقيمة الطلب: ${totalAmountNum} ر.س\nمدفوع: ${paidAmountNum} ر.س\nالمتبقي: ${remainingAmountNum} ر.س${paymentsText2}${ratingText}`;
           customerPhone = data.customer_phone;
           customerName = data.customer_name;
           break;
