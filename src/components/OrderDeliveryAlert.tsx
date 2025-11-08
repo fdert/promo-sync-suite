@@ -50,11 +50,26 @@ export const OrderDeliveryAlert = () => {
 
         if (error) throw error;
 
-        const now = new Date();
+        // الحصول على الوقت الحالي بتوقيت الرياض
+        const nowInRiyadh = new Date(new Intl.DateTimeFormat('en-US', {
+          timeZone: 'Asia/Riyadh',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false
+        }).format(new Date()));
+
+        console.log('🕐 الوقت الحالي (الرياض):', nowInRiyadh.toLocaleString('ar-SA'));
+
         const urgent: UrgentOrder[] = [];
 
         orders?.forEach((order: any) => {
-          const deliveryDateTime = new Date(order.delivery_date);
+          // إنشاء تاريخ ووقت التسليم بتوقيت الرياض
+          const [year, month, day] = order.delivery_date.split('-').map(Number);
+          const deliveryDateTime = new Date(year, month - 1, day);
           
           if (order.estimated_delivery_time) {
             const [hours, minutes] = order.estimated_delivery_time.split(':').map(Number);
@@ -63,11 +78,18 @@ export const OrderDeliveryAlert = () => {
             deliveryDateTime.setHours(17, 0, 0, 0);
           }
 
-          const diffMs = deliveryDateTime.getTime() - now.getTime();
+          const diffMs = deliveryDateTime.getTime() - nowInRiyadh.getTime();
           const diffMinutes = Math.floor(diffMs / (1000 * 60));
+
+          console.log(`⏰ فحص الطلب ${order.order_number}:`, {
+            deliveryDateTime: deliveryDateTime.toLocaleString('ar-SA'),
+            diffMinutes,
+            status: order.status
+          });
 
           // إذا كان متبقي 60 دقيقة أو أقل (وليس متأخر بالفعل)
           if (diffMinutes > 0 && diffMinutes <= 60) {
+            console.log(`🚨 طلب عاجل: ${order.order_number} - متبقي ${diffMinutes} دقيقة`);
             urgent.push({
               id: order.id,
               order_number: order.order_number,
@@ -82,15 +104,21 @@ export const OrderDeliveryAlert = () => {
         setUrgentOrders(urgent);
 
         // عرض تنبيه للطلبات التي لم يتم التنبيه عنها بعد
-        urgent.forEach((order) => {
-          if (!alertedOrders.has(order.id)) {
-            setCurrentAlert(order);
-            setShowAlert(true);
-            setAlertedOrders((prev) => new Set(prev).add(order.id));
-          }
-        });
+        if (urgent.length > 0) {
+          console.log(`📢 عدد الطلبات العاجلة: ${urgent.length}`);
+          urgent.forEach((order) => {
+            if (!alertedOrders.has(order.id)) {
+              console.log(`✅ عرض تنبيه للطلب: ${order.order_number}`);
+              setCurrentAlert(order);
+              setShowAlert(true);
+              setAlertedOrders((prev) => new Set(prev).add(order.id));
+            } else {
+              console.log(`⏭️ تم التنبيه مسبقاً للطلب: ${order.order_number}`);
+            }
+          });
+        }
       } catch (error) {
-        console.error('خطأ في فحص الطلبات العاجلة:', error);
+        console.error('❌ خطأ في فحص الطلبات العاجلة:', error);
       }
     };
 
@@ -101,7 +129,7 @@ export const OrderDeliveryAlert = () => {
     const interval = setInterval(checkUrgentOrders, 60000);
 
     return () => clearInterval(interval);
-  }, [user, alertedOrders]);
+  }, [user]);
 
   const handleClose = () => {
     setShowAlert(false);
