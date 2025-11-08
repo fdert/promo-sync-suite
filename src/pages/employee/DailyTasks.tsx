@@ -165,7 +165,48 @@ const DailyTasks = () => {
         is_manual: false,
       }));
 
-      setTasks(formattedOrders);
+      // ترتيب الطلبات حسب قرب وقت التسليم (الأقرب أولاً)
+      const sortedOrders = formattedOrders.sort((a, b) => {
+        if (!a.delivery_date || !b.delivery_date) return 0;
+        
+        const dateTimeA = new Date(a.delivery_date);
+        const dateTimeB = new Date(b.delivery_date);
+        
+        // إضافة الوقت إذا كان موجوداً
+        if (a.estimated_delivery_time) {
+          const [hours, minutes] = a.estimated_delivery_time.split(':').map(Number);
+          dateTimeA.setHours(hours, minutes, 0, 0);
+        } else {
+          dateTimeA.setHours(17, 0, 0, 0);
+        }
+        
+        if (b.estimated_delivery_time) {
+          const [hours, minutes] = b.estimated_delivery_time.split(':').map(Number);
+          dateTimeB.setHours(hours, minutes, 0, 0);
+        } else {
+          dateTimeB.setHours(17, 0, 0, 0);
+        }
+        
+        // الفرق بالنسبة للوقت الحالي
+        const now = new Date();
+        const diffA = dateTimeA.getTime() - now.getTime();
+        const diffB = dateTimeB.getTime() - now.getTime();
+        
+        // الطلبات المتأخرة أولاً (الأقدم تأخراً أولاً)
+        if (diffA < 0 && diffB < 0) {
+          return diffA - diffB; // الأكثر تأخراً أولاً
+        }
+        
+        // الطلبات القادمة (الأقرب أولاً)
+        if (diffA >= 0 && diffB >= 0) {
+          return diffA - diffB; // الأقرب أولاً
+        }
+        
+        // متأخر يأتي قبل قادم
+        return diffA < 0 ? -1 : 1;
+      });
+
+      setTasks(sortedOrders);
 
       console.log('✅ المهام النهائية:', {
         total: formattedOrders.length,
@@ -798,28 +839,25 @@ const DailyTasks = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>النوع</TableHead>
                   <TableHead>التفاصيل</TableHead>
                   <TableHead>العميل</TableHead>
                   <TableHead>نوع الخدمة</TableHead>
-                  <TableHead>المسؤول</TableHead>
                   <TableHead>المبلغ</TableHead>
                   <TableHead>الحالة</TableHead>
-                  <TableHead>حالة الإنجاز</TableHead>
-                  <TableHead>تاريخ التسليم</TableHead>
+                  <TableHead>وقت التسليم والوقت المتبقي</TableHead>
                   <TableHead>إجراءات</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center">
+                    <TableCell colSpan={7} className="text-center">
                       جارِ التحميل...
                     </TableCell>
                   </TableRow>
                 ) : tasks.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center">
+                    <TableCell colSpan={7} className="text-center">
                       لا توجد مهام غير منجزة
                     </TableCell>
                   </TableRow>
@@ -827,65 +865,35 @@ const DailyTasks = () => {
                   tasks.map((task) => (
                     <TableRow key={task.id}>
                       <TableCell>
-                        {task.is_manual ? (
-                          <Badge variant="secondary">مهمة شخصية</Badge>
-                        ) : (
-                          <Badge variant="outline">طلب</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {task.is_manual ? (
-                          <div>
-                            <div className="font-medium">{task.title}</div>
-                            {task.description && (
-                              <div className="text-sm text-muted-foreground">{task.description}</div>
-                            )}
-                          </div>
-                        ) : (
+                        <div className="space-y-1">
                           <span className="font-medium">{task.order_number}</span>
-                        )}
-                      </TableCell>
-                      <TableCell>{task.is_manual ? '-' : task.customer_name}</TableCell>
-                      <TableCell>{task.is_manual ? '-' : task.service_type}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">{task.assigned_to}</Badge>
-                      </TableCell>
-                      <TableCell>{task.is_manual ? '-' : `${task.total_amount?.toFixed(2)} ر.س`}</TableCell>
-                      <TableCell>
-                        {task.is_manual ? '-' : getStatusBadge(task.status!)}
-                      </TableCell>
-                      <TableCell>
-                        {task.is_manual ? (
-                          <Badge variant={task.is_completed ? 'default' : 'destructive'} className={task.is_completed ? 'bg-green-600' : ''}>
-                            {task.is_completed ? '✓ تم الإنجاز' : '✗ لم ينجز'}
-                          </Badge>
-                        ) : (
-                          <>
-                            {task.status === 'مكتمل' || task.status === 'جاهز للتسليم' ? (
-                              <Badge variant="default" className="bg-green-600">✓ تم الإنجاز</Badge>
-                            ) : (
-                              <Badge variant="destructive">✗ لم ينجز</Badge>
-                            )}
-                          </>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {task.is_manual ? (
-                          <div className="flex items-center gap-2">
-                            {new Date(task.due_date!).toLocaleDateString('ar-SA')}
-                            {task.due_date && task.due_date < todayDate && (
-                              <Badge variant="destructive" className="text-xs">متأخر</Badge>
-                            )}
+                          <div className="text-xs text-muted-foreground">
+                            بواسطة: {task.assigned_to}
                           </div>
-                        ) : (
-                          task.delivery_date && (
+                        </div>
+                      </TableCell>
+                      <TableCell>{task.customer_name}</TableCell>
+                      <TableCell>{task.service_type}</TableCell>
+                      <TableCell>{`${task.total_amount?.toFixed(2)} ر.س`}</TableCell>
+                      <TableCell>
+                        {getStatusBadge(task.status!)}
+                      </TableCell>
+                      <TableCell>
+                        {task.delivery_date && (
+                          <div className="space-y-1">
+                            <div className="text-sm font-medium">
+                              {new Date(task.delivery_date).toLocaleDateString('ar-SA')}
+                              {task.estimated_delivery_time && (
+                                <span className="mr-2">الساعة {task.estimated_delivery_time}</span>
+                              )}
+                            </div>
                             <DeliveryTimeIndicator
                               deliveryDate={task.delivery_date}
                               deliveryTime={task.estimated_delivery_time}
                               orderNumber={task.order_number || ''}
                               compact={true}
                             />
-                          )
+                          </div>
                         )}
                       </TableCell>
                       <TableCell>

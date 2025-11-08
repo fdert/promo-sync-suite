@@ -72,11 +72,17 @@ export const DeliveryTimeIndicator = ({
     return (
       <Badge 
         variant={isOverdue ? 'destructive' : isUrgent ? 'default' : 'secondary'}
-        className="flex items-center gap-1"
+        className={`flex items-center gap-1 ${
+          isOverdue ? 'bg-red-600 hover:bg-red-700' : 
+          isUrgent ? 'bg-amber-500 hover:bg-amber-600 text-white' : 
+          'bg-green-100 text-green-800 hover:bg-green-200'
+        }`}
       >
         <Clock className="h-3 w-3" />
         {isOverdue ? (
-          <span>متأخر {hours > 0 ? `${hours}س` : ''} {minutes}د</span>
+          <span className="font-semibold">متأخر {hours > 0 ? `${hours}س` : ''} {minutes}د</span>
+        ) : isUrgent ? (
+          <span className="font-semibold">باقي {hours > 0 ? `${hours}س` : ''} {minutes}د ⚠️</span>
         ) : (
           <span>باقي {hours > 0 ? `${hours}س` : ''} {minutes}د</span>
         )}
