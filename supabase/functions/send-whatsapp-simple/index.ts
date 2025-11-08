@@ -206,7 +206,11 @@ Deno.serve(async (req) => {
       phone: cleanPhone,
       to_number: cleanPhone,
       message,
-      text_body: message
+      text_body: message,
+      // معلومات إضافية لتمييز نوع الرسالة
+      message_type: webhook_type || 'general',
+      notification_type: webhook_type || 'general',
+      template_name: webhook_type || 'default'
     };
 
     // إضافة تلميحات اختيار القالب دائمًا عند تمرير webhook_type
@@ -215,9 +219,9 @@ Deno.serve(async (req) => {
       (messagePayload as any).template = webhook_type;
       (messagePayload as any).webhook_type = webhook_type;
       (messagePayload as any).template_key = webhook_type;
-      if (webhook_type === 'outstanding_balance_report') {
-        (messagePayload as any).message_category = 'financial_outstanding';
-      }
+      (messagePayload as any).message_category = webhook_type === 'outstanding_balance_report' ? 'financial_report' : 'notification';
+      (messagePayload as any).is_financial_report = webhook_type === 'outstanding_balance_report';
+      (messagePayload as any).report_type = webhook_type === 'outstanding_balance_report' ? 'accounts_receivable' : null;
       console.log('🏷️ إضافة تلميحات القالب:', webhook_type);
     }
 
