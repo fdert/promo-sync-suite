@@ -59,6 +59,7 @@ import { useThermalPrint } from "@/hooks/useThermalPrint";
 import "@/components/BarcodeLabel.css";
 import { cleanPhoneNumber } from "@/lib/utils";
 import { DeliveryTimeIndicator } from "@/components/DeliveryTimeIndicator";
+import { OrderDeliveryAlert } from "@/components/OrderDeliveryAlert";
 
 interface Order {
   id: string;
@@ -1724,6 +1725,9 @@ ${publicFileUrl}
 
   return (
     <div className="space-y-6">
+      {/* نظام التحذير التلقائي للطلبات */}
+      <OrderDeliveryAlert />
+      
       {/* العنوان والبحث */}
       <div className="flex justify-between items-center">
         <div>

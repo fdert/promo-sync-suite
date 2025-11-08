@@ -15,6 +15,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { z } from 'zod';
 import { DeliveryTimeIndicator } from '@/components/DeliveryTimeIndicator';
+import { OrderDeliveryAlert } from '@/components/OrderDeliveryAlert';
 
 interface DailyTask {
   id: string;
@@ -579,6 +580,9 @@ const DailyTasks = () => {
 
   return (
     <main role="main" aria-label="المهام اليومية" className="space-y-6">
+      {/* نظام التحذير التلقائي للطلبات */}
+      <OrderDeliveryAlert />
+      
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">المهام اليومية والمتأخرة</h1>
