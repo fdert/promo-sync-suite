@@ -186,6 +186,7 @@ const Orders = () => {
     service_name: '',
     priority: 'متوسطة',
     due_date: '',
+    estimated_delivery_time: '',
     description: '',
     amount: 0,
     payment_type: 'دفع آجل',
@@ -1449,6 +1450,7 @@ ${publicFileUrl}
         service_name: '',
         priority: 'متوسطة',
         due_date: '',
+        estimated_delivery_time: '',
         description: '',
         amount: 0,
         payment_type: 'دفع آجل',
@@ -2597,8 +2599,8 @@ ${publicFileUrl}
               </div>
             </div>
 
-            {/* الصف الثاني: تاريخ التسليم ووصف الطلب */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* الصف الثاني: تاريخ التسليم والوقت التقريبي */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="due_date">تاريخ التسليم *</Label>
                 <Input
@@ -2606,6 +2608,17 @@ ${publicFileUrl}
                   type="date"
                   value={newOrder.due_date}
                   onChange={(e) => setNewOrder(prev => ({ ...prev, due_date: e.target.value }))}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="estimated_delivery_time">الوقت التقريبي للتسليم</Label>
+                <Input
+                  id="estimated_delivery_time"
+                  type="time"
+                  value={newOrder.estimated_delivery_time}
+                  onChange={(e) => setNewOrder(prev => ({ ...prev, estimated_delivery_time: e.target.value }))}
+                  placeholder="مثال: 14:00"
                 />
               </div>
 

@@ -180,6 +180,7 @@ const Orders = () => {
     service_name: '',
     priority: 'متوسطة',
     due_date: '',
+    estimated_delivery_time: '',
     description: '',
     amount: 0,
     payment_type: 'دفع آجل',
@@ -868,7 +869,8 @@ ${companyName}`;
             new_status: newStatus,
             amount: orderData.total_amount,
             service_name: orderData.service_name,
-            due_date: orderData.delivery_date || orderData.due_date,
+          due_date: orderData.delivery_date || orderData.due_date,
+          estimated_delivery_time: orderData.estimated_delivery_time || '',
             progress: orderData.progress || 0,
             description: orderData.description || '',
             payment_type: orderData.payment_type || 'دفع آجل',
@@ -1255,7 +1257,7 @@ ${companyName}`;
       if (numberError) throw numberError;
 
       // إنشاء الطلب
-      const { data: createdOrder, error: orderError } = await supabase
+        const { data: createdOrder, error: orderError } = await supabase
         .from('orders')
         .insert({
           order_number: orderNumber,
@@ -1268,6 +1270,7 @@ ${companyName}`;
           payment_type: newOrder.payment_type,
           payment_notes: newOrder.payment_notes,
           delivery_date: newOrder.due_date,
+          estimated_delivery_time: newOrder.estimated_delivery_time,
           created_by: user?.id
         })
         .select()
@@ -1448,6 +1451,7 @@ ${companyName}`;
         customer_id: newOrder.customer_id,
         service_type_id: newOrder.service_id || null,
         delivery_date: newOrder.due_date || null,
+        estimated_delivery_time: newOrder.estimated_delivery_time || null,
         notes: newOrder.description?.trim() || null,
         total_amount: newOrder.amount || 0,
         tax: newOrder.tax || 0,
@@ -2675,6 +2679,17 @@ ${companyName}`;
                   type="date"
                   value={newOrder.due_date}
                   onChange={(e) => setNewOrder({...newOrder, due_date: e.target.value})}
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="estimated_delivery_time">الوقت التقريبي للتسليم</Label>
+                <Input
+                  id="estimated_delivery_time"
+                  type="time"
+                  value={newOrder.estimated_delivery_time}
+                  onChange={(e) => setNewOrder({...newOrder, estimated_delivery_time: e.target.value})}
+                  placeholder="مثال: 14:00"
                 />
               </div>
               

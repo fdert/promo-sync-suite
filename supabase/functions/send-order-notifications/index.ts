@@ -330,10 +330,15 @@ Deno.serve(async (req) => {
             startDate = new Date(orderDetails.delivery_date).toLocaleDateString('ar-SA');
           }
           
+          // تنسيق due_date مع الوقت التقريبي
           if (orderDetails.due_date) {
-            dueDate = new Date(orderDetails.due_date).toLocaleDateString('ar-SA');
+            const dateStr = new Date(orderDetails.due_date).toLocaleDateString('ar-SA');
+            const timeStr = orderDetails.estimated_delivery_time || '';
+            dueDate = timeStr ? `${dateStr} الساعة ${timeStr}` : dateStr;
           } else if (orderDetails.delivery_date) {
-            dueDate = new Date(orderDetails.delivery_date).toLocaleDateString('ar-SA');
+            const dateStr = new Date(orderDetails.delivery_date).toLocaleDateString('ar-SA');
+            const timeStr = orderDetails.estimated_delivery_time || '';
+            dueDate = timeStr ? `${dateStr} الساعة ${timeStr}` : dateStr;
           }
           
           description = orderDetails.description || 'غير محدد';
@@ -359,10 +364,14 @@ Deno.serve(async (req) => {
         
         let deliveryDate = 'غير محدد';
         if (orderDetails?.delivery_date) {
-          deliveryDate = new Date(orderDetails.delivery_date).toLocaleDateString('ar-SA');
+          const dateStr = new Date(orderDetails.delivery_date).toLocaleDateString('ar-SA');
+          const timeStr = orderDetails.estimated_delivery_time || '';
+          deliveryDate = timeStr ? `${dateStr} الساعة ${timeStr}` : dateStr;
         } else if (data?.delivery_date) {
           try {
-            deliveryDate = new Date(data.delivery_date).toLocaleDateString('ar-SA');
+            const dateStr = new Date(data.delivery_date).toLocaleDateString('ar-SA');
+            const timeStr = data.estimated_delivery_time || '';
+            deliveryDate = timeStr ? `${dateStr} الساعة ${timeStr}` : dateStr;
           } catch (_) {
             // ignore parse errors
           }

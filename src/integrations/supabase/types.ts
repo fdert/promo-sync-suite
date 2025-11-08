@@ -882,6 +882,7 @@ export type Database = {
           customer_id: string | null
           delivery_date: string | null
           discount: number | null
+          estimated_delivery_time: string | null
           id: string
           notes: string | null
           order_number: string | null
@@ -898,6 +899,7 @@ export type Database = {
           customer_id?: string | null
           delivery_date?: string | null
           discount?: number | null
+          estimated_delivery_time?: string | null
           id?: string
           notes?: string | null
           order_number?: string | null
@@ -914,6 +916,7 @@ export type Database = {
           customer_id?: string | null
           delivery_date?: string | null
           discount?: number | null
+          estimated_delivery_time?: string | null
           id?: string
           notes?: string | null
           order_number?: string | null
