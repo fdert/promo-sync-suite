@@ -58,6 +58,7 @@ import { Switch } from "@/components/ui/switch";
 import { useThermalPrint } from "@/hooks/useThermalPrint";
 import "@/components/BarcodeLabel.css";
 import { cleanPhoneNumber } from "@/lib/utils";
+import { DeliveryTimeIndicator } from "@/components/DeliveryTimeIndicator";
 
 interface Order {
   id: string;
@@ -1806,7 +1807,6 @@ ${publicFileUrl}
                   <div className="space-y-2">
                     <p><strong>العميل:</strong> {order.customers?.name || 'غير محدد'}</p>
                     <p><strong>الخدمة:</strong> {order.service_name || 'غير محدد'}</p>
-                    <p><strong>تاريخ التسليم:</strong> {order.due_date ? new Date(order.due_date).toLocaleDateString('ar-SA') : '-'}</p>
                   </div>
                   <div className="space-y-2">
                     <p><strong>المبلغ الإجمالي:</strong> {(order.total_amount || 0).toLocaleString()} ر.س</p>
@@ -1814,6 +1814,17 @@ ${publicFileUrl}
                     <p><strong>المبلغ المتبقي:</strong> {((order.total_amount || 0) - (order.paid_amount || 0)).toLocaleString()} ر.س</p>
                   </div>
                 </div>
+
+                {/* مؤشر الوقت المتبقي */}
+                {order.due_date && order.status !== 'مكتمل' && order.status !== 'ملغي' && (
+                  <div className="mt-4">
+                    <DeliveryTimeIndicator
+                      deliveryDate={order.due_date}
+                      deliveryTime={order.estimated_delivery_time}
+                      orderNumber={order.order_number}
+                    />
+                  </div>
+                )}
                 
                 {/* بنود الطلب */}
                 {order.order_items && order.order_items.length > 0 && (

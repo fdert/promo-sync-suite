@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { z } from 'zod';
+import { DeliveryTimeIndicator } from '@/components/DeliveryTimeIndicator';
 
 interface DailyTask {
   id: string;
@@ -22,6 +23,7 @@ interface DailyTask {
   service_type?: string;
   status?: string;
   delivery_date?: string;
+  estimated_delivery_time?: string;
   total_amount?: number;
   created_at?: string;
   created_by?: string;
@@ -111,6 +113,7 @@ const DailyTasks = () => {
           order_number,
           status,
           delivery_date,
+          estimated_delivery_time,
           total_amount,
           created_at,
           created_by,
@@ -154,6 +157,7 @@ const DailyTasks = () => {
         service_type: order.service_types?.name || 'غير محدد',
         status: order.status,
         delivery_date: order.delivery_date,
+        estimated_delivery_time: order.estimated_delivery_time,
         total_amount: order.total_amount || 0,
         created_at: order.created_at,
         created_by: order.created_by,
@@ -637,6 +641,50 @@ const DailyTasks = () => {
 
       <Separator />
 
+      {/* تنبيهات الطلبات القادمة خلال ساعتين */}
+      {tasks.filter(task => {
+        if (task.is_manual || !task.delivery_date) return false;
+        const deliveryDateTime = new Date(task.delivery_date);
+        if (task.estimated_delivery_time) {
+          const [hours, minutes] = task.estimated_delivery_time.split(':').map(Number);
+          deliveryDateTime.setHours(hours, minutes, 0, 0);
+        } else {
+          deliveryDateTime.setHours(17, 0, 0, 0);
+        }
+        const now = new Date();
+        const diff = deliveryDateTime.getTime() - now.getTime();
+        const isUrgent = diff > 0 && diff <= 2 * 60 * 60 * 1000;
+        return isUrgent && task.status !== 'مكتمل' && task.status !== 'ملغي';
+      }).length > 0 && (
+        <div className="space-y-2">
+          <h3 className="text-lg font-semibold text-amber-700 flex items-center gap-2">
+            <AlertCircle className="h-5 w-5" />
+            تنبيهات التسليم القريبة (خلال ساعتين)
+          </h3>
+          {tasks.filter(task => {
+            if (task.is_manual || !task.delivery_date) return false;
+            const deliveryDateTime = new Date(task.delivery_date);
+            if (task.estimated_delivery_time) {
+              const [hours, minutes] = task.estimated_delivery_time.split(':').map(Number);
+              deliveryDateTime.setHours(hours, minutes, 0, 0);
+            } else {
+              deliveryDateTime.setHours(17, 0, 0, 0);
+            }
+            const now = new Date();
+            const diff = deliveryDateTime.getTime() - now.getTime();
+            const isUrgent = diff > 0 && diff <= 2 * 60 * 60 * 1000;
+            return isUrgent && task.status !== 'مكتمل' && task.status !== 'ملغي';
+          }).map(task => (
+            <DeliveryTimeIndicator
+              key={task.id}
+              deliveryDate={task.delivery_date!}
+              deliveryTime={task.estimated_delivery_time}
+              orderNumber={task.order_number || ''}
+            />
+          ))}
+        </div>
+      )}
+
       {/* إحصائيات الإنجاز */}
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
@@ -822,12 +870,23 @@ const DailyTasks = () => {
                         )}
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          {new Date(task.is_manual ? task.due_date! : task.delivery_date!).toLocaleDateString('ar-SA')}
-                          {!task.is_manual && task.delivery_date && task.delivery_date < todayDate && (
-                            <Badge variant="destructive" className="text-xs">متأخر</Badge>
-                          )}
-                        </div>
+                        {task.is_manual ? (
+                          <div className="flex items-center gap-2">
+                            {new Date(task.due_date!).toLocaleDateString('ar-SA')}
+                            {task.due_date && task.due_date < todayDate && (
+                              <Badge variant="destructive" className="text-xs">متأخر</Badge>
+                            )}
+                          </div>
+                        ) : (
+                          task.delivery_date && (
+                            <DeliveryTimeIndicator
+                              deliveryDate={task.delivery_date}
+                              deliveryTime={task.estimated_delivery_time}
+                              orderNumber={task.order_number || ''}
+                              compact={true}
+                            />
+                          )
+                        )}
                       </TableCell>
                       <TableCell>
                         <Dialog open={transferDialogOpen && selectedTask === task.id} onOpenChange={(open) => {
