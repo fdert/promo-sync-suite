@@ -195,7 +195,7 @@ Deno.serve(async (req) => {
     console.log('📡 استخدام ويب هوك:', primaryWebhook.webhook_name, `(${primaryWebhook.webhook_type})`);
 
     // إعداد بيانات الرسالة للإرسال (يشمل حقول توافق إضافية)
-    const messagePayload = {
+    const messagePayload: Record<string, any> = {
       messaging_product: "whatsapp",
       to: cleanPhone.replace('+', ''),
       type: "text",
@@ -213,15 +213,21 @@ Deno.serve(async (req) => {
       template_name: webhook_type || 'default'
     };
 
+    // إذا كانت رسالة تقرير مديونيات، اطلب من الـ n8n تمرير النص كما هو بدون قوالب
+    if (webhook_type === 'outstanding_balance_report') {
+      messagePayload.is_financial_report = true;
+      messagePayload.report_type = 'accounts_receivable';
+      messagePayload.message_category = 'financial_report';
+      messagePayload.force_text_only = true; // لتجاوز أي قوالب في n8n
+      messagePayload.text_only = true;
+    }
+
     // إضافة تلميحات اختيار القالب دائمًا عند تمرير webhook_type
     if (webhook_type) {
       (messagePayload as any).event = webhook_type;
       (messagePayload as any).template = webhook_type;
       (messagePayload as any).webhook_type = webhook_type;
       (messagePayload as any).template_key = webhook_type;
-      (messagePayload as any).message_category = webhook_type === 'outstanding_balance_report' ? 'financial_report' : 'notification';
-      (messagePayload as any).is_financial_report = webhook_type === 'outstanding_balance_report';
-      (messagePayload as any).report_type = webhook_type === 'outstanding_balance_report' ? 'accounts_receivable' : null;
       console.log('🏷️ إضافة تلميحات القالب:', webhook_type);
     }
 
