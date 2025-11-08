@@ -363,15 +363,18 @@ Deno.serve(async (req) => {
         const customerPhoneNormalized = normalizePhoneInternational(customerPhone);
         
         let deliveryDate = 'غير محدد';
+        let deliveryTime = '';
         if (orderDetails?.delivery_date) {
           const dateStr = new Date(orderDetails.delivery_date).toLocaleDateString('ar-SA');
+          deliveryDate = dateStr;
           const timeStr = orderDetails.estimated_delivery_time || '';
-          deliveryDate = timeStr ? `${dateStr} الساعة ${timeStr}` : dateStr;
+          deliveryTime = timeStr ? `الساعة ${timeStr}` : '';
         } else if (data?.delivery_date) {
           try {
             const dateStr = new Date(data.delivery_date).toLocaleDateString('ar-SA');
+            deliveryDate = dateStr;
             const timeStr = data.estimated_delivery_time || '';
-            deliveryDate = timeStr ? `${dateStr} الساعة ${timeStr}` : dateStr;
+            deliveryTime = timeStr ? `الساعة ${timeStr}` : '';
           } catch (_) {
             // ignore parse errors
           }
@@ -395,6 +398,7 @@ Deno.serve(async (req) => {
           'start_date': startDate,
           'due_date': dueDate,
           'delivery_date': deliveryDate,
+          'delivery_time': deliveryTime,
           'status': data.new_status || data.status || orderDetails?.status || currentStatus || 'جديد',
           'priority': data.priority || 'متوسطة',
           'estimated_time': data.estimated_days || 'قريباً',
