@@ -568,7 +568,12 @@ ${index + 1}. *المبلغ:* ${payment.amount.toLocaleString()} ر.س
         return;
       }
       
-      // نجاح
+      // نجاح الإرسال
+      console.log('✅ تم إرسال الرسالة بنجاح');
+      toast({
+        title: "تم الإرسال بنجاح",
+        description: "تم إرسال ملخص الحساب المالي للعميل عبر واتساب",
+      });
 
     } catch (error) {
       console.error('❌ خطأ في الإرسال:', error);

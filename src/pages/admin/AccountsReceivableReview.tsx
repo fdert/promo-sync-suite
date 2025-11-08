@@ -69,9 +69,26 @@ const AccountsReceivableReview = () => {
   });
   const [loading, setLoading] = useState(true);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  
+  // Outstanding balance WhatsApp template (from message_templates)
+  const [outstandingTemplate, setOutstandingTemplate] = useState<string | null>(null);
 
   useEffect(() => {
     fetchAccountsReceivableData();
+  }, []);
+
+  // Load template once
+  useEffect(() => {
+    const loadTemplate = async () => {
+      const { data } = await supabase
+        .from('message_templates')
+        .select('content')
+        .eq('name', 'outstanding_balance_report')
+        .eq('is_active', true)
+        .maybeSingle();
+      if (data?.content) setOutstandingTemplate(data.content as string);
+    };
+    loadTemplate();
   }, []);
 
   const fetchAccountsReceivableData = async () => {
