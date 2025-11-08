@@ -76,6 +76,7 @@ interface Order {
   payment_type?: string;
   due_date: string;
   delivery_date?: string;
+  estimated_delivery_time?: string;
   created_at: string;
   customer_id?: string;
   items_total?: number;
@@ -1513,6 +1514,7 @@ ${publicFileUrl}
         service_name: fullOrder.service_types?.name || order.service_name,
         priority: order.priority,
         due_date: fullOrder.delivery_date || '',
+        estimated_delivery_time: fullOrder.estimated_delivery_time || '',
         description: fullOrder.notes || '', // استخدام notes من قاعدة البيانات
         amount: fullOrder.total_amount || order.amount,
         payment_type: order.payment_type || 'دفع آجل',
@@ -1527,6 +1529,7 @@ ${publicFileUrl}
         service_name: order.service_name,
         priority: order.priority,
         due_date: order.due_date || '',
+        estimated_delivery_time: order.estimated_delivery_time || '',
         description: order.description || '',
         amount: order.amount,
         payment_type: order.payment_type || 'دفع آجل',
@@ -1599,6 +1602,7 @@ ${publicFileUrl}
         customer_id: newOrder.customer_id,
         service_type_id: newOrder.service_id || null,
         delivery_date: newOrder.due_date || null,
+        estimated_delivery_time: newOrder.estimated_delivery_time || null,
         notes: newOrder.description?.trim() || null,
         total_amount: newOrder.amount || 0,
         updated_at: new Date().toISOString()
@@ -2871,6 +2875,17 @@ ${publicFileUrl}
                   type="date"
                   value={newOrder.due_date}
                   onChange={(e) => setNewOrder(prev => ({ ...prev, due_date: e.target.value }))}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="edit-estimated-time">الوقت التقريبي للتسليم</Label>
+                <Input
+                  id="edit-estimated-time"
+                  type="time"
+                  value={newOrder.estimated_delivery_time}
+                  onChange={(e) => setNewOrder(prev => ({ ...prev, estimated_delivery_time: e.target.value }))}
+                  placeholder="مثال: 14:00"
                 />
               </div>
 

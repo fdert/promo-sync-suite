@@ -63,6 +63,7 @@ interface Order {
   payment_type?: string;
   due_date?: string;
   delivery_date?: string;
+  estimated_delivery_time?: string;
   created_at: string;
   customer_id?: string;
   customers?: {
@@ -1684,6 +1685,7 @@ ${companyName}`;
       service_name: order.service_name,
       priority: order.priority,
       due_date: order.due_date || '',
+      estimated_delivery_time: order.estimated_delivery_time || '',
       description: order.description || '',
       amount: order.total_amount,
       payment_type: order.payment_type || 'دفع آجل',
@@ -2912,6 +2914,19 @@ ${companyName}`;
                 />
               </div>
               
+              <div>
+                <Label htmlFor="edit_estimated_time">الوقت التقريبي للتسليم</Label>
+                <Input
+                  id="edit_estimated_time"
+                  type="time"
+                  value={newOrder.estimated_delivery_time}
+                  onChange={(e) => setNewOrder({...newOrder, estimated_delivery_time: e.target.value})}
+                  placeholder="مثال: 14:00"
+                />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 gap-4">
               <div>
                 <Label htmlFor="edit_payment_type">نوع الدفع</Label>
                 <Select value={newOrder.payment_type} onValueChange={(value) => setNewOrder({...newOrder, payment_type: value})}>
