@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
     }
 
     const { phone, message, webhook_type, strict } = requestData as WhatsAppRequest & { strict?: boolean };
-    const strictRequested = (webhook_type === 'outstanding_balance_report') ? true : !!strict;
+    const strictRequested = (webhook_type === 'outstanding_balance_report') ? false : !!strict;
     
     if (!phone || !message) {
       console.error('Missing phone or message in request');
@@ -223,12 +223,16 @@ Deno.serve(async (req) => {
     }
 
     // إضافة تلميحات اختيار القالب دائمًا عند تمرير webhook_type
-    if (webhook_type) {
+    // Avoid template hints for financial reports to force text-only
+    if (webhook_type && webhook_type !== 'outstanding_balance_report') {
       (messagePayload as any).event = webhook_type;
       (messagePayload as any).template = webhook_type;
       (messagePayload as any).webhook_type = webhook_type;
       (messagePayload as any).template_key = webhook_type;
       console.log('🏷️ إضافة تلميحات القالب:', webhook_type);
+    } else if (webhook_type === 'outstanding_balance_report') {
+      (messagePayload as any).bypass_templates = true;
+      console.log('🚫 تم تعطيل تلميحات القوالب لتقرير المديونيات وإجبار النص فقط');
     }
 
     console.log('Sending message payload:', JSON.stringify(messagePayload, null, 2));
