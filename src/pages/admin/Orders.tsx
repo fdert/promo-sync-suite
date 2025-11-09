@@ -1241,10 +1241,10 @@ ${companyName}`;
   // إنشاء طلب جديد
   const createNewOrder = async () => {
     try {
-      if (!newOrder.customer_id || !newOrder.service_name || !newOrder.due_date) {
+      if (!newOrder.customer_id || !newOrder.service_id || !newOrder.due_date || !newOrder.estimated_delivery_time) {
         toast({
           title: "خطأ",
-          description: "يرجى ملء جميع الحقول المطلوبة",
+          description: "يرجى ملء جميع الحقول المطلوبة (العميل، الخدمة، تاريخ التسليم، والوقت التقريبي)",
           variant: "destructive",
         });
         return;
@@ -1259,21 +1259,20 @@ ${companyName}`;
       if (numberError) throw numberError;
 
       // إنشاء الطلب
-        const { data: createdOrder, error: orderError } = await supabase
+      const { data: createdOrder, error: orderError } = await supabase
         .from('orders')
         .insert({
           order_number: orderNumber,
           customer_id: newOrder.customer_id,
-          service_name: newOrder.service_name,
-          description: newOrder.description,
-          status: 'جديد',
-          priority: newOrder.priority,
-          total_amount: newOrder.amount,
-          payment_type: newOrder.payment_type,
-          payment_notes: newOrder.payment_notes,
-          delivery_date: newOrder.due_date,
-          estimated_delivery_time: newOrder.estimated_delivery_time,
-          created_by: user?.id
+          service_type_id: newOrder.service_id || null,
+          notes: newOrder.description || null,
+          status: 'pending',
+          total_amount: newOrder.amount || 0,
+          discount: 0,
+          paid_amount: 0,
+          delivery_date: newOrder.due_date || null,
+          estimated_delivery_time: newOrder.estimated_delivery_time || null,
+          created_by: user?.id || null
         })
         .select()
         .single();
@@ -1301,54 +1300,35 @@ ${companyName}`;
         }
       }
 
+      // رفع الملفات المرفقة إن وجدت
+      if (attachmentFiles.length > 0) {
+        for (const file of attachmentFiles) {
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${createdOrder.id}_${Date.now()}.${fileExt}`;
+          const filePath = `orders/${createdOrder.id}/${fileName}`;
+
+          const { error: uploadError } = await supabase.storage
+            .from('order-attachments')
+            .upload(filePath, file);
+
+          if (uploadError) {
+            console.error('Error uploading file:', uploadError);
+          }
+        }
+      }
+
       // إرسال إشعار واتساب للعميل بالطلب الجديد
       const selectedCustomer = customers.find(c => c.id === newOrder.customer_id);
-      if (selectedCustomer?.whatsapp) {
-        console.log('Sending WhatsApp notification for new order...');
-        
-        const notificationData = {
-          type: 'order_created',
-          order_id: createdOrder.id,
-          source: 'admin_dashboard',
-          webhook_preference: 'لوحة الإدارة',
-          force_send: true, // إجبار الإرسال للطلبات الجديدة
-          data: {
-            order_number: orderNumber,
-            customer_name: selectedCustomer.name,
-            customer_phone: selectedCustomer.whatsapp,
-            amount: newOrder.amount,
-            service_name: newOrder.service_name,
-            description: newOrder.description,
-            payment_type: newOrder.payment_type,
-            paid_amount: 0,
-            status: 'جديد',
-            priority: newOrder.priority,
-            due_date: newOrder.due_date,
-            start_date: null
-          }
-        };
 
-        try {
-          const { data: notificationResult, error: notificationError } = await supabase.functions.invoke('send-order-notifications', {
-            body: notificationData
-          });
-
-          if (notificationError) {
-            console.error('فشل في إرسال إشعار الواتس:', notificationError);
-          } else {
-            console.log('تم إرسال إشعار الواتس آب للطلب الجديد بنجاح');
+      // إشعار داخلي لفريق المتابعة بالطلب الجديد
+      try {
+        await supabase.functions.invoke('notify-new-order', {
+          body: {
+            orderId: createdOrder.id
           }
-
-          // تشغيل معالج رسائل الواتساب فوراً لضمان الإرسال
-          try {
-            await supabase.functions.invoke('process-whatsapp-queue');
-            console.log('تم تشغيل معالج رسائل الواتساب للطلب الجديد');
-          } catch (queueError) {
-            console.error('خطأ في تشغيل معالج رسائل الواتساب:', queueError);
-          }
-        } catch (notificationError) {
-          console.error('خطأ في إرسال الإشعار للطلب الجديد:', notificationError);
-        }
+        });
+      } catch (error) {
+        console.error('خطأ في إرسال إشعار الطلب الجديد:', error);
       }
 
       toast({
@@ -1363,6 +1343,7 @@ ${companyName}`;
         service_name: '',
         priority: 'متوسطة',
         due_date: '',
+        estimated_delivery_time: '',
         description: '',
         amount: 0,
         payment_type: 'دفع آجل',
@@ -1432,10 +1413,10 @@ ${companyName}`;
     if (!selectedOrderForEditing) return;
 
     // التحقق من البيانات المطلوبة
-    if (!newOrder.customer_id) {
+    if (!newOrder.customer_id || !newOrder.estimated_delivery_time) {
       toast({
         title: "خطأ",
-        description: "يرجى اختيار العميل",
+        description: "يرجى ملء جميع الحقول المطلوبة (العميل والوقت التقريبي)",
         variant: "destructive",
       });
       return;
@@ -1682,7 +1663,7 @@ ${companyName}`;
     setSelectedOrderForEditing(order);
     setNewOrder({
       customer_id: order.customer_id || '',
-      service_id: '',
+      service_id: order.service_type_id || '',
       service_name: order.service_name,
       priority: order.priority,
       due_date: order.due_date || '',
@@ -2628,7 +2609,7 @@ ${companyName}`;
 
       {/* حوار إنشاء طلب جديد */}
       <Dialog open={isNewOrderDialogOpen} onOpenChange={setIsNewOrderDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>إنشاء طلب جديد</DialogTitle>
             <DialogDescription>
@@ -2636,10 +2617,10 @@ ${companyName}`;
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-6">
-            {/* بيانات الطلب الأساسية */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
+          <div className="space-y-6 p-1">
+            {/* الصف الأول: العميل، نوع الخدمة، الأولوية */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
                 <Label htmlFor="customer">العميل *</Label>
                 <Select value={newOrder.customer_id} onValueChange={(value) => setNewOrder({...newOrder, customer_id: value})}>
                   <SelectTrigger>
@@ -2654,28 +2635,28 @@ ${companyName}`;
                   </SelectContent>
                 </Select>
               </div>
-              
-              <div>
-                <Label htmlFor="service">الخدمة *</Label>
+
+              <div className="space-y-2">
+                <Label htmlFor="service">نوع الخدمة *</Label>
                 <Select value={newOrder.service_id} onValueChange={handleServiceChange}>
                   <SelectTrigger>
-                    <SelectValue placeholder="اختر الخدمة" />
+                    <SelectValue placeholder="اختر نوع الخدمة" />
                   </SelectTrigger>
                   <SelectContent>
                     {services.map((service) => (
                       <SelectItem key={service.id} value={service.id}>
-                        {service.name} {service.base_price && `(${service.base_price} ر.س)`}
+                        {service.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-              
-              <div>
+
+              <div className="space-y-2">
                 <Label htmlFor="priority">الأولوية</Label>
                 <Select value={newOrder.priority} onValueChange={(value) => setNewOrder({...newOrder, priority: value})}>
                   <SelectTrigger>
-                    <SelectValue placeholder="اختر الأولوية" />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="منخفضة">منخفضة</SelectItem>
@@ -2684,9 +2665,12 @@ ${companyName}`;
                   </SelectContent>
                 </Select>
               </div>
-              
-              <div>
-                <Label htmlFor="due_date">تاريخ الاستحقاق *</Label>
+            </div>
+
+            {/* الصف الثاني: تاريخ التسليم، الوقت التقريبي، وصف الطلب */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="due_date">تاريخ التسليم *</Label>
                 <Input
                   id="due_date"
                   type="date"
@@ -2694,152 +2678,184 @@ ${companyName}`;
                   onChange={(e) => setNewOrder({...newOrder, due_date: e.target.value})}
                 />
               </div>
-              
-              <div>
-                <Label htmlFor="estimated_delivery_time">الوقت التقريبي للتسليم</Label>
+
+              <div className="space-y-2">
+                <Label htmlFor="estimated_delivery_time">
+                  الوقت التقريبي للتسليم <span className="text-destructive">*</span>
+                </Label>
                 <Input
                   id="estimated_delivery_time"
                   type="time"
                   value={newOrder.estimated_delivery_time}
                   onChange={(e) => setNewOrder({...newOrder, estimated_delivery_time: e.target.value})}
                   placeholder="مثال: 14:00"
+                  required
                 />
               </div>
-              
-              <div>
-                <Label htmlFor="payment_type">نوع الدفع</Label>
-                <Select value={newOrder.payment_type} onValueChange={(value) => setNewOrder({...newOrder, payment_type: value})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="اختر نوع الدفع" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="دفع فوري">دفع فوري</SelectItem>
-                    <SelectItem value="دفع آجل">دفع آجل</SelectItem>
-                    <SelectItem value="دفع جزئي">دفع جزئي</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <Label htmlFor="paid_amount">المبلغ المدفوع مقدماً</Label>
-                <Input
-                  id="paid_amount"
-                  type="text"
-                  placeholder="0"
-                  value={newOrder.paid_amount}
-                  onChange={(e) => setNewOrder({...newOrder, paid_amount: parseFloat(e.target.value) || 0})}
+
+              <div className="space-y-2">
+                <Label htmlFor="description">وصف الطلب</Label>
+                <Textarea
+                  id="description"
+                  placeholder="تفاصيل الطلب..."
+                  value={newOrder.description}
+                  onChange={(e) => setNewOrder({...newOrder, description: e.target.value})}
+                  rows={3}
                 />
               </div>
-              
-              <div>
-                <Label htmlFor="remaining_amount">المبلغ المتبقي</Label>
-                <Input
-                  id="remaining_amount"
-                  type="text"
-                  placeholder="0"
-                  value={newOrder.amount - newOrder.paid_amount}
-                  disabled
-                  className="bg-muted"
-                />
-              </div>
-            </div>
-            
-            <div>
-              <Label htmlFor="description">وصف الطلب</Label>
-              <Textarea
-                id="description"
-                placeholder="أدخل وصف مفصل للطلب..."
-                value={newOrder.description}
-                onChange={(e) => setNewOrder({...newOrder, description: e.target.value})}
-                rows={3}
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="payment_notes">ملاحظات الدفع</Label>
-              <Textarea
-                id="payment_notes"
-                placeholder="أدخل أي ملاحظات خاصة بالدفع..."
-                value={newOrder.payment_notes}
-                onChange={(e) => setNewOrder({...newOrder, payment_notes: e.target.value})}
-                rows={2}
-              />
             </div>
 
             {/* بنود الطلب */}
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <Label>بنود الطلب</Label>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-lg font-semibold">بنود الطلب</Label>
                 <Button type="button" variant="outline" size="sm" onClick={addOrderItem}>
                   <Plus className="h-4 w-4 mr-1" />
                   إضافة بند
                 </Button>
               </div>
-              
+
               <div className="space-y-3">
                 {orderItems.map((item, index) => (
-                  <div key={index} className="grid grid-cols-12 gap-2 items-end p-3 border rounded-lg">
-                    <div className="col-span-4">
-                      <Label htmlFor={`item_name_${index}`}>اسم البند</Label>
-                      <Input
-                        id={`item_name_${index}`}
-                        placeholder="اسم البند"
-                        value={item.item_name}
-                        onChange={(e) => updateOrderItem(index, 'item_name', e.target.value)}
-                      />
-                    </div>
-                     <div className="col-span-2">
-                       <Label htmlFor={`quantity_${index}`}>الكمية</Label>
-                       <Input
-                         id={`quantity_${index}`}
-                         type="number"
-                         step="0.01"
-                         value={item.quantity}
-                         onChange={(e) => updateOrderItem(index, 'quantity', parseFloat(e.target.value) || 1)}
-                       />
-                     </div>
-                     <div className="col-span-2">
-                       <Label htmlFor={`unit_price_${index}`}>سعر الوحدة</Label>
-                       <Input
-                         id={`unit_price_${index}`}
-                         type="number"
-                         step="0.01"
-                         value={item.unit_price}
-                         onChange={(e) => updateOrderItem(index, 'unit_price', parseFloat(e.target.value) || 0)}
-                       />
-                     </div>
-                    <div className="col-span-2">
-                      <Label>الإجمالي</Label>
-                      <Input
-                        value={item.total_amount.toFixed(2)}
-                        disabled
-                        className="bg-muted"
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => removeOrderItem(index)}
-                        disabled={orderItems.length === 1}
-                        className="w-full"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                  <div key={index} className="p-4 border rounded-lg space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                       <div className="space-y-2">
+                         <Label htmlFor={`item_name_${index}`}>اسم البند</Label>
+                         <Input
+                           id={`item_name_${index}`}
+                           type="text"
+                           value={item.item_name}
+                           onChange={(e) => updateOrderItem(index, 'item_name', e.target.value)}
+                           placeholder="اكتب اسم البند..."
+                         />
+                       </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor={`quantity_${index}`}>الكمية</Label>
+                         <Input
+                           id={`quantity_${index}`}
+                           type="number"
+                           step="0.01"
+                           value={item.quantity}
+                           onChange={(e) => updateOrderItem(index, 'quantity', parseFloat(e.target.value) || 0)}
+                         />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor={`unit_price_${index}`}>السعر المقرر</Label>
+                        <Input
+                          id={`unit_price_${index}`}
+                          type="number"
+                          step="0.01"
+                          value={item.unit_price}
+                          onChange={(e) => updateOrderItem(index, 'unit_price', parseFloat(e.target.value) || 0)}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor={`total_${index}`}>الإجمالي</Label>
+                        <div className="flex items-center gap-2">
+                           <Input
+                             id={`total_${index}`}
+                             type="text"
+                             value={item.total_amount}
+                             disabled
+                             className="bg-muted"
+                           />
+                          {orderItems.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => removeOrderItem(index)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
+
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="text-lg font-semibold">إجمالي المبلغ: {(newOrder.amount || 0).toFixed(2)} ر.س</p>
+              </div>
+            </div>
+
+            {/* معلومات الدفع */}
+            <div className="space-y-4">
+              <Label className="text-lg font-semibold">معلومات الدفع</Label>
               
-              <div className="mt-3 p-3 bg-muted rounded-lg">
-                <div className="flex justify-between items-center">
-                  <span className="font-medium">إجمالي المبلغ:</span>
-                  <span className="text-lg font-bold text-blue-600">
-                    {Number(newOrder.amount || 0).toLocaleString()} ر.س
-                  </span>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="paid_amount">المبلغ المدفوع (اختياري)</Label>
+                  <Input
+                    id="paid_amount"
+                    type="text"
+                    placeholder="0.00 ر.س"
+                    value={newOrder.paid_amount}
+                    onChange={(e) => setNewOrder({...newOrder, paid_amount: parseFloat(e.target.value) || 0})}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="payment_type">نوع الدفع</Label>
+                  <Select value={newOrder.payment_type} onValueChange={(value) => setNewOrder({...newOrder, payment_type: value})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="اختر نوع الدفع" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="دفع فوري">دفع فوري</SelectItem>
+                      <SelectItem value="دفع آجل">دفع آجل</SelectItem>
+                      <SelectItem value="دفع جزئي">دفع جزئي</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="remaining_amount">المبلغ المتبقي</Label>
+                  <Input
+                    id="remaining_amount"
+                    type="text"
+                    value={(newOrder.amount - newOrder.paid_amount).toFixed(2)}
+                    disabled
+                    className="bg-muted"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="payment_notes">ملاحظات الدفع</Label>
+                  <Input
+                    id="payment_notes"
+                    placeholder="ملاحظات..."
+                    value={newOrder.payment_notes}
+                    onChange={(e) => setNewOrder({...newOrder, payment_notes: e.target.value})}
+                  />
                 </div>
               </div>
+            </div>
+
+            {/* إرفاق ملفات */}
+            <div className="space-y-2">
+              <Label htmlFor="attachments">إرفاق ملفات (اختياري)</Label>
+              <Input
+                id="attachments"
+                type="file"
+                multiple
+                onChange={handleFileAttachment}
+                accept="image/*,application/pdf,.doc,.docx"
+              />
+              {attachmentFiles.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  {attachmentFiles.map((file, index) => (
+                    <div key={index} className="text-sm text-muted-foreground">
+                      {file.name} ({(file.size / 1024).toFixed(2)} KB)
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             
             <div className="flex gap-2 justify-end pt-4 border-t">
@@ -2863,7 +2879,7 @@ ${companyName}`;
 
       {/* حوار تعديل الطلب */}
       <Dialog open={isEditOrderDialogOpen} onOpenChange={setIsEditOrderDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>تعديل الطلب</DialogTitle>
             <DialogDescription>
@@ -2871,10 +2887,18 @@ ${companyName}`;
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4">
+          <div className="space-y-6">
+            {selectedOrderForEditing && (
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="text-sm"><strong>رقم الطلب:</strong> {selectedOrderForEditing.order_number}</p>
+                <p className="text-sm"><strong>العميل الحالي:</strong> {selectedOrderForEditing.customers?.name}</p>
+              </div>
+            )}
+            
+            {/* معلومات الطلب الأساسية */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="edit_customer">العميل</Label>
+                <Label htmlFor="edit-customer">العميل</Label>
                 <Select value={newOrder.customer_id} onValueChange={(value) => setNewOrder({...newOrder, customer_id: value})}>
                   <SelectTrigger>
                     <SelectValue placeholder="اختر العميل" />
@@ -2888,21 +2912,25 @@ ${companyName}`;
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div>
-                <Label htmlFor="edit_service">الخدمة</Label>
-                <Input
-                  id="edit_service"
-                  placeholder="اسم الخدمة"
-                  value={newOrder.service_name}
-                  onChange={(e) => setNewOrder({...newOrder, service_name: e.target.value})}
-                />
+                <Label htmlFor="edit-service">نوع الخدمة</Label>
+                <Select value={newOrder.service_id} onValueChange={handleServiceChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="اختر نوع الخدمة" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {services.map((service) => (
+                      <SelectItem key={service.id} value={service.id}>
+                        {service.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
               <div>
-                <Label htmlFor="edit_priority">الأولوية</Label>
+                <Label htmlFor="edit-priority">الأولوية</Label>
                 <Select value={newOrder.priority} onValueChange={(value) => setNewOrder({...newOrder, priority: value})}>
                   <SelectTrigger>
                     <SelectValue />
@@ -2914,120 +2942,139 @@ ${companyName}`;
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div>
-                <Label htmlFor="edit_due_date">تاريخ الاستحقاق</Label>
+                <Label htmlFor="edit-due-date">تاريخ الاستحقاق</Label>
                 <Input
-                  id="edit_due_date"
+                  id="edit-due-date"
                   type="date"
                   value={newOrder.due_date}
                   onChange={(e) => setNewOrder({...newOrder, due_date: e.target.value})}
                 />
               </div>
-              
+
               <div>
-                <Label htmlFor="edit_estimated_time">الوقت التقريبي للتسليم</Label>
+                <Label htmlFor="edit-estimated-time">
+                  الوقت التقريبي للتسليم <span className="text-destructive">*</span>
+                </Label>
                 <Input
-                  id="edit_estimated_time"
+                  id="edit-estimated-time"
                   type="time"
                   value={newOrder.estimated_delivery_time}
                   onChange={(e) => setNewOrder({...newOrder, estimated_delivery_time: e.target.value})}
                   placeholder="مثال: 14:00"
+                  required
                 />
               </div>
-            </div>
-            
-            <div className="grid grid-cols-1 gap-4">
+
               <div>
-                <Label htmlFor="edit_payment_type">نوع الدفع</Label>
+                <Label htmlFor="edit-payment-type">نوع الدفع</Label>
                 <Select value={newOrder.payment_type} onValueChange={(value) => setNewOrder({...newOrder, payment_type: value})}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="نقدي">نقدي</SelectItem>
+                    <SelectItem value="آجل">آجل</SelectItem>
                     <SelectItem value="دفع آجل">دفع آجل</SelectItem>
-                    <SelectItem value="دفع مقدم">دفع مقدم</SelectItem>
-                    <SelectItem value="دفع عند التسليم">دفع عند التسليم</SelectItem>
+                    <SelectItem value="تحويل بنكي">تحويل بنكي</SelectItem>
+                    <SelectItem value="شبكة">شبكة</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
-            
+
             <div>
-              <Label htmlFor="edit_description">وصف الطلب</Label>
+              <Label htmlFor="edit-description">الوصف</Label>
               <Textarea
-                id="edit_description"
-                placeholder="أدخل وصف مفصل للطلب..."
+                id="edit-description"
+                placeholder="وصف تفصيلي للطلب..."
                 value={newOrder.description}
                 onChange={(e) => setNewOrder({...newOrder, description: e.target.value})}
                 rows={3}
               />
             </div>
-            
-            {/* بنود الطلب في التعديل */}
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <Label>بنود الطلب</Label>
-                <Button type="button" variant="outline" size="sm" onClick={addOrderItem}>
-                  <Plus className="h-4 w-4 mr-1" />
+
+            {/* بنود الطلب */}
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <Label className="text-lg font-semibold">بنود الطلب</Label>
+                <Button type="button" onClick={addOrderItem} variant="outline" size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
                   إضافة بند
                 </Button>
               </div>
               
               <div className="space-y-3">
                 {orderItems.map((item, index) => (
-                  <div key={index} className="grid grid-cols-12 gap-2 items-end p-3 border rounded-lg">
-                    <div className="col-span-4">
-                      <Label htmlFor={`edit_item_name_${index}`}>اسم البند</Label>
-                      <Input
-                        id={`edit_item_name_${index}`}
-                        placeholder="اسم البند"
-                        value={item.item_name}
-                        onChange={(e) => updateOrderItem(index, 'item_name', e.target.value)}
-                      />
-                    </div>
-                    <div className="col-span-2">
+                  <div key={index} className="p-4 border rounded-lg space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                       <div className="space-y-2">
+                         <Label htmlFor={`edit_item_name_${index}`}>اسم البند</Label>
+                         <Input
+                           id={`edit_item_name_${index}`}
+                           type="text"
+                           value={item.item_name}
+                           onChange={(e) => updateOrderItem(index, 'item_name', e.target.value)}
+                           placeholder="اكتب اسم البند..."
+                         />
+                       </div>
+                    
+                    <div className="space-y-2">
                       <Label htmlFor={`edit_quantity_${index}`}>الكمية</Label>
-                      <Input
-                        id={`edit_quantity_${index}`}
-                        type="number"
-                        step="0.01"
-                        value={item.quantity}
-                        onChange={(e) => updateOrderItem(index, 'quantity', parseFloat(e.target.value) || 1)}
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <Label htmlFor={`edit_unit_price_${index}`}>سعر الوحدة</Label>
-                      <Input
-                        id={`edit_unit_price_${index}`}
-                        type="number"
-                        step="0.01"
-                        value={item.unit_price}
-                        onChange={(e) => updateOrderItem(index, 'unit_price', parseFloat(e.target.value) || 0)}
-                      />
-                    </div>
-                    <div className="col-span-2">
+                        <Input
+                          id={`edit_quantity_${index}`}
+                          type="number"
+                          step="0.01"
+                          value={item.quantity}
+                          onChange={(e) => updateOrderItem(index, 'quantity', parseFloat(e.target.value) || 0)}
+                        />
+                     </div>
+
+                     <div className="space-y-2">
+                       <Label htmlFor={`edit_unit_price_${index}`}>السعر</Label>
+                       <Input
+                         id={`edit_unit_price_${index}`}
+                         type="number"
+                         step="0.01"
+                         value={item.unit_price}
+                         onChange={(e) => updateOrderItem(index, 'unit_price', parseFloat(e.target.value) || 0)}
+                       />
+                     </div>
+
+                    <div className="space-y-2">
                       <Label>الإجمالي</Label>
-                      <Input
-                        value={item.total_amount.toFixed(2)}
-                        disabled
-                        className="bg-muted"
-                      />
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="text"
+                          value={(item.total_amount || 0).toLocaleString()}
+                          disabled
+                          className="bg-muted"
+                        />
+                        {orderItems.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => removeOrderItem(index)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                    <div className="col-span-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => removeOrderItem(index)}
-                        disabled={orderItems.length === 1}
-                        className="w-full"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
                     </div>
                   </div>
                 ))}
+              </div>
+              
+              <div className="mt-3 p-3 bg-muted rounded-lg">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">إجمالي المبلغ:</span>
+                  <span className="text-lg font-bold">
+                    {Number(newOrder.amount || 0).toLocaleString()} ر.س
+                  </span>
+                </div>
               </div>
             </div>
             
@@ -3041,7 +3088,7 @@ ${companyName}`;
               </Button>
               <Button 
                 onClick={updateOrder}
-                disabled={loading || !newOrder.customer_id || !newOrder.service_name}
+                disabled={loading || !newOrder.customer_id || !newOrder.estimated_delivery_time}
               >
                 {loading ? 'جاري التحديث...' : 'تحديث الطلب'}
               </Button>
