@@ -497,7 +497,7 @@ ${index + 1}. *المبلغ:* ${payment.amount.toLocaleString()} ر.س
         console.error('خطأ/فشل في الإرسال عبر الويب هوك:', functionError || functionData);
         toast({
           title: 'خطأ في الإرسال',
-          description: functionData?.message || 'تعذر الإرسال الآلي عبر القناة المحددة',
+          description: `${functionData?.message || 'تعذر الإرسال الآلي عبر القناة المحددة'}${functionData?.webhook_name ? ' | الويبهوك: ' + functionData.webhook_name : (functionData?.usedWebhook ? ' | الويبهوك: ' + functionData.usedWebhook : '')}${functionData?.http_status ? ' | HTTP: ' + functionData.http_status : ''}${functionData?.response_body ? ' | تفاصيل: ' + String(functionData.response_body).slice(0, 180) : ''}`,
           variant: 'destructive'
         });
         return;
@@ -562,7 +562,7 @@ ${index + 1}. *المبلغ:* ${payment.amount.toLocaleString()} ر.س
         console.error('خطأ في استدعاء/فشل edge function:', functionError || functionData);
         toast({
           title: 'خطأ في الإرسال',
-          description: functionData?.message || 'تعذر الإرسال الآلي عبر القناة المحددة',
+          description: `${functionData?.message || 'تعذر الإرسال الآلي عبر القناة المحددة'}${functionData?.webhook_name ? ' | الويبهوك: ' + functionData.webhook_name : (functionData?.usedWebhook ? ' | الويبهوك: ' + functionData.usedWebhook : '')}${functionData?.http_status ? ' | HTTP: ' + functionData.http_status : ''}${functionData?.response_body ? ' | تفاصيل: ' + String(functionData.response_body).slice(0, 180) : ''}`,
           variant: 'destructive'
         });
         return;
