@@ -2844,7 +2844,11 @@ ${companyName}`;
                 id="attachments"
                 type="file"
                 multiple
-                onChange={handleFileAttachment}
+                onChange={(e) => {
+                  if (e.target.files) {
+                    setAttachmentFiles(Array.from(e.target.files));
+                  }
+                }}
                 accept="image/*,application/pdf,.doc,.docx"
               />
               {attachmentFiles.length > 0 && (
