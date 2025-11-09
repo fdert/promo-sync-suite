@@ -326,23 +326,47 @@ Deno.serve(async (req) => {
       console.log('Webhook response (fallback):', response.status, responseData);
     }
 
-    // إذا مازال فاشلاً، جرّب بقية الويبهوكات البديلة (معطّل عند تحديد نوع ويب هوك محدد)
-    if (!strictRequested && !isOutstanding && !response.ok && Array.isArray(fallbackWebhooks)) {
+    // إذا مازال فاشلاً، جرّب بقية الويبهوكات البديلة عند تقارير المديونيات أيضًا
+    if (!strictRequested && !response.ok && Array.isArray(fallbackWebhooks) && isOutstanding) {
       for (const w of fallbackWebhooks) {
         if (w.webhook_url === usedWebhook?.webhook_url) continue;
-        console.warn('🔁 تجربة ويب هوك بديل:', w.webhook_name);
+        console.warn('🔁 تجربة ويب هوك بديل لتقرير المديونيات:', w.webhook_name);
         const altRes = await fetch(w.webhook_url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(messagePayload)
         });
         const altBody = await altRes.text();
-        console.log('Webhook response (alt):', altRes.status, altBody);
+        console.log('Webhook response (alt-outstanding):', altRes.status, altBody);
         if (altRes.ok) {
           usedWebhook = w;
           response = altRes;
           responseData = altBody;
           break;
+        }
+        // إذا كان الويب هوك بديل اختبار، جرّب النسخة المنشورة تلقائيًا
+        if (!altRes.ok && w.webhook_url?.includes('/webhook-test/')) {
+          try {
+            const publishedUrlAlt = w.webhook_url.replace('/webhook-test/', '/webhook/');
+            if (publishedUrlAlt !== w.webhook_url) {
+              console.warn('🔁 retry alt with published URL:', publishedUrlAlt);
+              const retryAlt = await fetch(publishedUrlAlt, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(messagePayload)
+              });
+              const retryAltBody = await retryAlt.text();
+              console.log('Webhook response (alt-published):', retryAlt.status, retryAltBody);
+              if (retryAlt.ok) {
+                usedWebhook = { ...w, webhook_url: publishedUrlAlt };
+                response = retryAlt;
+                responseData = retryAltBody;
+                break;
+              }
+            }
+          } catch (e) {
+            console.error('Failed retrying alt published URL:', e);
+          }
         }
       }
     }
@@ -369,7 +393,10 @@ Deno.serve(async (req) => {
         message: newStatus === 'sent' ? 'تم إرسال الرسالة بنجاح' : 'فشل الإرسال عبر جميع الويب هوكات المتاحة',
         messageId: messageData.id,
         status: newStatus,
-        usedWebhook: usedWebhook?.webhook_type || 'unknown'
+        usedWebhook: usedWebhook?.webhook_type || 'unknown',
+        webhook_name: usedWebhook?.webhook_name || null,
+        http_status: response.status,
+        response_body: responseData
       }),
       { 
         status: 200, 
