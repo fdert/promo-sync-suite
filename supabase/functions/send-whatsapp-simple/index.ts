@@ -233,8 +233,19 @@ Deno.serve(async (req) => {
       (messagePayload as any).template_key = 'outstanding_balance_report';
       (messagePayload as any).webhook_type = 'outstanding_balance_report';
       (messagePayload as any).use_template = true;
-      (messagePayload as any).template_language = 'ar';
+      (messagePayload as any).template_language = 'ar_SA';
       (messagePayload as any).channel_hint = 'template_preferred';
+      (messagePayload as any).hsm = true;
+      // بنية موحدة للقالب لمتوافقية أعلى مع n8n/مزود الواتساب
+      const tv = (messagePayload as any).template_vars || reqAny.template_vars || {};
+      (messagePayload as any).variables_array = Array.isArray(tv) ? tv : Object.values(tv || {});
+      (messagePayload as any).wa_template = {
+        name: 'outstanding_balance_report',
+        language: 'ar',
+        language_code: 'ar_SA',
+        variables: tv,
+        variables_array: (messagePayload as any).variables_array
+      };
       // نص احتياطي في حال فشل القالب
       (messagePayload as any).fallback_text = messagePayload.text?.body || (messagePayload as any).message || '';
       console.log('🏷️ تفعيل الإرسال عبر القالب outstanding_balance_report مع نص احتياطي');
