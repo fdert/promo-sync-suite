@@ -1313,10 +1313,10 @@ ${publicFileUrl}
   // إنشاء طلب جديد
   const createNewOrder = async () => {
     try {
-      if (!newOrder.customer_id || !newOrder.service_id || !newOrder.due_date) {
+      if (!newOrder.customer_id || !newOrder.service_id || !newOrder.due_date || !newOrder.estimated_delivery_time) {
         toast({
           title: "خطأ",
-          description: "يرجى ملء جميع الحقول المطلوبة",
+          description: "يرجى ملء جميع الحقول المطلوبة (العميل، الخدمة، تاريخ التسليم، والوقت التقريبي)",
           variant: "destructive",
         });
         return;
@@ -1343,6 +1343,7 @@ ${publicFileUrl}
           discount: 0,
           paid_amount: 0,
           delivery_date: newOrder.due_date || null,
+          estimated_delivery_time: newOrder.estimated_delivery_time || null,
           created_by: user?.id || null
         })
         .select()
@@ -2631,13 +2632,16 @@ ${publicFileUrl}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="estimated_delivery_time">الوقت التقريبي للتسليم</Label>
+                <Label htmlFor="estimated_delivery_time">
+                  الوقت التقريبي للتسليم <span className="text-destructive">*</span>
+                </Label>
                 <Input
                   id="estimated_delivery_time"
                   type="time"
                   value={newOrder.estimated_delivery_time}
                   onChange={(e) => setNewOrder(prev => ({ ...prev, estimated_delivery_time: e.target.value }))}
                   placeholder="مثال: 14:00"
+                  required
                 />
               </div>
 
@@ -2894,13 +2898,16 @@ ${publicFileUrl}
               </div>
 
               <div>
-                <Label htmlFor="edit-estimated-time">الوقت التقريبي للتسليم</Label>
+                <Label htmlFor="edit-estimated-time">
+                  الوقت التقريبي للتسليم <span className="text-destructive">*</span>
+                </Label>
                 <Input
                   id="edit-estimated-time"
                   type="time"
                   value={newOrder.estimated_delivery_time}
                   onChange={(e) => setNewOrder(prev => ({ ...prev, estimated_delivery_time: e.target.value }))}
                   placeholder="مثال: 14:00"
+                  required
                 />
               </div>
 
