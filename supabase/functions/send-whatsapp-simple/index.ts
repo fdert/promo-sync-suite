@@ -10,6 +10,7 @@ interface WhatsAppRequest {
   message: string;
   webhook_type?: string;
   strict?: boolean;
+  template_vars?: Record<string, any>;
 }
 
 Deno.serve(async (req) => {
@@ -214,6 +215,12 @@ Deno.serve(async (req) => {
       template_name: webhook_type || 'default'
     };
 
+    // تمرير متغيرات القالب إن وُجدت من الطلب
+    const reqAny = requestData as any;
+    if (reqAny.template_vars && typeof reqAny.template_vars === 'object') {
+      (messagePayload as any).template_vars = reqAny.template_vars;
+      (messagePayload as any).variables = reqAny.template_vars; // توافق مع بعض تدفقات n8n
+    }
     // إذا كانت رسالة تقرير مديونيات، فعّل الإرسال عبر القالب مع إتاحة النص كاحتياطي
     if (webhook_type === 'outstanding_balance_report') {
       messagePayload.is_financial_report = true;
