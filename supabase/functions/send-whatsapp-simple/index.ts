@@ -214,20 +214,23 @@ Deno.serve(async (req) => {
       template_name: webhook_type || 'default'
     };
 
-    // إذا كانت رسالة تقرير مديونيات، وفّر كل الحقول اللازمة للقالب مع الحفاظ على نص حر
+    // إذا كانت رسالة تقرير مديونيات، فعّل الإرسال عبر القالب مع إتاحة النص كاحتياطي
     if (webhook_type === 'outstanding_balance_report') {
       messagePayload.is_financial_report = true;
       messagePayload.report_type = 'accounts_receivable';
       messagePayload.message_category = 'financial_report';
-      // السماح لـ n8n باستخدام القالب الخاص بهذه الرسالة إن وُجد
+      // تلميحات صريحة للقالب
       (messagePayload as any).event = 'outstanding_balance_report';
       (messagePayload as any).template = 'outstanding_balance_report';
-      (messagePayload as any).webhook_type = 'outstanding_balance_report';
+      (messagePayload as any).template_name = 'outstanding_balance_report';
       (messagePayload as any).template_key = 'outstanding_balance_report';
-      // ومع ذلك أبقِ النص متاحاً كخيار إرسال مباشر
-      (messagePayload as any).text_only = true;
-      (messagePayload as any).channel_hint = 'text_or_template';
-      console.log('🏷️ تم تزويد الويبهوك بقالب outstanding_balance_report مع نص حر كبديل');
+      (messagePayload as any).webhook_type = 'outstanding_balance_report';
+      (messagePayload as any).use_template = true;
+      (messagePayload as any).template_language = 'ar';
+      (messagePayload as any).channel_hint = 'template_preferred';
+      // نص احتياطي في حال فشل القالب
+      (messagePayload as any).fallback_text = messagePayload.text?.body || (messagePayload as any).message || '';
+      console.log('🏷️ تفعيل الإرسال عبر القالب outstanding_balance_report مع نص احتياطي');
     } else if (webhook_type) {
       (messagePayload as any).event = webhook_type;
       (messagePayload as any).template = webhook_type;
