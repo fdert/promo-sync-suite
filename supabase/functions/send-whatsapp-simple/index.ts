@@ -46,7 +46,8 @@ Deno.serve(async (req) => {
     }
 
     const { phone, message, webhook_type, strict } = requestData as WhatsAppRequest & { strict?: boolean };
-    const strictRequested = (webhook_type === 'outstanding_balance_report') ? false : !!strict;
+    const isOutstanding = webhook_type === 'outstanding_balance_report';
+    const strictRequested = isOutstanding ? false : !!strict;
     
     if (!phone || !message) {
       console.error('Missing phone or message in request');
@@ -222,21 +223,34 @@ Deno.serve(async (req) => {
       messagePayload.text_only = true;
     }
 
-    // إضافة تلميحات اختيار القالب دائمًا عند تمرير webhook_type
-    // Avoid template hints for financial reports to force text-only
-    if (webhook_type && webhook_type !== 'outstanding_balance_report') {
+    // إضافة تلميحات اختيار القالب
+    if (webhook_type === 'outstanding_balance_report') {
+      // Enforce pure text for financial report
+      messagePayload.is_financial_report = true;
+      messagePayload.report_type = 'accounts_receivable';
+      messagePayload.message_category = 'financial_report';
+      messagePayload.force_text_only = true;
+      messagePayload.text_only = true;
+      (messagePayload as any).bypass_templates = true;
+      (messagePayload as any).channel_hint = 'text_only';
+      // Remove any fields that n8n might use to pick a template
+      delete (messagePayload as any).message_type;
+      delete (messagePayload as any).notification_type;
+      delete (messagePayload as any).template_name;
+      delete (messagePayload as any).event;
+      delete (messagePayload as any).template;
+      delete (messagePayload as any).template_key;
+      console.log('🚫 تم تعطيل تلميحات القوالب لتقرير المديونيات وإجبار النص فقط');
+    } else if (webhook_type) {
       (messagePayload as any).event = webhook_type;
       (messagePayload as any).template = webhook_type;
       (messagePayload as any).webhook_type = webhook_type;
       (messagePayload as any).template_key = webhook_type;
       console.log('🏷️ إضافة تلميحات القالب:', webhook_type);
-    } else if (webhook_type === 'outstanding_balance_report') {
-      (messagePayload as any).bypass_templates = true;
-      console.log('🚫 تم تعطيل تلميحات القوالب لتقرير المديونيات وإجبار النص فقط');
     }
-
+ 
     console.log('Sending message payload:', JSON.stringify(messagePayload, null, 2));
-
+ 
     // إرسال الرسالة عبر webhook (مع آلية بديلة عند الفشل)
     let usedWebhook = primaryWebhook;
     let response = await fetch(primaryWebhook.webhook_url, {
@@ -244,9 +258,33 @@ Deno.serve(async (req) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(messagePayload)
     });
-
+ 
     let responseData = await response.text();
     console.log('Webhook response (primary):', response.status, responseData);
+
+    // If outstanding_balance_report points to a test URL, try published URL automatically
+    if (!response.ok && isOutstanding && primaryWebhook?.webhook_url?.includes('/webhook-test/')) {
+      try {
+        const publishedUrl = primaryWebhook.webhook_url.replace('/webhook-test/', '/webhook/');
+        if (publishedUrl !== primaryWebhook.webhook_url) {
+          console.warn('🔁 404 on test webhook. Retrying with published URL:', publishedUrl);
+          usedWebhook = { ...primaryWebhook, webhook_url: publishedUrl };
+          const retryRes = await fetch(publishedUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(messagePayload)
+          });
+          const retryBody = await retryRes.text();
+          console.log('Webhook response (published):', retryRes.status, retryBody);
+          if (retryRes.ok) {
+            response = retryRes;
+            responseData = retryBody;
+          }
+        }
+      } catch (e) {
+        console.error('Failed retrying published URL:', e);
+      }
+    }
 
     // If a specific webhook_type was requested, do NOT fallback to any other webhook
     if (strictRequested && !response.ok) {
@@ -289,7 +327,7 @@ Deno.serve(async (req) => {
     }
 
     // إذا مازال فاشلاً، جرّب بقية الويبهوكات البديلة (معطّل عند تحديد نوع ويب هوك محدد)
-    if (!strictRequested && !response.ok && Array.isArray(fallbackWebhooks)) {
+    if (!strictRequested && !isOutstanding && !response.ok && Array.isArray(fallbackWebhooks)) {
       for (const w of fallbackWebhooks) {
         if (w.webhook_url === usedWebhook?.webhook_url) continue;
         console.warn('🔁 تجربة ويب هوك بديل:', w.webhook_name);
