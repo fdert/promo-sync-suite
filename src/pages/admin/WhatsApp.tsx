@@ -19,10 +19,12 @@ const WhatsApp = () => {
   const [webhookSettings, setWebhookSettings] = useState([]);
   const [messageTemplates, setMessageTemplates] = useState([]);
   const [selectedMessage, setSelectedMessage] = useState(null);
+  const [selectedConversation, setSelectedConversation] = useState(null);
   const [replyText, setReplyText] = useState("");
   const [isReplyDialogOpen, setIsReplyDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("messages");
+  const [conversations, setConversations] = useState([]);
 
   // إعدادات الويب هوك
   const [webhookForm, setWebhookForm] = useState({
@@ -57,10 +59,10 @@ const WhatsApp = () => {
         .from('whatsapp_messages')
         .select(`
           *,
-          customers(name, whatsapp_number)
+          customers(name, whatsapp)
         `)
         .order('created_at', { ascending: false })
-        .limit(100);
+        .limit(500);
 
       if (error) {
         console.error('Error fetching messages:', error);
@@ -68,8 +70,36 @@ const WhatsApp = () => {
       }
       
       console.log('Fetched messages:', data?.length || 0, 'messages');
-      console.log('Latest message:', data?.[0]);
       setMessages(data || []);
+      
+      // تجميع الرسائل في محادثات حسب الرقم
+      const conversationsMap = new Map();
+      
+      data?.forEach(message => {
+        // تحديد رقم العميل (سواء كان مرسل أو مستقبل)
+        const phoneNumber = message.from_number === 'system' 
+          ? message.to_number 
+          : message.from_number;
+        
+        if (!conversationsMap.has(phoneNumber)) {
+          conversationsMap.set(phoneNumber, {
+            phoneNumber,
+            customerName: message.customers?.name || 'غير محدد',
+            customerId: message.customer_id,
+            messages: [],
+            lastMessageAt: message.created_at,
+            unreadCount: 0
+          });
+        }
+        
+        conversationsMap.get(phoneNumber).messages.push(message);
+      });
+      
+      // تحويل Map إلى مصفوفة وترتيبها حسب آخر رسالة
+      const conversationsArray = Array.from(conversationsMap.values())
+        .sort((a, b) => new Date(b.lastMessageAt) - new Date(a.lastMessageAt));
+      
+      setConversations(conversationsArray);
     } catch (error) {
       console.error('Error fetching messages:', error);
       toast({
@@ -383,98 +413,191 @@ const WhatsApp = () => {
         </TabsList>
 
         <TabsContent value="messages" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MessageSquare className="h-5 w-5" />
-                الرسائل الواردة والصادرة
-              </CardTitle>
-              <CardDescription>
-                جميع رسائل الواتس آب مع إمكانية الرد والإدارة
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>التاريخ</TableHead>
-                      <TableHead>المرسل</TableHead>
-                      <TableHead>نوع الرسالة</TableHead>
-                      <TableHead>المحتوى</TableHead>
-                      <TableHead>الحالة</TableHead>
-                      <TableHead>الإجراءات</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {messages.map((message) => (
-                      <TableRow key={message.id}>
-                        <TableCell>
-                          {new Date(message.timestamp).toLocaleString('ar-SA')}
-                        </TableCell>
-                        <TableCell>
-                          <div>
-                            <div className="font-medium">
-                              {message.customers?.name || 'غير محدد'}
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              {message.from_number}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">
-                            {message.message_type}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="max-w-xs truncate">
-                          {message.message_content}
-                          {message.media_url && (
-                            <Button
-                              variant="link"
-                              size="sm"
-                              onClick={() => window.open(message.media_url, '_blank')}
-                              className="h-auto p-0 ml-2"
-                            >
-                              <ExternalLink className="h-3 w-3" />
-                            </Button>
-                          )}
-                        </TableCell>
-                        <TableCell>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* قائمة المحادثات */}
+            <Card className="lg:col-span-1">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5" />
+                  المحادثات ({conversations.length})
+                </CardTitle>
+                <CardDescription>
+                  جميع محادثات الواتساب
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="max-h-[600px] overflow-y-auto">
+                  {conversations.map((conversation) => (
+                    <div
+                      key={conversation.phoneNumber}
+                      onClick={() => setSelectedConversation(conversation)}
+                      className={`p-4 border-b cursor-pointer hover:bg-accent transition-colors ${
+                        selectedConversation?.phoneNumber === conversation.phoneNumber 
+                          ? 'bg-accent' 
+                          : ''
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            {getStatusIcon(message.status)}
-                            <span className="text-sm">{message.status}</span>
+                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                              <MessageCircle className="h-5 w-5 text-primary" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-semibold text-sm truncate">
+                                {conversation.customerName}
+                              </h4>
+                              <p className="text-xs text-muted-foreground truncate">
+                                {conversation.phoneNumber}
+                              </p>
+                            </div>
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          {!message.is_reply && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                setSelectedMessage(message);
-                                setIsReplyDialogOpen(true);
-                              }}
-                              className="gap-2"
+                          <p className="text-xs text-muted-foreground mt-2 truncate">
+                            {conversation.messages[0]?.message_content}
+                          </p>
+                        </div>
+                        <div className="text-xs text-muted-foreground flex-shrink-0 mr-2">
+                          {new Date(conversation.lastMessageAt).toLocaleDateString('ar-SA', {
+                            month: 'short',
+                            day: 'numeric'
+                          })}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 mt-2">
+                        <Badge variant="secondary" className="text-xs">
+                          {conversation.messages.length} رسالة
+                        </Badge>
+                        {conversation.messages.some(m => m.status === 'failed') && (
+                          <Badge variant="destructive" className="text-xs">
+                            فشل
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {conversations.length === 0 && (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <MessageSquare className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                      <p>لا توجد محادثات</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* عرض المحادثة المحددة */}
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                {selectedConversation ? (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="flex items-center gap-2">
+                          <MessageCircle className="h-5 w-5" />
+                          {selectedConversation.customerName}
+                        </CardTitle>
+                        <CardDescription className="flex items-center gap-2 mt-1">
+                          {selectedConversation.phoneNumber}
+                        </CardDescription>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          setSelectedMessage(selectedConversation.messages[0]);
+                          setIsReplyDialogOpen(true);
+                        }}
+                        className="gap-2"
+                      >
+                        <Send className="h-4 w-4" />
+                        إرسال رسالة
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <CardTitle>اختر محادثة</CardTitle>
+                    <CardDescription>
+                      اختر محادثة من القائمة لعرض الرسائل
+                    </CardDescription>
+                  </>
+                )}
+              </CardHeader>
+              <CardContent>
+                {selectedConversation ? (
+                  <div className="space-y-4 max-h-[500px] overflow-y-auto">
+                    {selectedConversation.messages
+                      .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+                      .map((message) => {
+                        const isOutgoing = message.from_number === 'system' || message.is_reply;
+                        
+                        return (
+                          <div
+                            key={message.id}
+                            className={`flex ${isOutgoing ? 'justify-end' : 'justify-start'}`}
+                          >
+                            <div
+                              className={`max-w-[70%] rounded-lg p-3 ${
+                                isOutgoing
+                                  ? 'bg-primary text-primary-foreground'
+                                  : 'bg-muted'
+                              }`}
                             >
-                              <Reply className="h-3 w-3" />
-                              رد
-                            </Button>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-                
-                {messages.length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    لا توجد رسائل حتى الآن
+                              <div className="flex items-start gap-2">
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm break-words">
+                                    {message.message_content}
+                                  </p>
+                                  {message.media_url && (
+                                    <Button
+                                      variant="link"
+                                      size="sm"
+                                      onClick={() => window.open(message.media_url, '_blank')}
+                                      className={`h-auto p-0 mt-1 ${
+                                        isOutgoing 
+                                          ? 'text-primary-foreground' 
+                                          : 'text-primary'
+                                      }`}
+                                    >
+                                      <ExternalLink className="h-3 w-3 ml-1" />
+                                      عرض المرفق
+                                    </Button>
+                                  )}
+                                  <div className={`flex items-center gap-2 mt-1 text-xs ${
+                                    isOutgoing 
+                                      ? 'text-primary-foreground/70' 
+                                      : 'text-muted-foreground'
+                                  }`}>
+                                    <span>
+                                      {new Date(message.created_at).toLocaleTimeString('ar-SA', {
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                      })}
+                                    </span>
+                                    {isOutgoing && (
+                                      <span className="flex items-center gap-1">
+                                        {getStatusIcon(message.status)}
+                                        {message.status}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                ) : (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <MessageSquare className="h-16 w-16 mx-auto mb-4 opacity-30" />
+                    <p className="text-lg font-medium">اختر محادثة للبدء</p>
+                    <p className="text-sm">حدد محادثة من القائمة لعرض الرسائل والرد</p>
                   </div>
                 )}
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="templates" className="space-y-4">
