@@ -6,7 +6,8 @@ const corsHeaders = {
 }
 
 interface WhatsAppRequest {
-  phone: string;
+  phone?: string;
+  phone_number?: string;
   message: string;
   webhook_type?: string;
   strict?: boolean;
@@ -46,12 +47,16 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { phone, message, webhook_type, strict } = requestData as WhatsAppRequest & { strict?: boolean };
+    const { phone, phone_number, message, webhook_type, strict } = requestData as WhatsAppRequest & { strict?: boolean };
+    
+    // قبول phone أو phone_number
+    const phoneToUse = phone_number || phone;
+    
     const isOutstanding = webhook_type === 'outstanding_balance_report';
     const strictRequested = isOutstanding ? false : !!strict;
     
-    if (!phone || !message) {
-      console.error('Missing phone or message in request');
+    if (!phoneToUse || !message) {
+      console.error('Missing phone or message in request', { phone, phone_number, message: message ? 'present' : 'missing' });
       return new Response(
         JSON.stringify({ error: 'Phone and message are required' }),
         { 
@@ -61,11 +66,11 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`Sending message to: ${phone}`);
+    console.log(`Sending message to: ${phoneToUse}`);
     console.log(`Message content length: ${message.length}`);
 
     // Clean phone number (remove non-digits except +)
-    const cleanPhone = phone.replace(/[^\d+]/g, '');
+    const cleanPhone = phoneToUse.replace(/[^\d+]/g, '');
     console.log(`Cleaned phone: ${cleanPhone}`);
 
     // Insert message into whatsapp_messages table
