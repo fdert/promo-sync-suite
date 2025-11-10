@@ -56,40 +56,50 @@ const WhatsApp = () => {
     try {
       console.log('Fetching messages...');
       
-      // فلتر الرسائل من رقم محدد
-      const targetPhone = '+966532709980';
-      
       const { data, error } = await supabase
         .from('whatsapp_messages')
         .select(`
           *,
-          customers(name, whatsapp)
+          customers(name, whatsapp, phone)
         `)
-        .or(`from_number.eq.${targetPhone},to_number.eq.${targetPhone}`)
         .order('created_at', { ascending: false })
-        .limit(500);
+        .limit(1000);
 
       if (error) {
         console.error('Error fetching messages:', error);
         throw error;
       }
       
-      console.log('Fetched messages for', targetPhone, ':', data?.length || 0, 'messages');
+      console.log('Fetched messages:', data?.length || 0, 'messages');
       setMessages(data || []);
       
-      // تجميع الرسائل في محادثات حسب الرقم
+      // تجميع الرسائل في محادثات حسب رقم العميل
       const conversationsMap = new Map();
       
       data?.forEach(message => {
-        // تحديد رقم العميل (سواء كان مرسل أو مستقبل)
-        const phoneNumber = message.from_number === 'system' 
-          ? message.to_number 
-          : message.from_number;
+        // تحديد رقم العميل (رقم المستقبل للرسائل الصادرة)
+        let phoneNumber = message.to_number;
+        
+        // إذا كانت الرسالة واردة، استخدم from_number
+        if (message.from_number && message.from_number !== 'system' && message.from_number !== null) {
+          phoneNumber = message.from_number;
+        }
+        
+        // تخطي الرسائل بدون رقم
+        if (!phoneNumber || phoneNumber === 'system') {
+          return;
+        }
+        
+        // البحث عن اسم العميل
+        let customerName = 'غير محدد';
+        if (message.customers?.name) {
+          customerName = message.customers.name;
+        }
         
         if (!conversationsMap.has(phoneNumber)) {
           conversationsMap.set(phoneNumber, {
             phoneNumber,
-            customerName: message.customers?.name || 'غير محدد',
+            customerName,
             customerId: message.customer_id,
             messages: [],
             lastMessageAt: message.created_at,
@@ -97,13 +107,25 @@ const WhatsApp = () => {
           });
         }
         
-        conversationsMap.get(phoneNumber).messages.push(message);
+        const conversation = conversationsMap.get(phoneNumber);
+        conversation.messages.push(message);
+        
+        // تحديث آخر وقت رسالة
+        if (new Date(message.created_at) > new Date(conversation.lastMessageAt)) {
+          conversation.lastMessageAt = message.created_at;
+        }
+        
+        // تحديث اسم العميل إذا كان متوفراً
+        if (customerName !== 'غير محدد') {
+          conversation.customerName = customerName;
+        }
       });
       
       // تحويل Map إلى مصفوفة وترتيبها حسب آخر رسالة
       const conversationsArray = Array.from(conversationsMap.values())
         .sort((a, b) => new Date(b.lastMessageAt) - new Date(a.lastMessageAt));
       
+      console.log('Conversations found:', conversationsArray.length);
       setConversations(conversationsArray);
     } catch (error) {
       console.error('Error fetching messages:', error);
@@ -395,7 +417,7 @@ const WhatsApp = () => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-foreground">إدارة الواتس آب</h1>
-          <p className="text-muted-foreground">عرض محادثات الرقم: +966532709980</p>
+          <p className="text-muted-foreground">جميع المحادثات ({conversations.length} محادثة)</p>
         </div>
         
         <div className="flex gap-2">
