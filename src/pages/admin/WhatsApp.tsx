@@ -25,6 +25,7 @@ const WhatsApp = () => {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("messages");
   const [conversations, setConversations] = useState([]);
+  const [searchPhone, setSearchPhone] = useState('');
 
   // إعدادات الويب هوك
   const [webhookForm, setWebhookForm] = useState({
@@ -52,12 +53,9 @@ const WhatsApp = () => {
     fetchMessageTemplates();
   }, []);
 
-  const fetchMessages = async () => {
+  const fetchMessages = async (targetPhone = '') => {
     try {
       console.log('Fetching messages...');
-      
-      // الرقم المستهدف
-      const targetPhone = '+966532709980';
       
       const { data, error } = await supabase
         .from('whatsapp_messages')
@@ -75,29 +73,41 @@ const WhatsApp = () => {
       
       console.log('Fetched all messages:', data?.length || 0);
       
-      // فلترة الرسائل فقط المتعلقة بالرقم المحدد
-      const filteredMessages = data?.filter(message => {
-        const isFromTarget = message.from_number === targetPhone;
-        const isToTarget = message.to_number === targetPhone;
-        return isFromTarget || isToTarget;
-      }) || [];
+      // فلترة الرسائل إذا كان هناك رقم مستهدف
+      let filteredMessages = data || [];
       
-      console.log('Filtered messages for', targetPhone, ':', filteredMessages.length);
+      if (targetPhone && targetPhone.trim()) {
+        filteredMessages = data?.filter(message => {
+          const isFromTarget = message.from_number === targetPhone;
+          const isToTarget = message.to_number === targetPhone;
+          return isFromTarget || isToTarget;
+        }) || [];
+        console.log('Filtered messages for', targetPhone, ':', filteredMessages.length);
+      }
+      
       setMessages(filteredMessages);
       
       // تجميع الرسائل في محادثات حسب رقم العميل
       const conversationsMap = new Map();
       
       filteredMessages.forEach(message => {
-        // تحديد رقم العميل (الطرف الآخر غير الرقم المستهدف)
+        // تحديد رقم العميل
         let phoneNumber;
         
-        if (message.from_number === targetPhone) {
-          // رسالة صادرة من الرقم المستهدف
+        if (targetPhone && targetPhone.trim()) {
+          // إذا كان هناك رقم مستهدف، خذ الطرف الآخر
+          if (message.from_number === targetPhone) {
+            phoneNumber = message.to_number;
+          } else if (message.to_number === targetPhone) {
+            phoneNumber = message.from_number;
+          }
+        } else {
+          // إذا لم يكن هناك رقم مستهدف، استخدم رقم المستقبل
           phoneNumber = message.to_number;
-        } else if (message.to_number === targetPhone) {
-          // رسالة واردة للرقم المستهدف
-          phoneNumber = message.from_number;
+          // إذا كانت واردة، استخدم المرسل
+          if (message.from_number && message.from_number !== 'system') {
+            phoneNumber = message.from_number;
+          }
         }
         
         // تخطي الرسائل بدون رقم أو system
@@ -140,7 +150,7 @@ const WhatsApp = () => {
       const conversationsArray = Array.from(conversationsMap.values())
         .sort((a, b) => new Date(b.lastMessageAt) - new Date(a.lastMessageAt));
       
-      console.log('Conversations with', targetPhone, ':', conversationsArray.length);
+      console.log('Total conversations:', conversationsArray.length);
       setConversations(conversationsArray);
     } catch (error) {
       console.error('Error fetching messages:', error);
@@ -430,12 +440,41 @@ const WhatsApp = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <div>
+        <div className="flex-1">
           <h1 className="text-3xl font-bold text-foreground">إدارة الواتس آب</h1>
-          <p className="text-muted-foreground">محادثات الرقم: +966532709980 ({conversations.length} محادثة)</p>
+          <p className="text-muted-foreground">
+            {searchPhone ? `محادثات الرقم: ${searchPhone}` : 'جميع المحادثات'} ({conversations.length} محادثة)
+          </p>
         </div>
         
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          <div className="flex gap-2 items-center">
+            <Input
+              placeholder="ابحث برقم الهاتف..."
+              value={searchPhone}
+              onChange={(e) => setSearchPhone(e.target.value)}
+              className="w-64"
+            />
+            <Button 
+              onClick={() => fetchMessages(searchPhone)}
+              variant="secondary"
+              size="sm"
+            >
+              بحث
+            </Button>
+            {searchPhone && (
+              <Button 
+                onClick={() => {
+                  setSearchPhone('');
+                  fetchMessages('');
+                }}
+                variant="outline"
+                size="sm"
+              >
+                مسح
+              </Button>
+            )}
+          </div>
           <Button 
             onClick={testWebhook} 
             disabled={loading}
