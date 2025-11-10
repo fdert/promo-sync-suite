@@ -5,7 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { CheckCircle2, Clock, AlertCircle, TrendingUp, Users, Eye } from 'lucide-react';
+import { CheckCircle2, Clock, AlertCircle, TrendingUp, Users, Eye, FileDown } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -256,13 +258,230 @@ const TasksMonitor = () => {
     return <Badge variant="destructive">ضعيف</Badge>;
   };
 
+  const exportToPDF = async () => {
+    try {
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+      });
+
+      // إعداد الخط للعربية
+      doc.setLanguage('ar');
+      
+      const now = new Date();
+      const dateStr = now.toLocaleDateString('ar-SA', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+      const timeStr = now.toLocaleTimeString('ar-SA', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
+
+      // العنوان الرئيسي
+      doc.setFontSize(20);
+      doc.setFont('helvetica', 'bold');
+      doc.text('تقرير المهام اليومية', doc.internal.pageSize.width / 2, 20, { align: 'center' });
+      
+      // التاريخ والوقت
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`التاريخ: ${dateStr}`, doc.internal.pageSize.width / 2, 30, { align: 'center' });
+      doc.text(`الوقت: ${timeStr}`, doc.internal.pageSize.width / 2, 37, { align: 'center' });
+
+      // الإحصائيات العامة
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('الإحصائيات العامة', 105, 50, { align: 'center' });
+
+      const statsData = [
+        ['إجمالي الطلبات اليوم', dailyStats.total_tasks.toString()],
+        ['الطلبات قيد التنفيذ', dailyStats.pending_tasks.toString()],
+        ['عدد الموظفين النشطين', dailyStats.total_employees.toString()],
+      ];
+
+      autoTable(doc, {
+        startY: 55,
+        head: [['المؤشر', 'العدد']],
+        body: statsData,
+        styles: { 
+          font: 'helvetica',
+          halign: 'right',
+          fontSize: 11,
+        },
+        headStyles: { 
+          fillColor: [66, 139, 202],
+          textColor: 255,
+          fontStyle: 'bold',
+          halign: 'right',
+        },
+        margin: { right: 15, left: 15 },
+      });
+
+      // جلب بيانات الطلبات التفصيلية
+      const today = new Date().toISOString().split('T')[0];
+      const { data: ordersData, error: ordersError } = await supabase
+        .from('orders')
+        .select(`
+          id,
+          order_number,
+          total_amount,
+          created_at,
+          delivery_date,
+          status,
+          customers (name),
+          order_items (
+            item_name,
+            quantity,
+            unit_price,
+            total
+          )
+        `)
+        .lte('delivery_date', today)
+        .in('status', ['قيد التنفيذ', 'in_progress', 'جديد', 'pending', 'قيد الانتظار'])
+        .order('delivery_date', { ascending: true });
+
+      if (ordersError) throw ordersError;
+
+      // تفاصيل الطلبات
+      let finalY = (doc as any).lastAutoTable.finalY + 15;
+      
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('تفاصيل الطلبات', 105, finalY, { align: 'center' });
+      
+      finalY += 10;
+
+      if (ordersData && ordersData.length > 0) {
+        ordersData.forEach((order: any, index: number) => {
+          // التحقق من الحاجة لصفحة جديدة
+          if (finalY > 250) {
+            doc.addPage();
+            finalY = 20;
+          }
+
+          const customerName = order.customers?.name || 'غير محدد';
+          const deliveryDate = new Date(order.delivery_date);
+          const createdDate = new Date(order.created_at);
+          const delayDays = Math.max(0, Math.floor((now.getTime() - deliveryDate.getTime()) / (1000 * 60 * 60 * 24)));
+
+          // عنوان الطلب
+          doc.setFontSize(12);
+          doc.setFont('helvetica', 'bold');
+          doc.text(`${index + 1}. طلب رقم: ${order.order_number}`, 15, finalY);
+          finalY += 7;
+
+          // معلومات الطلب
+          doc.setFontSize(10);
+          doc.setFont('helvetica', 'normal');
+          doc.text(`العميل: ${customerName}`, 15, finalY);
+          finalY += 5;
+          doc.text(`تاريخ الإنشاء: ${createdDate.toLocaleDateString('ar-SA')} - ${createdDate.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}`, 15, finalY);
+          finalY += 5;
+          doc.text(`تاريخ التسليم: ${deliveryDate.toLocaleDateString('ar-SA')}`, 15, finalY);
+          finalY += 5;
+          
+          if (delayDays > 0) {
+            doc.setTextColor(220, 53, 69); // أحمر
+            doc.text(`مدة التأخير: ${delayDays} يوم`, 15, finalY);
+            doc.setTextColor(0, 0, 0); // رجوع للأسود
+          } else {
+            doc.setTextColor(40, 167, 69); // أخضر
+            doc.text('في الوقت المحدد', 15, finalY);
+            doc.setTextColor(0, 0, 0);
+          }
+          finalY += 7;
+
+          // جدول البنود
+          if (order.order_items && order.order_items.length > 0) {
+            const itemsData = order.order_items.map((item: any) => [
+              item.item_name,
+              item.quantity.toString(),
+              `${item.unit_price.toFixed(2)} ريال`,
+              `${item.total.toFixed(2)} ريال`,
+            ]);
+
+            autoTable(doc, {
+              startY: finalY,
+              head: [['البند', 'الكمية', 'سعر الوحدة', 'الإجمالي']],
+              body: itemsData,
+              foot: [[{ content: 'إجمالي تكلفة الطلب', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold' } }, `${order.total_amount.toFixed(2)} ريال`]],
+              styles: { 
+                font: 'helvetica',
+                halign: 'right',
+                fontSize: 9,
+              },
+              headStyles: { 
+                fillColor: [108, 117, 125],
+                textColor: 255,
+                fontStyle: 'bold',
+                halign: 'right',
+              },
+              footStyles: {
+                fillColor: [233, 236, 239],
+                textColor: 0,
+                fontStyle: 'bold',
+                halign: 'right',
+              },
+              margin: { right: 15, left: 15 },
+            });
+
+            finalY = (doc as any).lastAutoTable.finalY + 10;
+          } else {
+            doc.text(`إجمالي تكلفة الطلب: ${order.total_amount.toFixed(2)} ريال`, 15, finalY);
+            finalY += 10;
+          }
+
+          // خط فاصل
+          if (index < ordersData.length - 1) {
+            doc.setDrawColor(200, 200, 200);
+            doc.line(15, finalY, 195, finalY);
+            finalY += 8;
+          }
+        });
+      } else {
+        doc.setFontSize(11);
+        doc.text('لا توجد طلبات لعرضها', 105, finalY, { align: 'center' });
+      }
+
+      // حفظ الملف
+      const fileName = `تقرير_المهام_اليومية_${now.toISOString().split('T')[0]}_${now.getHours()}-${now.getMinutes()}.pdf`;
+      doc.save(fileName);
+
+      toast({
+        title: 'تم التصدير بنجاح',
+        description: 'تم تصدير التقرير بصيغة PDF',
+      });
+    } catch (error: any) {
+      console.error('Error exporting PDF:', error);
+      toast({
+        title: 'خطأ في التصدير',
+        description: error?.message || 'تعذر تصدير التقرير',
+        variant: 'destructive',
+      });
+    }
+  };
+
   return (
     <main role="main" aria-label="متابعة المهام اليومية" className="space-y-6">
-      <header>
-        <h1 className="text-3xl font-bold">متابعة المهام المتأخرة والمستحقة</h1>
-        <p className="text-muted-foreground mt-2">
-          تقرير المهام المستحقة اليوم والمتأخرة عن التسليم - {new Date().toLocaleDateString('ar-SA')}
-        </p>
+      <header className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">متابعة المهام المتأخرة والمستحقة</h1>
+          <p className="text-muted-foreground mt-2">
+            تقرير المهام المستحقة اليوم والمتأخرة عن التسليم - {new Date().toLocaleDateString('ar-SA')}
+          </p>
+        </div>
+        <Button 
+          onClick={exportToPDF} 
+          variant="default"
+          className="gap-2"
+          disabled={loading}
+        >
+          <FileDown className="h-4 w-4" />
+          تصدير PDF
+        </Button>
       </header>
 
       <Separator />
