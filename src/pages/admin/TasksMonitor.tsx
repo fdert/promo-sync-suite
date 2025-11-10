@@ -73,13 +73,25 @@ const TasksMonitor = () => {
 
       if (ordersError) throw ordersError;
 
-      // إنشاء خريطة للموظفين - تهيئة جميع الموظفين بصفر مهام
+      // IDs الموظفين المستثنيين من التقرير
+      const excludedEmployeeIds = [
+        '3b2c81e5-c10e-4bba-a092-e00578901cdb', // عبدالمحسن
+        '258e4ba8-ff49-4517-8772-db75277e871b', // غير محدد
+      ];
+
+      // إنشاء خريطة للموظفين - تهيئة جميع الموظفين بصفر مهام (مع استثناء الموظفين المحددين)
       const employeeMap = new Map<string, EmployeeTask>();
       
       allEmployees?.forEach((employee: any) => {
+        // تخطي الموظفين المستثنيين
+        if (excludedEmployeeIds.includes(employee.id)) return;
+        
+        // تخطي الموظفين بدون اسم أو اسم "غير محدد"
+        if (!employee.full_name || employee.full_name.trim() === '' || employee.full_name === 'غير محدد') return;
+        
         employeeMap.set(employee.id, {
           employee_id: employee.id,
-          employee_name: employee.full_name || 'غير محدد',
+          employee_name: employee.full_name,
           total_tasks: 0,
           completed_tasks: 0,
           pending_tasks: 0,
