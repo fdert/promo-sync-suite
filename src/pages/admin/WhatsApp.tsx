@@ -26,6 +26,8 @@ const WhatsApp = () => {
   const [activeTab, setActiveTab] = useState("messages");
   const [conversations, setConversations] = useState([]);
   const [searchPhone, setSearchPhone] = useState('');
+  const [filterDirection, setFilterDirection] = useState<'all' | 'incoming' | 'outgoing'>('all');
+  const [replyInput, setReplyInput] = useState('');
 
   // إعدادات الويب هوك
   const [webhookForm, setWebhookForm] = useState({
@@ -46,46 +48,108 @@ const WhatsApp = () => {
 
   const { toast } = useToast();
 
-  // جلب البيانات
+  // جلب البيانات وتفعيل التحديث التلقائي
   useEffect(() => {
     fetchMessages();
     fetchWebhookSettings();
     fetchMessageTemplates();
+
+    // إعداد Realtime للرسائل الجديدة
+    const channel = supabase
+      .channel('whatsapp-messages-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'whatsapp_messages'
+        },
+        (payload) => {
+          console.log('رسالة جديدة:', payload);
+          // تحديث الرسائل عند استقبال رسالة جديدة
+          fetchMessages();
+          toast({
+            title: "رسالة جديدة 📩",
+            description: "تم استقبال رسالة واتساب جديدة",
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'whatsapp_messages'
+        },
+        (payload) => {
+          console.log('تحديث رسالة:', payload);
+          // تحديث الرسائل عند تغيير حالة رسالة
+          fetchMessages();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
-  const fetchMessages = async (targetPhone = '+966532709980') => {
+  const fetchMessages = async (targetPhone = '', direction: 'all' | 'incoming' | 'outgoing' = 'all') => {
     try {
-      console.log('Fetching messages from:', targetPhone);
+      console.log('Fetching messages...', { targetPhone, direction });
       
-      const { data, error } = await supabase
+      let query = supabase
         .from('whatsapp_messages')
         .select(`
           *,
           customers(name, whatsapp, phone)
         `)
-        .eq('from_number', targetPhone)
         .order('created_at', { ascending: false })
         .limit(1000);
+
+      // تطبيق الفلتر حسب الاتجاه
+      if (direction === 'incoming') {
+        // الرسائل الواردة (ليست من system)
+        query = query.neq('from_number', 'system').not('from_number', 'is', null);
+      } else if (direction === 'outgoing') {
+        // الرسائل الصادرة (من system)
+        query = query.eq('from_number', 'system');
+      }
+
+      // تطبيق فلتر الرقم إذا تم تحديده
+      if (targetPhone && targetPhone.trim()) {
+        query = query.or(`from_number.eq.${targetPhone},to_number.eq.${targetPhone}`);
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         console.error('Error fetching messages:', error);
         throw error;
       }
       
-      console.log('Fetched messages FROM', targetPhone, ':', data?.length || 0);
+      console.log('Fetched messages:', data?.length || 0);
       
       const filteredMessages = data || [];
       setMessages(filteredMessages);
       
-      // تجميع الرسائل في محادثات حسب رقم المستقبل (to_number)
+      // تجميع الرسائل في محادثات
       const conversationsMap = new Map();
       
       filteredMessages.forEach(message => {
-        // الرسائل الواردة من الرقم المستهدف: المستقبل هو العميل
-        const phoneNumber = message.to_number;
+        // تحديد رقم العميل (الطرف الآخر)
+        let phoneNumber;
         
-        // تخطي الرسائل بدون رقم أو system
-        if (!phoneNumber || phoneNumber === 'system' || phoneNumber === null) {
+        if (message.from_number === 'system' || message.from_number === null) {
+          // رسالة صادرة - العميل هو المستقبل
+          phoneNumber = message.to_number;
+        } else {
+          // رسالة واردة - العميل هو المرسل
+          phoneNumber = message.from_number;
+        }
+        
+        // تخطي الرسائل بدون رقم
+        if (!phoneNumber || phoneNumber === 'system') {
           return;
         }
         
@@ -417,16 +481,52 @@ const WhatsApp = () => {
         <div className="flex-1">
           <h1 className="text-3xl font-bold text-foreground">إدارة الواتس آب</h1>
           <p className="text-muted-foreground">
-            الرسائل الصادرة من: +966532709980 ({conversations.length} محادثة)
+            جميع المحادثات ({conversations.length} محادثة) • {messages.length} رسالة
           </p>
-          {conversations.length === 0 && messages.length === 0 && (
-            <p className="text-sm text-yellow-600 mt-1">
-              ⚠️ لا توجد رسائل من هذا الرقم في قاعدة البيانات
-            </p>
-          )}
         </div>
         
         <div className="flex gap-2 items-center">
+          <div className="flex gap-2">
+            <Select value={filterDirection} onValueChange={(value: any) => {
+              setFilterDirection(value);
+              fetchMessages(searchPhone, value);
+            }}>
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">جميع الرسائل</SelectItem>
+                <SelectItem value="incoming">واردة</SelectItem>
+                <SelectItem value="outgoing">صادرة</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <Input
+              placeholder="ابحث برقم الهاتف..."
+              value={searchPhone}
+              onChange={(e) => setSearchPhone(e.target.value)}
+              className="w-64"
+            />
+            <Button 
+              onClick={() => fetchMessages(searchPhone, filterDirection)}
+              variant="secondary"
+              size="sm"
+            >
+              بحث
+            </Button>
+            {searchPhone && (
+              <Button 
+                onClick={() => {
+                  setSearchPhone('');
+                  fetchMessages('', filterDirection);
+                }}
+                variant="outline"
+                size="sm"
+              >
+                مسح
+              </Button>
+            )}
+          </div>
           <Button 
             onClick={testWebhook} 
             disabled={loading}
@@ -576,11 +676,12 @@ const WhatsApp = () => {
               </CardHeader>
               <CardContent>
                 {selectedConversation ? (
-                  <div className="space-y-4 max-h-[500px] overflow-y-auto">
-                    {selectedConversation.messages
-                      .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
-                      .map((message) => {
-                        const isOutgoing = message.from_number === 'system' || message.is_reply;
+                  <>
+                    <div className="space-y-4 max-h-[400px] overflow-y-auto">
+                      {selectedConversation.messages
+                        .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+                        .map((message) => {
+                          const isOutgoing = message.from_number === 'system' || message.is_reply;
                         
                         return (
                           <div
@@ -638,7 +739,60 @@ const WhatsApp = () => {
                           </div>
                         );
                       })}
-                  </div>
+                    </div>
+                    
+                    {/* صندوق الرد السريع */}
+                    <div className="border-t pt-4 mt-4">
+                      <div className="flex gap-2">
+                        <Textarea
+                          placeholder="اكتب ردك هنا..."
+                          value={replyInput}
+                          onChange={(e) => setReplyInput(e.target.value)}
+                          rows={2}
+                          className="flex-1"
+                        />
+                        <Button
+                          onClick={async () => {
+                            if (!replyInput.trim()) return;
+                            
+                            try {
+                              setLoading(true);
+                              const { data, error } = await supabase.functions.invoke('send-whatsapp-simple', {
+                                body: {
+                                  phone_number: selectedConversation.phoneNumber,
+                                  message: replyInput
+                                }
+                              });
+
+                              if (error) throw error;
+
+                              toast({
+                                title: "تم الإرسال",
+                                description: "تم إرسال الرد بنجاح",
+                              });
+
+                              setReplyInput("");
+                              setTimeout(() => fetchMessages(searchPhone, filterDirection), 2000);
+                            } catch (error) {
+                              console.error('Error:', error);
+                              toast({
+                                title: "خطأ",
+                                description: "فشل إرسال الرد",
+                                variant: "destructive",
+                              });
+                            } finally {
+                              setLoading(false);
+                            }
+                          }}
+                          disabled={loading || !replyInput.trim()}
+                          className="gap-2"
+                        >
+                          <Send className="h-4 w-4" />
+                          إرسال
+                        </Button>
+                      </div>
+                    </div>
+                  </>
                 ) : (
                   <div className="text-center py-12 text-muted-foreground">
                     <MessageSquare className="h-16 w-16 mx-auto mb-4 opacity-30" />
