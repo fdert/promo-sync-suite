@@ -53,7 +53,7 @@ const WhatsApp = () => {
     fetchMessageTemplates();
   }, []);
 
-  const fetchMessages = async (targetPhone = '') => {
+  const fetchMessages = async (targetPhone = '+966532709980') => {
     try {
       console.log('Fetching messages...');
       
@@ -63,6 +63,7 @@ const WhatsApp = () => {
           *,
           customers(name, whatsapp, phone)
         `)
+        .eq('to_number', targetPhone)
         .order('created_at', { ascending: false })
         .limit(1000);
 
@@ -71,44 +72,17 @@ const WhatsApp = () => {
         throw error;
       }
       
-      console.log('Fetched all messages:', data?.length || 0);
+      console.log('Fetched incoming messages to', targetPhone, ':', data?.length || 0);
       
-      // فلترة الرسائل إذا كان هناك رقم مستهدف
-      let filteredMessages = data || [];
-      
-      if (targetPhone && targetPhone.trim()) {
-        filteredMessages = data?.filter(message => {
-          const isFromTarget = message.from_number === targetPhone;
-          const isToTarget = message.to_number === targetPhone;
-          return isFromTarget || isToTarget;
-        }) || [];
-        console.log('Filtered messages for', targetPhone, ':', filteredMessages.length);
-      }
-      
+      const filteredMessages = data || [];
       setMessages(filteredMessages);
       
-      // تجميع الرسائل في محادثات حسب رقم العميل
+      // تجميع الرسائل في محادثات حسب رقم المرسل (from_number)
       const conversationsMap = new Map();
       
       filteredMessages.forEach(message => {
-        // تحديد رقم العميل
-        let phoneNumber;
-        
-        if (targetPhone && targetPhone.trim()) {
-          // إذا كان هناك رقم مستهدف، خذ الطرف الآخر
-          if (message.from_number === targetPhone) {
-            phoneNumber = message.to_number;
-          } else if (message.to_number === targetPhone) {
-            phoneNumber = message.from_number;
-          }
-        } else {
-          // إذا لم يكن هناك رقم مستهدف، استخدم رقم المستقبل
-          phoneNumber = message.to_number;
-          // إذا كانت واردة، استخدم المرسل
-          if (message.from_number && message.from_number !== 'system') {
-            phoneNumber = message.from_number;
-          }
-        }
+        // الرسائل الواردة: المرسل هو العميل
+        const phoneNumber = message.from_number;
         
         // تخطي الرسائل بدون رقم أو system
         if (!phoneNumber || phoneNumber === 'system' || phoneNumber === null) {
@@ -443,38 +417,11 @@ const WhatsApp = () => {
         <div className="flex-1">
           <h1 className="text-3xl font-bold text-foreground">إدارة الواتس آب</h1>
           <p className="text-muted-foreground">
-            {searchPhone ? `محادثات الرقم: ${searchPhone}` : 'جميع المحادثات'} ({conversations.length} محادثة)
+            الرسائل الواردة إلى: +966532709980 ({conversations.length} محادثة)
           </p>
         </div>
         
         <div className="flex gap-2 items-center">
-          <div className="flex gap-2 items-center">
-            <Input
-              placeholder="ابحث برقم الهاتف..."
-              value={searchPhone}
-              onChange={(e) => setSearchPhone(e.target.value)}
-              className="w-64"
-            />
-            <Button 
-              onClick={() => fetchMessages(searchPhone)}
-              variant="secondary"
-              size="sm"
-            >
-              بحث
-            </Button>
-            {searchPhone && (
-              <Button 
-                onClick={() => {
-                  setSearchPhone('');
-                  fetchMessages('');
-                }}
-                variant="outline"
-                size="sm"
-              >
-                مسح
-              </Button>
-            )}
-          </div>
           <Button 
             onClick={testWebhook} 
             disabled={loading}
