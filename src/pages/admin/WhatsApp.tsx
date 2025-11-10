@@ -55,7 +55,7 @@ const WhatsApp = () => {
 
   const fetchMessages = async (targetPhone = '+966532709980') => {
     try {
-      console.log('Fetching messages...');
+      console.log('Fetching messages from:', targetPhone);
       
       const { data, error } = await supabase
         .from('whatsapp_messages')
@@ -63,7 +63,7 @@ const WhatsApp = () => {
           *,
           customers(name, whatsapp, phone)
         `)
-        .eq('to_number', targetPhone)
+        .eq('from_number', targetPhone)
         .order('created_at', { ascending: false })
         .limit(1000);
 
@@ -72,17 +72,17 @@ const WhatsApp = () => {
         throw error;
       }
       
-      console.log('Fetched incoming messages to', targetPhone, ':', data?.length || 0);
+      console.log('Fetched messages FROM', targetPhone, ':', data?.length || 0);
       
       const filteredMessages = data || [];
       setMessages(filteredMessages);
       
-      // تجميع الرسائل في محادثات حسب رقم المرسل (from_number)
+      // تجميع الرسائل في محادثات حسب رقم المستقبل (to_number)
       const conversationsMap = new Map();
       
       filteredMessages.forEach(message => {
-        // الرسائل الواردة: المرسل هو العميل
-        const phoneNumber = message.from_number;
+        // الرسائل الواردة من الرقم المستهدف: المستقبل هو العميل
+        const phoneNumber = message.to_number;
         
         // تخطي الرسائل بدون رقم أو system
         if (!phoneNumber || phoneNumber === 'system' || phoneNumber === null) {
@@ -417,8 +417,13 @@ const WhatsApp = () => {
         <div className="flex-1">
           <h1 className="text-3xl font-bold text-foreground">إدارة الواتس آب</h1>
           <p className="text-muted-foreground">
-            الرسائل الواردة إلى: +966532709980 ({conversations.length} محادثة)
+            الرسائل الصادرة من: +966532709980 ({conversations.length} محادثة)
           </p>
+          {conversations.length === 0 && messages.length === 0 && (
+            <p className="text-sm text-yellow-600 mt-1">
+              ⚠️ لا توجد رسائل من هذا الرقم في قاعدة البيانات
+            </p>
+          )}
         </div>
         
         <div className="flex gap-2 items-center">
