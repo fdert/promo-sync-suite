@@ -64,12 +64,12 @@ const TasksMonitor = () => {
 
       if (employeesError) throw employeesError;
 
-      // جلب بيانات المهام اليومية (قيد التنفيذ + المنجزة)
+      // جلب جميع المهام المستحقة اليوم (جميع الحالات ما عدا الملغاة)
       const { data: ordersData, error: ordersError } = await supabase
         .from('orders')
         .select('id, status, created_by')
         .eq('delivery_date', today)
-        .in('status', ['in_progress', 'قيد التنفيذ', 'completed', 'مكتمل', 'جاهز للتسليم']);
+        .not('status', 'in', '(cancelled,ملغي)');
 
       if (ordersError) throw ordersError;
 
@@ -104,13 +104,15 @@ const TasksMonitor = () => {
         const employeeId = order.created_by;
         if (!employeeId || !employeeMap.has(employeeId)) return;
 
-        const isCompleted = order.status === 'completed' || order.status === 'مكتمل' || order.status === 'جاهز للتسليم';
         const employee = employeeMap.get(employeeId)!;
-        
         employee.total_tasks++;
-        if (isCompleted) {
+        
+        // تصنيف المهام: المنجزة (مكتمل + جاهز للتسليم + delivered + تم التسليم)
+        const completedStatuses = ['completed', 'مكتمل', 'ready_for_delivery', 'جاهز للتسليم', 'delivered', 'تم التسليم'];
+        if (completedStatuses.includes(order.status)) {
           employee.completed_tasks++;
         } else {
+          // قيد التنفيذ (جديد + قيد التنفيذ + pending + in_progress)
           employee.pending_tasks++;
         }
       });
@@ -192,7 +194,7 @@ const TasksMonitor = () => {
         `)
         .eq('delivery_date', today)
         .eq('created_by', employeeId)
-        .in('status', ['in_progress', 'قيد التنفيذ', 'completed', 'مكتمل', 'جاهز للتسليم'])
+        .not('status', 'in', '(cancelled,ملغي)')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -229,6 +231,9 @@ const TasksMonitor = () => {
       case 'completed':
       case 'مكتمل':
         return <Badge className="bg-green-600">مكتمل</Badge>;
+      case 'delivered':
+      case 'تم التسليم':
+        return <Badge className="bg-green-700">تم التسليم</Badge>;
       case 'ready_for_delivery':
       case 'جاهز للتسليم':
         return <Badge className="bg-blue-600">جاهز للتسليم</Badge>;
@@ -237,7 +242,13 @@ const TasksMonitor = () => {
         return <Badge className="bg-yellow-600">قيد التنفيذ</Badge>;
       case 'pending':
       case 'قيد الانتظار':
-        return <Badge variant="outline">قيد الانتظار</Badge>;
+        return <Badge className="bg-orange-500">قيد الانتظار</Badge>;
+      case 'new':
+      case 'جديد':
+        return <Badge className="bg-sky-600">جديد</Badge>;
+      case 'cancelled':
+      case 'ملغي':
+        return <Badge variant="destructive">ملغي</Badge>;
       default:
         return <Badge>{status}</Badge>;
     }
