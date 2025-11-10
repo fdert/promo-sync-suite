@@ -34,7 +34,6 @@ interface OrderTask {
   status: string;
   total_amount: number;
   created_at: string;
-  delivery_date?: string;
 }
 
 const TasksMonitor = () => {
@@ -65,13 +64,12 @@ const TasksMonitor = () => {
 
       if (employeesError) throw employeesError;
 
-      // جلب المهام المسجلة اليوم (قيد التنفيذ، جديد، قيد الانتظار)
+      // جلب جميع المهام المستحقة اليوم (جميع الحالات ما عدا الملغاة)
       const { data: ordersData, error: ordersError } = await supabase
         .from('orders')
-        .select('id, status, created_by, created_at')
-        .gte('created_at', `${today}T00:00:00`)
-        .lte('created_at', `${today}T23:59:59`)
-        .in('status', ['قيد التنفيذ', 'in_progress', 'جديد', 'pending', 'قيد الانتظار']);
+        .select('id, status, created_by')
+        .eq('delivery_date', today)
+        .not('status', 'in', '(cancelled,ملغي)');
 
       if (ordersError) throw ordersError;
 
@@ -109,14 +107,22 @@ const TasksMonitor = () => {
         const employee = employeeMap.get(employeeId)!;
         employee.total_tasks++;
         
-        // جميع المهام المسجلة اليوم بحالة (قيد التنفيذ، جديد، قيد الانتظار) تعتبر قيد التنفيذ
-        employee.pending_tasks++;
+        // تصنيف المهام: المنجزة (مكتمل + جاهز للتسليم + delivered + تم التسليم)
+        const completedStatuses = ['completed', 'مكتمل', 'ready_for_delivery', 'جاهز للتسليم', 'delivered', 'تم التسليم'];
+        if (completedStatuses.includes(order.status)) {
+          employee.completed_tasks++;
+        } else {
+          // قيد التنفيذ (جديد + قيد التنفيذ + pending + in_progress)
+          employee.pending_tasks++;
+        }
       });
 
-      // حساب معدل الإنجاز لكل موظف (صفر للجميع لأن المهام كلها قيد التنفيذ)
+      // حساب معدل الإنجاز لكل موظف
       const employeeTasksArray = Array.from(employeeMap.values()).map(emp => ({
         ...emp,
-        completion_rate: 0, // جميع المهام المسجلة اليوم بحالة قيد التنفيذ
+        completion_rate: emp.total_tasks > 0 
+          ? Math.round((emp.completed_tasks / emp.total_tasks) * 100) 
+          : 0,
       }));
 
       setEmployeeTasks(employeeTasksArray);
@@ -128,9 +134,9 @@ const TasksMonitor = () => {
 
       setDailyStats({
         total_tasks: totalTasks,
-        completed_tasks: 0, // لا توجد مهام منجزة لأنها جميعاً قيد التنفيذ
-        pending_tasks: totalTasks,
-        completion_rate: 0,
+        completed_tasks: completedTasks,
+        pending_tasks: pendingTasks,
+        completion_rate: totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0,
         total_employees: employeeTasksArray.length,
       });
 
@@ -184,13 +190,11 @@ const TasksMonitor = () => {
           status,
           total_amount,
           created_at,
-          delivery_date,
           customers (name)
         `)
-        .gte('created_at', `${today}T00:00:00`)
-        .lte('created_at', `${today}T23:59:59`)
+        .eq('delivery_date', today)
         .eq('created_by', employeeId)
-        .in('status', ['قيد التنفيذ', 'in_progress', 'جديد', 'pending', 'قيد الانتظار'])
+        .not('status', 'in', '(cancelled,ملغي)')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -202,7 +206,6 @@ const TasksMonitor = () => {
         status: order.status,
         total_amount: order.total_amount || 0,
         created_at: order.created_at,
-        delivery_date: order.delivery_date,
       })) || [];
 
       setEmployeeOrders(formattedOrders);
@@ -252,8 +255,10 @@ const TasksMonitor = () => {
   };
 
   const getPerformanceBadge = (rate: number) => {
-    // جميع المهام المسجلة اليوم قيد التنفيذ، لذا التقييم يعتمد على العدد
-    return <Badge className="bg-blue-600">قيد التنفيذ</Badge>;
+    if (rate >= 80) return <Badge className="bg-green-600">ممتاز</Badge>;
+    if (rate >= 60) return <Badge className="bg-blue-600">جيد</Badge>;
+    if (rate >= 40) return <Badge className="bg-yellow-600">متوسط</Badge>;
+    return <Badge variant="destructive">ضعيف</Badge>;
   };
 
   return (
@@ -261,7 +266,7 @@ const TasksMonitor = () => {
       <header>
         <h1 className="text-3xl font-bold">متابعة المهام اليومية</h1>
         <p className="text-muted-foreground mt-2">
-          تقرير المهام المسجلة اليوم (قيد التنفيذ - جديد - قيد المراجعة) ليوم {new Date().toLocaleDateString('ar-SA')}
+          تقرير إنجاز المهام ليوم {new Date().toLocaleDateString('ar-SA')}
         </p>
       </header>
 
@@ -286,8 +291,8 @@ const TasksMonitor = () => {
             <CheckCircle2 className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">0</div>
-            <p className="text-xs text-muted-foreground">المهام المسجلة اليوم قيد التنفيذ</p>
+            <div className="text-2xl font-bold text-green-600">{dailyStats.completed_tasks}</div>
+            <p className="text-xs text-muted-foreground">مهمة مكتملة</p>
           </CardContent>
         </Card>
 
@@ -308,8 +313,8 @@ const TasksMonitor = () => {
             <TrendingUp className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0%</div>
-            <Progress value={0} className="mt-2" />
+            <div className="text-2xl font-bold">{dailyStats.completion_rate}%</div>
+            <Progress value={dailyStats.completion_rate} className="mt-2" />
           </CardContent>
         </Card>
 
@@ -377,12 +382,12 @@ const TasksMonitor = () => {
                         <TableCell className="text-orange-600">
                           {employee.pending_tasks}
                         </TableCell>
-                         <TableCell>
-                           <div className="flex items-center gap-2">
-                             <span className="font-semibold">0%</span>
-                             <Progress value={0} className="w-20" />
-                           </div>
-                         </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold">{employee.completion_rate}%</span>
+                            <Progress value={employee.completion_rate} className="w-20" />
+                          </div>
+                        </TableCell>
                         <TableCell>{getPerformanceBadge(employee.completion_rate)}</TableCell>
                       </TableRow>
                     ))
@@ -395,17 +400,17 @@ const TasksMonitor = () => {
 
       {/* Dialog تفاصيل مهام الموظف */}
       <Dialog open={!!selectedEmployee} onOpenChange={() => setSelectedEmployee(null)}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto" aria-describedby="employee-tasks-description">
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-xl">
               تفاصيل مهام: {selectedEmployee?.employee_name}
             </DialogTitle>
-            <p id="employee-tasks-description" className="flex gap-4 mt-2 text-sm text-muted-foreground">
+            <div className="flex gap-4 mt-2 text-sm text-muted-foreground">
               <span>إجمالي المهام: {selectedEmployee?.total_tasks}</span>
-              <span className="text-green-600">المنجزة: 0</span>
-              <span className="text-orange-600">قيد التنفيذ: {selectedEmployee?.pending_tasks}</span>
-              <span>معدل الإنجاز: 0%</span>
-            </p>
+              <span className="text-green-600">المنجزة: {selectedEmployee?.completed_tasks}</span>
+              <span className="text-orange-600">المتبقية: {selectedEmployee?.pending_tasks}</span>
+              <span>معدل الإنجاز: {selectedEmployee?.completion_rate}%</span>
+            </div>
           </DialogHeader>
 
           <div className="mt-4">
@@ -425,25 +430,20 @@ const TasksMonitor = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                   {employeeOrders.map((order) => (
-                     <TableRow key={order.id}>
-                       <TableCell className="font-medium">{order.order_number}</TableCell>
-                       <TableCell>{order.customer_name}</TableCell>
-                       <TableCell>{getStatusBadge(order.status)}</TableCell>
-                       <TableCell>{order.total_amount.toFixed(2)} ريال</TableCell>
-                       <TableCell>
-                         {new Date(order.created_at).toLocaleString('ar-SA', {
-                           hour: '2-digit',
-                           minute: '2-digit',
-                         })}
-                         {order.delivery_date && (
-                           <div className="text-xs text-muted-foreground mt-1">
-                             التسليم: {new Date(order.delivery_date).toLocaleDateString('ar-SA')}
-                           </div>
-                         )}
-                       </TableCell>
-                     </TableRow>
-                   ))}
+                  {employeeOrders.map((order) => (
+                    <TableRow key={order.id}>
+                      <TableCell className="font-medium">{order.order_number}</TableCell>
+                      <TableCell>{order.customer_name}</TableCell>
+                      <TableCell>{getStatusBadge(order.status)}</TableCell>
+                      <TableCell>{order.total_amount.toFixed(2)} ريال</TableCell>
+                      <TableCell>
+                        {new Date(order.created_at).toLocaleString('ar-SA', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </TableCell>
+                    </TableRow>
+                  ))}
                 </TableBody>
               </Table>
             )}
