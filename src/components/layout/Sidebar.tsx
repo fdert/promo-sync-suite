@@ -197,6 +197,12 @@ const menuItems = [
     allowedRoles: ['admin', 'manager'] as UserRole[],
   },
   {
+    title: "دخول QR واتساب",
+    icon: MessageSquare,
+    href: "/admin/whatsapp-qr-login",
+    allowedRoles: ['admin', 'manager'] as UserRole[],
+  },
+  {
     title: "إرسال جماعي",
     icon: Send,
     href: "/admin/bulk-whatsapp",

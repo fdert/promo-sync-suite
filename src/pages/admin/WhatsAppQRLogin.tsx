@@ -22,16 +22,18 @@ export default function WhatsAppQRLogin() {
 
   const checkExistingSession = async () => {
     try {
-      const { data, error } = await supabase
-        .from('whatsapp_sessions')
-        .select('*')
-        .eq('phone_number', phoneNumber)
-        .eq('is_active', true)
-        .single();
+      const { data, error } = await supabase.functions.invoke('whatsapp-qr-login', {
+        body: { 
+          action: 'check_status',
+          phone_number: phoneNumber 
+        }
+      });
 
-      if (data && !error) {
+      if (error) throw error;
+
+      if (data?.connected) {
         setIsConnected(true);
-        setSessionInfo(data);
+        setSessionInfo(data.session);
       }
     } catch (error) {
       console.error('Error checking session:', error);

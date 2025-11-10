@@ -1574,6 +1574,51 @@ export type Database = {
           },
         ]
       }
+      whatsapp_sessions: {
+        Row: {
+          connected_at: string | null
+          created_at: string
+          disconnected_at: string | null
+          id: string
+          is_active: boolean
+          last_sync_at: string | null
+          messages_synced: boolean | null
+          phone_number: string
+          qr_code: string | null
+          session_data: Json | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          connected_at?: string | null
+          created_at?: string
+          disconnected_at?: string | null
+          id?: string
+          is_active?: boolean
+          last_sync_at?: string | null
+          messages_synced?: boolean | null
+          phone_number: string
+          qr_code?: string | null
+          session_data?: Json | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          connected_at?: string | null
+          created_at?: string
+          disconnected_at?: string | null
+          id?: string
+          is_active?: boolean
+          last_sync_at?: string | null
+          messages_synced?: boolean | null
+          phone_number?: string
+          qr_code?: string | null
+          session_data?: Json | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       customer_order_balances: {
