@@ -56,6 +56,14 @@ const TasksMonitor = () => {
       setLoading(true);
       const today = new Date().toISOString().split('T')[0];
 
+      // جلب جميع الموظفين النشطين (الذين لديهم دور employee أو admin)
+      const { data: allEmployees, error: employeesError } = await supabase
+        .from('profiles')
+        .select('id, full_name, status')
+        .eq('status', 'active');
+
+      if (employeesError) throw employeesError;
+
       // جلب بيانات المهام اليومية (قيد التنفيذ + المنجزة)
       const { data: ordersData, error: ordersError } = await supabase
         .from('orders')
@@ -65,36 +73,28 @@ const TasksMonitor = () => {
 
       if (ordersError) throw ordersError;
 
-      // جلب بيانات الموظفين
-      const employeeIds = [...new Set(ordersData?.map((o: any) => o.created_by).filter(Boolean))];
-      const { data: profilesData } = await supabase
-        .from('profiles')
-        .select('id, full_name')
-        .in('id', employeeIds);
-
-      // إنشاء خريطة للموظفين
-      const profilesMap = new Map(profilesData?.map((p: any) => [p.id, p.full_name]) || []);
-
-      // تجميع البيانات حسب الموظف
+      // إنشاء خريطة للموظفين - تهيئة جميع الموظفين بصفر مهام
       const employeeMap = new Map<string, EmployeeTask>();
       
+      allEmployees?.forEach((employee: any) => {
+        employeeMap.set(employee.id, {
+          employee_id: employee.id,
+          employee_name: employee.full_name || 'غير محدد',
+          total_tasks: 0,
+          completed_tasks: 0,
+          pending_tasks: 0,
+          completion_rate: 0,
+        });
+      });
+
+      // إضافة بيانات المهام للموظفين
       ordersData?.forEach((order: any) => {
         const employeeId = order.created_by;
-        const employeeName = profilesMap.get(employeeId) || 'غير محدد';
+        if (!employeeId || !employeeMap.has(employeeId)) return;
+
         const isCompleted = order.status === 'completed' || order.status === 'مكتمل' || order.status === 'جاهز للتسليم';
-
-        if (!employeeMap.has(employeeId)) {
-          employeeMap.set(employeeId, {
-            employee_id: employeeId,
-            employee_name: employeeName,
-            total_tasks: 0,
-            completed_tasks: 0,
-            pending_tasks: 0,
-            completion_rate: 0,
-          });
-        }
-
         const employee = employeeMap.get(employeeId)!;
+        
         employee.total_tasks++;
         if (isCompleted) {
           employee.completed_tasks++;
