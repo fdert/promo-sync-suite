@@ -56,6 +56,9 @@ const WhatsApp = () => {
     try {
       console.log('Fetching messages...');
       
+      // الرقم المستهدف
+      const targetPhone = '+966532709980';
+      
       const { data, error } = await supabase
         .from('whatsapp_messages')
         .select(`
@@ -70,23 +73,35 @@ const WhatsApp = () => {
         throw error;
       }
       
-      console.log('Fetched messages:', data?.length || 0, 'messages');
-      setMessages(data || []);
+      console.log('Fetched all messages:', data?.length || 0);
+      
+      // فلترة الرسائل فقط المتعلقة بالرقم المحدد
+      const filteredMessages = data?.filter(message => {
+        const isFromTarget = message.from_number === targetPhone;
+        const isToTarget = message.to_number === targetPhone;
+        return isFromTarget || isToTarget;
+      }) || [];
+      
+      console.log('Filtered messages for', targetPhone, ':', filteredMessages.length);
+      setMessages(filteredMessages);
       
       // تجميع الرسائل في محادثات حسب رقم العميل
       const conversationsMap = new Map();
       
-      data?.forEach(message => {
-        // تحديد رقم العميل (رقم المستقبل للرسائل الصادرة)
-        let phoneNumber = message.to_number;
+      filteredMessages.forEach(message => {
+        // تحديد رقم العميل (الطرف الآخر غير الرقم المستهدف)
+        let phoneNumber;
         
-        // إذا كانت الرسالة واردة، استخدم from_number
-        if (message.from_number && message.from_number !== 'system' && message.from_number !== null) {
+        if (message.from_number === targetPhone) {
+          // رسالة صادرة من الرقم المستهدف
+          phoneNumber = message.to_number;
+        } else if (message.to_number === targetPhone) {
+          // رسالة واردة للرقم المستهدف
           phoneNumber = message.from_number;
         }
         
-        // تخطي الرسائل بدون رقم
-        if (!phoneNumber || phoneNumber === 'system') {
+        // تخطي الرسائل بدون رقم أو system
+        if (!phoneNumber || phoneNumber === 'system' || phoneNumber === null) {
           return;
         }
         
@@ -125,7 +140,7 @@ const WhatsApp = () => {
       const conversationsArray = Array.from(conversationsMap.values())
         .sort((a, b) => new Date(b.lastMessageAt) - new Date(a.lastMessageAt));
       
-      console.log('Conversations found:', conversationsArray.length);
+      console.log('Conversations with', targetPhone, ':', conversationsArray.length);
       setConversations(conversationsArray);
     } catch (error) {
       console.error('Error fetching messages:', error);
@@ -417,7 +432,7 @@ const WhatsApp = () => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-foreground">إدارة الواتس آب</h1>
-          <p className="text-muted-foreground">جميع المحادثات ({conversations.length} محادثة)</p>
+          <p className="text-muted-foreground">محادثات الرقم: +966532709980 ({conversations.length} محادثة)</p>
         </div>
         
         <div className="flex gap-2">
