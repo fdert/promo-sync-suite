@@ -292,14 +292,17 @@ const TasksMonitor = () => {
 
       if (ordersError) throw ordersError;
 
-      // إنشاء عنصر HTML للتقرير
+      // إنشاء عنصر HTML للتقرير - تصميم مضغوط
       const reportElement = document.createElement('div');
       reportElement.style.width = '210mm';
-      reportElement.style.padding = '20mm';
+      reportElement.style.minHeight = '297mm';
+      reportElement.style.maxHeight = '594mm'; // صفحتين كحد أقصى
+      reportElement.style.padding = '15mm';
       reportElement.style.fontFamily = 'Arial, sans-serif';
       reportElement.style.direction = 'rtl';
       reportElement.style.backgroundColor = 'white';
       reportElement.style.color = 'black';
+      reportElement.style.fontSize = '10px';
 
       const dateStr = now.toLocaleDateString('ar-SA', { 
         year: 'numeric', 
@@ -311,121 +314,178 @@ const TasksMonitor = () => {
         minute: '2-digit' 
       });
 
+      // حساب إجمالي البنود والتكلفة
+      let totalItemsCount = 0;
+      let grandTotal = 0;
+      ordersData?.forEach((order: any) => {
+        totalItemsCount += order.order_items?.length || 0;
+        grandTotal += order.total_amount || 0;
+      });
+
       let htmlContent = `
-        <div style="text-align: center; margin-bottom: 30px; border-bottom: 3px solid #4A90E2; padding-bottom: 20px;">
-          <h1 style="color: #2c3e50; font-size: 28px; margin-bottom: 10px;">📊 تقرير المهام اليومية</h1>
-          <p style="color: #7f8c8d; font-size: 16px;">${dateStr} - ${timeStr}</p>
+        <style>
+          @page { size: A4; margin: 0; }
+          body { margin: 0; padding: 0; }
+          .compact-table { font-size: 9px; }
+          .compact-table th, .compact-table td { padding: 4px 6px; }
+        </style>
+        
+        <!-- رأس التقرير -->
+        <div style="text-align: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 3px solid #4A90E2;">
+          <h1 style="color: #2c3e50; font-size: 20px; margin: 0 0 5px 0;">📊 تقرير المهام اليومية</h1>
+          <p style="color: #7f8c8d; font-size: 11px; margin: 0;">${dateStr} - ${timeStr}</p>
         </div>
 
-        <div style="margin-bottom: 30px;">
-          <h2 style="color: #2c3e50; font-size: 22px; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #ecf0f1;">الإحصائيات العامة</h2>
-          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
-            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; text-align: center;">
-              <h3 style="font-size: 14px; margin-bottom: 10px; opacity: 0.9;">إجمالي طلبات اليوم</h3>
-              <div style="font-size: 36px; font-weight: bold;">${dailyStats.total_tasks}</div>
-            </div>
-            <div style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; padding: 20px; border-radius: 8px; text-align: center;">
-              <h3 style="font-size: 14px; margin-bottom: 10px; opacity: 0.9;">الطلبات المنجزة</h3>
-              <div style="font-size: 36px; font-weight: bold;">${dailyStats.completed_tasks}</div>
-            </div>
-            <div style="background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%); color: white; padding: 20px; border-radius: 8px; text-align: center;">
-              <h3 style="font-size: 14px; margin-bottom: 10px; opacity: 0.9;">الطلبات قيد التنفيذ</h3>
-              <div style="font-size: 36px; font-weight: bold;">${dailyStats.pending_tasks}</div>
-            </div>
+        <!-- الإحصائيات المضغوطة -->
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 15px;">
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 10px; border-radius: 6px; text-align: center;">
+            <div style="font-size: 9px; margin-bottom: 3px; opacity: 0.9;">إجمالي الطلبات</div>
+            <div style="font-size: 22px; font-weight: bold;">${dailyStats.total_tasks}</div>
+          </div>
+          <div style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; padding: 10px; border-radius: 6px; text-align: center;">
+            <div style="font-size: 9px; margin-bottom: 3px; opacity: 0.9;">المنجزة</div>
+            <div style="font-size: 22px; font-weight: bold;">${dailyStats.completed_tasks}</div>
+          </div>
+          <div style="background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%); color: white; padding: 10px; border-radius: 6px; text-align: center;">
+            <div style="font-size: 9px; margin-bottom: 3px; opacity: 0.9;">قيد التنفيذ</div>
+            <div style="font-size: 22px; font-weight: bold;">${dailyStats.pending_tasks}</div>
+          </div>
+          <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 10px; border-radius: 6px; text-align: center;">
+            <div style="font-size: 9px; margin-bottom: 3px; opacity: 0.9;">الإجمالي</div>
+            <div style="font-size: 18px; font-weight: bold;">${grandTotal.toFixed(0)} ر.س</div>
           </div>
         </div>
 
-        <div style="margin-top: 30px;">
-          <h2 style="color: #2c3e50; font-size: 22px; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #ecf0f1;">📋 تفاصيل الطلبات</h2>
+        <!-- جدول الطلبات الموحد -->
+        <div style="margin-top: 15px;">
+          <h2 style="color: #2c3e50; font-size: 14px; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 2px solid #ecf0f1;">📋 تفاصيل الطلبات</h2>
       `;
 
       if (ordersData && ordersData.length > 0) {
+        // جدول موحد لجميع الطلبات
+        htmlContent += `
+          <table class="compact-table" style="width: 100%; border-collapse: collapse; font-size: 9px;">
+            <thead>
+              <tr style="background: #4A90E2; color: white;">
+                <th style="padding: 6px 4px; text-align: right; border: 1px solid #ddd; width: 10%;">رقم الطلب</th>
+                <th style="padding: 6px 4px; text-align: right; border: 1px solid #ddd; width: 18%;">العميل</th>
+                <th style="padding: 6px 4px; text-align: right; border: 1px solid #ddd; width: 25%;">البنود</th>
+                <th style="padding: 6px 4px; text-align: center; border: 1px solid #ddd; width: 11%;">تاريخ الإنشاء</th>
+                <th style="padding: 6px 4px; text-align: center; border: 1px solid #ddd; width: 8%;">الوقت</th>
+                <th style="padding: 6px 4px; text-align: center; border: 1px solid #ddd; width: 11%;">التسليم</th>
+                <th style="padding: 6px 4px; text-align: center; border: 1px solid #ddd; width: 8%;">التأخير</th>
+                <th style="padding: 6px 4px; text-align: right; border: 1px solid #ddd; width: 9%;">المبلغ</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+
         ordersData.forEach((order: any, index: number) => {
           const customerName = order.customers?.name || 'غير محدد';
           const deliveryDate = new Date(order.delivery_date);
           const createdDate = new Date(order.created_at);
           const delayDays = Math.max(0, Math.floor((now.getTime() - deliveryDate.getTime()) / (1000 * 60 * 60 * 24)));
 
-          htmlContent += `
-            <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 20px; margin-bottom: 20px; page-break-inside: avoid;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 2px solid #dee2e6;">
-                <div style="font-size: 20px; font-weight: bold; color: #4A90E2;">طلب رقم: ${order.order_number}</div>
-                <div style="background: ${delayDays > 0 ? '#dc3545' : '#28a745'}; color: white; padding: 5px 15px; border-radius: 20px; font-size: 14px; font-weight: bold;">
-                  ${delayDays > 0 ? `متأخر ${delayDays} يوم` : 'في الوقت المحدد'}
-                </div>
-              </div>
-
-              <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 15px;">
-                <div>
-                  <span style="font-size: 12px; color: #6c757d; display: block; margin-bottom: 5px;">اسم العميل</span>
-                  <span style="font-size: 15px; color: #2c3e50; font-weight: 600;">${customerName}</span>
-                </div>
-                <div>
-                  <span style="font-size: 12px; color: #6c757d; display: block; margin-bottom: 5px;">تاريخ الإنشاء</span>
-                  <span style="font-size: 15px; color: #2c3e50; font-weight: 600;">${createdDate.toLocaleDateString('ar-SA')}</span>
-                </div>
-                <div>
-                  <span style="font-size: 12px; color: #6c757d; display: block; margin-bottom: 5px;">وقت التسجيل</span>
-                  <span style="font-size: 15px; color: #2c3e50; font-weight: 600;">${createdDate.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}</span>
-                </div>
-                <div>
-                  <span style="font-size: 12px; color: #6c757d; display: block; margin-bottom: 5px;">تاريخ التسليم</span>
-                  <span style="font-size: 15px; color: #2c3e50; font-weight: 600;">${deliveryDate.toLocaleDateString('ar-SA')}</span>
-                </div>
-              </div>
-          `;
-
+          // تجميع البنود في نص واحد
+          let itemsText = '';
           if (order.order_items && order.order_items.length > 0) {
-            htmlContent += `
-              <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
-                <thead>
-                  <tr style="background: #e9ecef;">
-                    <th style="padding: 10px; text-align: right; border-bottom: 1px solid #dee2e6; font-weight: bold; color: #495057;">البند</th>
-                    <th style="padding: 10px; text-align: right; border-bottom: 1px solid #dee2e6; font-weight: bold; color: #495057;">الكمية</th>
-                    <th style="padding: 10px; text-align: right; border-bottom: 1px solid #dee2e6; font-weight: bold; color: #495057;">سعر الوحدة</th>
-                    <th style="padding: 10px; text-align: right; border-bottom: 1px solid #dee2e6; font-weight: bold; color: #495057;">الإجمالي</th>
-                  </tr>
-                </thead>
-                <tbody>
-            `;
-
-            order.order_items.forEach((item: any) => {
-              htmlContent += `
-                <tr>
-                  <td style="padding: 10px; text-align: right; border-bottom: 1px solid #dee2e6;">${item.item_name}</td>
-                  <td style="padding: 10px; text-align: right; border-bottom: 1px solid #dee2e6;">${item.quantity}</td>
-                  <td style="padding: 10px; text-align: right; border-bottom: 1px solid #dee2e6;">${item.unit_price.toFixed(2)} ر.س</td>
-                  <td style="padding: 10px; text-align: right; border-bottom: 1px solid #dee2e6;">${item.total.toFixed(2)} ر.س</td>
-                </tr>
-              `;
-            });
-
-            htmlContent += `
-                  <tr style="background: #f1f3f5; font-weight: bold;">
-                    <td colspan="3" style="padding: 10px; text-align: right;">إجمالي تكلفة الطلب</td>
-                    <td style="padding: 10px; text-align: right;">${order.total_amount.toFixed(2)} ر.س</td>
-                  </tr>
-                </tbody>
-              </table>
-            `;
+            itemsText = order.order_items
+              .map((item: any) => `${item.item_name} (${item.quantity})`)
+              .join('، ');
+          } else {
+            itemsText = '-';
           }
 
-          htmlContent += `</div>`;
+          // تقصير النص إذا كان طويلاً
+          if (itemsText.length > 50) {
+            itemsText = itemsText.substring(0, 47) + '...';
+          }
+
+          const bgColor = index % 2 === 0 ? '#f8f9fa' : '#ffffff';
+          const delayColor = delayDays > 0 ? '#dc3545' : '#28a745';
+
+          htmlContent += `
+            <tr style="background: ${bgColor};">
+              <td style="padding: 5px 4px; text-align: right; border: 1px solid #ddd; font-weight: bold; color: #4A90E2;">${order.order_number}</td>
+              <td style="padding: 5px 4px; text-align: right; border: 1px solid #ddd;">${customerName}</td>
+              <td style="padding: 5px 4px; text-align: right; border: 1px solid #ddd; font-size: 8px;">${itemsText}</td>
+              <td style="padding: 5px 4px; text-align: center; border: 1px solid #ddd;">${createdDate.toLocaleDateString('ar-SA', { month: '2-digit', day: '2-digit' })}</td>
+              <td style="padding: 5px 4px; text-align: center; border: 1px solid #ddd; font-size: 8px;">${createdDate.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}</td>
+              <td style="padding: 5px 4px; text-align: center; border: 1px solid #ddd;">${deliveryDate.toLocaleDateString('ar-SA', { month: '2-digit', day: '2-digit' })}</td>
+              <td style="padding: 5px 4px; text-align: center; border: 1px solid #ddd; font-weight: bold; color: ${delayColor};">${delayDays > 0 ? delayDays + ' يوم' : '✓'}</td>
+              <td style="padding: 5px 4px; text-align: right; border: 1px solid #ddd; font-weight: bold;">${order.total_amount.toFixed(0)}</td>
+            </tr>
+          `;
         });
+
+        htmlContent += `
+              <tr style="background: #e9ecef; font-weight: bold;">
+                <td colspan="7" style="padding: 6px 4px; text-align: right; border: 1px solid #ddd;">الإجمالي الكلي</td>
+                <td style="padding: 6px 4px; text-align: right; border: 1px solid #ddd;">${grandTotal.toFixed(2)} ر.س</td>
+              </tr>
+            </tbody>
+          </table>
+        `;
       } else {
-        htmlContent += `<p style="text-align: center; color: #6c757d; padding: 40px;">لا توجد طلبات لعرضها</p>`;
+        htmlContent += `<p style="text-align: center; color: #6c757d; padding: 30px; font-size: 11px;">لا توجد طلبات لعرضها</p>`;
       }
+
+      // ملخص الموظفين
+      if (employeeTasks.length > 0) {
+        htmlContent += `
+          <div style="margin-top: 15px;">
+            <h2 style="color: #2c3e50; font-size: 14px; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 2px solid #ecf0f1;">👥 ملخص أداء الموظفين</h2>
+            <table class="compact-table" style="width: 100%; border-collapse: collapse; font-size: 9px;">
+              <thead>
+                <tr style="background: #6c757d; color: white;">
+                  <th style="padding: 6px 4px; text-align: right; border: 1px solid #ddd;">اسم الموظف</th>
+                  <th style="padding: 6px 4px; text-align: center; border: 1px solid #ddd;">إجمالي المهام</th>
+                  <th style="padding: 6px 4px; text-align: center; border: 1px solid #ddd;">قيد التنفيذ</th>
+                </tr>
+              </thead>
+              <tbody>
+        `;
+
+        employeeTasks
+          .sort((a, b) => b.total_tasks - a.total_tasks)
+          .slice(0, 10) // أول 10 موظفين فقط
+          .forEach((emp, index) => {
+            const bgColor = index % 2 === 0 ? '#f8f9fa' : '#ffffff';
+            htmlContent += `
+              <tr style="background: ${bgColor};">
+                <td style="padding: 5px 4px; text-align: right; border: 1px solid #ddd;">${emp.employee_name}</td>
+                <td style="padding: 5px 4px; text-align: center; border: 1px solid #ddd;">${emp.total_tasks}</td>
+                <td style="padding: 5px 4px; text-align: center; border: 1px solid #ddd; color: #ee0979; font-weight: bold;">${emp.pending_tasks}</td>
+              </tr>
+            `;
+          });
+
+        htmlContent += `
+              </tbody>
+            </table>
+          </div>
+        `;
+      }
+
+      // تذييل التقرير
+      htmlContent += `
+        <div style="margin-top: 20px; padding-top: 10px; border-top: 2px solid #ecf0f1; text-align: center; color: #7f8c8d; font-size: 9px;">
+          <p style="margin: 0;">تم إنشاء هذا التقرير تلقائياً في ${dateStr} الساعة ${timeStr}</p>
+        </div>
+      `;
 
       htmlContent += `</div>`;
       reportElement.innerHTML = htmlContent;
       document.body.appendChild(reportElement);
 
-      // تحويل HTML إلى صورة باستخدام html2canvas
+      // تحويل HTML إلى صورة
       const canvas = await html2canvas(reportElement, {
         scale: 2,
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff',
+        width: reportElement.scrollWidth,
+        height: reportElement.scrollHeight,
       });
 
       document.body.removeChild(reportElement);
@@ -438,28 +498,32 @@ const TasksMonitor = () => {
         format: 'a4',
       });
 
-      const imgWidth = 210; // A4 width in mm
-      const pageHeight = 297; // A4 height in mm
+      const imgWidth = 210;
+      const pageHeight = 297;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
       let heightLeft = imgHeight;
       let position = 0;
 
+      // إضافة الصفحة الأولى
       pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
       heightLeft -= pageHeight;
 
-      while (heightLeft > 0) {
+      // إضافة صفحات إضافية إذا لزم الأمر (بحد أقصى صفحتين)
+      let pageCount = 1;
+      while (heightLeft > 0 && pageCount < 2) {
         position = heightLeft - imgHeight;
         pdf.addPage();
         pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
         heightLeft -= pageHeight;
+        pageCount++;
       }
 
-      const fileName = `تقرير_المهام_اليومية_${today}_${now.getHours()}-${now.getMinutes()}.pdf`;
+      const fileName = `تقرير_المهام_${today}_${now.getHours()}-${now.getMinutes()}.pdf`;
       pdf.save(fileName);
 
       toast({
         title: 'تم التصدير بنجاح',
-        description: 'تم تصدير التقرير بصيغة PDF',
+        description: `تم إنشاء تقرير من ${pageCount} ${pageCount === 1 ? 'صفحة' : 'صفحتين'}`,
       });
     } catch (error: any) {
       console.error('Error exporting PDF:', error);
