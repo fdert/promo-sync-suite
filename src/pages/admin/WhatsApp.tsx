@@ -55,12 +55,17 @@ const WhatsApp = () => {
   const fetchMessages = async () => {
     try {
       console.log('Fetching messages...');
+      
+      // فلتر الرسائل من رقم محدد
+      const targetPhone = '+966532709980';
+      
       const { data, error } = await supabase
         .from('whatsapp_messages')
         .select(`
           *,
           customers(name, whatsapp)
         `)
+        .or(`from_number.eq.${targetPhone},to_number.eq.${targetPhone}`)
         .order('created_at', { ascending: false })
         .limit(500);
 
@@ -69,7 +74,7 @@ const WhatsApp = () => {
         throw error;
       }
       
-      console.log('Fetched messages:', data?.length || 0, 'messages');
+      console.log('Fetched messages for', targetPhone, ':', data?.length || 0, 'messages');
       setMessages(data || []);
       
       // تجميع الرسائل في محادثات حسب الرقم
@@ -222,38 +227,56 @@ const WhatsApp = () => {
   };
 
   const sendReply = async () => {
-    if (!selectedMessage || !replyText.trim()) return;
+    if (!replyText.trim()) return;
 
     try {
       setLoading(true);
 
       // تحديد رقم الواتساب الصحيح للإرسال
-      const recipientNumber = selectedMessage.to_number === 'system' 
-        ? selectedMessage.from_number 
-        : selectedMessage.to_number;
+      let recipientNumber;
+      if (selectedMessage) {
+        recipientNumber = selectedMessage.to_number === 'system' 
+          ? selectedMessage.from_number 
+          : selectedMessage.to_number;
+      } else if (selectedConversation) {
+        recipientNumber = selectedConversation.phoneNumber;
+      }
+
+      if (!recipientNumber) {
+        throw new Error('لم يتم تحديد رقم المستلم');
+      }
 
       console.log('Sending reply to:', recipientNumber, 'Message:', replyText);
 
-      // ملاحظة: تم إلغاء تفعيل إرسال الرسائل
-      const response = { error: null, data: { success: false, message: 'إرسال الرسائل غير متاح حالياً' } };
+      // إرسال الرسالة عبر edge function
+      const { data, error } = await supabase.functions.invoke('send-whatsapp-simple', {
+        body: {
+          phone_number: recipientNumber,
+          message: replyText
+        }
+      });
 
-      console.log('Reply response:', response);
+      console.log('Reply response:', data);
 
-      if (response.error) throw response.error;
+      if (error) throw error;
 
       toast({
         title: "تم الإرسال",
-        description: "تم إرسال الرد بنجاح",
+        description: "تم إرسال الرد بنجاح وسيتم إرساله قريباً",
       });
 
       setReplyText("");
       setIsReplyDialogOpen(false);
-      fetchMessages();
+      
+      // تحديث الرسائل بعد ثانيتين
+      setTimeout(() => {
+        fetchMessages();
+      }, 2000);
     } catch (error) {
       console.error('Error sending reply:', error);
       toast({
         title: "خطأ",
-        description: "حدث خطأ في إرسال الرد",
+        description: error.message || "حدث خطأ في إرسال الرد",
         variant: "destructive",
       });
     } finally {
@@ -372,7 +395,7 @@ const WhatsApp = () => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-foreground">إدارة الواتس آب</h1>
-          <p className="text-muted-foreground">إدارة الرسائل والردود والإعدادات</p>
+          <p className="text-muted-foreground">عرض محادثات الرقم: +966532709980</p>
         </div>
         
         <div className="flex gap-2">
