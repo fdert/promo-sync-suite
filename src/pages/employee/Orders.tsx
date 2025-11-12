@@ -477,8 +477,7 @@ const Orders = () => {
             file_type: file.type,
             file_size: file.size,
             mime_type: file.type,
-            file_category: fileCategory,
-            sent_to_customer: false
+            uploaded_by: user?.id
           });
 
         if (insertError) throw insertError;
@@ -1124,13 +1123,13 @@ ${publicFileUrl}
           invoice_number: invoiceNumber,
           customer_id: orderData.customer_id,
           order_id: orderData.id,
-          amount: orderData.amount,
-          tax_amount: 0,
-          total_amount: orderData.amount,
+          total_amount: orderData.total_amount || 0,
+          tax: 0,
+          discount: 0,
+          paid_amount: orderData.paid_amount || 0,
           issue_date: new Date().toISOString().split('T')[0],
-          due_date: orderData.due_date || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          payment_type: orderData.payment_type || 'دفع آجل',
-          status: 'قيد الانتظار', // سيتم حساب الحالة تلقائياً في المعاينة
+          due_date: orderData.delivery_date || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          status: 'draft',
           created_by: user?.id
         })
         .select()
@@ -1152,10 +1151,10 @@ ${publicFileUrl}
          const invoiceItems = orderData.order_items.map((item: any) => ({
            invoice_id: newInvoice.id,
            item_name: item.item_name,
-           description: item.description,
+           description: item.description || '',
            quantity: item.quantity,
            unit_price: item.unit_price,
-           total_amount: item.total_amount
+           total: item.total || item.total_amount || 0
          }));
 
          console.log('Invoice items to insert:', invoiceItems);

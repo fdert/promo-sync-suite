@@ -474,8 +474,7 @@ const Orders = () => {
             file_type: file.type,
             file_size: file.size,
             mime_type: file.type,
-            file_category: fileCategory,
-            sent_to_customer: false
+            uploaded_by: user?.id
           });
 
         if (insertError) throw insertError;
@@ -1122,7 +1121,7 @@ ${companyName}`;
           description: item.description || '',
           quantity: item.quantity,
           unit_price: item.unit_price,
-          total: item.total_amount
+          total: item.total_amount || item.total || 0
         }));
 
         const { error: insertItemsError } = await supabase
