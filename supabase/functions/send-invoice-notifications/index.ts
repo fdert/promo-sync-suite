@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
         .from('invoices')
         .select(`
           *,
-          customers(name, phone, whatsapp_number)
+          customers(name, phone, whatsapp)
         `)
         .eq('id', invoice_id)
         .single();
@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
       // جلب بيانات العميل فقط
       const { data: customerData, error: customerError } = await supabase
         .from('customers')
-        .select('name, phone, whatsapp_number')
+        .select('name, phone, whatsapp')
         .eq('id', customer_id)
         .single();
 
@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
     }
 
     // التحقق من وجود رقم واتس آب للعميل
-    const customerPhone = customer.whatsapp_number || customer.phone;
+    const customerPhone = customer.whatsapp || customer.phone;
     if (!customerPhone) {
       console.log('No WhatsApp number available for customer');
       return new Response(
@@ -117,16 +117,16 @@ Deno.serve(async (req) => {
     // محاولة الحصول على قالب الرسالة من قاعدة البيانات
     const { data: templateData } = await supabase
       .from('message_templates')
-      .select('template_content')
-      .eq('template_name', type)
+      .select('content')
+      .eq('name', type)
       .eq('is_active', true)
       .maybeSingle();
 
     let message = '';
     
-    if (templateData?.template_content) {
+    if (templateData?.content) {
       // استخدام القالب من قاعدة البيانات
-      message = templateData.template_content;
+      message = templateData.content;
       
       // استبدال المتغيرات
       const replacements: Record<string, string> = {
@@ -271,8 +271,7 @@ https://e5a7747a-0935-46df-9ea9-1308e76636dc.lovableproject.com/invoice/${invoic
           message_content: message,
           status: 'sent',
           is_reply: true,
-          customer_id: customer_id || invoice?.customer_id,
-          replied_at: new Date().toISOString()
+          customer_id: customer_id || invoice?.customer_id
         })
         .select()
         .single();
