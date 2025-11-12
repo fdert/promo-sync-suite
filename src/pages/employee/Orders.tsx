@@ -1114,7 +1114,7 @@ ${publicFileUrl}
       if (!orderData) throw new Error('لم يتم العثور على الطلب');
 
       const { data: invoiceNumber, error: numberError } = await supabase
-        .rpc('generate_print_order_number');
+        .rpc('generate_invoice_number');
 
       if (numberError) {
         console.error('Error generating invoice number:', numberError);

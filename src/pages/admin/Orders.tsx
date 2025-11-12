@@ -1092,7 +1092,7 @@ ${companyName}`;
 
       // إنشاء رقم فاتورة جديد
       const { data: invoiceNumber, error: numberError } = await supabase
-        .rpc('generate_print_order_number');
+        .rpc('generate_invoice_number');
 
       if (numberError) throw numberError;
 

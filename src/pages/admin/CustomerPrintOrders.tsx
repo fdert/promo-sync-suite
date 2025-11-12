@@ -184,7 +184,7 @@ const CustomerPrintOrders = () => {
   const downloadFile = async (filePath: string, fileName: string) => {
     try {
       const { data, error } = await supabase.storage
-        .from('print-files')
+        .from('print_files')
         .download(filePath);
 
       if (error) throw error;
