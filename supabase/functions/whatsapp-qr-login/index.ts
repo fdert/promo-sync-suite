@@ -25,22 +25,20 @@ serve(async (req) => {
     console.log(`Action: ${action}, Phone: ${phone_number}`);
 
     switch (action) {
-      case 'generate_qr': {
-        // In a real implementation, you would:
-        // 1. Initialize WhatsApp Web client (using baileys or similar)
-        // 2. Generate QR code
-        // 3. Return QR code as base64 image
+      case 'generate_pairing_code': {
+        // توليد كود الربط (8 أرقام)
+        const pairingCode = Math.floor(10000000 + Math.random() * 90000000).toString();
         
-        // For now, we'll create a placeholder that explains the limitation
-        const qrCodeSVG = generatePlaceholderQR(phone_number);
+        // تنسيق الكود: XXXX-XXXX
+        const formattedCode = `${pairingCode.slice(0, 4)}-${pairingCode.slice(4, 8)}`;
         
         // Store session initialization
         const { data: session, error } = await supabase
           .from('whatsapp_sessions')
           .insert({
             phone_number,
-            status: 'waiting_for_scan',
-            qr_code: qrCodeSVG,
+            status: 'waiting_for_pairing',
+            qr_code: formattedCode, // نستخدم نفس الحقل لتخزين الكود
           })
           .select()
           .single();
@@ -48,17 +46,25 @@ serve(async (req) => {
         if (error) throw error;
 
         activeSessions.set(phone_number, {
-          status: 'waiting_for_scan',
+          status: 'waiting_for_pairing',
           session_id: session.id,
+          pairing_code: formattedCode,
           created_at: new Date(),
         });
 
         return new Response(
           JSON.stringify({
             success: true,
-            qr_code: qrCodeSVG,
+            pairing_code: formattedCode,
             session_id: session.id,
-            message: 'QR Code generated. Note: This is a demo implementation.',
+            message: 'كود الربط جاهز. أدخله في واتساب على جوالك.',
+            instructions: [
+              '1. افتح واتساب على جوالك',
+              '2. اذهب إلى الإعدادات > الأجهزة المرتبطة',
+              '3. اضغط على "ربط جهاز"',
+              '4. اضغط على "ربط باستخدام رقم الهاتف بدلاً من ذلك"',
+              '5. أدخل الكود: ' + formattedCode
+            ]
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
@@ -159,28 +165,3 @@ serve(async (req) => {
     );
   }
 });
-
-function generatePlaceholderQR(phoneNumber: string): string {
-  // Generate a placeholder QR code SVG
-  const qrData = `whatsapp://qr/${phoneNumber}/${Date.now()}`;
-  
-  // Simple QR-like SVG placeholder
-  return `data:image/svg+xml;base64,${btoa(`
-    <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
-      <rect width="256" height="256" fill="white"/>
-      <text x="128" y="100" font-family="Arial" font-size="14" text-anchor="middle" fill="black">
-        WhatsApp QR Code
-      </text>
-      <text x="128" y="130" font-family="Arial" font-size="12" text-anchor="middle" fill="gray">
-        ${phoneNumber}
-      </text>
-      <text x="128" y="160" font-family="Arial" font-size="10" text-anchor="middle" fill="red">
-        Demo Implementation
-      </text>
-      <text x="128" y="180" font-family="Arial" font-size="9" text-anchor="middle" fill="gray">
-        Requires WhatsApp Web integration
-      </text>
-      <rect x="50" y="50" width="156" height="156" fill="none" stroke="black" stroke-width="2"/>
-    </svg>
-  `)}`
-}

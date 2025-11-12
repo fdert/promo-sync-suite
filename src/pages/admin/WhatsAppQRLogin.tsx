@@ -3,13 +3,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Phone, QrCode, CheckCircle2 } from "lucide-react";
+import { Loader2, Phone, Smartphone, CheckCircle2, AlertCircle } from "lucide-react";
 
 export default function WhatsAppQRLogin() {
   const [phoneNumber, setPhoneNumber] = useState("+966532709980");
-  const [qrCode, setQrCode] = useState<string | null>(null);
+  const [pairingCode, setPairingCode] = useState<string | null>(null);
+  const [instructions, setInstructions] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [sessionInfo, setSessionInfo] = useState<any>(null);
@@ -40,33 +42,34 @@ export default function WhatsAppQRLogin() {
     }
   };
 
-  const generateQRCode = async () => {
+  const generatePairingCode = async () => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('whatsapp-qr-login', {
         body: { 
-          action: 'generate_qr',
+          action: 'generate_pairing_code',
           phone_number: phoneNumber 
         }
       });
 
       if (error) throw error;
 
-      if (data.qr_code) {
-        setQrCode(data.qr_code);
+      if (data.pairing_code) {
+        setPairingCode(data.pairing_code);
+        setInstructions(data.instructions || []);
         toast({
-          title: "✅ تم إنشاء رمز QR",
-          description: "قم بمسح الرمز من تطبيق الواتساب على هاتفك",
+          title: "✅ تم إنشاء كود الربط",
+          description: "أدخل الكود في تطبيق الواتساب على هاتفك",
         });
         
         // Start polling for connection status
         startPollingConnection();
       }
     } catch (error: any) {
-      console.error('Error generating QR:', error);
+      console.error('Error generating pairing code:', error);
       toast({
         title: "❌ خطأ",
-        description: error.message || "فشل إنشاء رمز QR",
+        description: error.message || "فشل إنشاء كود الربط",
         variant: "destructive",
       });
     } finally {
@@ -87,7 +90,8 @@ export default function WhatsAppQRLogin() {
         if (data?.connected) {
           setIsConnected(true);
           setSessionInfo(data.session);
-          setQrCode(null);
+          setPairingCode(null);
+          setInstructions([]);
           clearInterval(interval);
           
           toast({
@@ -145,7 +149,8 @@ export default function WhatsAppQRLogin() {
 
       setIsConnected(false);
       setSessionInfo(null);
-      setQrCode(null);
+      setPairingCode(null);
+      setInstructions([]);
 
       toast({
         title: "✅ تم قطع الاتصال",
@@ -165,7 +170,7 @@ export default function WhatsAppQRLogin() {
       <div className="mb-6">
         <h1 className="text-3xl font-bold mb-2">تسجيل الدخول للواتساب</h1>
         <p className="text-muted-foreground">
-          قم بمسح رمز QR لربط حساب الواتساب وجلب جميع الرسائل
+          قم بإدخال كود الربط لربط حساب الواتساب وجلب جميع الرسائل
         </p>
       </div>
 
@@ -197,7 +202,7 @@ export default function WhatsAppQRLogin() {
 
             {!isConnected && (
               <Button
-                onClick={generateQRCode}
+                onClick={generatePairingCode}
                 disabled={isLoading || !phoneNumber}
                 className="w-full"
               >
@@ -208,8 +213,8 @@ export default function WhatsAppQRLogin() {
                   </>
                 ) : (
                   <>
-                    <QrCode className="w-4 h-4 ml-2" />
-                    إنشاء رمز QR
+                    <Smartphone className="w-4 h-4 ml-2" />
+                    إنشاء كود الربط
                   </>
                 )}
               </Button>
@@ -233,30 +238,45 @@ export default function WhatsAppQRLogin() {
           </CardContent>
         </Card>
 
-        {qrCode && (
+        {pairingCode && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <QrCode className="w-5 h-5" />
-                رمز QR
+                <Smartphone className="w-5 h-5" />
+                كود الربط
               </CardTitle>
               <CardDescription>
-                امسح هذا الرمز من تطبيق الواتساب على هاتفك
+                أدخل هذا الكود في تطبيق الواتساب على هاتفك
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex flex-col items-center justify-center p-8">
-              <div className="bg-white p-4 rounded-lg shadow-lg mb-4">
-                <img 
-                  src={qrCode} 
-                  alt="WhatsApp QR Code" 
-                  className="w-64 h-64"
-                />
-              </div>
-              <div className="text-center text-sm text-muted-foreground space-y-2">
-                <p>📱 افتح الواتساب على هاتفك</p>
-                <p>⚙️ اذهب إلى الإعدادات &gt; الأجهزة المرتبطة</p>
-                <p>📷 اضغط على "ربط جهاز" وامسح الرمز</p>
-              </div>
+            <CardContent className="space-y-4">
+              <Alert className="border-green-500 bg-green-50 dark:bg-green-950">
+                <Smartphone className="h-4 w-4 text-green-600 dark:text-green-400" />
+                <AlertTitle className="text-green-900 dark:text-green-100">كود الربط الخاص بك</AlertTitle>
+                <AlertDescription className="space-y-3">
+                  <div className="text-4xl font-bold text-center py-6 text-green-700 dark:text-green-300 tracking-widest" dir="ltr">
+                    {pairingCode}
+                  </div>
+                  <div className="text-sm text-green-800 dark:text-green-200 space-y-1.5 pr-4">
+                    {instructions.map((instruction, idx) => (
+                      <div key={idx} className="flex items-start gap-2">
+                        <span className="text-green-600 dark:text-green-400">•</span>
+                        <span>{instruction}</span>
+                      </div>
+                    ))}
+                  </div>
+                </AlertDescription>
+              </Alert>
+              
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>ملاحظة هامة</AlertTitle>
+                <AlertDescription className="space-y-1">
+                  <p>• هذا النظام تجريبي حالياً</p>
+                  <p>• للربط الفعلي، يحتاج النظام إلى تثبيت مكتبة WhatsApp Web</p>
+                  <p>• سيتم تطوير الربط الكامل قريباً</p>
+                </AlertDescription>
+              </Alert>
             </CardContent>
           </Card>
         )}
