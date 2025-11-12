@@ -460,10 +460,15 @@ const Orders = () => {
         const fileName = `${printOrderId}_${Date.now()}_${i}.${fileExt}`;
         const filePath = `${printOrderId}/${fileName}`;
 
-        // رفع الملف إلى storage
-        const { error: uploadError } = await supabase.storage
+        // رفع مع معالجة خطأ "Bucket not found" عبر محاولة بديلة
+        let uploadError: any = await supabase.storage
           .from('print-files')
           .upload(filePath, file);
+        uploadError = uploadError?.error || null;
+        if (uploadError && (uploadError as any).message?.includes('Bucket not found')) {
+          const retry = await supabase.storage.from('print_files').upload(filePath, file);
+          uploadError = retry?.error || null;
+        }
 
         if (uploadError) throw uploadError;
 
@@ -1154,7 +1159,7 @@ ${publicFileUrl}
            description: item.description || '',
            quantity: item.quantity,
            unit_price: item.unit_price,
-           total: item.total || item.total_amount || 0
+            total: item.total || item.total_amount || 0
          }));
 
          console.log('Invoice items to insert:', invoiceItems);

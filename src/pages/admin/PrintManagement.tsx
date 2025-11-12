@@ -381,9 +381,15 @@ const PrintManagement = () => {
         const fileName = `${orderId}_${Date.now()}.${fileExtension}`;
         const filePath = `${orderId}/${fileName}`;
 
-        const { error: uploadError } = await supabase.storage
+        // رفع مع معالجة خطأ "Bucket not found" عبر محاولة بديلة
+        let uploadResult: any = await supabase.storage
           .from('print-files')
           .upload(filePath, file);
+        let uploadError = uploadResult?.error || null;
+        if (uploadError && (uploadError as any).message?.includes('Bucket not found')) {
+          const retry = await supabase.storage.from('print_files').upload(filePath, file);
+          uploadError = retry?.error || null;
+        }
 
         if (uploadError) throw uploadError;
 
