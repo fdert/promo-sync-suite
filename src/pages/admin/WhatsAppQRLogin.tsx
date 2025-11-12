@@ -48,34 +48,24 @@ export default function WhatsAppQRLogin() {
   const generatePairingCode = async () => {
     setIsLoading(true);
     try {
-      // 1) إظهار كود فوري عبر REST حتى لو فشل WS
-      const { data: restData, error: restErr } = await supabase.functions.invoke('whatsapp-qr-login', {
-        body: { 
-          action: 'generate_pairing_code',
-          phone_number: phoneNumber 
-        }
-      });
-      if (restErr) throw restErr;
-      if (restData?.pairing_code) {
-        setPairingCode(restData.pairing_code);
-        setInstructions(restData.instructions || []);
-        toast({
-          title: "✅ تم إنشاء كود الربط",
-          description: "أدخل الكود في تطبيق الواتساب على هاتفك",
-        });
-      }
-
-      // 2) محاولة الربط الحقيقي عبر WebSocket (غير حاجبة)
+      // ابدأ الربط الحقيقي عبر WebSocket فقط (لا نعرض أي كود تجريبي)
       startPairing(phoneNumber);
+      setInstructions([
+        '1. افتح واتساب على جوالك',
+        '2. الإعدادات > الأجهزة المرتبطة',
+        '3. اضغط على "ربط جهاز"',
+        '4. اختر "ربط باستخدام رقم الهاتف بدلاً من ذلك"',
+        '5. أدخل الكود الذي سيظهر هنا عند توليده من واتساب'
+      ]);
     } catch (error: any) {
-      console.error('Error generating pairing code:', error);
+      console.error('Error starting pairing:', error);
       toast({
         title: "❌ خطأ",
-        description: error.message || "تعذر إنشاء كود الربط",
+        description: error.message || "تعذر بدء الربط",
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      // سيُعاد تعطيل التحميل تلقائيًا عند وصول الكود/الخطأ عبر WebSocket
     }
   };
 
