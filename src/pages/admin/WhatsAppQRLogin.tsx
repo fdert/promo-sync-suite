@@ -74,6 +74,7 @@ export default function WhatsAppQRLogin() {
   useEffect(() => {
     if (wsPairingCode) {
       setPairingCode(wsPairingCode);
+      setIsLoading(false);
       toast({
         title: "✅ تم إنشاء كود الربط",
         description: "أدخل الكود في تطبيق الواتساب على هاتفك",
@@ -92,6 +93,25 @@ export default function WhatsAppQRLogin() {
       });
     }
   }, [wsConnected, toast]);
+
+  useEffect(() => {
+    if (wsError) {
+      setIsLoading(false);
+      toast({
+        title: "❌ خطأ في الاتصال",
+        description: wsError,
+        variant: "destructive",
+      });
+    }
+  }, [wsError, toast]);
+
+  useEffect(() => {
+    if (status === 'connecting') {
+      setIsLoading(true);
+    } else if (status === 'code') {
+      setIsLoading(false);
+    }
+  }, [status]);
 
 
   const fetchAllMessages = async () => {
