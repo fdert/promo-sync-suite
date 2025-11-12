@@ -389,7 +389,7 @@ const Orders = () => {
       // إنشاء رابط مؤقت لعرض الملف
       const { data: signedUrlData, error: urlError } = await supabase
         .storage
-        .from('print-files')
+        .from('print_files')
         .createSignedUrl(file.file_path, 3600); // ساعة واحدة
 
       if (urlError) {
@@ -459,7 +459,7 @@ const Orders = () => {
 
         // رفع مع معالجة خطأ "Bucket not found" عبر محاولة بديلة
         let uploadError: any = await supabase.storage
-          .from('print-files')
+          .from('print_files')
           .upload(filePath, file);
         uploadError = uploadError?.error || null;
         if (uploadError && (uploadError as any).message?.includes('Bucket not found')) {
@@ -563,7 +563,7 @@ const Orders = () => {
       // إنشاء رابط موقع للملف (يعمل لمدة 24 ساعة)
       const { data: signedUrlData, error: urlError } = await supabase
         .storage
-        .from('print-files')
+        .from('print_files')
         .createSignedUrl(proofFile.file_path, 86400); // 24 ساعة
 
       if (urlError) {
@@ -729,7 +729,7 @@ ${companyName}`;
   const downloadFile = async (filePath: string, fileName: string) => {
     try {
       const { data, error } = await supabase.storage
-        .from('print-files')
+        .from('print_files')
         .download(filePath);
       
       if (error) throw error;
@@ -1092,7 +1092,7 @@ ${companyName}`;
 
       // إنشاء رقم فاتورة جديد
       const { data: invoiceNumber, error: numberError } = await supabase
-        .rpc('generate_invoice_number');
+        .rpc('generate_print_order_number');
 
       if (numberError) throw numberError;
 
