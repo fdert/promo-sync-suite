@@ -1,69 +1,75 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Store active sessions in memory (in production, use Redis or similar)
-const activeSessions = new Map();
-
 serve(async (req) => {
+  // CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    const WORKER_URL = (Deno.env.get('WHATSAPP_WORKER_URL') || '').replace(/\/$/, '');
+    const WORKER_TOKEN = Deno.env.get('WHATSAPP_WORKER_TOKEN') || '';
 
-    const { action, phone_number } = await req.json();
+    if (!WORKER_URL || !WORKER_TOKEN) {
+      console.warn('Missing worker secrets WHATSAPP_WORKER_URL/WHATSAPP_WORKER_TOKEN');
+      return new Response(
+        JSON.stringify({
+          error: 'missing_worker_secrets',
+          message: 'يجب ضبط WHATSAPP_WORKER_URL و WHATSAPP_WORKER_TOKEN في أسرار المشروع.'
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
-    console.log(`Action: ${action}, Phone: ${phone_number}`);
+    const body = await req.json().catch(() => ({}));
+    const { action, phone_number } = body as { action?: string; phone_number?: string };
+
+    console.log(`Proxy action: ${action} phone: ${phone_number}`);
+
+    const callWorker = async (path: string, method: 'GET' | 'POST' = 'POST', payload?: Record<string, unknown>) => {
+      const url = `${WORKER_URL}${path}`;
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${WORKER_TOKEN}`,
+      };
+
+      const res = await fetch(url, {
+        method,
+        headers,
+        body: method === 'POST' ? JSON.stringify(payload || {}) : undefined,
+      });
+
+      const text = await res.text();
+      let data: any = null;
+      try { data = text ? JSON.parse(text) : null; } catch (_) { data = { raw: text }; }
+      if (!res.ok) {
+        console.error('Worker error', res.status, data);
+        throw new Error(data?.message || `Worker responded ${res.status}`);
+      }
+      return data;
+    };
 
     switch (action) {
       case 'generate_pairing_code': {
-        // توليد كود الربط (8 أرقام)
-        const pairingCode = Math.floor(10000000 + Math.random() * 90000000).toString();
-        
-        // تنسيق الكود: XXXX-XXXX
-        const formattedCode = `${pairingCode.slice(0, 4)}-${pairingCode.slice(4, 8)}`;
-        
-        // Store session initialization
-        const { data: session, error } = await supabase
-          .from('whatsapp_sessions')
-          .insert({
-            phone_number,
-            status: 'waiting_for_pairing',
-            qr_code: formattedCode, // نستخدم نفس الحقل لتخزين الكود
-          })
-          .select()
-          .single();
-
-        if (error) throw error;
-
-        activeSessions.set(phone_number, {
-          status: 'waiting_for_pairing',
-          session_id: session.id,
-          pairing_code: formattedCode,
-          created_at: new Date(),
-        });
-
+        if (!phone_number) throw new Error('phone_number is required');
+        const data = await callWorker('/pairing/start', 'POST', { phone_number });
         return new Response(
           JSON.stringify({
             success: true,
-            pairing_code: formattedCode,
-            session_id: session.id,
-            message: 'كود الربط جاهز. أدخله في واتساب على جوالك.',
+            pairing_code: data.pairing_code,
+            session_id: data.session_id,
+            expires_in: data.expires_in,
             instructions: [
               '1. افتح واتساب على جوالك',
-              '2. اذهب إلى الإعدادات > الأجهزة المرتبطة',
+              '2. الإعدادات > الأجهزة المرتبطة',
               '3. اضغط على "ربط جهاز"',
-              '4. اضغط على "ربط باستخدام رقم الهاتف بدلاً من ذلك"',
-              '5. أدخل الكود: ' + formattedCode
+              '4. اختر "ربط باستخدام رقم الهاتف بدلاً من ذلك"',
+              '5. أدخل الكود: ' + (data.pairing_code || '')
             ]
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -71,97 +77,34 @@ serve(async (req) => {
       }
 
       case 'check_status': {
-        const sessionState = activeSessions.get(phone_number);
-        
-        // Check database for session status
-        const { data: session, error } = await supabase
-          .from('whatsapp_sessions')
-          .select('*')
-          .eq('phone_number', phone_number)
-          .eq('is_active', true)
-          .order('connected_at', { ascending: false })
-          .limit(1)
-          .single();
-
-        const connected = session?.status === 'connected';
-
-        return new Response(
-          JSON.stringify({
-            connected,
-            session: session || null,
-            status: sessionState?.status || 'unknown',
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      case 'fetch_messages': {
-        // In a real implementation, you would:
-        // 1. Use the active WhatsApp Web session
-        // 2. Fetch all chats and messages
-        // 3. Store them in whatsapp_messages table
-        
-        // For demo purposes, we'll simulate this
-        const { data: session } = await supabase
-          .from('whatsapp_sessions')
-          .select('*')
-          .eq('phone_number', phone_number)
-          .eq('is_active', true)
-          .single();
-
-        if (!session) {
-          throw new Error('No active session found');
-        }
-
-        // Update session to mark messages as fetched
-        await supabase
-          .from('whatsapp_sessions')
-          .update({ 
-            last_sync_at: new Date().toISOString(),
-            messages_synced: true 
-          })
-          .eq('id', session.id);
-
-        return new Response(
-          JSON.stringify({
-            success: true,
-            messages_count: 0,
-            message: 'Messages fetch initiated. Note: This is a demo implementation.',
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        if (!phone_number) throw new Error('phone_number is required');
+        const data = await callWorker('/pairing/status', 'POST', { phone_number });
+        return new Response(JSON.stringify(data), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
       case 'disconnect': {
-        // Mark session as inactive
-        await supabase
-          .from('whatsapp_sessions')
-          .update({ 
-            is_active: false,
-            disconnected_at: new Date().toISOString()
-          })
-          .eq('phone_number', phone_number)
-          .eq('is_active', true);
+        if (!phone_number) throw new Error('phone_number is required');
+        const data = await callWorker('/pairing/disconnect', 'POST', { phone_number });
+        return new Response(JSON.stringify(data), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
 
-        activeSessions.delete(phone_number);
-
-        return new Response(
-          JSON.stringify({ success: true, message: 'Disconnected successfully' }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+      case 'fetch_messages': {
+        if (!phone_number) throw new Error('phone_number is required');
+        const data = await callWorker('/messages/sync', 'POST', { phone_number });
+        return new Response(JSON.stringify(data), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
       default:
-        throw new Error('Invalid action');
+        return new Response(
+          JSON.stringify({ error: 'invalid_action', message: 'Invalid action' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
     }
   } catch (error: any) {
-    console.error('Error:', error);
+    console.error('Proxy Error:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
-      { 
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
+      JSON.stringify({ error: 'proxy_failed', message: error?.message || 'Unknown error' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });

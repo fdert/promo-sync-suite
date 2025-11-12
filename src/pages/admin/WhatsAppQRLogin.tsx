@@ -7,7 +7,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Phone, Smartphone, CheckCircle2, AlertCircle } from "lucide-react";
-import { useWhatsappPairing } from "@/hooks/useWhatsappPairing";
+
 
 export default function WhatsAppQRLogin() {
   const [phoneNumber, setPhoneNumber] = useState("+966532709980");
@@ -23,7 +23,7 @@ export default function WhatsAppQRLogin() {
     checkExistingSession();
   }, []);
 
-  const { startPairing, stop, status, pairingCode: wsPairingCode, isConnected: wsConnected, error: wsError } = useWhatsappPairing();
+  
 
   const checkExistingSession = async () => {
     try {
@@ -48,70 +48,42 @@ export default function WhatsAppQRLogin() {
   const generatePairingCode = async () => {
     setIsLoading(true);
     try {
-      // ابدأ الربط الحقيقي عبر WebSocket فقط (لا نعرض أي كود تجريبي)
-      startPairing(phoneNumber);
-      setInstructions([
-        '1. افتح واتساب على جوالك',
-        '2. الإعدادات > الأجهزة المرتبطة',
-        '3. اضغط على "ربط جهاز"',
-        '4. اختر "ربط باستخدام رقم الهاتف بدلاً من ذلك"',
-        '5. أدخل الكود الذي سيظهر هنا عند توليده من واتساب'
-      ]);
+      const { data, error } = await supabase.functions.invoke('whatsapp-qr-login', {
+        body: {
+          action: 'generate_pairing_code',
+          phone_number: phoneNumber,
+        }
+      });
+      if (error) throw error;
+
+      if (data?.pairing_code) {
+        setPairingCode(data.pairing_code);
+        setInstructions(data.instructions || [
+          '1. افتح واتساب على جوالك',
+          '2. الإعدادات > الأجهزة المرتبطة',
+          '3. اضغط على "ربط جهاز"',
+          '4. اختر "ربط باستخدام رقم الهاتف بدلاً من ذلك"',
+          '5. أدخل الكود الظاهر هنا'
+        ]);
+        toast({
+          title: '✅ تم إنشاء كود الربط',
+          description: 'أدخل الكود في تطبيق الواتساب على هاتفك',
+        });
+      } else {
+        throw new Error(data?.message || 'تعذر الحصول على كود الربط');
+      }
     } catch (error: any) {
-      console.error('Error starting pairing:', error);
+      console.error('Error generating pairing code:', error);
       toast({
-        title: "❌ خطأ",
-        description: error.message || "تعذر بدء الربط",
-        variant: "destructive",
+        title: '❌ خطأ',
+        description: error.message || 'تعذر إنشاء كود الربط',
+        variant: 'destructive',
       });
     } finally {
-      // سيُعاد تعطيل التحميل تلقائيًا عند وصول الكود/الخطأ عبر WebSocket
+      setIsLoading(false);
     }
   };
 
-  // WebSocket-based pairing keeps session alive while page is open
-  const startPollingConnection = () => {};
-
-  useEffect(() => {
-    if (wsPairingCode) {
-      setPairingCode(wsPairingCode);
-      setIsLoading(false);
-      toast({
-        title: "✅ تم إنشاء كود الربط",
-        description: "أدخل الكود في تطبيق الواتساب على هاتفك",
-      });
-    }
-  }, [wsPairingCode, toast]);
-
-  useEffect(() => {
-    if (wsConnected) {
-      setIsConnected(true);
-      setPairingCode(null);
-      setInstructions([]);
-      toast({
-        title: "🎉 تم الاتصال بنجاح!",
-        description: "تم الربط عبر الكود ويتم الحفاظ على الاتصال ما دامت الصفحة مفتوحة",
-      });
-    }
-  }, [wsConnected, toast]);
-
-  useEffect(() => {
-    if (wsError) {
-      setIsLoading(false);
-      toast({
-        title: "❌ خطأ في الاتصال",
-        description: wsError,
-        variant: "destructive",
-      });
-    }
-  }, [wsError, toast]);
-
-  useEffect(() => {
-    // أوقف التحميل عند أي حالة غير "connecting" لتفادي بقاء الزر على جاري الإنشاء
-    if (status !== 'connecting') {
-      setIsLoading(false);
-    }
-  }, [status]);
 
 
   const fetchAllMessages = async () => {
