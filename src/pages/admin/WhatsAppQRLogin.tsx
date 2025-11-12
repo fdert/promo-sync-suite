@@ -7,6 +7,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Phone, Smartphone, CheckCircle2, AlertCircle } from "lucide-react";
+import { useWhatsappPairing } from "@/hooks/useWhatsappPairing";
 
 export default function WhatsAppQRLogin() {
   const [phoneNumber, setPhoneNumber] = useState("+966532709980");
@@ -17,10 +18,12 @@ export default function WhatsAppQRLogin() {
   const [sessionInfo, setSessionInfo] = useState<any>(null);
   const { toast } = useToast();
 
-  // Check for existing session
+  // Check for existing session (fallback to REST check)
   useEffect(() => {
     checkExistingSession();
   }, []);
+
+  const { startPairing, stop, status, pairingCode: wsPairingCode, isConnected: wsConnected, error: wsError } = useWhatsappPairing();
 
   const checkExistingSession = async () => {
     try {
@@ -45,31 +48,19 @@ export default function WhatsAppQRLogin() {
   const generatePairingCode = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('whatsapp-qr-login', {
-        body: { 
-          action: 'generate_pairing_code',
-          phone_number: phoneNumber 
-        }
-      });
-
-      if (error) throw error;
-
-      if (data.pairing_code) {
-        setPairingCode(data.pairing_code);
-        setInstructions(data.instructions || []);
-        toast({
-          title: "✅ تم إنشاء كود الربط",
-          description: "أدخل الكود في تطبيق الواتساب على هاتفك",
-        });
-        
-        // Start polling for connection status
-        startPollingConnection();
-      }
+      startPairing(phoneNumber);
+      setInstructions([
+        '1. افتح واتساب على جوالك',
+        '2. اذهب إلى الإعدادات > الأجهزة المرتبطة',
+        '3. اضغط على "ربط جهاز"',
+        '4. اضغط على "ربط باستخدام رقم الهاتف بدلاً من ذلك"',
+        '5. أدخل الكود الظاهر هنا'
+      ]);
     } catch (error: any) {
-      console.error('Error generating pairing code:', error);
+      console.error('Error starting pairing:', error);
       toast({
         title: "❌ خطأ",
-        description: error.message || "فشل إنشاء كود الربط",
+        description: error.message || "تعذر بدء الربط",
         variant: "destructive",
       });
     } finally {
@@ -77,39 +68,31 @@ export default function WhatsAppQRLogin() {
     }
   };
 
-  const startPollingConnection = () => {
-    const interval = setInterval(async () => {
-      try {
-        const { data, error } = await supabase.functions.invoke('whatsapp-qr-login', {
-          body: { 
-            action: 'check_status',
-            phone_number: phoneNumber 
-          }
-        });
+  // WebSocket-based pairing keeps session alive while page is open
+  const startPollingConnection = () => {};
 
-        if (data?.connected) {
-          setIsConnected(true);
-          setSessionInfo(data.session);
-          setPairingCode(null);
-          setInstructions([]);
-          clearInterval(interval);
-          
-          toast({
-            title: "🎉 تم الاتصال بنجاح!",
-            description: "يتم الآن جلب الرسائل...",
-          });
+  useEffect(() => {
+    if (wsPairingCode) {
+      setPairingCode(wsPairingCode);
+      toast({
+        title: "✅ تم إنشاء كود الربط",
+        description: "أدخل الكود في تطبيق الواتساب على هاتفك",
+      });
+    }
+  }, [wsPairingCode, toast]);
 
-          // Fetch messages after connection
-          fetchAllMessages();
-        }
-      } catch (error) {
-        console.error('Error checking status:', error);
-      }
-    }, 3000); // Check every 3 seconds
+  useEffect(() => {
+    if (wsConnected) {
+      setIsConnected(true);
+      setPairingCode(null);
+      setInstructions([]);
+      toast({
+        title: "🎉 تم الاتصال بنجاح!",
+        description: "تم الربط عبر الكود ويتم الحفاظ على الاتصال ما دامت الصفحة مفتوحة",
+      });
+    }
+  }, [wsConnected, toast]);
 
-    // Stop polling after 2 minutes
-    setTimeout(() => clearInterval(interval), 120000);
-  };
 
   const fetchAllMessages = async () => {
     try {
@@ -138,6 +121,7 @@ export default function WhatsAppQRLogin() {
 
   const disconnect = async () => {
     try {
+      stop();
       const { error } = await supabase.functions.invoke('whatsapp-qr-login', {
         body: { 
           action: 'disconnect',
@@ -233,6 +217,8 @@ export default function WhatsAppQRLogin() {
                 >
                   قطع الاتصال
                 </Button>
+                <p className="text-xs text-muted-foreground">ملاحظة: للحفاظ على الاتصال، اترك هذه الصفحة مفتوحة.</p>
+
               </div>
             )}
           </CardContent>
@@ -272,9 +258,9 @@ export default function WhatsAppQRLogin() {
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>ملاحظة هامة</AlertTitle>
                 <AlertDescription className="space-y-1">
-                  <p>• هذا النظام تجريبي حالياً</p>
-                  <p>• للربط الفعلي، يحتاج النظام إلى تثبيت مكتبة WhatsApp Web</p>
-                  <p>• سيتم تطوير الربط الكامل قريباً</p>
+                  <p>• هذا الربط حقيقي باستخدام كود الإقران من واتساب</p>
+                  <p>• للحفاظ على الاتصال بشكل دائم نوصي بتشغيل عامل دائم (سنجهزه لك لاحقًا)</p>
+                  <p>• الآن: اترك هذه الصفحة مفتوحة للحفاظ على الاتصال</p>
                 </AlertDescription>
               </Alert>
             </CardContent>

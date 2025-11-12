@@ -47,3 +47,6 @@ verify_jwt = false
 
 [functions.whatsapp-qr-login]
 verify_jwt = false
+
+[functions.whatsapp-pairing-ws]
+verify_jwt = false
