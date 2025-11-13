@@ -441,8 +441,8 @@ export default function WhatsAppQRLogin() {
         )}
       </div>
 
-      <div className="flex border rounded-lg overflow-hidden" style={{ height: '650px' }}>
-        <div className="w-full md:w-[350px] border-l bg-background flex-shrink-0">
+      <div className="flex w-full border rounded-lg overflow-hidden" style={{ height: '650px' }}>
+        <div className="w-[300px] md:w-[350px] border-l bg-background flex-shrink-0">
           <div className="p-4 border-b bg-muted/50">
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-semibold">المحادثات</h3>
@@ -520,7 +520,7 @@ export default function WhatsAppQRLogin() {
           </ScrollArea>
         </div>
 
-        <div className="flex-1 flex flex-col bg-[#efeae2] dark:bg-[#0b141a]">
+        <div className="flex-1 min-w-0 flex flex-col bg-[#efeae2] dark:bg-[#0b141a]">
           {selectedContact ? (
             <>
               <div className="p-4 border-b bg-background flex items-center gap-3">
