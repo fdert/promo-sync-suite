@@ -627,8 +627,7 @@ export default function WhatsAppQRLogin() {
                     e.key === "Enter" &&
                     !sendingReply &&
                     replyMessage.trim() &&
-                    selectedContact &&
-                    isConnected
+                    selectedContact
                   ) {
                     sendReply();
                   }
@@ -638,7 +637,7 @@ export default function WhatsAppQRLogin() {
               <Button
                 onClick={sendReply}
                 disabled={
-                  sendingReply || !replyMessage.trim() || !isConnected || !selectedContact
+                  sendingReply || !replyMessage.trim() || !selectedContact
                 }
                 className="bg-[#00a884] hover:bg-[#008f6f] dark:bg-[#00a884] dark:hover:bg-[#008f6f]"
               >
