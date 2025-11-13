@@ -6,9 +6,19 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Phone, Smartphone, CheckCircle2, AlertCircle, RefreshCw, MessageSquare, Send, Download, User } from "lucide-react";
+import {
+  Loader2,
+  Phone,
+  Smartphone,
+  CheckCircle2,
+  AlertCircle,
+  RefreshCw,
+  MessageSquare,
+  Send,
+  Download,
+  User,
+} from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-
 
 interface WhatsAppMessage {
   id: string;
@@ -56,7 +66,7 @@ export default function WhatsAppQRLogin() {
   useEffect(() => {
     checkExistingSession();
     loadMessages();
-    
+
     const interval = setInterval(loadMessages, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -67,29 +77,31 @@ export default function WhatsAppQRLogin() {
 
   const updateContactsList = () => {
     const contactsMap = new Map<string, ChatContact>();
-    
-    messages.forEach(msg => {
+
+    messages.forEach((msg) => {
       const contactNumber = msg.is_reply ? msg.from_number : msg.to_number;
       if (!contactNumber) return;
 
       const existing = contactsMap.get(contactNumber);
       const msgTime = new Date(msg.created_at);
-      
+
       if (!existing || new Date(existing.lastMessageTime) < msgTime) {
         contactsMap.set(contactNumber, {
           number: contactNumber,
           lastMessage: msg.message_content.substring(0, 50),
           lastMessageTime: msg.created_at,
-          unreadCount: 0
+          unreadCount: 0,
         });
       }
     });
 
-    const contactsList = Array.from(contactsMap.values())
-      .sort((a, b) => new Date(b.lastMessageTime).getTime() - new Date(a.lastMessageTime).getTime());
-    
+    const contactsList = Array.from(contactsMap.values()).sort(
+      (a, b) =>
+        new Date(b.lastMessageTime).getTime() - new Date(a.lastMessageTime).getTime()
+    );
+
     setContacts(contactsList);
-    
+
     if (!selectedContact && contactsList.length > 0) {
       setSelectedContact(contactsList[0].number);
     }
@@ -97,11 +109,11 @@ export default function WhatsAppQRLogin() {
 
   const checkExistingSession = async () => {
     try {
-      const { data, error } = await supabase.functions.invoke('whatsapp-qr-login', {
-        body: { 
-          action: 'check_status',
-          phone_number: phoneNumber 
-        }
+      const { data, error } = await supabase.functions.invoke("whatsapp-qr-login", {
+        body: {
+          action: "check_status",
+          phone_number: phoneNumber,
+        },
       });
 
       if (error) throw error;
@@ -111,43 +123,45 @@ export default function WhatsAppQRLogin() {
         setSessionInfo(data.session);
       }
     } catch (error) {
-      console.error('Error checking session:', error);
+      console.error("Error checking session:", error);
     }
   };
 
   const generatePairingCode = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('whatsapp-qr-login', {
+      const { data, error } = await supabase.functions.invoke("whatsapp-qr-login", {
         body: {
-          action: 'generate_pairing_code',
+          action: "generate_pairing_code",
           phone_number: phoneNumber,
-        }
+        },
       });
       if (error) throw error;
 
       if (data?.pairing_code) {
         setPairingCode(data.pairing_code);
-        setInstructions(data.instructions || [
-          '1. افتح واتساب على جوالك',
-          '2. الإعدادات > الأجهزة المرتبطة',
-          '3. اضغط على "ربط جهاز"',
-          '4. اختر "ربط باستخدام رقم الهاتف بدلاً من ذلك"',
-          '5. أدخل الكود الظاهر هنا'
-        ]);
+        setInstructions(
+          data.instructions || [
+            "1. افتح واتساب على جوالك",
+            "2. الإعدادات > الأجهزة المرتبطة",
+            '3. اضغط على "ربط جهاز"',
+            '4. اختر "ربط باستخدام رقم الهاتف بدلاً من ذلك"',
+            "5. أدخل الكود الظاهر هنا",
+          ]
+        );
         toast({
-          title: '✅ تم إنشاء كود الربط',
-          description: 'أدخل الكود في تطبيق الواتساب على هاتفك',
+          title: "✅ تم إنشاء كود الربط",
+          description: "أدخل الكود في تطبيق الواتساب على هاتفك",
         });
       } else {
-        throw new Error(data?.message || 'تعذر الحصول على كود الربط');
+        throw new Error(data?.message || "تعذر الحصول على كود الربط");
       }
     } catch (error: any) {
-      console.error('Error generating pairing code:', error);
+      console.error("Error generating pairing code:", error);
       toast({
-        title: '❌ خطأ',
-        description: error.message || 'تعذر إنشاء كود الربط',
-        variant: 'destructive',
+        title: "❌ خطأ",
+        description: error.message || "تعذر إنشاء كود الربط",
+        variant: "destructive",
       });
     } finally {
       setIsLoading(false);
@@ -158,15 +172,15 @@ export default function WhatsAppQRLogin() {
     setLoadingMessages(true);
     try {
       const { data, error } = await supabase
-        .from('whatsapp_messages')
-        .select('*')
-        .order('created_at', { ascending: false })
+        .from("whatsapp_messages")
+        .select("*")
+        .order("created_at", { ascending: false })
         .limit(500);
 
       if (error) throw error;
       setMessages(data || []);
     } catch (error: any) {
-      console.error('Error loading messages:', error);
+      console.error("Error loading messages:", error);
     } finally {
       setLoadingMessages(false);
     }
@@ -175,25 +189,27 @@ export default function WhatsAppQRLogin() {
   const syncMessagesFromWorker = async () => {
     setSyncingMessages(true);
     try {
-      const { data, error } = await supabase.functions.invoke('whatsapp-qr-login', {
-        body: { 
-          action: 'fetch_messages',
-          phone_number: phoneNumber 
-        }
+      const { data, error } = await supabase.functions.invoke("whatsapp-qr-login", {
+        body: {
+          action: "fetch_messages",
+          phone_number: phoneNumber,
+        },
       });
 
       if (error) throw error;
 
       if (data.messages && data.messages.length > 0) {
-        const insertPromises = data.messages.map((msg: IncomingMessage) => 
-          supabase.from('whatsapp_messages').insert([{
-            from_number: msg.from,
-            to_number: phoneNumber,
-            message_content: msg.message,
-            message_type: 'text',
-            status: 'delivered',
-            is_reply: true,
-          }])
+        const insertPromises = data.messages.map((msg: IncomingMessage) =>
+          supabase.from("whatsapp_messages").insert([
+            {
+              from_number: msg.from,
+              to_number: phoneNumber,
+              message_content: msg.message,
+              message_type: "text",
+              status: "delivered",
+              is_reply: true,
+            },
+          ])
         );
 
         await Promise.all(insertPromises);
@@ -208,10 +224,10 @@ export default function WhatsAppQRLogin() {
           description: "لا توجد رسائل واردة جديدة للمزامنة",
         });
       }
-      
+
       setTimeout(loadMessages, 1000);
     } catch (error: any) {
-      console.error('Error syncing messages:', error);
+      console.error("Error syncing messages:", error);
       toast({
         title: "⚠️ خطأ",
         description: error.message || "حدث خطأ أثناء مزامنة الرسائل",
@@ -223,39 +239,46 @@ export default function WhatsAppQRLogin() {
   };
 
   const sendReply = async () => {
-    if (!selectedContact || !replyMessage.trim()) return;
+    if (!selectedContact) {
+      toast({ title: "اختر محادثة", description: "يرجى اختيار جهة قبل الإرسال" });
+      return;
+    }
+    if (!isConnected) {
+      toast({ title: "غير متصل", description: "يرجى ربط الواتساب أولاً" });
+      return;
+    }
+    if (!replyMessage.trim()) return;
 
     setSendingReply(true);
     try {
-      const { data, error } = await supabase.functions.invoke('whatsapp-qr-login', {
-        body: { 
-          action: 'send_message',
+      const { error } = await supabase.functions.invoke("whatsapp-qr-login", {
+        body: {
+          action: "send_message",
           phone_number: phoneNumber,
           to: selectedContact,
-          message: replyMessage
-        }
+          message: replyMessage,
+        },
       });
 
       if (error) throw error;
 
-      await supabase.from('whatsapp_messages').insert([{
-        to_number: selectedContact,
-        message_content: replyMessage,
-        message_type: 'text',
-        status: 'sent',
-        is_reply: false,
-        sent_at: new Date().toISOString(),
-      }]);
+      await supabase.from("whatsapp_messages").insert([
+        {
+          to_number: selectedContact,
+          message_content: replyMessage,
+          message_type: "text",
+          status: "sent",
+          is_reply: false,
+          sent_at: new Date().toISOString(),
+        },
+      ]);
 
-      toast({
-        title: "✅ تم إرسال الرسالة",
-        description: "تم إرسال رسالتك بنجاح",
-      });
+      toast({ title: "✅ تم إرسال الرسالة", description: "تم إرسال رسالتك بنجاح" });
 
       setReplyMessage("");
       setTimeout(loadMessages, 1000);
     } catch (error: any) {
-      console.error('Error sending reply:', error);
+      console.error("Error sending reply:", error);
       toast({
         title: "⚠️ خطأ",
         description: error.message || "فشل إرسال الرسالة",
@@ -268,11 +291,11 @@ export default function WhatsAppQRLogin() {
 
   const handleDisconnect = async () => {
     try {
-      const { error } = await supabase.functions.invoke('whatsapp-qr-login', {
-        body: { 
-          action: 'disconnect',
-          phone_number: phoneNumber 
-        }
+      const { error } = await supabase.functions.invoke("whatsapp-qr-login", {
+        body: {
+          action: "disconnect",
+          phone_number: phoneNumber,
+        },
       });
 
       if (error) throw error;
@@ -282,10 +305,7 @@ export default function WhatsAppQRLogin() {
       setPairingCode(null);
       setInstructions([]);
 
-      toast({
-        title: "✅ تم قطع الاتصال",
-        description: "تم قطع الاتصال بالواتساب",
-      });
+      toast({ title: "✅ تم قطع الاتصال", description: "تم قطع الاتصال بالواتساب" });
     } catch (error: any) {
       toast({
         title: "❌ خطأ",
@@ -296,14 +316,17 @@ export default function WhatsAppQRLogin() {
   };
 
   const getContactMessages = () => {
-    if (!selectedContact) return [];
-    
+    if (!selectedContact) return [] as WhatsAppMessage[];
+
     return messages
-      .filter(msg => 
-        (msg.is_reply && msg.from_number === selectedContact) ||
-        (!msg.is_reply && msg.to_number === selectedContact)
+      .filter(
+        (msg) =>
+          (msg.is_reply && msg.from_number === selectedContact) ||
+          (!msg.is_reply && msg.to_number === selectedContact)
       )
-      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      .sort(
+        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      );
   };
 
   return (
@@ -322,9 +345,7 @@ export default function WhatsAppQRLogin() {
               <Phone className="w-5 h-5" />
               إعدادات الرقم
             </CardTitle>
-            <CardDescription>
-              أدخل رقم الواتساب الذي تريد ربطه
-            </CardDescription>
+            <CardDescription>أدخل رقم الواتساب الذي تريد ربطه</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -342,11 +363,7 @@ export default function WhatsAppQRLogin() {
             </div>
 
             {!isConnected && (
-              <Button
-                onClick={generatePairingCode}
-                disabled={isLoading || !phoneNumber}
-                className="w-full"
-              >
+              <Button onClick={generatePairingCode} disabled={isLoading || !phoneNumber} className="w-full">
                 {isLoading ? (
                   <>
                     <Loader2 className="w-4 h-4 ml-2 animate-spin" />
@@ -367,11 +384,7 @@ export default function WhatsAppQRLogin() {
                   <CheckCircle2 className="w-5 h-5" />
                   <span className="font-medium">متصل بنجاح</span>
                 </div>
-                <Button
-                  variant="destructive"
-                  onClick={handleDisconnect}
-                  className="w-full"
-                >
+                <Button variant="destructive" onClick={handleDisconnect} className="w-full">
                   قطع الاتصال
                 </Button>
               </div>
@@ -387,12 +400,13 @@ export default function WhatsAppQRLogin() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="text-center">
-                <div className="text-4xl font-bold tracking-widest p-6 bg-primary/10 rounded-lg" dir="ltr">
+                <div
+                  className="text-4xl font-bold tracking-widest p-6 bg-primary/10 rounded-lg"
+                  dir="ltr"
+                >
                   {pairingCode}
                 </div>
-                <p className="text-sm text-muted-foreground mt-2">
-                  هذا الكود صالح لمدة دقائق قليلة
-                </p>
+                <p className="text-sm text-muted-foreground mt-2">هذا الكود صالح لمدة دقائق قليلة</p>
               </div>
 
               {instructions.length > 0 && (
@@ -426,11 +440,13 @@ export default function WhatsAppQRLogin() {
             <CardContent className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">الرقم:</span>
-                <span className="font-mono" dir="ltr">{sessionInfo.phone_number}</span>
+                <span className="font-mono" dir="ltr">
+                  {sessionInfo.phone_number}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">وقت الاتصال:</span>
-                <span>{new Date(sessionInfo.connected_at).toLocaleString('ar-SA')}</span>
+                <span>{new Date(sessionInfo.connected_at).toLocaleString("ar-SA")}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">الحالة:</span>
@@ -441,7 +457,9 @@ export default function WhatsAppQRLogin() {
         )}
       </div>
 
-      <div className="flex w-full border rounded-lg overflow-x-auto" style={{ height: '650px' }}>
+      {/* محادثات على اليسار، شاشة الدردشة على اليمين */}
+      <div className="flex w-full border rounded-lg overflow-x-auto" style={{ height: "650px" }}>
+        {/* العمود الأيسر: قائمة المحادثات */}
         <div className="w-[300px] md:w-[350px] border-l bg-background flex-shrink-0">
           <div className="p-4 border-b bg-muted/50">
             <div className="flex items-center justify-between mb-3">
@@ -459,12 +477,7 @@ export default function WhatsAppQRLogin() {
                     <Download className="h-4 w-4" />
                   )}
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={loadMessages}
-                  disabled={loadingMessages}
-                >
+                <Button variant="ghost" size="sm" onClick={loadMessages} disabled={loadingMessages}>
                   {loadingMessages ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
@@ -489,7 +502,7 @@ export default function WhatsAppQRLogin() {
                     key={contact.number}
                     onClick={() => setSelectedContact(contact.number)}
                     className={`p-4 cursor-pointer hover:bg-muted/50 transition-colors ${
-                      selectedContact === contact.number ? 'bg-muted' : ''
+                      selectedContact === contact.number ? "bg-muted" : ""
                     }`}
                   >
                     <div className="flex items-start gap-3">
@@ -502,9 +515,9 @@ export default function WhatsAppQRLogin() {
                             {contact.number}
                           </p>
                           <span className="text-xs text-muted-foreground whitespace-nowrap">
-                            {new Date(contact.lastMessageTime).toLocaleTimeString('ar-SA', {
-                              hour: '2-digit',
-                              minute: '2-digit'
+                            {new Date(contact.lastMessageTime).toLocaleTimeString("ar-SA", {
+                              hour: "2-digit",
+                              minute: "2-digit",
                             })}
                           </span>
                         </div>
@@ -520,6 +533,7 @@ export default function WhatsAppQRLogin() {
           </ScrollArea>
         </div>
 
+        {/* العمود الأيمن: شاشة الدردشة */}
         <div className="flex-1 min-w-[380px] flex flex-col bg-[#efeae2] dark:bg-[#0b141a]">
           {selectedContact ? (
             <>
@@ -528,16 +542,22 @@ export default function WhatsAppQRLogin() {
                   <User className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <p className="font-semibold" dir="ltr">{selectedContact}</p>
+                  <p className="font-semibold" dir="ltr">
+                    {selectedContact}
+                  </p>
                   <p className="text-xs text-muted-foreground">اضغط لعرض التفاصيل</p>
                 </div>
               </div>
 
               <div className="flex-1 relative">
-                <div className="absolute inset-0 opacity-10" style={{
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-                }}></div>
-                
+                <div
+                  className="absolute inset-0 opacity-10"
+                  style={{
+                    backgroundImage:
+                      "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")",
+                  }}
+                />
+
                 <ScrollArea className="h-full px-6 py-4 relative z-10">
                   <div className="space-y-2">
                     {getContactMessages().map((msg) => {
@@ -545,33 +565,33 @@ export default function WhatsAppQRLogin() {
                       return (
                         <div
                           key={msg.id}
-                          className={`flex ${isOutgoing ? 'justify-end' : 'justify-start'} mb-2`}
+                          className={`flex ${isOutgoing ? "justify-end" : "justify-start"} mb-2`}
                         >
                           <div
                             className={`max-w-[70%] rounded-lg p-3 shadow-sm ${
                               isOutgoing
-                                ? 'bg-[#d9fdd3] dark:bg-[#005c4b]'
-                                : 'bg-white dark:bg-[#202c33]'
+                                ? "bg-[#d9fdd3] dark:bg-[#005c4b]"
+                                : "bg-white dark:bg-[#202c33]"
                             }`}
                           >
                             <div className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap break-words">
                               {msg.message_content}
                             </div>
-                            
+
                             <div className="flex items-center justify-end gap-1 mt-1">
                               <span className="text-[10px] text-gray-500 dark:text-gray-400">
-                                {new Date(msg.created_at).toLocaleTimeString('ar-SA', {
-                                  hour: '2-digit',
-                                  minute: '2-digit'
+                                {new Date(msg.created_at).toLocaleTimeString("ar-SA", {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
                                 })}
                               </span>
-                              
+
                               {isOutgoing && (
                                 <span className="text-gray-500 dark:text-gray-400">
-                                  {msg.status === 'sent' && '✓'}
-                                  {msg.status === 'delivered' && '✓✓'}
-                                  {msg.status === 'read' && '✓✓'}
-                                  {msg.status === 'failed' && '✗'}
+                                  {msg.status === "sent" && "✓"}
+                                  {msg.status === "delivered" && "✓✓"}
+                                  {msg.status === "read" && "✓✓"}
+                                  {msg.status === "failed" && "✗"}
                                 </span>
                               )}
                             </div>
@@ -582,7 +602,6 @@ export default function WhatsAppQRLogin() {
                   </div>
                 </ScrollArea>
               </div>
-
             </>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
@@ -592,28 +611,40 @@ export default function WhatsAppQRLogin() {
             </div>
           )}
 
+          {/* شريط الرد (ظاهر دائماً، زر الإرسال يُعطّل حسب الحالة) */}
           <div className="p-4 border-t bg-background">
             <div className="flex gap-2">
               <Input
-                placeholder={selectedContact ? "اكتب رسالتك..." : "اختر محادثة ثم اكتب رسالتك..."}
+                placeholder={
+                  selectedContact
+                    ? "اكتب رسالتك..."
+                    : "اختر محادثة ثم اكتب رسالتك..."
+                }
                 value={replyMessage}
                 onChange={(e) => setReplyMessage(e.target.value)}
                 onKeyPress={(e) => {
-                  if (e.key === 'Enter' && !sendingReply && replyMessage.trim() && selectedContact && isConnected) {
+                  if (
+                    e.key === "Enter" &&
+                    !sendingReply &&
+                    replyMessage.trim() &&
+                    selectedContact &&
+                    isConnected
+                  ) {
                     sendReply();
                   }
                 }}
                 className="flex-1"
-                disabled={!isConnected || !selectedContact}
               />
               <Button
                 onClick={sendReply}
-                disabled={sendingReply || !replyMessage.trim() || !isConnected || !selectedContact}
+                disabled={
+                  sendingReply || !replyMessage.trim() || !isConnected || !selectedContact
+                }
                 className="bg-[#00a884] hover:bg-[#008f6f] dark:bg-[#00a884] dark:hover:bg-[#008f6f]"
               >
                 {sendingReply ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
+                  <Loader2 className="h-4 w-4 animate-spin" />)
+                : (
                   <Send className="h-4 w-4" />
                 )}
               </Button>
