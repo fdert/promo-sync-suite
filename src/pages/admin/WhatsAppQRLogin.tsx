@@ -441,7 +441,7 @@ export default function WhatsAppQRLogin() {
         )}
       </div>
 
-      <div className="flex w-full border rounded-lg overflow-hidden" style={{ height: '650px' }}>
+      <div className="flex w-full border rounded-lg overflow-x-auto" style={{ height: '650px' }}>
         <div className="w-[300px] md:w-[350px] border-l bg-background flex-shrink-0">
           <div className="p-4 border-b bg-muted/50">
             <div className="flex items-center justify-between mb-3">
@@ -520,7 +520,7 @@ export default function WhatsAppQRLogin() {
           </ScrollArea>
         </div>
 
-        <div className="flex-1 min-w-0 flex flex-col bg-[#efeae2] dark:bg-[#0b141a]">
+        <div className="flex-1 min-w-[380px] flex flex-col bg-[#efeae2] dark:bg-[#0b141a]">
           {selectedContact ? (
             <>
               <div className="p-4 border-b bg-background flex items-center gap-3">
@@ -583,33 +583,6 @@ export default function WhatsAppQRLogin() {
                 </ScrollArea>
               </div>
 
-              <div className="p-4 border-t bg-background">
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="اكتب رسالتك..."
-                    value={replyMessage}
-                    onChange={(e) => setReplyMessage(e.target.value)}
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter' && !sendingReply && replyMessage.trim()) {
-                        sendReply();
-                      }
-                    }}
-                    className="flex-1"
-                    disabled={!isConnected}
-                  />
-                  <Button
-                    onClick={sendReply}
-                    disabled={sendingReply || !replyMessage.trim() || !isConnected}
-                    className="bg-[#00a884] hover:bg-[#008f6f] dark:bg-[#00a884] dark:hover:bg-[#008f6f]"
-                  >
-                    {sendingReply ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Send className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
-              </div>
             </>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
@@ -618,6 +591,34 @@ export default function WhatsAppQRLogin() {
               <p className="text-sm">استخدم "مزامنة" لجلب الرسائل الجديدة</p>
             </div>
           )}
+
+          <div className="p-4 border-t bg-background">
+            <div className="flex gap-2">
+              <Input
+                placeholder={selectedContact ? "اكتب رسالتك..." : "اختر محادثة ثم اكتب رسالتك..."}
+                value={replyMessage}
+                onChange={(e) => setReplyMessage(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && !sendingReply && replyMessage.trim() && selectedContact && isConnected) {
+                    sendReply();
+                  }
+                }}
+                className="flex-1"
+                disabled={!isConnected || !selectedContact}
+              />
+              <Button
+                onClick={sendReply}
+                disabled={sendingReply || !replyMessage.trim() || !isConnected || !selectedContact}
+                className="bg-[#00a884] hover:bg-[#008f6f] dark:bg-[#00a884] dark:hover:bg-[#008f6f]"
+              >
+                {sendingReply ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
