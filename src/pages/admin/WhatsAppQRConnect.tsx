@@ -17,6 +17,7 @@ export default function WhatsAppQRConnect() {
   const [connectedPhone, setConnectedPhone] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [expirySeconds, setExpirySeconds] = useState<number | null>(null);
   const { toast } = useToast();
 
   // Check status periodically after generating code
@@ -28,6 +29,28 @@ export default function WhatsAppQRConnect() {
       return () => clearInterval(interval);
     }
   }, [status, phoneNumber]);
+
+  // Countdown for pairing code expiry and auto-regenerate
+  useEffect(() => {
+    if (status === "waiting_for_pairing" && pairingCode) {
+      if (expirySeconds === null) setExpirySeconds(60);
+      const timer = setInterval(() => {
+        setExpirySeconds((s) => {
+          if (s === null) return null;
+          if (s <= 1) {
+            clearInterval(timer);
+            if (status === "waiting_for_pairing" && !isLoading) {
+              // Auto regenerate a fresh code
+              generatePairingCode();
+            }
+            return 0;
+          }
+          return s - 1;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [status, pairingCode]);
 
   const generatePairingCode = async () => {
     if (!phoneNumber.trim()) {
@@ -42,6 +65,7 @@ export default function WhatsAppQRConnect() {
     setIsLoading(true);
     setErrorMessage(null);
     setPairingCode(null);
+    setExpirySeconds(null);
     setStatus("initializing");
 
     try {
@@ -62,6 +86,7 @@ export default function WhatsAppQRConnect() {
 
       setPairingCode(data.pairing_code);
       setSessionId(data.session_id);
+      setExpirySeconds(data.expires_in || 60);
       setStatus("waiting_for_pairing");
       
       toast({
@@ -107,6 +132,18 @@ export default function WhatsAppQRConnect() {
           description: "واتساب متصل الآن",
           duration: 5000,
         });
+      } else if (data?.session?.status === "waiting_for_pairing") {
+        setStatus("waiting_for_pairing");
+        const serverCode = data?.session?.qr_code;
+        if (serverCode) {
+          setPairingCode((prev) => {
+            if (prev !== serverCode) {
+              // Reset expiry when a fresh code arrives from server
+              setExpirySeconds(60);
+            }
+            return serverCode;
+          });
+        }
       }
     } catch (error) {
       console.error("Error checking status:", error);
@@ -147,12 +184,29 @@ export default function WhatsAppQRConnect() {
     }
   };
 
+  const forceReset = async () => {
+    setIsLoading(true);
+    try {
+      await fetch("https://pqrzkfpowjutylegdcxj.supabase.co/functions/v1/whatsapp-qr-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "disconnect", phone_number: phoneNumber.trim() })
+      });
+    } catch (e) {
+      console.error("Force reset disconnect error", e);
+    } finally {
+      setIsLoading(false);
+    }
+    await generatePairingCode();
+  };
+
   const reset = () => {
     setStatus("disconnected");
     setPairingCode(null);
     setSessionId(null);
     setConnectedPhone(null);
     setErrorMessage(null);
+    setExpirySeconds(null);
   };
 
   const getStatusIcon = () => {
@@ -279,14 +333,16 @@ export default function WhatsAppQRConnect() {
                     </AlertDescription>
                   </Alert>
 
-                  <Button
-                    onClick={reset}
-                    variant="outline"
-                    size="sm"
-                  >
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    إلغاء وإعادة المحاولة
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button onClick={reset} variant="outline" size="sm">
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      إلغاء وإعادة المحاولة
+                    </Button>
+                    <Button onClick={forceReset} variant="secondary" size="sm" disabled={isLoading}>
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      إعادة تهيئة قوية
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
