@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 interface WhatsAppMessage {
   id: string;
   to_number: string;
+  from_number?: string;
   message_content: string;
   message_type: string;
   status: string;
@@ -22,6 +23,13 @@ interface WhatsAppMessage {
   sent_at: string | null;
   customer_id: string | null;
   is_reply: boolean;
+}
+
+interface IncomingMessage {
+  from: string;
+  message: string;
+  timestamp: number;
+  messageId: string;
 }
 
 export default function WhatsAppQRLogin() {
@@ -33,6 +41,10 @@ export default function WhatsAppQRLogin() {
   const [sessionInfo, setSessionInfo] = useState<any>(null);
   const [messages, setMessages] = useState<WhatsAppMessage[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
+  const [replyTo, setReplyTo] = useState<WhatsAppMessage | null>(null);
+  const [replyMessage, setReplyMessage] = useState("");
+  const [sendingReply, setSendingReply] = useState(false);
+  const [syncingMessages, setSyncingMessages] = useState(false);
   const { toast } = useToast();
 
   // Check for existing session and load messages
@@ -126,7 +138,8 @@ export default function WhatsAppQRLogin() {
     }
   };
 
-  const fetchAllMessages = async () => {
+  const syncMessagesFromWorker = async () => {
+    setSyncingMessages(true);
     try {
       const { data, error } = await supabase.functions.invoke('whatsapp-qr-login', {
         body: { 
@@ -137,20 +150,90 @@ export default function WhatsAppQRLogin() {
 
       if (error) throw error;
 
-      toast({
-        title: "✅ تم جلب الرسائل",
-        description: `تم جلب ${data.messages_count || 0} رسالة`,
-      });
+      if (data.messages && data.messages.length > 0) {
+        // حفظ الرسائل الواردة في قاعدة البيانات
+        const insertPromises = data.messages.map((msg: IncomingMessage) => 
+          supabase.from('whatsapp_messages').insert([{
+            to_number: phoneNumber,
+            message_content: msg.message,
+            message_type: 'text',
+            status: 'delivered',
+            is_reply: true,
+          }])
+        );
+
+        await Promise.all(insertPromises);
+
+        toast({
+          title: "✅ تم مزامنة الرسائل",
+          description: `تم جلب ${data.messages.length} رسالة جديدة`,
+        });
+      } else {
+        toast({
+          title: "ℹ️ لا توجد رسائل جديدة",
+          description: "لا توجد رسائل واردة جديدة للمزامنة",
+        });
+      }
       
-      // Reload messages after fetching
-      setTimeout(loadMessages, 2000);
+      // Reload messages after syncing
+      setTimeout(loadMessages, 1000);
     } catch (error: any) {
-      console.error('Error fetching messages:', error);
+      console.error('Error syncing messages:', error);
       toast({
-        title: "⚠️ تنبيه",
-        description: "حدث خطأ أثناء جلب الرسائل",
+        title: "⚠️ خطأ",
+        description: error.message || "حدث خطأ أثناء مزامنة الرسائل",
         variant: "destructive",
       });
+    } finally {
+      setSyncingMessages(false);
+    }
+  };
+
+  const sendReply = async () => {
+    if (!replyTo || !replyMessage.trim()) return;
+
+    setSendingReply(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('whatsapp-qr-login', {
+        body: { 
+          action: 'send_message',
+          phone_number: phoneNumber,
+          to: replyTo.from_number || replyTo.to_number,
+          message: replyMessage
+        }
+      });
+
+      if (error) throw error;
+
+      // حفظ الرسالة المرسلة في قاعدة البيانات
+      await supabase.from('whatsapp_messages').insert([{
+        to_number: replyTo.from_number || replyTo.to_number,
+        message_content: replyMessage,
+        message_type: 'text',
+        status: 'sent',
+        is_reply: false,
+        sent_at: new Date().toISOString(),
+      }]);
+
+      toast({
+        title: "✅ تم إرسال الرد",
+        description: "تم إرسال رسالتك بنجاح",
+      });
+
+      setReplyMessage("");
+      setReplyTo(null);
+      
+      // Reload messages
+      setTimeout(loadMessages, 1000);
+    } catch (error: any) {
+      console.error('Error sending reply:', error);
+      toast({
+        title: "⚠️ خطأ",
+        description: error.message || "فشل إرسال الرد",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingReply(false);
     }
   };
 
@@ -354,18 +437,33 @@ export default function WhatsAppQRLogin() {
                 <MessageSquare className="h-5 w-5" />
                 <CardTitle>الرسائل</CardTitle>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={loadMessages}
-                disabled={loadingMessages}
-              >
-                {loadingMessages ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-4 w-4" />
-                )}
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={syncMessagesFromWorker}
+                  disabled={syncingMessages || !isConnected}
+                >
+                  {syncingMessages ? (
+                    <Loader2 className="h-4 w-4 animate-spin ml-2" />
+                  ) : (
+                    <Download className="h-4 w-4 ml-2" />
+                  )}
+                  مزامنة
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={loadMessages}
+                  disabled={loadingMessages}
+                >
+                  {loadingMessages ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
             </div>
             <CardDescription>
               الرسائل الواردة والصادرة - يتم التحديث تلقائياً كل 30 ثانية
@@ -444,7 +542,17 @@ export default function WhatsAppQRLogin() {
                               <Phone className="h-4 w-4 text-muted-foreground" />
                               <span className="font-medium" dir="ltr">{msg.to_number}</span>
                             </div>
-                            <Badge variant="outline">وارد</Badge>
+                            <div className="flex gap-2">
+                              <Badge variant="outline">وارد</Badge>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => setReplyTo(msg)}
+                                disabled={!isConnected}
+                              >
+                                <Send className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </div>
                           <p className="text-sm mb-2 whitespace-pre-wrap">
                             {msg.message_content}
@@ -452,6 +560,48 @@ export default function WhatsAppQRLogin() {
                           <div className="text-xs text-muted-foreground">
                             {new Date(msg.created_at).toLocaleString('ar-SA')}
                           </div>
+                          
+                          {replyTo?.id === msg.id && (
+                            <div className="mt-4 space-y-2 border-t pt-4">
+                              <Label htmlFor={`reply-${msg.id}`}>الرد على الرسالة</Label>
+                              <div className="flex gap-2">
+                                <Input
+                                  id={`reply-${msg.id}`}
+                                  value={replyMessage}
+                                  onChange={(e) => setReplyMessage(e.target.value)}
+                                  placeholder="اكتب رسالتك..."
+                                  disabled={sendingReply}
+                                  onKeyPress={(e) => {
+                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                      e.preventDefault();
+                                      sendReply();
+                                    }
+                                  }}
+                                />
+                                <Button
+                                  size="sm"
+                                  onClick={sendReply}
+                                  disabled={sendingReply || !replyMessage.trim()}
+                                >
+                                  {sendingReply ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Send className="h-4 w-4" />
+                                  )}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => {
+                                    setReplyTo(null);
+                                    setReplyMessage("");
+                                  }}
+                                >
+                                  إلغاء
+                                </Button>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>

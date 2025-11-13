@@ -94,6 +94,13 @@ serve(async (req) => {
         return new Response(JSON.stringify(data), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
+      case 'send_message': {
+        const { to, message } = body as { to?: string; message?: string };
+        if (!phone_number || !to || !message) throw new Error('phone_number, to, and message are required');
+        const data = await callWorker('/messages/send', 'POST', { phone_number, to, message });
+        return new Response(JSON.stringify(data), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
       default:
         return new Response(
           JSON.stringify({ error: 'invalid_action', message: 'Invalid action' }),
