@@ -50,3 +50,6 @@ verify_jwt = false
 
 [functions.whatsapp-pairing-ws]
 verify_jwt = false
+
+[functions.whatsapp-qr-connect]
+verify_jwt = false
