@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, QrCode, CheckCircle2, AlertCircle, RefreshCw, Smartphone } from "lucide-react";
 import QRCode from "react-qr-code";
@@ -13,6 +15,9 @@ export default function WhatsAppQRConnect() {
   const [qrData, setQrData] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [connectedPhone, setConnectedPhone] = useState<string | null>(null);
+  const [phoneNumber, setPhoneNumber] = useState<string>("+9665");
+  const [pairingCode, setPairingCode] = useState<string | null>(null);
+  const [pairingInstructions, setPairingInstructions] = useState<string[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
   const { toast } = useToast();
 
@@ -23,6 +28,19 @@ export default function WhatsAppQRConnect() {
       }
     };
   }, []);
+
+  // Safety timeout: fallback suggestion to pairing code if QR delays
+  useEffect(() => {
+    if ((status === "initializing" || status === "connecting" || status === "generating_qr") && !qrData) {
+      const t = setTimeout(() => {
+        if (!qrData && (status === "initializing" || status === "connecting" || status === "generating_qr")) {
+          setStatus("error");
+          setErrorMessage("تأخر إنشاء QR. يمكنك استخدام كود الربط كبديل.");
+        }
+      }, 12000);
+      return () => clearTimeout(t);
+    }
+  }, [status, qrData]);
 
   const connectWhatsApp = () => {
     setStatus("initializing");
@@ -132,6 +150,25 @@ export default function WhatsAppQRConnect() {
       title: "تم قطع الاتصال",
       description: "تم فصل الواتساب بنجاح",
     });
+  };
+
+  const generatePairingCode = async () => {
+    try {
+      setPairingCode(null);
+      setPairingInstructions([]);
+      const res = await fetch("https://pqrzkfpowjutylegdcxj.supabase.co/functions/v1/whatsapp-qr-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "generate_pairing_code", phone_number: phoneNumber.trim() })
+      });
+      const data = await res.json();
+      if (!res.ok || !data?.success) throw new Error(data?.message || "فشل توليد كود الربط");
+      setPairingCode(data.pairing_code);
+      setPairingInstructions(data.instructions || []);
+      toast({ title: "جاهز", description: `أدخل الكود: ${data.pairing_code}` });
+    } catch (e: any) {
+      toast({ title: "فشل توليد الكود", description: e?.message || "خطأ غير متوقع", variant: "destructive" });
+    }
   };
 
   const getStatusIcon = () => {
@@ -284,7 +321,35 @@ export default function WhatsAppQRConnect() {
             )}
           </div>
 
-          {/* Instructions */}
+          {/* Fallback: Pairing Code method */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">بدلاً من QR: استخدم كود الربط</CardTitle>
+              <CardDescription>إن تأخر ظهور QR، يمكنك الربط بإدخال رقمك وتوليد كود.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+                <div className="sm:col-span-2">
+                  <Label htmlFor="wa-phone">رقم واتساب</Label>
+                  <Input id="wa-phone" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="مثال: +9665XXXXXXXX" />
+                </div>
+                <Button onClick={generatePairingCode} className="w-full sm:w-auto">توليد كود ربط</Button>
+              </div>
+
+              {pairingCode && (
+                <div className="p-4 rounded-lg border">
+                  <p className="text-sm text-muted-foreground mb-2">أدخل هذا الكود في جوالك:</p>
+                  <p className="text-3xl font-bold tracking-widest">{pairingCode}</p>
+                  {pairingInstructions?.length > 0 && (
+                    <ul className="list-decimal list-inside mt-3 space-y-1 text-sm text-muted-foreground">
+                      {pairingInstructions.map((s, i) => (<li key={i}>{s}</li>))}
+                    </ul>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           <Card className="bg-muted">
             <CardContent className="p-4">
               <h3 className="font-semibold mb-2">💡 نصائح مهمة:</h3>
