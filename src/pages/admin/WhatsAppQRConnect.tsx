@@ -29,8 +29,10 @@ export default function WhatsAppQRConnect() {
     setQrData(null);
     setErrorMessage(null);
 
-    const projectId = "pqrzkfpowjutylegdcxj";
-    const wsUrl = `wss://${projectId}.supabase.co/functions/v1/whatsapp-qr-connect`;
+    // CORRECT WebSocket URL format for Supabase Edge Functions
+    const wsUrl = `wss://pqrzkfpowjutylegdcxj.supabase.co/functions/v1/whatsapp-qr-connect`;
+    
+    console.log("Connecting to:", wsUrl);
 
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
@@ -100,11 +102,12 @@ export default function WhatsAppQRConnect() {
 
     ws.onerror = (error) => {
       console.error("WebSocket error:", error);
+      console.error("WebSocket URL was:", wsUrl);
       setStatus("error");
-      setErrorMessage("فشل الاتصال بالخادم");
+      setErrorMessage("فشل الاتصال بالخادم - تأكد من نشر Edge Function");
       toast({
         title: "خطأ في الاتصال",
-        description: "تعذر الاتصال بخادم واتساب",
+        description: "تعذر الاتصال بخادم واتساب. جرب مرة أخرى بعد قليل.",
         variant: "destructive",
       });
     };
