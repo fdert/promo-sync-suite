@@ -47,6 +47,10 @@ serve(async (req) => {
       const text = await res.text();
       let data: any = null;
       try { data = text ? JSON.parse(text) : null; } catch (_) { data = { raw: text }; }
+      
+      console.log(`Worker ${method} ${path} responded with status ${res.status}`);
+      console.log('Worker response:', JSON.stringify(data));
+      
       if (!res.ok) {
         console.error('Worker error', res.status, data);
         throw new Error(data?.message || `Worker responded ${res.status}`);
@@ -57,7 +61,9 @@ serve(async (req) => {
     switch (action) {
       case 'generate_pairing_code': {
         if (!phone_number) throw new Error('phone_number is required');
+        console.log(`Generating pairing code for ${phone_number}`);
         const data = await callWorker('/pairing/start', 'POST', { phone_number });
+        console.log('Pairing code generated successfully:', data.pairing_code);
         return new Response(
           JSON.stringify({
             success: true,
@@ -78,7 +84,9 @@ serve(async (req) => {
 
       case 'check_status': {
         if (!phone_number) throw new Error('phone_number is required');
+        console.log(`Checking status for ${phone_number}`);
         const data = await callWorker('/pairing/status', 'POST', { phone_number });
+        console.log('Status check result:', JSON.stringify(data));
         return new Response(JSON.stringify(data), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
