@@ -154,6 +154,7 @@ export default function WhatsAppQRLogin() {
         // حفظ الرسائل الواردة في قاعدة البيانات
         const insertPromises = data.messages.map((msg: IncomingMessage) => 
           supabase.from('whatsapp_messages').insert([{
+            from_number: msg.from,
             to_number: phoneNumber,
             message_content: msg.message,
             message_type: 'text',
