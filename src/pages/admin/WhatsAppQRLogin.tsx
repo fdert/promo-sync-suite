@@ -7,9 +7,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Phone, Smartphone, CheckCircle2, AlertCircle, RefreshCw, MessageSquare, Send, Download } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
 
 
 interface WhatsAppMessage {
@@ -56,8 +54,6 @@ export default function WhatsAppQRLogin() {
     const interval = setInterval(loadMessages, 30000);
     return () => clearInterval(interval);
   }, []);
-
-  
 
   const checkExistingSession = async () => {
     try {
@@ -117,8 +113,6 @@ export default function WhatsAppQRLogin() {
       setIsLoading(false);
     }
   };
-
-
 
   const loadMessages = async () => {
     setLoadingMessages(true);
@@ -238,27 +232,8 @@ export default function WhatsAppQRLogin() {
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'sent': return 'default';
-      case 'pending': return 'secondary';
-      case 'failed': return 'destructive';
-      default: return 'outline';
-    }
-  };
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'sent': return 'تم الإرسال';
-      case 'pending': return 'قيد الانتظار';
-      case 'failed': return 'فشل';
-      default: return status;
-    }
-  };
-
-  const disconnect = async () => {
+  const handleDisconnect = async () => {
     try {
-      stop();
       const { error } = await supabase.functions.invoke('whatsapp-qr-login', {
         body: { 
           action: 'disconnect',
@@ -286,9 +261,6 @@ export default function WhatsAppQRLogin() {
     }
   };
 
-  const outgoingMessages = messages.filter(m => !m.is_reply);
-  const incomingMessages = messages.filter(m => m.is_reply);
-
   return (
     <div className="container mx-auto py-8 px-4 max-w-7xl">
       <div className="mb-6">
@@ -298,7 +270,7 @@ export default function WhatsAppQRLogin() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Connection Card */}
         <Card>
           <CardHeader>
@@ -352,49 +324,45 @@ export default function WhatsAppQRLogin() {
                   <span className="font-medium">متصل بنجاح</span>
                 </div>
                 <Button
-                  onClick={disconnect}
                   variant="destructive"
+                  onClick={handleDisconnect}
                   className="w-full"
                 >
                   قطع الاتصال
                 </Button>
-                <p className="text-xs text-muted-foreground">ملاحظة: للحفاظ على الاتصال، اترك هذه الصفحة مفتوحة.</p>
-
               </div>
             )}
           </CardContent>
         </Card>
 
-        {pairingCode && (
+        {/* Pairing Code Card */}
+        {pairingCode && !isConnected && (
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Smartphone className="w-5 h-5" />
-                كود الربط
-              </CardTitle>
-              <CardDescription>
-                أدخل هذا الكود في تطبيق الواتساب على هاتفك
-              </CardDescription>
+              <CardTitle>كود الربط</CardTitle>
+              <CardDescription>أدخل هذا الكود في تطبيق الواتساب</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Alert className="border-green-500 bg-green-50 dark:bg-green-950">
-                <Smartphone className="h-4 w-4 text-green-600 dark:text-green-400" />
-                <AlertTitle className="text-green-900 dark:text-green-100">كود الربط الخاص بك</AlertTitle>
-                <AlertDescription className="space-y-3">
-                  <div className="text-4xl font-bold text-center py-6 text-green-700 dark:text-green-300 tracking-widest" dir="ltr">
-                    {pairingCode}
-                  </div>
-                  <div className="text-sm text-green-800 dark:text-green-200 space-y-1.5 pr-4">
-                    {instructions.map((instruction, idx) => (
-                      <div key={idx} className="flex items-start gap-2">
-                        <span className="text-green-600 dark:text-green-400">•</span>
-                        <span>{instruction}</span>
-                      </div>
+              <div className="text-center">
+                <div className="text-4xl font-bold tracking-widest p-6 bg-primary/10 rounded-lg" dir="ltr">
+                  {pairingCode}
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">
+                  هذا الكود صالح لمدة دقائق قليلة
+                </p>
+              </div>
+
+              {instructions.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="font-semibold text-sm">خطوات الربط:</h4>
+                  <ol className="text-sm space-y-1 text-muted-foreground">
+                    {instructions.map((instruction, index) => (
+                      <li key={index}>{instruction}</li>
                     ))}
-                  </div>
-                </AlertDescription>
-              </Alert>
-              
+                  </ol>
+                </div>
+              )}
+
               <Alert>
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>ملاحظة هامة</AlertTitle>
@@ -430,13 +398,13 @@ export default function WhatsAppQRLogin() {
           </Card>
         )}
 
-        {/* Messages Card */}
-        <Card className="lg:row-span-2">
+        {/* WhatsApp-style Messages Card */}
+        <Card className="lg:col-span-3">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <MessageSquare className="h-5 w-5" />
-                <CardTitle>الرسائل</CardTitle>
+                <CardTitle>المحادثات</CardTitle>
               </div>
               <div className="flex gap-2">
                 <Button
@@ -467,149 +435,148 @@ export default function WhatsAppQRLogin() {
               </div>
             </div>
             <CardDescription>
-              الرسائل الواردة والصادرة - يتم التحديث تلقائياً كل 30 ثانية
+              واجهة محادثات شبيهة بواتساب ويب
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="outgoing" dir="rtl">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="outgoing">
-                  <Send className="h-4 w-4 ml-2" />
-                  الصادرة ({outgoingMessages.length})
-                </TabsTrigger>
-                <TabsTrigger value="incoming">
-                  <Download className="h-4 w-4 ml-2" />
-                  الواردة ({incomingMessages.length})
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="outgoing">
-                <ScrollArea className="h-[600px] pr-4">
-                  {outgoingMessages.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      لا توجد رسائل صادرة
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {outgoingMessages.map((msg) => (
-                        <div
-                          key={msg.id}
-                          className="p-4 border rounded-lg bg-card hover:bg-accent/5 transition-colors"
-                        >
-                          <div className="flex items-start justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                              <Phone className="h-4 w-4 text-muted-foreground" />
-                              <span className="font-medium" dir="ltr">{msg.to_number}</span>
-                            </div>
-                            <Badge variant={getStatusColor(msg.status)}>
-                              {getStatusText(msg.status)}
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground mb-2 whitespace-pre-wrap">
-                            {msg.message_content}
-                          </p>
-                          <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <span>
-                              {new Date(msg.created_at).toLocaleString('ar-SA')}
-                            </span>
-                            {msg.sent_at && (
-                              <span>
-                                تم الإرسال: {new Date(msg.sent_at).toLocaleString('ar-SA')}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </ScrollArea>
-              </TabsContent>
-
-              <TabsContent value="incoming">
-                <ScrollArea className="h-[600px] pr-4">
-                  {incomingMessages.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      لا توجد رسائل واردة
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {incomingMessages.map((msg) => (
-                        <div
-                          key={msg.id}
-                          className="p-4 border rounded-lg bg-primary/5 hover:bg-primary/10 transition-colors"
-                        >
-                          <div className="flex items-start justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                              <Phone className="h-4 w-4 text-muted-foreground" />
-                              <span className="font-medium" dir="ltr">{msg.to_number}</span>
-                            </div>
-                            <div className="flex gap-2">
-                              <Badge variant="outline">وارد</Badge>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => setReplyTo(msg)}
-                                disabled={!isConnected}
-                              >
-                                <Send className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                          <p className="text-sm mb-2 whitespace-pre-wrap">
-                            {msg.message_content}
-                          </p>
-                          <div className="text-xs text-muted-foreground">
-                            {new Date(msg.created_at).toLocaleString('ar-SA')}
-                          </div>
-                          
-                          {replyTo?.id === msg.id && (
-                            <div className="mt-4 space-y-2 border-t pt-4">
-                              <Label htmlFor={`reply-${msg.id}`}>الرد على الرسالة</Label>
-                              <div className="flex gap-2">
-                                <Input
-                                  id={`reply-${msg.id}`}
-                                  value={replyMessage}
-                                  onChange={(e) => setReplyMessage(e.target.value)}
-                                  placeholder="اكتب رسالتك..."
-                                  disabled={sendingReply}
-                                  onKeyPress={(e) => {
-                                    if (e.key === 'Enter' && !e.shiftKey) {
-                                      e.preventDefault();
-                                      sendReply();
-                                    }
-                                  }}
-                                />
-                                <Button
-                                  size="sm"
-                                  onClick={sendReply}
-                                  disabled={sendingReply || !replyMessage.trim()}
-                                >
-                                  {sendingReply ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <Send className="h-4 w-4" />
-                                  )}
-                                </Button>
+          <CardContent className="p-0">
+            {/* WhatsApp-style chat container */}
+            <div className="bg-[#efeae2] dark:bg-[#0b141a] min-h-[600px] relative">
+              {/* Chat background pattern */}
+              <div className="absolute inset-0 opacity-10" style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+              }}></div>
+              
+              {/* Messages container */}
+              <ScrollArea className="h-[550px] px-6 py-4 relative z-10">
+                {messages.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                    <MessageSquare className="h-16 w-16 mb-4 opacity-20" />
+                    <p>لا توجد رسائل بعد</p>
+                    <p className="text-sm">استخدم زر "مزامنة" لجلب الرسائل</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {messages
+                      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+                      .map((msg) => {
+                        const isOutgoing = !msg.is_reply;
+                        return (
+                          <div
+                            key={msg.id}
+                            className={`flex ${isOutgoing ? 'justify-end' : 'justify-start'} mb-2`}
+                          >
+                            <div
+                              className={`max-w-[70%] rounded-lg p-3 shadow-sm ${
+                                isOutgoing
+                                  ? 'bg-[#d9fdd3] dark:bg-[#005c4b] ml-auto'
+                                  : 'bg-white dark:bg-[#202c33] mr-auto'
+                              }`}
+                            >
+                              {/* Sender info for incoming messages */}
+                              {!isOutgoing && msg.from_number && (
+                                <div className="text-xs font-semibold mb-1 text-[#00a884] dark:text-[#00a884]" dir="ltr">
+                                  {msg.from_number}
+                                </div>
+                              )}
+                              
+                              {/* Recipient info for outgoing messages */}
+                              {isOutgoing && msg.to_number && (
+                                <div className="text-xs font-semibold mb-1 text-[#667781] dark:text-[#8696a0]" dir="ltr">
+                                  إلى: {msg.to_number}
+                                </div>
+                              )}
+                              
+                              {/* Message content */}
+                              <div className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap break-words">
+                                {msg.message_content}
+                              </div>
+                              
+                              {/* Time and status */}
+                              <div className="flex items-center justify-end gap-1 mt-1">
+                                <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                                  {new Date(msg.created_at).toLocaleTimeString('ar-SA', {
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
+                                </span>
+                                
+                                {isOutgoing && (
+                                  <span className="text-gray-500 dark:text-gray-400">
+                                    {msg.status === 'sent' && '✓'}
+                                    {msg.status === 'delivered' && '✓✓'}
+                                    {msg.status === 'read' && '✓✓'}
+                                    {msg.status === 'failed' && '✗'}
+                                  </span>
+                                )}
+                              </div>
+                              
+                              {/* Reply button for incoming messages */}
+                              {!isOutgoing && replyTo?.id !== msg.id && (
                                 <Button
                                   size="sm"
                                   variant="ghost"
-                                  onClick={() => {
-                                    setReplyTo(null);
-                                    setReplyMessage("");
-                                  }}
+                                  className="mt-2 h-7 text-xs"
+                                  onClick={() => setReplyTo(msg)}
                                 >
-                                  إلغاء
+                                  <Send className="h-3 w-3 ml-1" />
+                                  رد
                                 </Button>
-                              </div>
+                              )}
                             </div>
-                          )}
-                        </div>
-                      ))}
+                          </div>
+                        );
+                      })}
+                  </div>
+                )}
+              </ScrollArea>
+              
+              {/* Reply input box */}
+              {replyTo && (
+                <div className="border-t bg-background p-4 relative z-10">
+                  <div className="flex items-start gap-2 mb-2 text-xs text-muted-foreground">
+                    <div className="flex-1">
+                      <div className="font-semibold" dir="ltr">الرد على: {replyTo.from_number}</div>
+                      <div className="truncate">{replyTo.message_content}</div>
                     </div>
-                  )}
-                </ScrollArea>
-              </TabsContent>
-            </Tabs>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 w-6 p-0"
+                      onClick={() => {
+                        setReplyTo(null);
+                        setReplyMessage("");
+                      }}
+                    >
+                      ✕
+                    </Button>
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="اكتب رسالتك..."
+                      value={replyMessage}
+                      onChange={(e) => setReplyMessage(e.target.value)}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter' && !sendingReply && replyMessage.trim()) {
+                          sendReply();
+                        }
+                      }}
+                      className="flex-1"
+                    />
+                    <Button
+                      onClick={sendReply}
+                      disabled={sendingReply || !replyMessage.trim()}
+                      className="bg-[#00a884] hover:bg-[#008f6f] dark:bg-[#00a884] dark:hover:bg-[#008f6f]"
+                    >
+                      {sendingReply ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Send className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>
