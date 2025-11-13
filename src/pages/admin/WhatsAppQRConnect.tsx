@@ -30,7 +30,7 @@ export default function WhatsAppQRConnect() {
     setErrorMessage(null);
 
     // CORRECT WebSocket URL format for Supabase Edge Functions
-    const wsUrl = `wss://pqrzkfpowjutylegdcxj.supabase.co/functions/v1/whatsapp-qr-connect`;
+    const wsUrl = `wss://pqrzkfpowjutylegdcxj.functions.supabase.co/functions/v1/whatsapp-qr-connect`;
     
     console.log("Connecting to:", wsUrl);
 
