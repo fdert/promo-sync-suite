@@ -926,7 +926,11 @@ ${publicFileUrl}
 
             const directPayload = {
               type: notificationType,
+              event: 'order_status_update',
               to_number: customerWhatsapp,
+              phone: customerWhatsapp,
+              phone_number: customerWhatsapp,
+              to: customerWhatsapp,
               text: directMessage,
               message: directMessage,
               order_number: orderData.order_number,
@@ -938,11 +942,16 @@ ${publicFileUrl}
               remaining_amount: remainingAmount,
             };
 
-            await fetch(outgoing.webhook_url, {
+            const resp = await fetch(outgoing.webhook_url, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(directPayload),
             });
+            if (!resp.ok) {
+              const text = await resp.text().catch(() => '');
+              console.error('n8n webhook returned non-200:', resp.status, text);
+              throw new Error('n8n webhook rejected the request');
+            }
             console.log('تم إرسال الرسالة مباشرة عبر n8n (employee)');
           } catch (directError) {
             console.error('فشل الإرسال عبر n8n (employee):', directError);
@@ -1514,7 +1523,11 @@ ${publicFileUrl}
           const directMessage = `تم إنشاء طلبك رقم: ${orderNumber}`;
           const directPayload = {
             type: 'order_created',
+            event: 'order_created',
             to_number: selectedCustomer.whatsapp_number,
+            phone: selectedCustomer.whatsapp_number,
+            phone_number: selectedCustomer.whatsapp_number,
+            to: selectedCustomer.whatsapp_number,
             text: directMessage,
             message: directMessage,
             order_number: orderNumber,
@@ -1523,11 +1536,16 @@ ${publicFileUrl}
             delivery_date: newOrder.due_date,
           };
 
-          await fetch(outgoing.webhook_url, {
+          const resp2 = await fetch(outgoing.webhook_url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(directPayload),
           });
+          if (!resp2.ok) {
+            const text = await resp2.text().catch(() => '');
+            console.error('n8n webhook (order_created) non-200:', resp2.status, text);
+            throw new Error('n8n webhook rejected the request');
+          }
           console.log('تم إرسال إشعار الواتس آب للطلب الجديد مباشرة عبر n8n');
         } catch (err) {
           console.error('فشل الإرسال المباشر عبر n8n:', err);
