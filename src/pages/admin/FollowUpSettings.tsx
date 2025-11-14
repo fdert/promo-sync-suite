@@ -271,19 +271,17 @@ const FollowUpSettings = () => {
 
 ⏰ وقت الاختبار: ${new Date().toLocaleString('ar-SA')}`;
 
-      // إرسال رسالة الاختبار عبر Edge Function الموحدة
-      const { data: sendResult, error: sendError } = await supabase.functions.invoke('send-whatsapp-simple', {
+      // إرسال رسالة الاختبار عبر الويب هوك المرتبط بـ n8n
+      const { data: sendResult, error: sendError } = await supabase.functions.invoke('send-direct-whatsapp', {
         body: {
           phone: String(settingsData.whatsapp_number || '').trim(),
           message: testMessage,
-          webhook_type: 'outgoing',
-          strict: false,
         },
       });
       if (sendError) {
-        console.warn('تحذير: فشل في إرسال رسالة الاختبار:', sendError.message || sendError);
+        console.warn('تحذير: فشل في إرسال رسالة الاختبار عبر الويب هوك:', sendError.message || sendError);
       } else {
-        console.log('تم إرسال رسالة الاختبار عبر send-whatsapp-simple:', sendResult);
+        console.log('تم إرسال رسالة الاختبار عبر الويب هوك (send-direct-whatsapp):', sendResult);
       }
 
       toast({
@@ -334,12 +332,10 @@ const FollowUpSettings = () => {
       const toNumber = String(settings.whatsapp_number || '').trim();
 
       // إرسال التقرير عبر Edge Function الموحدة لإرسال الواتساب
-      const { data: sendReport, error: sendReportError } = await supabase.functions.invoke('send-whatsapp-simple', {
+      const { data: sendReport, error: sendReportError } = await supabase.functions.invoke('send-direct-whatsapp', {
         body: {
           phone: toNumber,
           message,
-          webhook_type: 'outgoing',
-          strict: false,
         },
       });
       if (sendReportError) throw sendReportError;
@@ -390,19 +386,17 @@ const FollowUpSettings = () => {
           throw new Error('نوع الإشعار غير معروف');
       }
 
-      const { data: sendData, error: sendError } = await supabase.functions.invoke('send-whatsapp-simple', {
+      const { data: sendData, error: sendError } = await supabase.functions.invoke('send-direct-whatsapp', {
         body: {
           phone: toNumber,
           message: messageText,
-          webhook_type: 'outgoing',
-          strict: false,
         },
       });
       if (sendError) throw sendError;
 
       toast({
         title: 'تم إرسال الإشعار بنجاح ✅',
-        description: `تم إرسال ${getNotificationName(notificationType)} عبر قناة الإرسال المباشرة`,
+        description: `تم إرسال ${getNotificationName(notificationType)} عبر الويب هوك الخاص بـ n8n`,
       });
     } catch (error: any) {
       console.error('Error testing notification:', error);

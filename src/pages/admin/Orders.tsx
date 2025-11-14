@@ -875,9 +875,9 @@ ${companyName}`;
                 : `تم تحديث حالة طلبك إلى: ${newStatus}`
             }${deliveryDateText}\n\n📊 الملخص المالي:\n• قيمة الطلب: ${(orderData.total_amount || 0).toFixed(2)} ر.س\n• المدفوع: ${paidAmount.toFixed(2)} ر.س\n• المتبقي: ${remainingAmount.toFixed(2)} ر.س`;
 
-            const { data, error } = await supabase.functions.invoke('send-whatsapp-simple', {
+            const { data, error } = await supabase.functions.invoke('send-direct-whatsapp', {
               body: {
-                phone_number: customerWhatsapp,
+                phone: customerWhatsapp,
                 message: directMessage,
               }
             });
@@ -890,7 +890,7 @@ ${companyName}`;
                 variant: "destructive",
               });
             } else {
-              console.log('تم جدولة رسالة واتساب عبر الدالة (send-whatsapp-simple)', data);
+              console.log('تم جدولة رسالة واتساب عبر الدالة (send-direct-whatsapp)', data);
             }
           } catch (directError) {
             console.error('فشل استدعاء دالة واتساب:', directError);

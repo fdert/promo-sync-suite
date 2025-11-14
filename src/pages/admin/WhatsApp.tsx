@@ -334,9 +334,9 @@ const WhatsApp = () => {
       console.log('Sending reply to:', recipientNumber, 'Message:', replyText);
 
       // إرسال الرسالة عبر edge function
-      const { data, error } = await supabase.functions.invoke('send-whatsapp-simple', {
+      const { data, error } = await supabase.functions.invoke('send-direct-whatsapp', {
         body: {
-          phone_number: recipientNumber,
+          phone: recipientNumber,
           message: replyText
         }
       });
@@ -757,9 +757,9 @@ const WhatsApp = () => {
                             
                             try {
                               setLoading(true);
-                              const { data, error } = await supabase.functions.invoke('send-whatsapp-simple', {
+                              const { data, error } = await supabase.functions.invoke('send-direct-whatsapp', {
                                 body: {
-                                  phone_number: selectedConversation.phoneNumber,
+                                  phone: selectedConversation.phoneNumber,
                                   message: replyInput
                                 }
                               });
