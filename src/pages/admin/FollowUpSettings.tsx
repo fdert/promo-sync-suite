@@ -368,53 +368,41 @@ const FollowUpSettings = () => {
         throw new Error('يرجى إدخال رقم واتساب فريق المتابعة في الإعدادات وحفظه أولاً');
       }
 
-      let result;
+      const toNumber = String(settings.whatsapp_number || '').trim();
+      let messageText = '';
       switch (notificationType) {
         case 'new_order':
-          result = await supabase.functions.invoke('notify-new-order', {
-            body: { test: true }
-          });
+          messageText = '🟢 اختبار إشعار: طلب جديد تم تسجيله للتو.';
           break;
-          
         case 'delivery_delay':
-          result = await supabase.functions.invoke('notify-delivery-delay', {
-            body: { test: true }
-          });
+          messageText = '⏳ اختبار إشعار: تأخر في تسليم بعض الطلبات.';
           break;
-          
         case 'payment_delay':
-          result = await supabase.functions.invoke('notify-payment-delay', {
-            body: { test: true }
-          });
+          messageText = '💳 اختبار إشعار: تأخر سداد مستحقات لبعض العملاء.';
           break;
-          
         case 'expense_logged':
-          result = await supabase.functions.invoke('notify-new-expense', {
-            body: { 
-              expense_id: 'test',
-              test: true
-            }
-          });
+          messageText = '🧾 اختبار إشعار: تم تسجيل مصروف جديد.';
           break;
-          
         case 'payment_logged':
-          result = await supabase.functions.invoke('notify-new-payment', {
-            body: { 
-              payment_id: 'test',
-              test: true
-            }
-          });
+          messageText = '✅ اختبار إشعار: تم تسجيل دفعة جديدة.';
           break;
-          
         default:
           throw new Error('نوع الإشعار غير معروف');
       }
 
-      if (result.error) throw result.error;
+      const { data: sendData, error: sendError } = await supabase.functions.invoke('send-whatsapp-simple', {
+        body: {
+          phone: toNumber,
+          message: messageText,
+          webhook_type: 'outgoing',
+          strict: false,
+        },
+      });
+      if (sendError) throw sendError;
 
       toast({
         title: 'تم إرسال الإشعار بنجاح ✅',
-        description: `تم إرسال ${getNotificationName(notificationType)} عبر الويب هوك`,
+        description: `تم إرسال ${getNotificationName(notificationType)} عبر قناة الإرسال المباشرة`,
       });
     } catch (error: any) {
       console.error('Error testing notification:', error);
