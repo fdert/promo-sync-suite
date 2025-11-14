@@ -383,7 +383,7 @@ const PrintManagement = () => {
 
         // رفع مع معالجة خطأ "Bucket not found" عبر محاولة بديلة
         let uploadResult: any = await supabase.storage
-          .from('print_files')
+          .from('print-files')
           .upload(filePath, file);
         let uploadError = uploadResult?.error || null;
         if (uploadError && (uploadError as any).message?.includes('Bucket not found')) {
@@ -481,7 +481,7 @@ const PrintManagement = () => {
   const downloadFile = async (filePath: string, fileName: string) => {
     try {
       const { data, error } = await supabase.storage
-        .from('print_files')
+        .from('print-files')
         .download(filePath);
 
       if (error) throw error;

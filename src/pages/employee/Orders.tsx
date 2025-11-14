@@ -392,7 +392,7 @@ const Orders = () => {
       // إنشاء رابط مؤقت لعرض الملف
       const { data: signedUrlData, error: urlError } = await supabase
         .storage
-        .from('print_files')
+        .from('print-files')
         .createSignedUrl(file.file_path, 3600); // ساعة واحدة
 
       if (urlError) {
@@ -462,7 +462,7 @@ const Orders = () => {
 
         // رفع مع معالجة خطأ "Bucket not found" عبر محاولة بديلة
         let uploadError: any = await supabase.storage
-          .from('print_files')
+          .from('print-files')
           .upload(filePath, file);
         uploadError = uploadError?.error || null;
         if (uploadError && (uploadError as any).message?.includes('Bucket not found')) {
@@ -566,7 +566,7 @@ const Orders = () => {
       // إنشاء رابط موقع للملف (يعمل لمدة 24 ساعة)
       const { data: signedUrlData, error: urlError } = await supabase
         .storage
-        .from('print_files')
+        .from('print-files')
         .createSignedUrl(proofFile.file_path, 86400); // 24 ساعة
 
       if (urlError) {
@@ -684,7 +684,7 @@ ${publicFileUrl}
   const downloadFile = async (filePath: string, fileName: string) => {
     try {
       const { data, error } = await supabase.storage
-        .from('print_files')
+        .from('print-files')
         .download(filePath);
 
       if (error) throw error;

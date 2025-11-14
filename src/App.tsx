@@ -70,7 +70,6 @@ import DailyTasks from "./pages/employee/DailyTasks";
 import TasksMonitor from "./pages/admin/TasksMonitor";
 import UserActivityLogs from "./pages/admin/UserActivityLogs";
 import WhatsAppQRLogin from "./pages/admin/WhatsAppQRLogin";
-import WhatsAppQRConnect from "./pages/admin/WhatsAppQRConnect";
 
 const queryClient = new QueryClient();
 
@@ -145,7 +144,6 @@ const App = () => (
             <Route path="whatsapp" element={<WhatsApp />} />
             <Route path="whatsapp-monitor" element={<WhatsAppMonitor />} />
             <Route path="whatsapp-qr-login" element={<WhatsAppQRLogin />} />
-            <Route path="whatsapp-qr-connect" element={<WhatsAppQRConnect />} />
               <Route path="print-management" element={<PrintManagement />} />
               <Route path="customer-print-orders" element={<CustomerPrintOrders />} />
               <Route path="webhooks" element={<WebhookSettings />} />

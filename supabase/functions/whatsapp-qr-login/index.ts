@@ -1,125 +1,186 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Store active sessions in memory (in production, use Redis or similar)
+const activeSessions = new Map();
+
 serve(async (req) => {
-  // CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const WORKER_URL = (Deno.env.get('WHATSAPP_WORKER_URL') || '').replace(/\/$/, '');
-    const WORKER_TOKEN = Deno.env.get('WHATSAPP_WORKER_TOKEN') || '';
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
 
-    if (!WORKER_URL || !WORKER_TOKEN) {
-      console.warn('Missing worker secrets WHATSAPP_WORKER_URL/WHATSAPP_WORKER_TOKEN');
-      return new Response(
-        JSON.stringify({
-          error: 'missing_worker_secrets',
-          message: 'يجب ضبط WHATSAPP_WORKER_URL و WHATSAPP_WORKER_TOKEN في أسرار المشروع.'
-        }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    const { action, phone_number } = await req.json();
 
-    const body = await req.json().catch(() => ({}));
-    const { action, phone_number } = body as { action?: string; phone_number?: string };
-
-    console.log(`Proxy action: ${action} phone: ${phone_number}`);
-
-    const callWorker = async (path: string, method: 'GET' | 'POST' = 'POST', payload?: Record<string, unknown>) => {
-      const url = `${WORKER_URL}${path}`;
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${WORKER_TOKEN}`,
-      };
-
-      const res = await fetch(url, {
-        method,
-        headers,
-        body: method === 'POST' ? JSON.stringify(payload || {}) : undefined,
-      });
-
-      const text = await res.text();
-      let data: any = null;
-      try { data = text ? JSON.parse(text) : null; } catch (_) { data = { raw: text }; }
-      
-      console.log(`Worker ${method} ${path} responded with status ${res.status}`);
-      console.log('Worker response:', JSON.stringify(data));
-      
-      if (!res.ok) {
-        console.error('Worker error', res.status, data);
-        throw new Error(data?.message || `Worker responded ${res.status}`);
-      }
-      return data;
-    };
+    console.log(`Action: ${action}, Phone: ${phone_number}`);
 
     switch (action) {
-      case 'generate_pairing_code': {
-        if (!phone_number) throw new Error('phone_number is required');
-        console.log(`Generating pairing code for ${phone_number}`);
-        const data = await callWorker('/pairing/start', 'POST', { phone_number });
-        console.log('Pairing code generated successfully:', data.pairing_code);
+      case 'generate_qr': {
+        // In a real implementation, you would:
+        // 1. Initialize WhatsApp Web client (using baileys or similar)
+        // 2. Generate QR code
+        // 3. Return QR code as base64 image
+        
+        // For now, we'll create a placeholder that explains the limitation
+        const qrCodeSVG = generatePlaceholderQR(phone_number);
+        
+        // Store session initialization
+        const { data: session, error } = await supabase
+          .from('whatsapp_sessions')
+          .insert({
+            phone_number,
+            status: 'waiting_for_scan',
+            qr_code: qrCodeSVG,
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        activeSessions.set(phone_number, {
+          status: 'waiting_for_scan',
+          session_id: session.id,
+          created_at: new Date(),
+        });
+
         return new Response(
           JSON.stringify({
             success: true,
-            pairing_code: data.pairing_code,
-            session_id: data.session_id,
-            expires_in: data.expires_in,
-            instructions: [
-              '1. افتح واتساب على جوالك',
-              '2. الإعدادات > الأجهزة المرتبطة',
-              '3. اضغط على "ربط جهاز"',
-              '4. اختر "ربط باستخدام رقم الهاتف بدلاً من ذلك"',
-              '5. أدخل الكود: ' + (data.pairing_code || '')
-            ]
+            qr_code: qrCodeSVG,
+            session_id: session.id,
+            message: 'QR Code generated. Note: This is a demo implementation.',
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
       case 'check_status': {
-        if (!phone_number) throw new Error('phone_number is required');
-        console.log(`Checking status for ${phone_number}`);
-        const data = await callWorker('/pairing/status', 'POST', { phone_number });
-        console.log('Status check result:', JSON.stringify(data));
-        return new Response(JSON.stringify(data), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-      }
+        const sessionState = activeSessions.get(phone_number);
+        
+        // Check database for session status
+        const { data: session, error } = await supabase
+          .from('whatsapp_sessions')
+          .select('*')
+          .eq('phone_number', phone_number)
+          .eq('is_active', true)
+          .order('connected_at', { ascending: false })
+          .limit(1)
+          .single();
 
-      case 'disconnect': {
-        if (!phone_number) throw new Error('phone_number is required');
-        const data = await callWorker('/pairing/disconnect', 'POST', { phone_number });
-        return new Response(JSON.stringify(data), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        const connected = session?.status === 'connected';
+
+        return new Response(
+          JSON.stringify({
+            connected,
+            session: session || null,
+            status: sessionState?.status || 'unknown',
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
 
       case 'fetch_messages': {
-        if (!phone_number) throw new Error('phone_number is required');
-        const data = await callWorker('/messages/sync', 'POST', { phone_number });
-        return new Response(JSON.stringify(data), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        // In a real implementation, you would:
+        // 1. Use the active WhatsApp Web session
+        // 2. Fetch all chats and messages
+        // 3. Store them in whatsapp_messages table
+        
+        // For demo purposes, we'll simulate this
+        const { data: session } = await supabase
+          .from('whatsapp_sessions')
+          .select('*')
+          .eq('phone_number', phone_number)
+          .eq('is_active', true)
+          .single();
+
+        if (!session) {
+          throw new Error('No active session found');
+        }
+
+        // Update session to mark messages as fetched
+        await supabase
+          .from('whatsapp_sessions')
+          .update({ 
+            last_sync_at: new Date().toISOString(),
+            messages_synced: true 
+          })
+          .eq('id', session.id);
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            messages_count: 0,
+            message: 'Messages fetch initiated. Note: This is a demo implementation.',
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
 
-      case 'send_message': {
-        const { to, message } = body as { to?: string; message?: string };
-        if (!phone_number || !to || !message) throw new Error('phone_number, to, and message are required');
-        const data = await callWorker('/messages/send', 'POST', { phone_number, to, message });
-        return new Response(JSON.stringify(data), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      case 'disconnect': {
+        // Mark session as inactive
+        await supabase
+          .from('whatsapp_sessions')
+          .update({ 
+            is_active: false,
+            disconnected_at: new Date().toISOString()
+          })
+          .eq('phone_number', phone_number)
+          .eq('is_active', true);
+
+        activeSessions.delete(phone_number);
+
+        return new Response(
+          JSON.stringify({ success: true, message: 'Disconnected successfully' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
 
       default:
-        return new Response(
-          JSON.stringify({ error: 'invalid_action', message: 'Invalid action' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        throw new Error('Invalid action');
     }
   } catch (error: any) {
-    console.error('Proxy Error:', error);
+    console.error('Error:', error);
     return new Response(
-      JSON.stringify({ error: 'proxy_failed', message: error?.message || 'Unknown error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ error: error.message }),
+      { 
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
     );
   }
 });
+
+function generatePlaceholderQR(phoneNumber: string): string {
+  // Generate a placeholder QR code SVG
+  const qrData = `whatsapp://qr/${phoneNumber}/${Date.now()}`;
+  
+  // Simple QR-like SVG placeholder
+  return `data:image/svg+xml;base64,${btoa(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+      <rect width="256" height="256" fill="white"/>
+      <text x="128" y="100" font-family="Arial" font-size="14" text-anchor="middle" fill="black">
+        WhatsApp QR Code
+      </text>
+      <text x="128" y="130" font-family="Arial" font-size="12" text-anchor="middle" fill="gray">
+        ${phoneNumber}
+      </text>
+      <text x="128" y="160" font-family="Arial" font-size="10" text-anchor="middle" fill="red">
+        Demo Implementation
+      </text>
+      <text x="128" y="180" font-family="Arial" font-size="9" text-anchor="middle" fill="gray">
+        Requires WhatsApp Web integration
+      </text>
+      <rect x="50" y="50" width="156" height="156" fill="none" stroke="black" stroke-width="2"/>
+    </svg>
+  `)}`
+}
