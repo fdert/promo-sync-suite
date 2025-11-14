@@ -635,61 +635,31 @@ ${companyName}`;
 
       console.log('Customer phone number:', phoneNumber);
 
-      // إنشاء رسالة WhatsApp في قاعدة البيانات
-      const { data: messageData, error: messageError } = await supabase
-        .from('whatsapp_messages')
-        .insert({
-          from_number: phoneNumber,
-          to_number: phoneNumber,
-          message_content: textMessage,
-          message_type: 'text',
-          status: 'pending'
-        })
-        .select()
-        .single();
+      // إرسال مباشرة عبر n8n webhook
+      const { data: webhook } = await supabase
+        .from('webhook_settings')
+        .select('webhook_url')
+        .eq('webhook_type', 'proof')
+        .eq('is_active', true)
+        .limit(1)
+        .maybeSingle();
 
-      if (messageError) {
-        console.error('Error creating WhatsApp message:', messageError);
-        throw new Error('فشل في إنشاء رسالة الواتساب');
-      }
-
-      console.log('WhatsApp message created in database with ID:', messageData.id);
-
-      // استدعاء دالة إرسال الرسائل المعلقة مباشرة
-      try {
-        const { data: sendResult, error: sendError } = await supabase.functions.invoke('send-pending-whatsapp');
-        
-        if (sendError) {
-          console.error('Error calling send-pending-whatsapp function:', sendError);
-          toast({
-            title: "تحذير",
-            description: "تم إنشاء الرسالة لكن قد يكون هناك تأخير في الإرسال. تحقق من إعدادات الواتساب.",
-            variant: "destructive",
-          });
-        } else {
-          console.log('Send pending WhatsApp function called successfully:', sendResult);
-          
-          // التحقق من نتيجة الإرسال
-          if (sendResult?.processed_count > 0) {
-            const successCount = sendResult.results?.filter((r: any) => r.status === 'sent')?.length || 0;
-            const failedCount = sendResult.results?.filter((r: any) => r.status === 'failed')?.length || 0;
-            
-            if (failedCount > 0) {
-              toast({
-                title: "تم إرسال البروفة مع تحذير",
-                description: `تم إرسال البروفة لكن بعض الرسائل فشلت. تحقق من إعدادات الواتساب.`,
-                variant: "destructive",
-              });
-            }
-          }
-        }
-      } catch (functionError) {
-        console.error('Failed to call send-pending-whatsapp function:', functionError);
-        toast({
-          title: "تحذير",
-          description: "تم إنشاء الرسالة لكن قد يكون هناك مشكلة في الإرسال. تحقق من إعدادات الواتساب.",
-          variant: "destructive",
+      if (webhook?.webhook_url) {
+        await fetch(webhook.webhook_url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to_number: phoneNumber,
+            text: textMessage,
+            message: textMessage,
+            media_url: publicFileUrl,
+            order_number: order.order_number,
+            customer_name: order.customers?.name,
+          }),
         });
+        console.log('تم إرسال البروفة عبر n8n');
+      } else {
+        throw new Error('لا يوجد ويب هوك بروفة نشط');
       }
 
       // تحديث حالة الإرسال في قاعدة البيانات
@@ -889,7 +859,7 @@ ${companyName}`;
 
         try {
           try {
-            // Direct send via active outgoing webhook (n8n)
+            // Direct send via n8n webhook only
             const { data: outgoing } = await supabase
               .from('webhook_settings')
               .select('webhook_url')
@@ -897,6 +867,16 @@ ${companyName}`;
               .eq('is_active', true)
               .limit(1)
               .maybeSingle();
+
+            if (!outgoing?.webhook_url) {
+              console.error('لا يوجد ويب هوك outgoing نشط');
+              toast({
+                title: "خطأ في الإرسال",
+                description: "لا يوجد ويب هوك واتساب نشط. يرجى التحقق من الإعدادات.",
+                variant: "destructive",
+              });
+              return;
+            }
 
             const paidAmount = Number(orderData.paid_amount || 0);
             const remainingAmount = Math.max(0, Number(orderData.total_amount || 0) - paidAmount);
@@ -924,20 +904,20 @@ ${companyName}`;
               remaining_amount: remainingAmount,
             };
 
-            if (outgoing?.webhook_url) {
-              await fetch(outgoing.webhook_url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(directPayload),
-              });
-              console.log('Direct webhook sent (n8n)');
-            } else {
-              console.warn('No active outgoing webhook found; falling back to edge function');
-              await supabase.functions.invoke('send-order-notifications', { body: notificationData });
-            }
+            const response = await fetch(outgoing.webhook_url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(directPayload),
+            });
+
+            console.log('تم إرسال الرسالة مباشرة عبر n8n:', response.ok);
           } catch (directError) {
-            console.error('Direct webhook failed, fallback to edge function:', directError);
-            await supabase.functions.invoke('send-order-notifications', { body: notificationData });
+            console.error('فشل الإرسال عبر n8n:', directError);
+            toast({
+              title: "خطأ في الإرسال",
+              description: "فشل إرسال رسالة الواتساب",
+              variant: "destructive",
+            });
           }
 
           // تشغيل معالج رسائل الواتساب فوراً لضمان الإرسال

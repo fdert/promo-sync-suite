@@ -627,26 +627,36 @@ ${publicFileUrl}
 شكراً لكم،
 *${companyName}*`;
 
-      // إرسال رسالة نصية تحتوي على الرابط
-      const { error: messageError } = await supabase
-        .from('whatsapp_messages')
-        .insert({
-          from_number: 'system',
-          to_number: order.customers?.whatsapp_number || '',
-          message_type: 'text',
-          message_content: textMessage,
-          status: 'pending',
-          customer_id: order.customer_id || (order as any).customer_id
+      // إرسال مباشرة عبر n8n webhook
+      const phoneNumber = order.customers?.whatsapp || order.customers?.phone || '';
+      if (!phoneNumber) {
+        throw new Error('رقم هاتف العميل غير متوفر');
+      }
+
+      const { data: webhook } = await supabase
+        .from('webhook_settings')
+        .select('webhook_url')
+        .eq('webhook_type', 'proof')
+        .eq('is_active', true)
+        .limit(1)
+        .maybeSingle();
+
+      if (webhook?.webhook_url) {
+        await fetch(webhook.webhook_url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to_number: phoneNumber,
+            text: textMessage,
+            message: textMessage,
+            media_url: publicFileUrl,
+            order_number: order.order_number,
+            customer_name: order.customers?.name,
+          }),
         });
-
-      if (messageError) throw messageError;
-
-      // استدعاء edge function لمعالجة رسائل الواتساب المعلقة
-      try {
-        await supabase.functions.invoke('send-pending-whatsapp');
-      } catch (pendingError) {
-        console.warn('Error processing pending WhatsApp messages:', pendingError);
-        // لا نوقف العملية إذا فشل إرسال الرسائل المعلقة
+        console.log('تم إرسال البروفة عبر n8n (employee)');
+      } else {
+        throw new Error('لا يوجد ويب هوك بروفة نشط');
       }
 
       // تحديث حالة الملف
@@ -879,7 +889,7 @@ ${publicFileUrl}
           console.log('Full notification data:', JSON.stringify(notificationData, null, 2));
           
           try {
-            // Direct send via active outgoing webhook (n8n)
+            // Direct send via n8n webhook only
             const { data: outgoing } = await supabase
               .from('webhook_settings')
               .select('webhook_url')
@@ -887,6 +897,11 @@ ${publicFileUrl}
               .eq('is_active', true)
               .limit(1)
               .maybeSingle();
+
+            if (!outgoing?.webhook_url) {
+              console.error('لا يوجد ويب هوك outgoing نشط');
+              return;
+            }
 
             const paidAmount = Number(orderData.paid_amount || 0);
             const remainingAmount = Math.max(0, Number(orderData.total_amount || 0) - paidAmount);
@@ -912,20 +927,14 @@ ${publicFileUrl}
               remaining_amount: remainingAmount,
             };
 
-            if (outgoing?.webhook_url) {
-              await fetch(outgoing.webhook_url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(directPayload),
-              });
-              console.log('Direct webhook sent (employee, n8n)');
-            } else {
-              console.warn('No active outgoing webhook found; falling back to edge function (employee)');
-              await supabase.functions.invoke('send-order-notifications', { body: notificationData });
-            }
+            await fetch(outgoing.webhook_url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(directPayload),
+            });
+            console.log('تم إرسال الرسالة مباشرة عبر n8n (employee)');
           } catch (directError) {
-            console.error('Direct webhook failed, fallback to edge function (employee):', directError);
-            await supabase.functions.invoke('send-order-notifications', { body: notificationData });
+            console.error('فشل الإرسال عبر n8n (employee):', directError);
           }
           
           // فحص مباشر للويب هوك في قاعدة البيانات
@@ -1482,6 +1491,11 @@ ${publicFileUrl}
             .limit(1)
             .maybeSingle();
 
+          if (!outgoing?.webhook_url) {
+            console.warn('لا يوجد ويب هوك outgoing نشط');
+            return;
+          }
+
           const directMessage = `تم إنشاء طلبك رقم: ${orderNumber}`;
           const directPayload = {
             type: 'order_created',
@@ -1494,20 +1508,14 @@ ${publicFileUrl}
             delivery_date: newOrder.due_date,
           };
 
-          if (outgoing?.webhook_url) {
-            await fetch(outgoing.webhook_url, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(directPayload),
-            });
-            console.log('تم إرسال إشعار الواتس آب للطلب الجديد مباشرة عبر n8n');
-          } else {
-            console.warn('لا يوجد ويب هوك outgoing نشط؛ سيتم استخدام الدالة كاحتياطي');
-            await supabase.functions.invoke('send-order-notifications', { body: notificationData });
-          }
+          await fetch(outgoing.webhook_url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(directPayload),
+          });
+          console.log('تم إرسال إشعار الواتس آب للطلب الجديد مباشرة عبر n8n');
         } catch (err) {
-          console.error('فشل الإرسال المباشر، سيتم استخدام الدالة كاحتياطي:', err);
-          await supabase.functions.invoke('send-order-notifications', { body: notificationData });
+          console.error('فشل الإرسال المباشر عبر n8n:', err);
         }
       }
 
