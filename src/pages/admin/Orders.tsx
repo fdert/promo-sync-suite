@@ -892,10 +892,57 @@ ${companyName}`;
             body: notificationData
           });
 
-          if (notificationError) {
-            console.error('فشل في إرسال إشعار الواتس:', notificationError);
-          } else {
-            console.log('تم إرسال إشعار الواتس آب بنجاح');
+          if (notificationError || (notificationResult && (notificationResult as any).success === false)) {
+            console.warn('Fallback to direct webhook send...');
+            // جلب أول ويب هوك outgoing نشط
+            const { data: outgoing } = await supabase
+              .from('webhook_settings')
+              .select('webhook_url')
+              .eq('webhook_type', 'outgoing')
+              .eq('is_active', true)
+              .limit(1)
+              .maybeSingle();
+
+            if (outgoing?.webhook_url) {
+              const paidAmount = Number(orderData.paid_amount || 0);
+              const remainingAmount = Math.max(0, Number(orderData.total_amount || 0) - paidAmount);
+              const deliveryDateText = orderData.delivery_date
+                ? `\n\n📅 يمكنك الاستلام في: ${new Date(orderData.delivery_date).toLocaleDateString('ar-SA')}`
+                : '';
+              // رسالة بسيطة مباشرة
+              const fallbackMessage = `${orderData.customers?.name || ''}، ${
+                newStatus === 'جاهز للتسليم'
+                  ? 'طلبك جاهز للتسليم!'
+                  : `تم تحديث حالة طلبك إلى: ${newStatus}`
+              }${deliveryDateText}\n\n📊 الملخص المالي:\n• قيمة الطلب: ${(orderData.total_amount || 0).toFixed(2)} ر.س\n• المدفوع: ${paidAmount.toFixed(2)} ر.س\n• المتبقي: ${remainingAmount.toFixed(2)} ر.س`;
+
+              const directPayload = {
+                type: notificationType,
+                to_number: customerWhatsapp,
+                text: fallbackMessage,
+                message: fallbackMessage,
+                order_number: orderData.order_number,
+                customer_name: orderData.customers?.name,
+                service_name: (orderData as any).service_name,
+                delivery_date: orderData.delivery_date,
+                amount: orderData.total_amount,
+                paid_amount: paidAmount,
+                remaining_amount: remainingAmount,
+              };
+
+              try {
+                await fetch(outgoing.webhook_url, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(directPayload)
+                });
+                console.log('Direct webhook sent');
+              } catch (e) {
+                console.error('Direct webhook failed:', e);
+              }
+            } else {
+              console.warn('No active outgoing webhook found for direct send');
+            }
           }
 
           // تشغيل معالج رسائل الواتساب فوراً لضمان الإرسال
