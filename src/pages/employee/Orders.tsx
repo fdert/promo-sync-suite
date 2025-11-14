@@ -886,6 +886,53 @@ ${publicFileUrl}
           console.log('Full result:', result);
           console.log('Result data:', result.data);
           console.log('Result error:', result.error);
+
+          if (result.error || (result.data && (result.data as any).success === false)) {
+            console.warn('Fallback to direct webhook send from employee dashboard...');
+            const { data: outgoing } = await supabase
+              .from('webhook_settings')
+              .select('webhook_url')
+              .eq('webhook_type', 'outgoing')
+              .eq('is_active', true)
+              .limit(1)
+              .maybeSingle();
+
+            if (outgoing?.webhook_url) {
+              const deliveryDateText = orderData.delivery_date
+                ? `\n\n📅 يمكنك الاستلام في: ${new Date(orderData.delivery_date).toLocaleDateString('ar-SA')}`
+                : '';
+              const fallbackMessage = `${orderData.customers?.name || ''}، ${
+                status === 'جاهز للتسليم' ? 'طلبك جاهز للتسليم!' : `تم تحديث حالة طلبك إلى: ${status}`
+              }${deliveryDateText}\n\n📊 الملخص المالي:\n• قيمة الطلب: ${(orderData.total_amount || 0).toFixed(2)} ر.س\n• المدفوع: ${paidAmount.toFixed(2)} ر.س\n• المتبقي: ${remainingAmount.toFixed(2)} ر.س`;
+
+              const directPayload = {
+                type: notificationType,
+                to_number: customerWhatsapp,
+                text: fallbackMessage,
+                message: fallbackMessage,
+                order_number: orderData.order_number,
+                customer_name: orderData.customers?.name,
+                service_name: orderData.service_name,
+                delivery_date: orderData.delivery_date,
+                amount: orderData.total_amount,
+                paid_amount: paidAmount,
+                remaining_amount: remainingAmount,
+              };
+
+              try {
+                await fetch(outgoing.webhook_url, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(directPayload)
+                });
+                console.log('Direct webhook sent (employee)');
+              } catch (e) {
+                console.error('Direct webhook failed (employee):', e);
+              }
+            } else {
+              console.warn('No active outgoing webhook found for direct send (employee)');
+            }
+          }
           
           // فحص مباشر للويب هوك في قاعدة البيانات
           const { data: webhookCheck } = await supabase
