@@ -271,30 +271,19 @@ const FollowUpSettings = () => {
 
 ⏰ وقت الاختبار: ${new Date().toLocaleString('ar-SA')}`;
 
-      // حفظ رسالة الاختبار
-      const { error: insertError } = await supabase
-        .from('whatsapp_messages')
-        .insert({
-          from_number: 'test_system',
-          to_number: String(settingsData.whatsapp_number || '').trim(),
-          message_type: 'text',
-          message_content: testMessage,
-          status: 'pending',
-          dedupe_key: `test_${Date.now()}`
-        });
-      
-      if (insertError) {
-        console.warn('تحذير: فشل في حفظ رسالة الاختبار:', insertError.message);
+      // إرسال رسالة الاختبار عبر Edge Function الموحدة
+      const { data: sendResult, error: sendError } = await supabase.functions.invoke('send-whatsapp-simple', {
+        body: {
+          phone: String(settingsData.whatsapp_number || '').trim(),
+          message: testMessage,
+          webhook_type: 'outgoing',
+          strict: false,
+        },
+      });
+      if (sendError) {
+        console.warn('تحذير: فشل في إرسال رسالة الاختبار:', sendError.message || sendError);
       } else {
-        // معالجة الرسائل عبر الويب هوك (n8n)
-        const { data: queueResult, error: queueError } = await supabase.functions.invoke('process-whatsapp-queue', {
-          body: { action: 'process_pending_messages', source: 'follow-up-settings-follow-up-test' }
-        });
-        if (queueError) {
-          console.warn('تحذير: فشل في استدعاء process-whatsapp-queue:', queueError.message);
-        } else {
-          console.log('تمت معالجة قائمة الواتساب:', queueResult);
-        }
+        console.log('تم إرسال رسالة الاختبار عبر send-whatsapp-simple:', sendResult);
       }
 
       toast({
@@ -344,19 +333,16 @@ const FollowUpSettings = () => {
 
       const toNumber = String(settings.whatsapp_number || '').trim();
 
-      // استدعاء دالة التقرير المالي والتي ترسل مباشرة عبر follow_up_webhook إن وُجد
-      const { data: reportResult, error: reportError } = await supabase.functions.invoke('daily-financial-report', {
-        body: { test: true }
+      // إرسال التقرير عبر Edge Function الموحدة لإرسال الواتساب
+      const { data: sendReport, error: sendReportError } = await supabase.functions.invoke('send-whatsapp-simple', {
+        body: {
+          phone: toNumber,
+          message,
+          webhook_type: 'outgoing',
+          strict: false,
+        },
       });
-      if (reportError) throw reportError;
-
-      // تشغيل معالج قائمة رسائل الواتساب لضمان الإرسال عبر نفس القناة المستخدمة في بقية الإشعارات
-      const { data: queueData, error: queueError } = await supabase.functions.invoke('process-whatsapp-queue', {
-        body: { action: 'process_pending_messages', source: 'follow-up-settings-financial-report-test' }
-      });
-      if (queueError) {
-        console.warn('تحذير: فشل في استدعاء process-whatsapp-queue:', queueError.message || queueError);
-      }
+      if (sendReportError) throw sendReportError;
 
       toast({
         title: 'تم إرسال التقرير المالي ✅',
