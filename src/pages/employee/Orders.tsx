@@ -752,15 +752,22 @@ ${publicFileUrl}
         .update({ status: status })
         .eq('id', orderId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('خطأ في تحديث حالة الطلب:', error);
+        throw error;
+      }
 
-      console.log('=== تحقق من إرسال إشعار الواتساب ===');
-      console.log('Order data:', orderData);
-      console.log('Customer WhatsApp:', orderData?.customers?.whatsapp);
-      
-      // إرسال إشعار واتساب عند تغيير الحالة - تنظيف الرقم من الأحرف الخاصة
-      let customerWhatsapp = orderData?.customers?.whatsapp || orderData?.customers?.phone;
-      if (customerWhatsapp) {
+      console.log('✅ تم تحديث حالة الطلب بنجاح');
+
+      // إرسال إشعار واتساب (في try/catch منفصل حتى لا يؤثر على التحديث)
+      try {
+        console.log('=== بداية إرسال إشعار الواتساب ===');
+        console.log('Order data:', orderData);
+        console.log('Customer WhatsApp:', orderData?.customers?.whatsapp);
+        
+        // إرسال إشعار واتساب عند تغيير الحالة - تنظيف الرقم من الأحرف الخاصة
+        let customerWhatsapp = orderData?.customers?.whatsapp || orderData?.customers?.phone;
+        if (customerWhatsapp) {
         // تنظيف الرقم من الأحرف الخاصة (Left-to-Right Marks وغيرها)
         customerWhatsapp = cleanPhoneNumber(customerWhatsapp);
         console.log('Customer data:', orderData.customers);
@@ -967,6 +974,10 @@ ${publicFileUrl}
         }
       } else {
         console.log('لا يوجد رقم واتس آب للعميل');
+      }
+      } catch (whatsappError) {
+        // إذا فشل إرسال واتساب، نسجل الخطأ فقط ولا نفشل عملية التحديث
+        console.error('خطأ في إرسال إشعار واتساب:', whatsappError);
       }
 
       toast({
