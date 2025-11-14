@@ -645,14 +645,18 @@ ${publicFileUrl}
         await fetch(webhook.webhook_url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            to_number: phoneNumber,
-            text: textMessage,
-            message: textMessage,
-            media_url: publicFileUrl,
-            order_number: order.order_number,
-            customer_name: order.customers?.name,
-          }),
+            body: JSON.stringify({
+              event: 'design_proof',
+              to_number: phoneNumber,
+              phone: phoneNumber,
+              phone_number: phoneNumber,
+              to: phoneNumber,
+              text: textMessage,
+              message: textMessage,
+              media_url: publicFileUrl,
+              order_number: order.order_number,
+              customer_name: order.customers?.name,
+            }),
         });
         console.log('تم إرسال البروفة عبر n8n (employee)');
       } else {

@@ -649,7 +649,11 @@ ${companyName}`;
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            event: 'design_proof',
             to_number: phoneNumber,
+            phone: phoneNumber,
+            phone_number: phoneNumber,
+            to: phoneNumber,
             text: textMessage,
             message: textMessage,
             media_url: publicFileUrl,
@@ -892,7 +896,11 @@ ${companyName}`;
 
             const directPayload = {
               type: notificationType,
+              event: 'order_status_update',
               to_number: customerWhatsapp,
+              phone: customerWhatsapp,
+              phone_number: customerWhatsapp,
+              to: customerWhatsapp,
               text: directMessage,
               message: directMessage,
               order_number: orderData.order_number,
