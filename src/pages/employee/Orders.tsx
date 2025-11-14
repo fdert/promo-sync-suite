@@ -900,20 +900,6 @@ ${publicFileUrl}
           console.log('Full notification data:', JSON.stringify(notificationData, null, 2));
           
           try {
-            // Direct send via n8n webhook only
-            const { data: outgoing } = await supabase
-              .from('webhook_settings')
-              .select('webhook_url')
-              .eq('webhook_type', 'outgoing')
-              .eq('is_active', true)
-              .limit(1)
-              .maybeSingle();
-
-            if (!outgoing?.webhook_url) {
-              console.error('لا يوجد ويب هوك outgoing نشط');
-              return;
-            }
-
             const paidAmount = Number(orderData.paid_amount || 0);
             const remainingAmount = Math.max(0, Number(orderData.total_amount || 0) - paidAmount);
             const deliveryDateText = orderData.delivery_date
@@ -924,37 +910,21 @@ ${publicFileUrl}
               status === 'جاهز للتسليم' ? 'طلبك جاهز للتسليم!' : `تم تحديث حالة طلبك إلى: ${status}`
             }${deliveryDateText}\n\n📊 الملخص المالي:\n• قيمة الطلب: ${(orderData.total_amount || 0).toFixed(2)} ر.س\n• المدفوع: ${paidAmount.toFixed(2)} ر.س\n• المتبقي: ${remainingAmount.toFixed(2)} ر.س`;
 
-            const directPayload = {
-              type: notificationType,
-              event: 'order_status_update',
-              to_number: customerWhatsapp,
-              phone: customerWhatsapp,
-              phone_number: customerWhatsapp,
-              to: customerWhatsapp,
-              text: directMessage,
-              message: directMessage,
-              order_number: orderData.order_number,
-              customer_name: orderData.customers?.name,
-              service_name: orderData.service_name,
-              delivery_date: orderData.delivery_date,
-              amount: orderData.total_amount,
-              paid_amount: paidAmount,
-              remaining_amount: remainingAmount,
-            };
-
-            const resp = await fetch(outgoing.webhook_url, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(directPayload),
+            // إرسال عبر Edge Function لتفادي قيود CORS وضمان التسليم
+            const { data, error } = await supabase.functions.invoke('send-whatsapp-simple', {
+              body: {
+                phone_number: customerWhatsapp,
+                message: directMessage,
+              },
             });
-            if (!resp.ok) {
-              const text = await resp.text().catch(() => '');
-              console.error('n8n webhook returned non-200:', resp.status, text);
-              throw new Error('n8n webhook rejected the request');
+
+            if (error) {
+              console.error('خطأ من دالة الإرسال:', error);
+            } else {
+              console.log('تم جدولة رسالة واتساب عبر الدالة (send-whatsapp-simple)', data);
             }
-            console.log('تم إرسال الرسالة مباشرة عبر n8n (employee)');
-          } catch (directError) {
-            console.error('فشل الإرسال عبر n8n (employee):', directError);
+          } catch (fnError) {
+            console.error('فشل استدعاء دالة واتساب:', fnError);
           }
           
           // فحص مباشر للويب هوك في قاعدة البيانات
@@ -966,10 +936,7 @@ ${publicFileUrl}
           
           console.log('Webhook check for لوحة الموظف :', webhookCheck);
 
-          if (result.error) {
-            console.error('خطأ في إرسال الإشعار:', result.error);
-          } else {
-            console.log('تم إرسال إشعار الواتس آب بنجاح');
+          // تمت محاولة إرسال إشعار الواتس آب (يتم التحقق من السجلات لمعرفة النتيجة)
             
             // إذا كانت الحالة "مكتمل" وتم إرسال رابط التقييم، نحدث sent_at
             if (status === 'مكتمل' && evaluationLink) {
