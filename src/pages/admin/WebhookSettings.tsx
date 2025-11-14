@@ -60,6 +60,46 @@ const WebhookSettings = () => {
     }
   };
 
+  const enableAllOrderStatuses = async () => {
+    try {
+      // تحديث الويب هوك ليدعم جميع أنواع الإشعارات
+      const { error } = await supabase
+        .from('webhook_settings')
+        .update({
+          order_statuses: [
+            'order_created',
+            'order_confirmed',
+            'order_in_progress',
+            'order_under_review',
+            'order_ready_for_delivery',
+            'order_completed',
+            'order_cancelled',
+            'order_updated',
+            'order_on_hold',
+            'status_update'
+          ]
+        })
+        .eq('webhook_name', 'تحديث الطلبات')
+        .eq('webhook_type', 'outgoing');
+
+      if (error) throw error;
+
+      toast({
+        title: "تم التحديث",
+        description: "تم تفعيل جميع أنواع إشعارات الطلبات",
+      });
+
+      await fetchWebhookSettings();
+    } catch (error) {
+      console.error('Error updating webhook:', error);
+      toast({
+        title: "خطأ",
+        description: "فشل في تحديث الويب هوك",
+        variant: "destructive",
+      });
+    }
+  };
+
   const saveWebhookSetting = async (webhookData: {
     webhook_name: string;
     webhook_url: string;
@@ -689,7 +729,25 @@ const WebhookSettings = () => {
                 إضافة وإدارة ويب هوك لإشعارات الطلبات
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                <div className="flex-1">
+                  <h3 className="font-semibold text-sm">تفعيل جميع إشعارات الطلبات</h3>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    تحديث ويب هوك "تحديث الطلبات" ليدعم جميع أنواع الإشعارات (مؤكد، قيد المراجعة، جاهز للتسليم، إلخ)
+                  </p>
+                </div>
+                <Button 
+                  onClick={enableAllOrderStatuses}
+                  variant="default"
+                  className="whitespace-nowrap"
+                  disabled={loading}
+                >
+                  <Settings className="w-4 h-4 mr-2" />
+                  تفعيل الكل
+                </Button>
+              </div>
+              
               <WebhookManagement 
                 webhookSettings={webhookSettings.filter(w => w.webhook_type === 'outgoing')}
                 onSave={saveWebhookSetting}
