@@ -493,12 +493,10 @@ ${index + 1}. *المبلغ:* ${payment.amount.toLocaleString()} ر.س
       };
 
       // إرسال مباشر عبر Edge Function الموثوقة مع اختيار أفضل Webhook
-      const { data: functionData, error: functionError } = await supabase.functions.invoke('send-whatsapp-simple', {
+      const { data: functionData, error: functionError } = await supabase.functions.invoke('send-direct-whatsapp', {
         body: {
           phone,
           message: summaryText,
-          webhook_type: 'outstanding_balance_report',
-          template_vars: templateVars
         }
       });
       
@@ -567,12 +565,10 @@ ${index + 1}. *المبلغ:* ${payment.amount.toLocaleString()} ر.س
       console.log('📱 الرقم المستهدف:', phoneNumber);
       
       // استدعاء edge function مع تحديد نوع الويب هوك للعملاء المدينين
-      const { data: functionData, error: functionError } = await supabase.functions.invoke('send-whatsapp-simple', {
+      const { data: functionData, error: functionError } = await supabase.functions.invoke('send-direct-whatsapp', {
         body: {
           phone: phoneNumber,
           message: summary,
-          webhook_type: 'outstanding_balance_report',
-          template_vars: templateVars
         }
       });
       

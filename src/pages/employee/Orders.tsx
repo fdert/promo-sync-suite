@@ -911,9 +911,9 @@ ${publicFileUrl}
             }${deliveryDateText}\n\n📊 الملخص المالي:\n• قيمة الطلب: ${(orderData.total_amount || 0).toFixed(2)} ر.س\n• المدفوع: ${paidAmount.toFixed(2)} ر.س\n• المتبقي: ${remainingAmount.toFixed(2)} ر.س`;
 
             // إرسال عبر Edge Function لتفادي قيود CORS وضمان التسليم
-            const { data, error } = await supabase.functions.invoke('send-whatsapp-simple', {
+            const { data, error } = await supabase.functions.invoke('send-direct-whatsapp', {
               body: {
-                phone_number: customerWhatsapp,
+                phone: customerWhatsapp,
                 message: directMessage,
               },
             });
