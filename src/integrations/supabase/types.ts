@@ -1757,6 +1757,7 @@ export type Database = {
       exec_sql: { Args: { sql: string }; Returns: undefined }
       generate_database_backup: { Args: never; Returns: string }
       generate_evaluation_token: { Args: never; Returns: string }
+      generate_invoice_number: { Args: never; Returns: string }
       generate_order_number: { Args: never; Returns: string }
       generate_print_order_number: { Args: never; Returns: string }
       log_activity: {
