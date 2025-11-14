@@ -948,9 +948,6 @@ ${publicFileUrl}
             }
           }
         }
-      } else {
-        console.log('لا يوجد رقم واتس آب للعميل');
-      }
       } catch (whatsappError) {
         // إذا فشل إرسال واتساب، نسجل الخطأ فقط ولا نفشل عملية التحديث
         console.error('خطأ في إرسال إشعار واتساب:', whatsappError);

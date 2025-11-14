@@ -863,25 +863,6 @@ ${companyName}`;
 
         try {
           try {
-            // Direct send via n8n webhook only
-            const { data: outgoing } = await supabase
-              .from('webhook_settings')
-              .select('webhook_url')
-              .eq('webhook_type', 'outgoing')
-              .eq('is_active', true)
-              .limit(1)
-              .maybeSingle();
-
-            if (!outgoing?.webhook_url) {
-              console.error('لا يوجد ويب هوك outgoing نشط');
-              toast({
-                title: "خطأ في الإرسال",
-                description: "لا يوجد ويب هوك واتساب نشط. يرجى التحقق من الإعدادات.",
-                variant: "destructive",
-              });
-              return;
-            }
-
             const paidAmount = Number(orderData.paid_amount || 0);
             const remainingAmount = Math.max(0, Number(orderData.total_amount || 0) - paidAmount);
             const deliveryDateText = orderData.delivery_date
@@ -894,36 +875,28 @@ ${companyName}`;
                 : `تم تحديث حالة طلبك إلى: ${newStatus}`
             }${deliveryDateText}\n\n📊 الملخص المالي:\n• قيمة الطلب: ${(orderData.total_amount || 0).toFixed(2)} ر.س\n• المدفوع: ${paidAmount.toFixed(2)} ر.س\n• المتبقي: ${remainingAmount.toFixed(2)} ر.س`;
 
-            const directPayload = {
-              type: notificationType,
-              event: 'order_status_update',
-              to_number: customerWhatsapp,
-              phone: customerWhatsapp,
-              phone_number: customerWhatsapp,
-              to: customerWhatsapp,
-              text: directMessage,
-              message: directMessage,
-              order_number: orderData.order_number,
-              customer_name: orderData.customers?.name,
-              service_name: (orderData as any).service_name,
-              delivery_date: orderData.delivery_date,
-              amount: orderData.total_amount,
-              paid_amount: paidAmount,
-              remaining_amount: remainingAmount,
-            };
-
-            const response = await fetch(outgoing.webhook_url, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(directPayload),
+            const { data, error } = await supabase.functions.invoke('send-whatsapp-simple', {
+              body: {
+                phone_number: customerWhatsapp,
+                message: directMessage,
+              }
             });
 
-            console.log('تم إرسال الرسالة مباشرة عبر n8n:', response.ok);
+            if (error) {
+              console.error('خطأ من دالة الإرسال:', error);
+              toast({
+                title: "خطأ في الإرسال",
+                description: "فشل إرسال رسالة الواتساب",
+                variant: "destructive",
+              });
+            } else {
+              console.log('تم جدولة رسالة واتساب عبر الدالة (send-whatsapp-simple)', data);
+            }
           } catch (directError) {
-            console.error('فشل الإرسال عبر n8n:', directError);
+            console.error('فشل استدعاء دالة واتساب:', directError);
             toast({
               title: "خطأ في الإرسال",
-              description: "فشل إرسال رسالة الواتساب",
+              description: "تعذر استدعاء دالة الإرسال",
               variant: "destructive",
             });
           }
