@@ -76,45 +76,20 @@ serve(async (req) => {
 
     console.log('✅ تم حفظ الرسالة بنجاح، ID:', messageData.id)
 
-    // إرسال الرسالة عبر الويب هوك
-    console.log('📤 إرسال الرسالة للويب هوك...')
-    
-    const webhookUrl = 'https://n8n.srv894347.hstgr.cloud/webhook/ca719409-ac29-485a-99d4-3b602978eace'
-    
-    const webhookResponse = await fetch(webhookUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        phone: phone,
-        message: message,
-        customer_name: customer_name || 'غير محدد',
-        message_id: messageData.id,
-        timestamp: new Date().toISOString()
-      })
-    })
-
-    const webhookResponseText = await webhookResponse.text()
-    console.log('📥 استجابة الويب هوك:', webhookResponse.status, webhookResponseText)
-
-    // تحديث حالة الرسالة حسب نتيجة الويب هوك
-    const newStatus = webhookResponse.ok ? 'sent' : 'failed'
-    
-    const { error: updateError } = await supabase
-      .from('whatsapp_messages')
-      .update({ 
-        status: newStatus,
-        error_message: webhookResponse.ok ? null : `Webhook error: ${webhookResponse.status} - ${webhookResponseText}`
-      })
-      .eq('id', messageData.id)
-
-    if (updateError) {
-      console.error('❌ خطأ في تحديث حالة الرسالة:', updateError)
+    // بدلاً من الإرسال المباشر: الاكتفاء بالطابور
+    try {
+      await supabase.functions.invoke('process-whatsapp-queue', { body: { trigger: 'send-whatsapp-direct', message_id: messageData.id } });
+    } catch (e) {
+      console.warn('process-whatsapp-queue invoke failed (ignored):', e?.message || e);
     }
 
     // في كل الأحوال، نرد بنجاح للمستخدم مع تفاصيل التشخيص
     const response = {
+      success: true,
+      message_id: messageData.id,
+      phone: phone,
+      status: 'queued'
+    }
       success: true,
       message_id: messageData.id,
       phone: phone,

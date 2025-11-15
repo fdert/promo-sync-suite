@@ -159,47 +159,16 @@ ${test ? '\n🧪 *هذه رسالة اختبار*' : ''}`;
       throw msgInsertError;
     }
 
-    // إرسال مباشر عبر follow_up_webhook_url إذا كان موجوداً
-    if (settings.follow_up_webhook_url) {
-      try {
-        const payload = {
-          event: 'whatsapp_message_send',
-          data: {
-            to: settings.whatsapp_number,
-            phone: settings.whatsapp_number,
-            phoneNumber: settings.whatsapp_number,
-            message: message,
-            messageText: message,
-            text: message,
-            type: 'text',
-            message_type: 'payment_notification',
-            timestamp: Math.floor(Date.now() / 1000),
-            from_number: 'system',
-            payment_id: payment_id
-          }
-        };
-
-        const webhookResp = await fetch(settings.follow_up_webhook_url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-
-        if (webhookResp.ok && msgInserted?.id) {
-          await supabase
-            .from('whatsapp_messages')
-            .update({ 
-              status: 'sent', 
-              sent_at: new Date().toISOString() 
-            })
-            .eq('id', msgInserted.id);
-          
-          console.log('✅ Payment notification sent successfully');
-        }
-      } catch (webhookError) {
-        console.error('Error sending via follow_up_webhook:', webhookError);
-      }
+    // استبدال الإرسال المباشر: استدعاء معالج الطابور فقط
+    try {
+      await supabase.functions.invoke('process-whatsapp-queue', {
+        body: { trigger: 'notify-new-payment', message_id: msgInserted?.id }
+      });
+      console.log('Triggered process-whatsapp-queue for new payment');
+    } catch (e) {
+      console.warn('process-whatsapp-queue invoke failed (ignored):', e?.message || e);
     }
+
 
     return new Response(
       JSON.stringify({ 
