@@ -322,12 +322,21 @@ const FollowUpSettings = () => {
       const totalExpenses = (expenses || []).reduce((sum: number, e: any) => sum + (e.amount || 0), 0);
       const netProfit = totalPayments - totalExpenses;
 
-      const [{ count: newOrdersCount }, { count: completedOrdersCount }] = await Promise.all([
+      const [{ count: newOrdersCount }, { count: completedOrdersCount }, { data: readyOrders }] = await Promise.all([
         supabase.from('orders').select('id', { count: 'exact', head: true }).gte('created_at', start).lte('created_at', end),
-        supabase.from('orders').select('id', { count: 'exact', head: true }).eq('status', 'completed').gte('updated_at', start).lte('updated_at', end),
+        supabase.from('orders').select('id', { count: 'exact', head: true }).eq('status', 'مكتمل').gte('updated_at', start).lte('updated_at', end),
+        supabase.from('orders').select('order_number, customers(name)').eq('status', 'جاهز للتسليم').eq('delivery_date', start.split('T')[0]).limit(5),
       ]);
 
-      const message = `📊 *التقرير المالي اليومي*\n\n📅 التاريخ: ${now.toLocaleDateString('ar-SA')}\n\n💰 *المبالغ المدفوعة اليوم:*\n${totalPayments.toFixed(2)} ريال\n\n💸 *المصروفات اليومية:*\n${totalExpenses.toFixed(2)} ريال\n\n📈 *صافي الربح اليومي:*\n${netProfit.toFixed(2)} ريال ${netProfit >= 0 ? '✅' : '❌'}\n\n📦 *الطلبات:*\n• طلبات جديدة: ${newOrdersCount || 0}\n• طلبات مكتملة: ${completedOrdersCount || 0}\n\n---\nتم إنشاء التقرير تلقائياً في تمام الساعة ${now.toLocaleTimeString('ar-SA')}`;
+      let readyOrdersList = '';
+      if (readyOrders && readyOrders.length > 0) {
+        readyOrdersList = '\n\n📅 *جاهزة للتسليم اليوم:*\n';
+        readyOrders.forEach((order: any, index: number) => {
+          readyOrdersList += `${index + 1}. ${order.order_number} - ${order.customers?.name || 'عميل'}\n`;
+        });
+      }
+
+      const message = `📊 *التقرير المالي اليومي*\n\n📅 التاريخ: ${now.toLocaleDateString('ar-SA')}\n\n💰 *المبالغ المدفوعة اليوم:*\n${totalPayments.toFixed(2)} ريال\n\n💸 *المصروفات اليومية:*\n${totalExpenses.toFixed(2)} ريال\n\n📈 *صافي الربح اليومي:*\n${netProfit.toFixed(2)} ريال ${netProfit >= 0 ? '✅' : '❌'}\n\n📦 *الطلبات:*\n• طلبات جديدة: ${newOrdersCount || 0}\n• طلبات مكتملة: ${completedOrdersCount || 0}${readyOrdersList}\n\n---\nتم إنشاء التقرير تلقائياً في تمام الساعة ${now.toLocaleTimeString('ar-SA')}`;
 
       const toNumber = String(settings.whatsapp_number || '').trim();
 
@@ -342,7 +351,7 @@ const FollowUpSettings = () => {
 
       toast({
         title: 'تم إرسال التقرير المالي ✅',
-        description: 'تم إنشاء التقرير وإرساله عبر الويب هوك بنجاح',
+        description: 'تم إنشاء التقرير وإرساله عبر الويب هوك الخاص بـ n8n بنجاح',
       });
     } catch (error: any) {
       console.error('Error testing financial report:', error);
