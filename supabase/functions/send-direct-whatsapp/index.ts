@@ -79,26 +79,27 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Normalize phone number: ensure it starts with '+' and remove spaces
-    const cleanedPhone = phone.replace(/[^\d+]/g, '');
-    const normalizedPhone = cleanedPhone.startsWith('+') ? cleanedPhone : `+${cleanedPhone}`;
+    // Normalize phone number to E.164 and provide both digits-only and E.164 variants
+    const raw = phone.replace(/\s+/g, '');
+    const digitsOnly = raw.replace(/[^\d]/g, '');
+    const toE164 = raw.startsWith('+') ? raw.replace(/[^\d+]/g, '') : `+${digitsOnly}`;
+    const toDigits = toE164.replace(/\D/g, '');
 
-    const cleanedPhone = phone.replace(/[^\d+]/g, '');
-    const normalizedPhone = cleanedPhone.startsWith('+') ? cleanedPhone : `+${cleanedPhone}`;
-
-    // Build payload compatible with WhatsApp webhook (and keep legacy fields for n8n flows)
+    // Build payload compatible with WhatsApp webhook and legacy n8n flows
     const messagePayload: Record<string, any> = {
       // WhatsApp-style fields
       messaging_product: 'whatsapp',
-      to: normalizedPhone,
+      to: toDigits,              // many n8n nodes expect digits-only here
+      to_e164: toE164,           // provide E.164 as well for newer flows
       type: 'text',
       text: { body: message },
 
       // Legacy/general fields for existing n8n workflows
-      phone: normalizedPhone,
-      phoneNumber: normalizedPhone,
-      phone_number: normalizedPhone,
-      to_number: normalizedPhone,
+      phone: toE164,
+      phoneNumber: toE164,
+      phone_number: toE164,
+      to_number: toE164,
+      to_digits: toDigits,
       message,
       messageText: message,
       notification_type: 'direct_message',
@@ -141,7 +142,7 @@ Deno.serve(async (req) => {
     // Save message record
     const { error: insertError } = await supabase.from('whatsapp_messages').insert({
       from_number: 'system',
-      to_number: normalizedPhone,
+      to_number: toE164,
       message_type: 'text',
       message_content: message,
       status,

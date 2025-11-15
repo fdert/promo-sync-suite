@@ -69,13 +69,38 @@ serve(async (req) => {
       }
       if (settings.follow_up_webhook_url) {
         try {
-          const payload = { event: 'whatsapp_message_send', data: { to: settings.whatsapp_number, phone: settings.whatsapp_number, phoneNumber: settings.whatsapp_number, message, messageText: message, text: message, type: 'text', message_type: 'delivery_delay_notification', timestamp: Math.floor(Date.now()/1000), from_number: 'system', order_id: 'test', order_number: 'TEST' } };
-          const webhookResp = await fetch(settings.follow_up_webhook_url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+          const raw = (settings.whatsapp_number || '').replace(/\s+/g, '')
+          const digitsOnly = raw.replace(/[^\d]/g, '')
+          const toE164 = raw.startsWith('+') ? raw.replace(/[^\d+]/g, '') : `+${digitsOnly}`
+          const toDigits = toE164.replace(/\D/g, '')
+
+          const payload = {
+            event: 'whatsapp_message_send',
+            data: {
+              to: toDigits,
+              to_e164: toE164,
+              phone: toE164,
+              phoneNumber: toE164,
+              phone_number: toE164,
+              to_number: toE164,
+              to_digits: toDigits,
+              message,
+              messageText: message,
+              text: message,
+              type: 'text',
+              message_type: 'delivery_delay_notification',
+              timestamp: Math.floor(Date.now()/1000),
+              from_number: 'system',
+              order_id: 'test',
+              order_number: 'TEST'
+            }
+          }
+          const webhookResp = await fetch(settings.follow_up_webhook_url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
           if (webhookResp.ok && msgInserted?.id) {
-            await supabase.from('whatsapp_messages').update({ status: 'sent', sent_at: new Date().toISOString() }).eq('id', msgInserted.id);
+            await supabase.from('whatsapp_messages').update({ status: 'sent', sent_at: new Date().toISOString() }).eq('id', msgInserted.id)
           }
         } catch (webhookError) {
-          console.error('Error sending test via follow_up_webhook:', webhookError);
+          console.error('Error sending test via follow_up_webhook:', webhookError)
         }
       }
       return new Response(JSON.stringify({ success: true, message: 'Test delivery delay notification sent' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
