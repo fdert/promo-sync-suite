@@ -111,7 +111,7 @@ Deno.serve(async (req) => {
 
     let response;
     let responseData: string | undefined;
-    let status: 'sent' | 'failed' = 'failed';
+    let webhookOk = false;
 
     try {
       response = await fetch(selected.webhook_url, {
@@ -131,21 +131,21 @@ Deno.serve(async (req) => {
         responseData = 'Failed to read response';
       }
 
-      status = response.ok ? 'sent' : 'failed';
+      webhookOk = response.ok;
       console.log('Webhook response status:', response.status, 'data:', responseData);
     } catch (fetchError: any) {
       console.error('Fetch error:', fetchError);
-      status = 'failed';
+      webhookOk = false;
       responseData = `Fetch error: ${fetchError?.message}`;
     }
 
-    // Save message record
+    // Save message as queued for processing by process-whatsapp-queue
     const { error: insertError } = await supabase.from('whatsapp_messages').insert({
       from_number: 'system',
       to_number: toE164,
       message_type: 'text',
       message_content: message,
-      status,
+      status: 'pending',
       is_reply: false,
     });
 
@@ -154,7 +154,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: status === 'sent', status, webhook_response: responseData }),
+      JSON.stringify({ success: true, status: 'queued', webhook_ok: webhookOk, webhook_response: responseData }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
   } catch (error: any) {
