@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.52.1'
+import { renderTemplate } from '../_shared/template-utils.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
