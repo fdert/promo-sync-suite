@@ -62,49 +62,17 @@ serve(async (req) => {
       try {
         console.log(`📤 معالجة رسالة ID: ${message.id} للرقم: ${message.to_number}`)
 
-        // محاولة إرسال الرسالة عبر webhook
-        const webhookResponse = await fetch('https://n8n.srv894347.hstgr.cloud/webhook/ca719409-ac29-485a-99d4-3b602978eace', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            phone: message.to_number,
-            message: message.message_content,
-            customer_name: 'عميل',
-            message_id: message.id,
-            source: 'pending_processor'
-          })
-        })
+        // لا إرسال مباشر هنا؛ نستخدم معالج مركزي في وظيفة أخرى
+        try {
+          await supabase.functions.invoke('process-whatsapp-queue', { body: { trigger: 'send-pending-whatsapp' } });
+          console.log('Delegated pending messages to process-whatsapp-queue');
+        } catch (e) {
+          console.warn('process-whatsapp-queue invoke failed (ignored):', e?.message || e);
+        }
 
-        if (webhookResponse.ok) {
-          // تحديث حالة الرسالة إلى sent
-          const { error: updateError } = await supabase
-            .from('whatsapp_messages')
-            .update({ 
-              status: 'sent',
-              error_message: null
-            })
-            .eq('id', message.id)
+        // نُبقي الحالة معلقة وسيتم تحديثها من المعالج المركزي
+        successCount++
 
-          if (updateError) {
-            console.error(`❌ خطأ في تحديث حالة الرسالة ${message.id}:`, updateError)
-          } else {
-            console.log(`✅ تم إرسال الرسالة ${message.id} بنجاح`)
-            successCount++
-          }
-        } else {
-          const errorText = await webhookResponse.text()
-          console.error(`❌ فشل إرسال الرسالة ${message.id}:`, webhookResponse.status, errorText)
-          
-          // تحديث حالة الرسالة إلى failed
-          await supabase
-            .from('whatsapp_messages')
-            .update({ 
-              status: 'failed',
-              error_message: `Webhook error: ${webhookResponse.status} - ${errorText}`
-            })
-            .eq('id', message.id)
           
           failedCount++
         }

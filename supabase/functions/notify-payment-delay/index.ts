@@ -55,27 +55,13 @@ serve(async (req) => {
           dedupe_key: `payment_delay_test_${new Date().toISOString()}_${Math.random().toString(36).slice(2,8)}`
         }).select('id').single();
         if (insertErr) { console.error('Failed to insert test payment delay:', insertErr); }
-        if (settings.follow_up_webhook_url) {
-          try {
-            const raw = (settings.whatsapp_number || '').replace(/\s+/g, '')
-            const digitsOnly = raw.replace(/[^\d]/g, '')
-            const toE164 = raw.startsWith('+') ? raw.replace(/[^\d+]/g, '') : `+${digitsOnly}`
-            const toDigits = toE164.replace(/\D/g, '')
-
-            const payload = { 
-              event: 'whatsapp_message_send', 
-              data: { 
-                to: toDigits,
-                to_e164: toE164,
-                phone: toE164, phoneNumber: toE164, phone_number: toE164, to_number: toE164, to_digits: toDigits,
-                message: msg, messageText: msg, text: msg, type: 'text',
-                message_type: 'payment_delay_notification', timestamp: Math.floor(Date.now()/1000), from_number: 'system', customer_id: 'test' 
-              } 
-            };
-            const resp = await fetch(settings.follow_up_webhook_url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-            if (resp.ok && inserted?.id) { await supabase.from('whatsapp_messages').update({ status: 'sent', sent_at: new Date().toISOString() }).eq('id', inserted.id); }
-          } catch (e) { console.error('Error sending test via follow_up_webhook:', e); }
+        // استدعاء معالج الطابور فقط بدل الإرسال المباشر
+        try {
+          await supabase.functions.invoke('process-whatsapp-queue', { body: { trigger: 'notify-payment-delay' } });
+        } catch (e) {
+          console.warn('process-whatsapp-queue invoke failed (ignored):', e?.message || e);
         }
+
         return new Response(JSON.stringify({ success: true, message: 'Test payment delay notification sent' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
       }
     } catch {}
@@ -175,34 +161,15 @@ serve(async (req) => {
         continue;
       }
 
-      // إرسال مباشر عبر follow_up_webhook_url إذا كان موجوداً
-      if (settings.follow_up_webhook_url) {
-        try {
-          const payload = {
-            event: 'whatsapp_message_send',
-            data: {
-              to: settings.whatsapp_number,
-              phone: settings.whatsapp_number,
-              phoneNumber: settings.whatsapp_number,
-              message: message,
-              messageText: message,
-              text: message,
-              type: 'text',
-              message_type: 'payment_delay_notification',
-              timestamp: Math.floor(Date.now() / 1000),
-              from_number: 'system',
-              customer_id: customer.customer_id
-            }
-          };
+      // استدعاء معالج الطابور فقط بدل الإرسال المباشر
+      try {
+        await supabase.functions.invoke('process-whatsapp-queue', {
+          body: { trigger: 'notify-payment-delay' }
+        });
+      } catch (e) {
+        console.warn('process-whatsapp-queue invoke failed (ignored):', e?.message || e);
+      }
 
-          const webhookResp = await fetch(settings.follow_up_webhook_url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
-
-          if (webhookResp.ok && msgId) {
-            await supabase
               .from('whatsapp_messages')
               .update({ 
                 status: 'sent', 

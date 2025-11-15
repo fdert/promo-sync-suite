@@ -187,55 +187,16 @@ ${test ? '🧪 *هذه رسالة اختبار*' : 'يرجى متابعة الط
 
     console.log('New order notification saved successfully');
 
-    // إرسال مباشر عبر follow_up_webhook_url إذا كان موجوداً
-    if (settings.follow_up_webhook_url) {
-      try {
-        console.log('Sending via follow_up_webhook:', settings.follow_up_webhook_url);
-        
-        const payload = {
-          event: 'whatsapp_message_send',
-          data: {
-            to: settings.whatsapp_number,
-            phone: settings.whatsapp_number,
-            phoneNumber: settings.whatsapp_number,
-            message: message,
-            messageText: message,
-            text: message,
-            type: 'text',
-            message_type: 'new_order_notification',
-            timestamp: Math.floor(Date.now() / 1000),
-            from_number: 'system',
-            order_id: orderId,
-            order_number: order.order_number,
-            customer_name: order.customers?.name
-          }
-        };
-
-        const webhookResp = await fetch(settings.follow_up_webhook_url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-
-        if (webhookResp.ok) {
-          console.log('✅ Sent via follow_up_webhook successfully');
-          
-          if (messageId) {
-            await supabase
-              .from('whatsapp_messages')
-              .update({ 
-                status: 'sent', 
-                sent_at: new Date().toISOString() 
-              })
-              .eq('id', messageId);
-          }
-        } else {
-          console.warn('Follow_up_webhook failed, keeping pending');
-        }
-      } catch (webhookError) {
-        console.error('Error sending via follow_up_webhook:', webhookError);
-      }
+    // استبدال الإرسال المباشر: استدعاء معالج الطابور فقط
+    try {
+      await supabase.functions.invoke('process-whatsapp-queue', {
+        body: { trigger: 'notify-new-order', message_id: messageId }
+      });
+      console.log('Triggered process-whatsapp-queue for new order');
+    } catch (e) {
+      console.warn('process-whatsapp-queue invoke failed (ignored):', e?.message || e);
     }
+
 
     return new Response(
       JSON.stringify({ success: true, message: 'Notification sent or queued' }),
