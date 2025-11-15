@@ -123,13 +123,22 @@ serve(async (req) => {
 
 يرجى المتابعة مع العميل لتحصيل المستحقات.`;
 
-      const dedupeKey = `payment_delay_${customer.customer_id}_${new Date().toISOString().split('T')[0]}`;
+      // اختيار رقم العميل (واتساب أو هاتف) بصيغة E.164
+      const rawPhone = (customer.whatsapp || customer.phone || '').toString().trim();
+      if (!rawPhone) {
+        console.warn(`No phone/whatsapp for customer ${customer.customer_id}, skipping`);
+        continue;
+      }
+      const raw = rawPhone.replace(/\s+/g, '');
+      const digitsOnly = raw.replace(/[^\d]/g, '');
+      const toE164 = raw.startsWith('+') ? raw.replace(/[^\d+]/g, '') : `+${digitsOnly}`;
+
       let msgId: string | null = null;
       const { data: msgInserted, error: msgInsertError } = await supabase
         .from('whatsapp_messages')
         .insert({
           from_number: 'system',
-          to_number: settings.whatsapp_number,
+          to_number: toE164,
           message_type: 'payment_delay_notification',
           message_content: message,
           status: 'pending',
@@ -161,7 +170,6 @@ serve(async (req) => {
         continue;
       }
 
-      // استدعاء معالج الطابور فقط بدل الإرسال المباشر
       try {
         await supabase.functions.invoke('process-whatsapp-queue', {
           body: { trigger: 'notify-payment-delay' }
@@ -170,17 +178,6 @@ serve(async (req) => {
         console.warn('process-whatsapp-queue invoke failed (ignored):', e?.message || e);
       }
 
-              .from('whatsapp_messages')
-              .update({ 
-                status: 'sent', 
-                sent_at: new Date().toISOString() 
-              })
-              .eq('id', msgId);
-          }
-        } catch (webhookError) {
-          console.error('Error sending via follow_up_webhook:', webhookError);
-        }
-      }
 
       notificationsSent++;
     }

@@ -83,7 +83,7 @@ serve(async (req) => {
 
     const { data: delayedOrders, error: ordersError } = await supabase
       .from('orders')
-      .select('id, order_number, delivery_date, customers(name)')
+      .select('id, order_number, delivery_date, customers(name, phone, whatsapp)')
       .eq('status', 'in_progress')
       .lt('delivery_date', delayDate.toISOString())
       .order('delivery_date', { ascending: true })
@@ -118,11 +118,21 @@ serve(async (req) => {
 
 يرجى المتابعة الفورية مع العميل.`;
 
+      // اختيار رقم العميل من بيانات الطلب (واتساب ثم الهاتف)
+      const rawPhone = (order.customers?.whatsapp || order.customers?.phone || '').toString().trim();
+      if (!rawPhone) {
+        console.warn(`No phone/whatsapp for order ${order.id}, skipping`);
+        continue;
+      }
+      const raw = rawPhone.replace(/\s+/g, '');
+      const digitsOnly = raw.replace(/[^\d]/g, '');
+      const toE164 = raw.startsWith('+') ? raw.replace(/[^\d+]/g, '') : `+${digitsOnly}`;
+
       const { data: msgInserted, error: msgInsertError } = await supabase
         .from('whatsapp_messages')
         .insert({
           from_number: 'system',
-          to_number: settings.whatsapp_number,
+          to_number: toE164,
           message_type: 'delivery_delay_notification',
           message_content: message,
           status: 'pending',
