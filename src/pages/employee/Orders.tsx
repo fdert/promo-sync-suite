@@ -900,31 +900,23 @@ ${publicFileUrl}
           console.log('Full notification data:', JSON.stringify(notificationData, null, 2));
           
           try {
-            const paidAmount = Number(orderData.paid_amount || 0);
-            const remainingAmount = Math.max(0, Number(orderData.total_amount || 0) - paidAmount);
-            const deliveryDateText = orderData.delivery_date
-              ? `\n\n📅 يمكنك الاستلام في: ${new Date(orderData.delivery_date).toLocaleDateString('ar-SA')}`
-              : '';
+            console.log('📤 إرسال إشعار واتساب عبر send-order-status-notification');
 
-            const directMessage = `${orderData.customers?.name || ''}، ${
-              status === 'جاهز للتسليم' ? 'طلبك جاهز للتسليم!' : `تم تحديث حالة طلبك إلى: ${status}`
-            }${deliveryDateText}\n\n📊 الملخص المالي:\n• قيمة الطلب: ${(orderData.total_amount || 0).toFixed(2)} ر.س\n• المدفوع: ${paidAmount.toFixed(2)} ر.س\n• المتبقي: ${remainingAmount.toFixed(2)} ر.س`;
-
-            // إرسال عبر Edge Function لتفادي قيود CORS وضمان التسليم
-            const { data, error } = await supabase.functions.invoke('send-direct-whatsapp', {
+            const { data, error } = await supabase.functions.invoke('send-order-status-notification', {
               body: {
-                phone: customerWhatsapp,
-                message: directMessage,
+                order_id: orderId,
+                new_status: status,
+                old_status: orderData?.status,
               },
             });
 
             if (error) {
-              console.error('خطأ من دالة الإرسال:', error);
+              console.error('❌ خطأ في إرسال إشعار الواتساب:', error);
             } else {
-              console.log('تم جدولة رسالة واتساب عبر الدالة (send-whatsapp-simple)', data);
+              console.log('✅ تم إرسال إشعار الواتساب بنجاح:', data);
             }
           } catch (fnError) {
-            console.error('فشل استدعاء دالة واتساب:', fnError);
+            console.error('فشل استدعاء دالة إشعار حالة الطلب:', fnError);
           }
           
           // فحص مباشر للويب هوك في قاعدة البيانات
