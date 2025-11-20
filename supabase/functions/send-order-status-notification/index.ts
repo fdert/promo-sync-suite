@@ -12,6 +12,7 @@ const STATUS_TEMPLATE_MAP: Record<string, string> = {
   'جديد': 'order_created',
   'pending': 'order_created',
   'مؤكد': 'order_confirmed',
+  'confirmed': 'order_confirmed',
   'قيد التنفيذ': 'order_in_progress',
   'in_progress': 'order_in_progress',
   'قيد المراجعة': 'order_under_review',
@@ -20,8 +21,8 @@ const STATUS_TEMPLATE_MAP: Record<string, string> = {
   'completed': 'order_completed',
   'ملغي': 'order_cancelled',
   'cancelled': 'order_cancelled',
-  'مؤجل': 'order_postponed',
-  'قيد الانتظار': 'order_pending'
+  'مؤجل': 'order_on_hold',
+  'قيد الانتظار': 'order_on_hold'
 };
 
 serve(async (req) => {
@@ -82,17 +83,9 @@ serve(async (req) => {
     };
     const toNumber = cleanPhone(customerPhone);
 
-    // تحديد القالب المناسب للحالة
-    const templateName = STATUS_TEMPLATE_MAP[new_status];
+    // تحديد القالب المناسب للحالة، مع استخدام قالب عام في حال عدم وجود قالب مخصص
+    const templateName = STATUS_TEMPLATE_MAP[new_status] || 'order_status_updated';
     
-    if (!templateName) {
-      console.log(`⚠️ لا يوجد قالب محدد للحالة: ${new_status}`);
-      return new Response(
-        JSON.stringify({ error: `لا يوجد قالب محدد للحالة: ${new_status}` }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      );
-    }
-
     console.log(`📋 استخدام القالب: ${templateName}`);
 
     // حساب المبالغ

@@ -44,3 +44,6 @@ verify_jwt = false
 
 [functions.send-account-summary-simple]
 verify_jwt = false
+
+[functions.send-order-status-notification]
+verify_jwt = false
