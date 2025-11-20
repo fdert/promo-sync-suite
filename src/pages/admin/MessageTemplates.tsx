@@ -45,7 +45,13 @@ const MessageTemplates = () => {
     "company_name", "description", "progress", "timestamp",
     "total_due", "unpaid_orders_count", "earliest_due_date", "report_date",
     "orders_section", "payments_section", "invoice_number",
-    "due_date", "payment_date", "date", "time"
+    "due_date", "payment_date", "date", "time",
+    "delay_days", "outstanding_balance", "oldest_order", "order_date",
+    "total_payments", "total_expenses", "net_profit", "profit_icon",
+    "new_orders_count", "completed_orders_count", "settings_status",
+    "pending_messages", "recent_orders", "notify_new_order",
+    "notify_delivery_delay", "notify_payment_delay", "notify_whatsapp_failure",
+    "notify_expense", "daily_report", "delivery_delay_days", "payment_delay_days"
   ];
 
   useEffect(() => {
@@ -319,6 +325,59 @@ const MessageTemplates = () => {
           break;
         case 'time':
           preview = preview.replace(regex, new Date().toLocaleTimeString('ar-SA'));
+          break;
+        case 'delay_days':
+          preview = preview.replace(regex, '3');
+          break;
+        case 'outstanding_balance':
+          preview = preview.replace(regex, '1,500.00');
+          break;
+        case 'oldest_order':
+          preview = preview.replace(regex, 'ORD-20250101-001');
+          break;
+        case 'order_date':
+          preview = preview.replace(regex, '01/01/2025');
+          break;
+        case 'total_payments':
+          preview = preview.replace(regex, '5,000.00');
+          break;
+        case 'total_expenses':
+          preview = preview.replace(regex, '2,000.00');
+          break;
+        case 'net_profit':
+          preview = preview.replace(regex, '3,000.00');
+          break;
+        case 'profit_icon':
+          preview = preview.replace(regex, '✅');
+          break;
+        case 'new_orders_count':
+          preview = preview.replace(regex, '5');
+          break;
+        case 'completed_orders_count':
+          preview = preview.replace(regex, '3');
+          break;
+        case 'settings_status':
+          preview = preview.replace(regex, 'نشط');
+          break;
+        case 'pending_messages':
+          preview = preview.replace(regex, '2');
+          break;
+        case 'recent_orders':
+          preview = preview.replace(regex, '4');
+          break;
+        case 'notify_new_order':
+        case 'notify_delivery_delay':
+        case 'notify_payment_delay':
+        case 'notify_whatsapp_failure':
+        case 'notify_expense':
+        case 'daily_report':
+          preview = preview.replace(regex, 'مفعّل');
+          break;
+        case 'delivery_delay_days':
+          preview = preview.replace(regex, '3');
+          break;
+        case 'payment_delay_days':
+          preview = preview.replace(regex, '7');
           break;
         default:
           preview = preview.replace(regex, `[${variable}]`);
