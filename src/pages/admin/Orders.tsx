@@ -861,55 +861,30 @@ ${companyName}`;
           }
         };
 
+        // إرسال إشعار واتساب باستخدام النظام الجديد المعتمد على القوالب
         try {
-          try {
-            const paidAmount = Number(orderData.paid_amount || 0);
-            const remainingAmount = Math.max(0, Number(orderData.total_amount || 0) - paidAmount);
-            const deliveryDateText = orderData.delivery_date
-              ? `\n\n📅 يمكنك الاستلام في: ${new Date(orderData.delivery_date).toLocaleDateString('ar-SA')}`
-              : '';
-
-            const directMessage = `${orderData.customers?.name || ''}، ${
-              newStatus === 'جاهز للتسليم'
-                ? 'طلبك جاهز للتسليم!'
-                : `تم تحديث حالة طلبك إلى: ${newStatus}`
-            }${deliveryDateText}\n\n📊 الملخص المالي:\n• قيمة الطلب: ${(orderData.total_amount || 0).toFixed(2)} ر.س\n• المدفوع: ${paidAmount.toFixed(2)} ر.س\n• المتبقي: ${remainingAmount.toFixed(2)} ر.س`;
-
-            const { data, error } = await supabase.functions.invoke('send-direct-whatsapp', {
-              body: {
-                phone: customerWhatsapp,
-                message: directMessage,
-              }
-            });
-
-            if (error) {
-              console.error('خطأ من دالة الإرسال:', error);
-              toast({
-                title: "خطأ في الإرسال",
-                description: "فشل إرسال رسالة الواتساب",
-                variant: "destructive",
-              });
-            } else {
-              console.log('تم جدولة رسالة واتساب عبر الدالة (send-direct-whatsapp)', data);
+          console.log('📤 إرسال إشعار واتساب عبر send-order-status-notification');
+          
+          const { data, error } = await supabase.functions.invoke('send-order-status-notification', {
+            body: {
+              order_id: orderId,
+              new_status: newStatus,
+              old_status: orderData.status
             }
-          } catch (directError) {
-            console.error('فشل استدعاء دالة واتساب:', directError);
+          });
+
+          if (error) {
+            console.error('❌ خطأ في إرسال إشعار الواتساب:', error);
             toast({
-              title: "خطأ في الإرسال",
-              description: "تعذر استدعاء دالة الإرسال",
+              title: "تحذير",
+              description: "تم تحديث الحالة لكن فشل إرسال إشعار الواتساب",
               variant: "destructive",
             });
-          }
-
-          // تشغيل معالج رسائل الواتساب فوراً لضمان الإرسال
-          try {
-            await supabase.functions.invoke('process-whatsapp-queue');
-            console.log('تم تشغيل معالج رسائل الواتساب');
-          } catch (queueError) {
-            console.error('خطأ في تشغيل معالج رسائل الواتساب:', queueError);
+          } else {
+            console.log('✅ تم إرسال إشعار الواتساب بنجاح:', data);
           }
         } catch (notificationError) {
-          console.error('خطأ في إرسال الإشعار:', notificationError);
+          console.error('❌ خطأ في إرسال الإشعار:', notificationError);
         }
       }
 
