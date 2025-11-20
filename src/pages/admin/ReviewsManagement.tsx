@@ -271,7 +271,64 @@ const ReviewsManagement = () => {
       }
 
       const code = (correctToken || evaluation.id || '').slice(-5).toUpperCase();
-      const content = `🌟 عزيزنا العميل، نشكرك على تعاملك معنا\n\n✅ تم اكتمال طلبك رقم: ${evaluation.orders?.order_number || ''}\n\nنرجو تقييم تجربتك عبر الرابط التالي:\n${link}\n\nرمز التقييم: ${code}\n\nشاكرين لكم وقتكم`;
+      // استخدام قالب order_completed من قاعدة البيانات
+      const { data: template } = await supabase
+        .from('message_templates')
+        .select('content')
+        .eq('name', 'order_completed')
+        .eq('is_active', true)
+        .maybeSingle();
+
+      let content: string;
+      if (template) {
+        // جلب تفاصيل الطلب والدفعات
+        const { data: orderDetails } = await supabase
+          .from('orders')
+          .select('*, service_types:service_type_id(name)')
+          .eq('id', evaluation.order_id || '')
+          .maybeSingle();
+
+        const { data: items } = await supabase
+          .from('order_items')
+          .select('*')
+          .eq('order_id', evaluation.order_id || '');
+
+        const { data: payments } = await supabase
+          .from('payments')
+          .select('*')
+          .eq('order_id', evaluation.order_id || '')
+          .order('payment_date', { ascending: false });
+
+        const orderItems = items?.map(item => 
+          `• ${item.item_name}: ${item.quantity || 1} × ${(item.unit_price || 0).toFixed(2)} = ${(item.total || 0).toFixed(2)} ر.س`
+        ).join('\n') || 'لا توجد بنود';
+
+        const paymentsDetails = payments?.map(p => 
+          `• ${new Date(p.payment_date || '').toLocaleDateString('ar-SA')}: ${(p.amount || 0).toFixed(2)} ر.س (${p.payment_type})`
+        ).join('\n') || 'لا توجد دفعات مسجلة';
+
+        const totalAmount = Number(orderDetails?.total_amount || 0);
+        const paidAmount = Number(orderDetails?.paid_amount || 0);
+        const remainingAmount = Math.max(0, totalAmount - paidAmount);
+
+        // استبدال المتغيرات في القالب
+        content = template.content
+          .replace(/{{customer_name}}/g, evaluation.customers?.name || 'عزيزنا العميل')
+          .replace(/{{order_number}}/g, evaluation.orders?.order_number || '')
+          .replace(/{{service_name}}/g, orderDetails?.service_types?.name || 'الخدمة')
+          .replace(/{{delivery_date}}/g, orderDetails?.delivery_date ? new Date(orderDetails.delivery_date).toLocaleDateString('ar-SA') : 'سيتم تحديده')
+          .replace(/{{delivery_time}}/g, orderDetails?.estimated_delivery_time || '')
+          .replace(/{{order_items}}/g, orderItems)
+          .replace(/{{amount}}/g, totalAmount.toFixed(2))
+          .replace(/{{paid_amount}}/g, paidAmount.toFixed(2))
+          .replace(/{{remaining_amount}}/g, remainingAmount.toFixed(2))
+          .replace(/{{payments_details}}/g, paymentsDetails)
+          .replace(/{{evaluation_link}}/g, link)
+          .replace(/{{evaluation_code}}/g, code);
+      } else {
+        // استخدام النص الاحتياطي إذا لم يُعثر على القالب
+        content = `🌟 عزيزنا العميل، شكراً لثقتك بنا!\n\n✅ تم اكتمال طلبك رقم: ${evaluation.orders?.order_number || ''}\n\n📝 نرجو تقييم تجربتك معنا من خلال الرابط التالي:\n${link}\n\nرمز التقييم: ${code}\n\n⭐ رأيك يهمنا لتحسين خدماتنا`;
+      }
 
 
       // إرسال مباشر عبر دالة الحافة بدون انتظار الطابور

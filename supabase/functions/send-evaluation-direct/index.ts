@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
           .from('evaluations')
           .select(`id, evaluation_token, order_id, customer_id,
                    customers:customer_id (phone, whatsapp, name),
-                   orders:order_id (order_number)`)
+                   orders:order_id (order_number, total_amount, paid_amount, service_types:service_type_id(name), delivery_date, estimated_delivery_time)`)
           .eq('id', evaluation_id)
           .maybeSingle();
 
@@ -77,14 +77,62 @@ Deno.serve(async (req) => {
           const phone = ev.customers?.whatsapp || ev.customers?.phone || '';
           if (!finalTo) finalTo = phone;
           if (!finalMessage && ev.evaluation_token) {
-            const code = String(ev.evaluation_token).slice(-5).toUpperCase();
-            // ملاحظة: يمكن تمرير الرابط من الواجهة لتفادي تثبيت النطاق
-            const link = `https://e5a7747a-0935-46df-9ea9-1308e76636dc.lovableproject.com/evaluation/${ev.evaluation_token}`;
-            finalMessage = `🌟 عزيزنا العميل، نشكرك على تعاملك معنا\n\n` +
-              `✅ تم اكتمال طلبك رقم: ${ev.orders?.order_number || ''}\n\n` +
-              `نرجو تقييم تجربتك عبر الرابط التالي:\n${link}\n\n` +
-              `رمز التقييم: ${code}\n\n` +
-              `شاكرين لكم وقتكم`;
+            // استخدام قالب order_completed بدلاً من النص الثابت
+            const { data: template } = await supabase
+              .from('message_templates')
+              .select('content')
+              .eq('name', 'order_completed')
+              .eq('is_active', true)
+              .maybeSingle();
+
+            if (template) {
+              const code = String(ev.evaluation_token).slice(-5).toUpperCase();
+              const link = `https://id-preview--e5a7747a-0935-46df-9ea9-1308e76636dc.lovable.app/evaluation/${ev.evaluation_token}`;
+              
+              // جلب بنود الطلب والدفعات
+              const { data: items } = await supabase
+                .from('order_items')
+                .select('*')
+                .eq('order_id', ev.order_id || '');
+              
+              const { data: payments } = await supabase
+                .from('payments')
+                .select('*')
+                .eq('order_id', ev.order_id || '')
+                .order('payment_date', { ascending: false });
+
+              const orderItems = items?.map(item => 
+                `• ${item.item_name}: ${item.quantity || 1} × ${(item.unit_price || 0).toFixed(2)} = ${(item.total || 0).toFixed(2)} ر.س`
+              ).join('\n') || 'لا توجد بنود';
+
+              const paymentsDetails = payments?.map(p => 
+                `• ${new Date(p.payment_date || '').toLocaleDateString('ar-SA')}: ${(p.amount || 0).toFixed(2)} ر.س (${p.payment_type})`
+              ).join('\n') || 'لا توجد دفعات مسجلة';
+
+              const totalAmount = Number(ev.orders?.total_amount || 0);
+              const paidAmount = Number(ev.orders?.paid_amount || 0);
+              const remainingAmount = Math.max(0, totalAmount - paidAmount);
+
+              // استبدال المتغيرات في القالب
+              finalMessage = template.content
+                .replace(/{{customer_name}}/g, ev.customers?.name || 'عزيزنا العميل')
+                .replace(/{{order_number}}/g, ev.orders?.order_number || '')
+                .replace(/{{service_name}}/g, ev.orders?.service_types?.name || 'الخدمة')
+                .replace(/{{delivery_date}}/g, ev.orders?.delivery_date ? new Date(ev.orders.delivery_date).toLocaleDateString('ar-SA') : 'سيتم تحديده')
+                .replace(/{{delivery_time}}/g, ev.orders?.estimated_delivery_time || '')
+                .replace(/{{order_items}}/g, orderItems)
+                .replace(/{{amount}}/g, totalAmount.toFixed(2))
+                .replace(/{{paid_amount}}/g, paidAmount.toFixed(2))
+                .replace(/{{remaining_amount}}/g, remainingAmount.toFixed(2))
+                .replace(/{{payments_details}}/g, paymentsDetails)
+                .replace(/{{evaluation_link}}/g, link)
+                .replace(/{{evaluation_code}}/g, code);
+            } else {
+              // استخدام النص الاحتياطي إذا لم يُعثر على القالب
+              const code = String(ev.evaluation_token).slice(-5).toUpperCase();
+              const link = `https://id-preview--e5a7747a-0935-46df-9ea9-1308e76636dc.lovable.app/evaluation/${ev.evaluation_token}`;
+              finalMessage = `🌟 عزيزنا العميل، شكراً لثقتك بنا!\n\n✅ تم اكتمال طلبك رقم: ${ev.orders?.order_number || ''}\n\n📝 نرجو تقييم تجربتك معنا من خلال الرابط التالي:\n${link}\n\nرمز التقييم: ${code}\n\n⭐ رأيك يهمنا لتحسين خدماتنا`;
+            }
           }
         }
       }
