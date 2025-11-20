@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { renderTemplate } from '../_shared/template-utils.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -45,7 +46,18 @@ serve(async (req) => {
     try {
       const body = await req.json();
       if (body?.test === true) {
-        const msg = `🧪 *هذه رسالة اختبار*\n\n💰 *تنبيه: تأخير في الدفعات*\n\n👤 اسم العميل: اختبار\n📱 رقم الواتساب: ${settings.whatsapp_number}\n\n💵 الرصيد المستحق: 100.00 ريال\n📦 أقدم طلب: TEST-PAY-${new Date().toISOString().slice(0,10).replaceAll('-', '')}\n📅 تاريخ الطلب: ${new Date().toLocaleDateString('ar-SA')}\n⏱️ مر على الطلب: ${settings.payment_delay_days}+ أيام\n\nيرجى المتابعة مع العميل لتحصيل المستحقات.`;
+        const orderDate = new Date().toLocaleDateString('ar-SA');
+        const oldestOrder = `TEST-PAY-${new Date().toISOString().slice(0,10).replaceAll('-', '')}`;
+        
+        const msg = await renderTemplate(supabase, 'payment_delay_notification', {
+          customer_name: 'اختبار',
+          customer_phone: settings.whatsapp_number,
+          outstanding_balance: '100.00',
+          oldest_order: oldestOrder,
+          order_date: orderDate,
+          delay_days: settings.payment_delay_days.toString()
+        }) || `🧪 *هذه رسالة اختبار*\n\n💰 *تنبيه: تأخير في الدفعات*\n\n👤 اسم العميل: اختبار\n📱 رقم الواتساب: ${settings.whatsapp_number}\n\n💵 الرصيد المستحق: 100.00 ريال\n📦 أقدم طلب: ${oldestOrder}\n📅 تاريخ الطلب: ${orderDate}\n⏱️ مر على الطلب: ${settings.payment_delay_days}+ أيام\n\nيرجى المتابعة مع العميل لتحصيل المستحقات.`;
+        
         const { data: inserted, error: insertErr } = await supabase.from('whatsapp_messages').insert({
           from_number: 'system',
           to_number: settings.whatsapp_number,
@@ -110,18 +122,14 @@ serve(async (req) => {
       const oldestOrder = oldOrders[0];
       const orderDate = new Date(oldestOrder.created_at).toLocaleDateString('ar-SA');
 
-      const message = `💰 *تنبيه: تأخير في الدفعات*
-
-👤 اسم العميل: ${customer.customer_name}
-📱 رقم الواتساب: ${customer.whatsapp || 'غير متوفر'}
-📞 رقم الهاتف: ${customer.phone || 'غير متوفر'}
-
-💵 الرصيد المستحق: ${customer.outstanding_balance?.toFixed(2)} ريال
-📦 أقدم طلب: ${oldestOrder.order_number}
-📅 تاريخ الطلب: ${orderDate}
-⏱️ مر على الطلب: ${settings.payment_delay_days}+ أيام
-
-يرجى المتابعة مع العميل لتحصيل المستحقات.`;
+      const message = await renderTemplate(supabase, 'payment_delay_notification', {
+        customer_name: customer.customer_name || 'غير معروف',
+        customer_phone: customer.whatsapp || customer.phone || 'غير متوفر',
+        outstanding_balance: customer.outstanding_balance?.toFixed(2) || '0.00',
+        oldest_order: oldestOrder.order_number || 'غير محدد',
+        order_date: orderDate,
+        delay_days: settings.payment_delay_days.toString()
+      }) || `💰 *تنبيه: تأخير في الدفعات*\n\n👤 اسم العميل: ${customer.customer_name}\n📱 رقم الواتساب: ${customer.whatsapp || 'غير متوفر'}\n📞 رقم الهاتف: ${customer.phone || 'غير متوفر'}\n\n💵 الرصيد المستحق: ${customer.outstanding_balance?.toFixed(2)} ريال\n📦 أقدم طلب: ${oldestOrder.order_number}\n📅 تاريخ الطلب: ${orderDate}\n⏱️ مر على الطلب: ${settings.payment_delay_days}+ أيام\n\nيرجى المتابعة مع العميل لتحصيل المستحقات.`;
 
       // اختيار رقم العميل (واتساب أو هاتف) بصيغة E.164
       const rawPhone = (customer.whatsapp || customer.phone || '').toString().trim();

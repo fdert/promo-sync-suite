@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { renderTemplate } from '../_shared/template-utils.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -51,7 +52,15 @@ serve(async (req) => {
     if (isTest) {
       const customerName = 'اختبار';
       const deliveryDateStr = new Date().toLocaleDateString('ar-SA');
-      const message = `🧪 *هذه رسالة اختبار*\n\n⚠️ *تنبيه: تجاوز فترة التسليم*\n\n📦 رقم الطلب: TEST-DEL-${new Date().toISOString().slice(0,10).replaceAll('-', '')}\n👤 اسم العميل: ${customerName}\n📅 تاريخ التسليم المتوقع: ${deliveryDateStr}\n⏱️ تأخير: ${settings.delivery_delay_days}+ أيام\n\nيرجى المتابعة الفورية مع العميل.`;
+      const orderNumber = `TEST-DEL-${new Date().toISOString().slice(0,10).replaceAll('-', '')}`;
+      
+      const message = await renderTemplate(supabase, 'delivery_delay_notification', {
+        customer_name: customerName,
+        order_number: orderNumber,
+        delivery_date: deliveryDateStr,
+        delay_days: settings.delivery_delay_days.toString()
+      }) || `🧪 *هذه رسالة اختبار*\n\n⚠️ *تنبيه: تجاوز فترة التسليم*\n\n📦 رقم الطلب: ${orderNumber}\n👤 اسم العميل: ${customerName}\n📅 تاريخ التسليم المتوقع: ${deliveryDateStr}\n⏱️ تأخير: ${settings.delivery_delay_days}+ أيام\n\nيرجى المتابعة الفورية مع العميل.`;
+      
       const { data: msgInserted, error: msgInsertError } = await supabase
         .from('whatsapp_messages')
         .insert({
@@ -109,14 +118,12 @@ serve(async (req) => {
       const customerName = order.customers?.name || 'غير معروف';
       const deliveryDate = new Date(order.delivery_date).toLocaleDateString('ar-SA');
 
-      const message = `⚠️ *تنبيه: تجاوز فترة التسليم*
-
-📦 رقم الطلب: ${order.order_number}
-👤 اسم العميل: ${customerName}
-📅 تاريخ التسليم المتوقع: ${deliveryDate}
-⏱️ تأخير: ${settings.delivery_delay_days}+ أيام
-
-يرجى المتابعة الفورية مع العميل.`;
+      const message = await renderTemplate(supabase, 'delivery_delay_notification', {
+        customer_name: customerName,
+        order_number: order.order_number || 'غير محدد',
+        delivery_date: deliveryDate,
+        delay_days: settings.delivery_delay_days.toString()
+      }) || `⚠️ *تنبيه: تجاوز فترة التسليم*\n\n📦 رقم الطلب: ${order.order_number}\n👤 اسم العميل: ${customerName}\n📅 تاريخ التسليم المتوقع: ${deliveryDate}\n⏱️ تأخير: ${settings.delivery_delay_days}+ أيام\n\nيرجى المتابعة الفورية مع العميل.`;
 
       // اختيار رقم العميل من بيانات الطلب (واتساب ثم الهاتف)
       const rawPhone = (order.customers?.whatsapp || order.customers?.phone || '').toString().trim();
