@@ -72,10 +72,12 @@ const Evaluations = () => {
         return;
       }
 
-      // حساب الإحصائيات من البيانات المتوفرة
-      const submittedEvaluations = (evaluationsData || []).filter(e => e.submitted_at !== null && e.rating !== null);
+      // حساب الإحصائيات من البيانات المتوفرة - يجب أن تكون التقييمات المرسلة فقط
+      const submittedEvaluations = (evaluationsData || []).filter(e => 
+        e.submitted_at !== null && e.rating !== null && e.rating > 0
+      );
       const allEvaluations = evaluationsData || [];
-      const totalEvaluations = allEvaluations.length;
+      const totalEvaluations = submittedEvaluations.length; // فقط التقييمات المكتملة
       
       let calculatedStats = null;
       if (submittedEvaluations.length > 0) {
@@ -90,17 +92,17 @@ const Evaluations = () => {
         calculatedStats = {
           total_evaluations: totalEvaluations,
           submitted_evaluations: submittedEvaluations.length,
-          average_rating: Math.round(averageRating * 100) / 100,
+          average_rating: Math.round(averageRating * 10) / 10,
           five_star_count: fiveStarCount,
           four_star_count: fourStarCount,
           three_star_count: threeStarCount,
           two_star_count: twoStarCount,
           one_star_count: oneStarCount,
           recommendation_percentage: submittedEvaluations.length > 0 ? Math.round((recommendationCount / submittedEvaluations.length) * 100) : 0,
-          service_quality_avg: submittedEvaluations.filter(e => e.service_quality_rating).reduce((sum, e) => sum + e.service_quality_rating, 0) / submittedEvaluations.filter(e => e.service_quality_rating).length || 0,
-          delivery_time_avg: submittedEvaluations.filter(e => e.delivery_time_rating).reduce((sum, e) => sum + e.delivery_time_rating, 0) / submittedEvaluations.filter(e => e.delivery_time_rating).length || 0,
-          communication_avg: submittedEvaluations.filter(e => e.communication_rating).reduce((sum, e) => sum + e.communication_rating, 0) / submittedEvaluations.filter(e => e.communication_rating).length || 0,
-          price_value_avg: submittedEvaluations.filter(e => e.price_value_rating).reduce((sum, e) => sum + e.price_value_rating, 0) / submittedEvaluations.filter(e => e.price_value_rating).length || 0
+          service_quality_avg: Math.round((submittedEvaluations.filter(e => e.service_quality_rating).reduce((sum, e) => sum + e.service_quality_rating, 0) / submittedEvaluations.filter(e => e.service_quality_rating).length || 1) * 10) / 10,
+          delivery_time_avg: Math.round((submittedEvaluations.filter(e => e.delivery_time_rating).reduce((sum, e) => sum + e.delivery_time_rating, 0) / submittedEvaluations.filter(e => e.delivery_time_rating).length || 1) * 10) / 10,
+          communication_avg: Math.round((submittedEvaluations.filter(e => e.communication_rating).reduce((sum, e) => sum + e.communication_rating, 0) / submittedEvaluations.filter(e => e.communication_rating).length || 1) * 10) / 10,
+          price_value_avg: Math.round((submittedEvaluations.filter(e => e.price_value_rating).reduce((sum, e) => sum + e.price_value_rating, 0) / submittedEvaluations.filter(e => e.price_value_rating).length || 1) * 10) / 10
         };
       }
 
@@ -262,32 +264,32 @@ const Evaluations = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="flex justify-between items-center">
+                  <div className="flex justify-between items-center">
                   <span className="text-sm">جودة الخدمة</span>
                   <div className="flex items-center gap-2">
                     <div className="flex">{renderStars(Math.round(stats.service_quality_avg || 0))}</div>
-                    <span className="text-sm font-medium">{stats.service_quality_avg}</span>
+                    <span className="text-sm font-medium">{stats.service_quality_avg.toFixed(1)}</span>
                   </div>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm">وقت التسليم</span>
                   <div className="flex items-center gap-2">
                     <div className="flex">{renderStars(Math.round(stats.delivery_time_avg || 0))}</div>
-                    <span className="text-sm font-medium">{stats.delivery_time_avg}</span>
+                    <span className="text-sm font-medium">{stats.delivery_time_avg.toFixed(1)}</span>
                   </div>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm">التواصل</span>
                   <div className="flex items-center gap-2">
                     <div className="flex">{renderStars(Math.round(stats.communication_avg || 0))}</div>
-                    <span className="text-sm font-medium">{stats.communication_avg}</span>
+                    <span className="text-sm font-medium">{stats.communication_avg.toFixed(1)}</span>
                   </div>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm">قيمة السعر</span>
                   <div className="flex items-center gap-2">
                     <div className="flex">{renderStars(Math.round(stats.price_value_avg || 0))}</div>
-                    <span className="text-sm font-medium">{stats.price_value_avg}</span>
+                    <span className="text-sm font-medium">{stats.price_value_avg.toFixed(1)}</span>
                   </div>
                 </div>
               </div>
@@ -361,19 +363,9 @@ const Evaluations = () => {
                      )}
                    </TableCell>
                    <TableCell>
-                     <Badge variant={evaluation.submitted_at ? "default" : "secondary"}>
-                       {evaluation.submitted_at ? "مرسل" : "في الانتظار"}
+                     <Badge variant={evaluation.submitted_at && evaluation.rating ? "default" : "secondary"}>
+                       {evaluation.submitted_at && evaluation.rating ? "مكتمل" : "في الانتظار"}
                      </Badge>
-                     {evaluation.google_review_status && (
-                       <div className="mt-1">
-                         <Badge variant={evaluation.google_review_status === 'pending' ? "outline" : 
-                                      evaluation.google_review_status === 'sent_to_customer' ? "default" : "secondary"}>
-                           {evaluation.google_review_status === 'pending' ? 'قيد المراجعة' :
-                            evaluation.google_review_status === 'sent_to_customer' ? 'تم الإرسال للعميل' :
-                            evaluation.google_review_status === 'approved' ? 'معتمد' : evaluation.google_review_status}
-                         </Badge>
-                       </div>
-                     )}
                    </TableCell>
                   <TableCell>
                     <Badge variant={evaluation.would_recommend ? "default" : "secondary"}>

@@ -43,15 +43,14 @@ const Evaluation = () => {
         .from('evaluations')
         .select(`
           *,
-          orders (
+          orders!order_id (
             order_number,
             notes,
             total_amount,
             delivery_date,
-            service_type_id,
-            service_types (name)
+            service_types!service_type_id (name)
           ),
-          customers (
+          customers!customer_id (
             name,
             phone,
             whatsapp
@@ -71,7 +70,18 @@ const Evaluation = () => {
       }
 
       setEvaluation(evaluationData);
-      setOrderData(evaluationData.orders);
+      
+      // استخراج بيانات الطلب بشكل صحيح
+      const order = evaluationData.orders;
+      if (order) {
+        setOrderData({
+          order_number: order.order_number,
+          service_name: order.service_types?.name || 'غير محدد',
+          amount: order.total_amount,
+          due_date: order.delivery_date,
+          notes: order.notes
+        });
+      }
       
       // إذا كان التقييم مرسل بالفعل، اعرض حالة الإرسال
       if (evaluationData.submitted_at) {
