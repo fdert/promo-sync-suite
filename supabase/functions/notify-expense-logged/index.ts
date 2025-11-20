@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { renderTemplate } from '../_shared/template-utils.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -43,15 +44,14 @@ serve(async (req) => {
       );
     }
 
-    const message = `💸 *مصروف جديد مسجل*
-
-📋 نوع المصروف: ${expenseType}
-💰 المبلغ: ${amount} ريال
-📝 الوصف: ${description || 'غير محدد'}
-
-⏰ تاريخ التسجيل: ${new Date().toLocaleString('ar-SA')}
-
-تم تسجيل المصروف في النظام بنجاح.`;
+    const message = await renderTemplate(supabase, 'new_expense_notification', {
+      amount: amount.toString(),
+      expense_type: expenseType,
+      description: description || 'غير محدد',
+      expense_date: new Date().toLocaleDateString('ar-SA'),
+      receipt_number: 'غير محدد',
+      timestamp: new Date().toLocaleString('ar-SA')
+    }) || `💸 *مصروف جديد مسجل*\n\n📋 نوع المصروف: ${expenseType}\n💰 المبلغ: ${amount} ريال\n📝 الوصف: ${description || 'غير محدد'}\n\n⏰ تاريخ التسجيل: ${new Date().toLocaleString('ar-SA')}\n\nتم تسجيل المصروف في النظام بنجاح.`;
 
     // حفظ الرسالة
     const { data: inserted, error: insertError } = await supabase

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { renderTemplate } from '../_shared/template-utils.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -92,26 +93,14 @@ serve(async (req) => {
       createdDate = new Date(expense.created_at).toLocaleDateString('ar-SA');
     }
 
-    const message = `💸 *إشعار: تسجيل مصروف جديد*
-
-📝 نوع المصروف: ${expense.expense_type}
-${expense.description ? `📋 الوصف: ${expense.description}` : ''}
-
-━━━━━━━━━━━━━━━━━━━━
-
-💰 تفاصيل المصروف:
-• المبلغ: ${expense.amount.toFixed(2)} ر.س
-• تاريخ المصروف: ${expenseDate}
-${expense.payment_method ? `• طريقة الدفع: ${expense.payment_method}` : ''}
-${expense.receipt_number ? `• رقم الإيصال: ${expense.receipt_number}` : ''}
-
-━━━━━━━━━━━━━━━━━━━━
-
-${expense.notes ? `📌 ملاحظات:\n${expense.notes}\n\n━━━━━━━━━━━━━━━━━━━━\n` : ''}
-📅 تاريخ التسجيل: ${createdDate}
-⏰ الوقت: ${new Date().toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}
-
-${test ? '\n🧪 *هذه رسالة اختبار*' : ''}`;
+    const message = await renderTemplate(supabase, 'new_expense_notification', {
+      amount: expense.amount.toFixed(2),
+      expense_type: expense.expense_type || 'غير محدد',
+      description: expense.description || 'غير محدد',
+      expense_date: expenseDate,
+      receipt_number: expense.receipt_number || 'غير محدد',
+      timestamp: new Date().toLocaleString('ar-SA')
+    }) || `💸 *إشعار: تسجيل مصروف جديد*\n\n📝 نوع المصروف: ${expense.expense_type}\n${expense.description ? `📋 الوصف: ${expense.description}` : ''}\n\n━━━━━━━━━━━━━━━━━━━━\n\n💰 تفاصيل المصروف:\n• المبلغ: ${expense.amount.toFixed(2)} ر.س\n• تاريخ المصروف: ${expenseDate}\n${expense.payment_method ? `• طريقة الدفع: ${expense.payment_method}` : ''}\n${expense.receipt_number ? `• رقم الإيصال: ${expense.receipt_number}` : ''}\n\n━━━━━━━━━━━━━━━━━━━━\n\n${expense.notes ? `📌 ملاحظات:\n${expense.notes}\n\n━━━━━━━━━━━━━━━━━━━━\n` : ''}📅 تاريخ التسجيل: ${createdDate}\n⏰ الوقت: ${new Date().toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}\n\n${test ? '\n🧪 *هذه رسالة اختبار*' : ''}`;
 
     const { data: msgInserted, error: msgInsertError } = await supabase
       .from('whatsapp_messages')
