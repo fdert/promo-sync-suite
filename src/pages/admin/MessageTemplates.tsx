@@ -51,7 +51,8 @@ const MessageTemplates = () => {
     "new_orders_count", "completed_orders_count", "settings_status",
     "pending_messages", "recent_orders", "notify_new_order",
     "notify_delivery_delay", "notify_payment_delay", "notify_whatsapp_failure",
-    "notify_expense", "daily_report", "delivery_delay_days", "payment_delay_days"
+    "notify_expense", "daily_report", "delivery_delay_days", "payment_delay_days",
+    "payment_type", "total_amount", "expense_type", "expense_date", "receipt_number"
   ];
 
   useEffect(() => {
@@ -378,6 +379,21 @@ const MessageTemplates = () => {
           break;
         case 'payment_delay_days':
           preview = preview.replace(regex, '7');
+          break;
+        case 'payment_type':
+          preview = preview.replace(regex, '💵 نقدي');
+          break;
+        case 'total_amount':
+          preview = preview.replace(regex, '1,500.00');
+          break;
+        case 'expense_type':
+          preview = preview.replace(regex, 'مصروفات إدارية');
+          break;
+        case 'expense_date':
+          preview = preview.replace(regex, new Date().toLocaleDateString('ar-SA'));
+          break;
+        case 'receipt_number':
+          preview = preview.replace(regex, 'RCP-001');
           break;
         default:
           preview = preview.replace(regex, `[${variable}]`);

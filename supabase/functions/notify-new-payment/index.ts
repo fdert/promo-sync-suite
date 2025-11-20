@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { renderTemplate } from '../_shared/template-utils.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -114,32 +115,16 @@ serve(async (req) => {
       paymentDate = new Date(payment.payment_date).toLocaleDateString('ar-SA');
     }
 
-    const message = `💰 *إشعار: تسجيل دفعة جديدة*
-
-📦 رقم الطلب: ${orderNumber}
-👤 العميل: ${customerName}
-📱 واتساب العميل: ${customerWhatsapp}
-
-━━━━━━━━━━━━━━━━━━━━
-
-💵 تفاصيل الدفعة:
-• المبلغ المدفوع: ${payment.amount.toFixed(2)} ر.س
-• طريقة الدفع: ${getPaymentTypeArabic(payment.payment_type)}
-• تاريخ الدفع: ${paymentDate}
-${payment.reference_number ? `• رقم المرجع: ${payment.reference_number}` : ''}
-${payment.notes ? `• ملاحظات: ${payment.notes}` : ''}
-
-━━━━━━━━━━━━━━━━━━━━
-
-📊 حالة الطلب:
-• إجمالي الطلب: ${totalAmount.toFixed(2)} ر.س
-• المبلغ المدفوع: ${paidAmount.toFixed(2)} ر.س
-• المتبقي: ${remainingAmount.toFixed(2)} ر.س
-• الحالة: ${remainingAmount <= 0 ? '✅ مدفوع بالكامل' : '⏳ دفعة جزئية'}
-
-⏰ ${new Date().toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}
-
-${test ? '\n🧪 *هذه رسالة اختبار*' : ''}`;
+    const message = await renderTemplate(supabase, 'new_payment_notification', {
+      amount: payment.amount.toFixed(2),
+      order_number: orderNumber,
+      customer_name: customerName,
+      payment_type: getPaymentTypeArabic(payment.payment_type),
+      total_amount: totalAmount.toFixed(2),
+      paid_amount: paidAmount.toFixed(2),
+      remaining_amount: remainingAmount.toFixed(2),
+      timestamp: new Date().toLocaleString('ar-SA')
+    }) || `💰 *إشعار: تسجيل دفعة جديدة*\n\n📦 رقم الطلب: ${orderNumber}\n👤 العميل: ${customerName}\n📱 واتساب العميل: ${customerWhatsapp}\n\n━━━━━━━━━━━━━━━━━━━━\n\n💵 تفاصيل الدفعة:\n• المبلغ المدفوع: ${payment.amount.toFixed(2)} ر.س\n• طريقة الدفع: ${getPaymentTypeArabic(payment.payment_type)}\n• تاريخ الدفع: ${paymentDate}\n${payment.reference_number ? `• رقم المرجع: ${payment.reference_number}` : ''}\n${payment.notes ? `• ملاحظات: ${payment.notes}` : ''}\n\n━━━━━━━━━━━━━━━━━━━━\n\n📊 حالة الطلب:\n• إجمالي الطلب: ${totalAmount.toFixed(2)} ر.س\n• المبلغ المدفوع: ${paidAmount.toFixed(2)} ر.س\n• المتبقي: ${remainingAmount.toFixed(2)} ر.س\n• الحالة: ${remainingAmount <= 0 ? '✅ مدفوع بالكامل' : '⏳ دفعة جزئية'}\n\n⏰ ${new Date().toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}\n\n${test ? '\n🧪 *هذه رسالة اختبار*' : ''}`;
 
     const { data: msgInserted, error: msgInsertError } = await supabase
       .from('whatsapp_messages')
