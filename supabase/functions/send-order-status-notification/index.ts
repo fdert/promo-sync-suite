@@ -152,7 +152,9 @@ serve(async (req) => {
     // المتغيرات للقالب
     const variables = {
       customer_name: order.customers?.name || 'عزيزنا العميل',
+      customer_phone: customerPhone,
       order_number: order.order_number || '',
+      order_status: new_status,
       service_name: order.service_types?.name || 'الخدمة',
       amount: totalAmount.toFixed(2),
       paid_amount: paidAmount.toFixed(2),

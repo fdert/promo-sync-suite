@@ -39,10 +39,13 @@ const MessageTemplates = () => {
 
   const availableVariables = [
     "customer_name", "customer_phone", "order_number", "order_status",
+    "service_name", "amount", "paid_amount", "remaining_amount",
+    "order_items", "payments_details", "delivery_date", "delivery_time",
+    "estimated_time", "evaluation_link", "evaluation_code",
+    "company_name", "description", "progress", "timestamp",
     "total_due", "unpaid_orders_count", "earliest_due_date", "report_date",
-    "orders_section", "payments_section", "invoice_number", "amount",
-    "due_date", "payment_date", "remaining_amount", "paid_amount",
-    "service_name", "company_name", "date", "time"
+    "orders_section", "payments_section", "invoice_number",
+    "due_date", "payment_date", "date", "time"
   ];
 
   useEffect(() => {
@@ -234,10 +237,55 @@ const MessageTemplates = () => {
           preview = preview.replace(regex, '+966501234567');
           break;
         case 'order_number':
-          preview = preview.replace(regex, 'ORD-001');
+          preview = preview.replace(regex, 'ORD-20250120-001');
           break;
         case 'order_status':
           preview = preview.replace(regex, 'قيد التنفيذ');
+          break;
+        case 'service_name':
+          preview = preview.replace(regex, 'طباعة أكريليك');
+          break;
+        case 'amount':
+          preview = preview.replace(regex, '1,500.00');
+          break;
+        case 'paid_amount':
+          preview = preview.replace(regex, '1,000.00');
+          break;
+        case 'remaining_amount':
+          preview = preview.replace(regex, '500.00');
+          break;
+        case 'order_items':
+          preview = preview.replace(regex, '• لوحة أكريليك: 2 × 150.00 = 300.00 ر.س\n• حروف بارزة: 1 × 200.00 = 200.00 ر.س');
+          break;
+        case 'payments_details':
+          preview = preview.replace(regex, '• ٢٠‏/١‏/٢٠٢٥ م: 500.00 ر.س (cash)\n• ١٥‏/١‏/٢٠٢٥ م: 500.00 ر.س (bank_transfer)');
+          break;
+        case 'delivery_date':
+          preview = preview.replace(regex, '٢٥‏/١‏/٢٠٢٥ م');
+          break;
+        case 'delivery_time':
+          preview = preview.replace(regex, '15:00');
+          break;
+        case 'estimated_time':
+          preview = preview.replace(regex, '3 أيام عمل');
+          break;
+        case 'evaluation_link':
+          preview = preview.replace(regex, 'https://example.com/evaluation/abc123');
+          break;
+        case 'evaluation_code':
+          preview = preview.replace(regex, 'ABC123');
+          break;
+        case 'company_name':
+          preview = preview.replace(regex, 'إدارة المتابعة');
+          break;
+        case 'description':
+          preview = preview.replace(regex, 'ملاحظات خاصة بالطلب');
+          break;
+        case 'progress':
+          preview = preview.replace(regex, '75');
+          break;
+        case 'timestamp':
+          preview = preview.replace(regex, new Date().toLocaleString('ar-SA'));
           break;
         case 'total_due':
           preview = preview.replace(regex, '1,500 ر.س');
@@ -260,26 +308,11 @@ const MessageTemplates = () => {
         case 'invoice_number':
           preview = preview.replace(regex, 'INV-001');
           break;
-        case 'amount':
-          preview = preview.replace(regex, '1,500 ر.س');
-          break;
-        case 'paid_amount':
-          preview = preview.replace(regex, '1,000 ر.س');
-          break;
-        case 'remaining_amount':
-          preview = preview.replace(regex, '500 ر.س');
-          break;
         case 'due_date':
           preview = preview.replace(regex, '15/02/2024');
           break;
         case 'payment_date':
           preview = preview.replace(regex, '01/02/2024');
-          break;
-        case 'service_name':
-          preview = preview.replace(regex, 'تصميم شعار');
-          break;
-        case 'company_name':
-          preview = preview.replace(regex, 'شركة المثال');
           break;
         case 'date':
           preview = preview.replace(regex, new Date().toLocaleDateString('ar-SA'));
