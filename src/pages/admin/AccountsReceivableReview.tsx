@@ -255,34 +255,14 @@ const AccountsReceivableReview = () => {
 
   const exportToPDF = async () => {
     try {
-      const doc = new jsPDF();
-      
-      // عنوان التقرير
-      doc.text('تقرير أرصدة العملاء المدينون', 105, 15, { align: 'center' });
-      doc.setFontSize(10);
-      doc.text(`التاريخ: ${format(new Date(), 'dd/MM/yyyy', { locale: ar })}`, 105, 22, { align: 'center' });
-      
-      // ملخص الأرصدة
-      doc.setFontSize(12);
-      doc.text('ملخص الأرصدة', 14, 35);
-      
-      const summaryData = [
-        ['إجمالي الطلبات', `${accountingSummary.total_invoiced.toLocaleString()} ر.س`],
-        ['إجمالي المدفوعات', `${accountingSummary.total_paid.toLocaleString()} ر.س`],
-        ['المبلغ المستحق', `${accountingSummary.total_outstanding.toLocaleString()} ر.س`],
-        ['رصيد الحساب', `${accountingSummary.account_balance.toLocaleString()} ر.س`]
-      ];
-      
-      autoTable(doc, {
-        startY: 40,
-        head: [['البيان', 'المبلغ']],
-        body: summaryData,
-        theme: 'grid',
-        styles: { font: 'helvetica', halign: 'right' },
-        headStyles: { fillColor: [41, 128, 185] }
-      });
-      
-      // جلب الطلبات لحساب المتأخرة أكثر من شهر
+      // Create a printable HTML version instead of PDF
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        toast({ title: 'خطأ', description: 'فشل فتح نافذة الطباعة', variant: 'destructive' });
+        return;
+      }
+
+      // جلب الطلبات المتأخرة
       const { data: ordersData } = await supabase
         .from('order_payment_summary')
         .select('*')
@@ -294,32 +274,181 @@ const AccountsReceivableReview = () => {
         const daysOverdue = differenceInDays(new Date(), dueDate);
         return daysOverdue > 30;
       }) || [];
+
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html dir="rtl" lang="ar">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>تقرير أرصدة العملاء المدينون</title>
+          <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body {
+              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+              direction: rtl;
+              padding: 20px;
+              background: white;
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 30px;
+              border-bottom: 3px solid #2c3e50;
+              padding-bottom: 15px;
+            }
+            h1 { color: #2c3e50; font-size: 24px; margin-bottom: 10px; }
+            .date { color: #7f8c8d; font-size: 14px; }
+            .summary {
+              display: grid;
+              grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+              gap: 15px;
+              margin-bottom: 30px;
+            }
+            .summary-card {
+              background: #ecf0f1;
+              padding: 15px;
+              border-radius: 8px;
+              border-right: 4px solid #3498db;
+            }
+            .summary-label { font-size: 12px; color: #7f8c8d; margin-bottom: 5px; }
+            .summary-value { font-size: 20px; font-weight: bold; color: #2c3e50; }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 20px;
+              font-size: 12px;
+            }
+            th, td {
+              border: 1px solid #ddd;
+              padding: 10px;
+              text-align: right;
+            }
+            th {
+              background: #3498db;
+              color: white;
+              font-weight: bold;
+            }
+            tr:nth-child(even) { background: #f9f9f9; }
+            .section-title {
+              font-size: 18px;
+              color: #2c3e50;
+              margin: 20px 0 10px 0;
+              padding-bottom: 5px;
+              border-bottom: 2px solid #3498db;
+            }
+            @media print {
+              body { padding: 10px; }
+              .no-print { display: none; }
+            }
+            .print-btn {
+              background: #3498db;
+              color: white;
+              border: none;
+              padding: 10px 20px;
+              border-radius: 5px;
+              cursor: pointer;
+              font-size: 14px;
+              margin-bottom: 20px;
+            }
+            .print-btn:hover { background: #2980b9; }
+          </style>
+        </head>
+        <body>
+          <button class="print-btn no-print" onclick="window.print()">طباعة التقرير</button>
+          
+          <div class="header">
+            <h1>تقرير أرصدة العملاء المدينون</h1>
+            <p class="date">التاريخ: ${format(new Date(), 'dd MMMM yyyy - HH:mm', { locale: ar })}</p>
+          </div>
+
+          <div class="summary">
+            <div class="summary-card">
+              <div class="summary-label">إجمالي الطلبات</div>
+              <div class="summary-value">${accountingSummary.total_invoiced.toLocaleString('ar-SA')} ر.س</div>
+            </div>
+            <div class="summary-card">
+              <div class="summary-label">إجمالي المدفوعات</div>
+              <div class="summary-value">${accountingSummary.total_paid.toLocaleString('ar-SA')} ر.س</div>
+            </div>
+            <div class="summary-card">
+              <div class="summary-label">المبلغ المستحق</div>
+              <div class="summary-value">${accountingSummary.total_outstanding.toLocaleString('ar-SA')} ر.س</div>
+            </div>
+            <div class="summary-card">
+              <div class="summary-label">الطلبات المتأخرة +30 يوم</div>
+              <div class="summary-value">${overdueOrders.length}</div>
+            </div>
+          </div>
+
+          <h2 class="section-title">تفاصيل العملاء المدينون (${customerBalances.length} عميل)</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>اسم العميل</th>
+                <th>المبلغ المستحق</th>
+                <th>عدد الطلبات</th>
+                <th>رقم الجوال</th>
+                <th>تاريخ الاستحقاق</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${customerBalances.map((customer, index) => `
+                <tr>
+                  <td>${index + 1}</td>
+                  <td>${customer.customer_name}</td>
+                  <td>${customer.outstanding_balance.toLocaleString('ar-SA')} ر.س</td>
+                  <td>${customer.unpaid_invoices_count}</td>
+                  <td>${customerPhones[customer.customer_id] || '-'}</td>
+                  <td>${customer.earliest_due_date ? format(new Date(customer.earliest_due_date), 'dd/MM/yyyy', { locale: ar }) : '-'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+
+          ${overdueOrders.length > 0 ? `
+            <h2 class="section-title">الطلبات المتأخرة أكثر من 30 يوم (${overdueOrders.length} طلب)</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>رقم الطلب</th>
+                  <th>اسم العميل</th>
+                  <th>المبلغ المتبقي</th>
+                  <th>تاريخ الطلب</th>
+                  <th>أيام التأخير</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${overdueOrders.map((order, index) => {
+                  const dueDate = order.created_at ? new Date(order.created_at) : null;
+                  const daysOverdue = dueDate ? differenceInDays(new Date(), dueDate) : 0;
+                  return `
+                    <tr>
+                      <td>${index + 1}</td>
+                      <td>${order.order_number}</td>
+                      <td>${order.customer_name}</td>
+                      <td>${order.balance.toLocaleString('ar-SA')} ر.س</td>
+                      <td>${dueDate ? format(dueDate, 'dd/MM/yyyy', { locale: ar }) : '-'}</td>
+                      <td>${daysOverdue} يوم</td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          ` : ''}
+
+          <div style="margin-top: 40px; text-align: center; color: #7f8c8d; font-size: 12px;">
+            <p>تم إنشاء هذا التقرير تلقائياً - ${format(new Date(), 'dd/MM/yyyy HH:mm', { locale: ar })}</p>
+          </div>
+        </body>
+        </html>
+      `;
+
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
       
-      // تفاصيل العملاء
-      doc.setFontSize(12);
-      const startY = (doc as any).lastAutoTable.finalY + 15;
-      doc.text(`تفاصيل العملاء المدينون (${customerBalances.length})`, 14, startY);
-      doc.text(`الطلبات المتأخرة أكثر من شهر: ${overdueOrders.length}`, 14, startY + 7);
-      
-      const customersTableData = customerBalances.map(customer => [
-        customer.customer_name,
-        `${customer.outstanding_balance.toLocaleString()} ر.س`,
-        String(customer.unpaid_invoices_count),
-        customerPhones[customer.customer_id] || '-',
-        customer.earliest_due_date ? format(new Date(customer.earliest_due_date), 'dd/MM/yyyy', { locale: ar }) : '-'
-      ]);
-      
-      autoTable(doc, {
-        startY: startY + 12,
-        head: [['اسم العميل', 'المبلغ المستحق', 'عدد الطلبات', 'رقم الجوال', 'تاريخ الاستحقاق']],
-        body: customersTableData,
-        theme: 'striped',
-        styles: { font: 'helvetica', halign: 'right', fontSize: 8 },
-        headStyles: { fillColor: [52, 152, 219] }
-      });
-      
-      doc.save(`تقرير_العملاء_المدينون_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
-      toast({ title: 'تم التصدير بنجاح', description: 'تم تصدير التقرير إلى PDF' });
+      toast({ title: 'تم فتح نافذة الطباعة', description: 'يمكنك الآن طباعة التقرير أو حفظه كـ PDF' });
     } catch (error) {
       console.error('Error exporting to PDF:', error);
       toast({ title: 'خطأ', description: 'فشل تصدير التقرير', variant: 'destructive' });
