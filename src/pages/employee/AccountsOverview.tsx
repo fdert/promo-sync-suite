@@ -807,8 +807,18 @@ ${index + 1}. *المبلغ:* ${payment.amount.toLocaleString()} ر.س
               background: #3498db;
               color: white;
               font-weight: bold;
+              print-color-adjust: exact;
+              -webkit-print-color-adjust: exact;
             }
-            tr:nth-child(even) { background: #f9f9f9; }
+            tr:nth-child(even) { 
+              background: #f9f9f9;
+              print-color-adjust: exact;
+              -webkit-print-color-adjust: exact;
+            }
+            .summary-card {
+              print-color-adjust: exact;
+              -webkit-print-color-adjust: exact;
+            }
             .section-title {
               font-size: 18px;
               color: #2c3e50;
@@ -819,6 +829,21 @@ ${index + 1}. *المبلغ:* ${payment.amount.toLocaleString()} ر.س
             @media print {
               body { padding: 10px; }
               .no-print { display: none; }
+              * {
+                print-color-adjust: exact !important;
+                -webkit-print-color-adjust: exact !important;
+              }
+              th {
+                background: #3498db !important;
+                color: white !important;
+              }
+              tr:nth-child(even) { 
+                background: #f9f9f9 !important;
+              }
+              .summary-card {
+                background: #ecf0f1 !important;
+                border-right: 4px solid #3498db !important;
+              }
             }
             .print-btn {
               background: #3498db;
