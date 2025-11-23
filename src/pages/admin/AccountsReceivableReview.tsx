@@ -432,32 +432,6 @@ const AccountsReceivableReview = () => {
               `).join('')}
             </tbody>
           </table>
-          
-          <h2 class="section-title">ملخص العملاء المدينون (${customerBalances.length} عميل)</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>اسم العميل</th>
-                <th>رقم الجوال</th>
-                <th>إجمالي المبالغ المستحقة</th>
-                <th>عدد الطلبات</th>
-                <th>أقرب تاريخ استحقاق</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${customerBalances.map((customer, index) => `
-                <tr>
-                  <td>${index + 1}</td>
-                  <td>${customer.customer_name}</td>
-                  <td>${customerPhones[customer.customer_id] || '-'}</td>
-                  <td><strong>${customer.outstanding_balance.toLocaleString('ar-SA')} ر.س</strong></td>
-                  <td>${customer.unpaid_invoices_count}</td>
-                  <td>${customer.earliest_due_date ? format(new Date(customer.earliest_due_date), 'dd/MM/yyyy', { locale: ar }) : '-'}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
 
 
           <div style="margin-top: 40px; text-align: center; color: #7f8c8d; font-size: 12px;">
