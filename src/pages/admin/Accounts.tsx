@@ -664,25 +664,45 @@ const Accounts = () => {
   // تصدير جميع البيانات إلى PDF
   const exportAllDataToPDF = () => {
     try {
-      const doc = new jsPDF('p', 'mm', 'a4');
+      const doc = new jsPDF({
+        orientation: 'p',
+        unit: 'mm',
+        format: 'a4',
+        putOnlyUsedFonts: true,
+        compress: true
+      });
       
-      // إضافة الخط العربي
+      // تفعيل دعم اللغة العربية والكتابة من اليمين لليسار
       addArabicFont(doc);
-      doc.setR2L(true);
-
+      
       let yPos = 20;
       
-      // العنوان الرئيسي
-      doc.setFontSize(18);
-      doc.text('تقرير شامل للنظام المحاسبي', doc.internal.pageSize.width / 2, yPos, { align: 'center' });
-      yPos += 10;
-      doc.setFontSize(12);
-      doc.text(`تاريخ التقرير: ${new Date().toLocaleDateString('ar-SA')}`, doc.internal.pageSize.width / 2, yPos, { align: 'center' });
+      // العنوان الرئيسي بخط أكبر ومحاذاة للوسط
+      doc.setFontSize(20);
+      doc.setFont('helvetica', 'bold');
+      doc.text('تقرير شامل للنظام المحاسبي', doc.internal.pageSize.width / 2, yPos, { 
+        align: 'center',
+        lang: 'ar',
+        renderingMode: 'fill'
+      });
+      
+      yPos += 8;
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`تاريخ التقرير: ${new Date().toLocaleDateString('ar-SA')}`, doc.internal.pageSize.width / 2, yPos, { 
+        align: 'center',
+        lang: 'ar'
+      });
+      
       yPos += 15;
 
       // ملخص الإيرادات والمصروفات
       doc.setFontSize(14);
-      doc.text('الملخص المالي', 14, yPos);
+      doc.setFont('helvetica', 'bold');
+      doc.text('الملخص المالي', doc.internal.pageSize.width - 14, yPos, { 
+        align: 'right',
+        lang: 'ar'
+      });
       yPos += 8;
       
       const summaryData = [
@@ -697,20 +717,45 @@ const Accounts = () => {
         startY: yPos,
         head: [['البيان', 'القيمة']],
         body: summaryData,
-        styles: { font: 'Amiri', fontSize: 10, halign: 'right' },
-        headStyles: { fillColor: [52, 152, 219], textColor: 255, halign: 'right' },
+        styles: { 
+          font: 'helvetica',
+          fontStyle: 'normal',
+          fontSize: 11,
+          halign: 'right',
+          cellPadding: 3,
+          textColor: [0, 0, 0],
+          lineColor: [200, 200, 200],
+          lineWidth: 0.1
+        },
+        headStyles: { 
+          fillColor: [41, 128, 185],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+          halign: 'right',
+          fontSize: 12
+        },
+        alternateRowStyles: {
+          fillColor: [245, 245, 245]
+        },
         margin: { left: 14, right: 14 },
+        tableWidth: 'auto',
+        theme: 'grid'
       });
       
       yPos = (doc as any).lastAutoTable.finalY + 15;
 
       // الحسابات المحاسبية
+      yPos = (doc as any).lastAutoTable.finalY + 15;
       if (yPos > 240) {
         doc.addPage();
         yPos = 20;
       }
       doc.setFontSize(14);
-      doc.text('الحسابات المحاسبية', 14, yPos);
+      doc.setFont('helvetica', 'bold');
+      doc.text('الحسابات المحاسبية', doc.internal.pageSize.width - 14, yPos, { 
+        align: 'right',
+        lang: 'ar'
+      });
       yPos += 8;
 
       const accountsData = accounts.map(acc => [
@@ -724,20 +769,43 @@ const Accounts = () => {
         startY: yPos,
         head: [['اسم الحساب', 'نوع الحساب', 'رقم الحساب', 'الرصيد']],
         body: accountsData,
-        styles: { font: 'Amiri', fontSize: 9, halign: 'right' },
-        headStyles: { fillColor: [52, 152, 219], textColor: 255, halign: 'right' },
+        styles: { 
+          font: 'helvetica',
+          fontSize: 10,
+          halign: 'right',
+          cellPadding: 2.5,
+          textColor: [0, 0, 0],
+          lineColor: [200, 200, 200],
+          lineWidth: 0.1
+        },
+        headStyles: { 
+          fillColor: [41, 128, 185],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+          halign: 'right',
+          fontSize: 11
+        },
+        alternateRowStyles: {
+          fillColor: [245, 245, 245]
+        },
         margin: { left: 14, right: 14 },
+        theme: 'grid'
       });
 
       yPos = (doc as any).lastAutoTable.finalY + 15;
 
       // القيود المحاسبية
+      yPos = (doc as any).lastAutoTable.finalY + 15;
       if (yPos > 240 || accountEntries.length > 0) {
         doc.addPage();
         yPos = 20;
       }
       doc.setFontSize(14);
-      doc.text('القيود المحاسبية (آخر 50 قيد)', 14, yPos);
+      doc.setFont('helvetica', 'bold');
+      doc.text('القيود المحاسبية (آخر 50 قيد)', doc.internal.pageSize.width - 14, yPos, { 
+        align: 'right',
+        lang: 'ar'
+      });
       yPos += 8;
 
       const entriesData = accountEntries.slice(0, 50).map(entry => [
@@ -754,19 +822,43 @@ const Accounts = () => {
           startY: yPos,
           head: [['الوصف', 'الحساب', 'النوع', 'التاريخ', 'مدين', 'دائن']],
           body: entriesData,
-          styles: { font: 'Amiri', fontSize: 8, halign: 'right' },
-          headStyles: { fillColor: [52, 152, 219], textColor: 255, halign: 'right' },
+          styles: { 
+            font: 'helvetica',
+            fontSize: 9,
+            halign: 'right',
+            cellPadding: 2,
+            textColor: [0, 0, 0],
+            lineColor: [200, 200, 200],
+            lineWidth: 0.1
+          },
+          headStyles: { 
+            fillColor: [41, 128, 185],
+            textColor: [255, 255, 255],
+            fontStyle: 'bold',
+            halign: 'right',
+            fontSize: 10
+          },
+          alternateRowStyles: {
+            fillColor: [245, 245, 245]
+          },
           margin: { left: 14, right: 14 },
+          theme: 'grid'
         });
         yPos = (doc as any).lastAutoTable.finalY + 15;
       }
 
       // المصروفات
       if (expenses.length > 0) {
-        doc.addPage();
-        yPos = 20;
+        if (yPos > 240) {
+          doc.addPage();
+          yPos = 20;
+        }
         doc.setFontSize(14);
-        doc.text('المصروفات (آخر 50 مصروف)', 14, yPos);
+        doc.setFont('helvetica', 'bold');
+        doc.text('المصروفات (آخر 50 مصروف)', doc.internal.pageSize.width - 14, yPos, { 
+          align: 'right',
+          lang: 'ar'
+        });
         yPos += 8;
 
         const expensesData = expenses.slice(0, 50).map(exp => [
@@ -781,19 +873,43 @@ const Accounts = () => {
           startY: yPos,
           head: [['الوصف', 'الفئة', 'التاريخ', 'طريقة الدفع', 'المبلغ']],
           body: expensesData,
-          styles: { font: 'Amiri', fontSize: 9, halign: 'right' },
-          headStyles: { fillColor: [231, 76, 60], textColor: 255, halign: 'right' },
+          styles: { 
+            font: 'helvetica',
+            fontSize: 10,
+            halign: 'right',
+            cellPadding: 2.5,
+            textColor: [0, 0, 0],
+            lineColor: [200, 200, 200],
+            lineWidth: 0.1
+          },
+          headStyles: { 
+            fillColor: [192, 57, 43],
+            textColor: [255, 255, 255],
+            fontStyle: 'bold',
+            halign: 'right',
+            fontSize: 11
+          },
+          alternateRowStyles: {
+            fillColor: [245, 245, 245]
+          },
           margin: { left: 14, right: 14 },
+          theme: 'grid'
         });
         yPos = (doc as any).lastAutoTable.finalY + 15;
       }
 
       // العملاء المدينون
       if (debtorInvoices.length > 0) {
-        doc.addPage();
-        yPos = 20;
+        if (yPos > 240) {
+          doc.addPage();
+          yPos = 20;
+        }
         doc.setFontSize(14);
-        doc.text('العملاء المدينون', 14, yPos);
+        doc.setFont('helvetica', 'bold');
+        doc.text('العملاء المدينون', doc.internal.pageSize.width - 14, yPos, { 
+          align: 'right',
+          lang: 'ar'
+        });
         yPos += 8;
 
         const debtorsData = debtorInvoices.map(customer => [
@@ -808,11 +924,35 @@ const Accounts = () => {
           startY: yPos,
           head: [['اسم العميل', 'عدد الطلبات', 'إجمالي المبلغ', 'المبلغ المدفوع', 'المبلغ المستحق']],
           body: debtorsData,
-          styles: { font: 'Amiri', fontSize: 9, halign: 'right' },
-          headStyles: { fillColor: [243, 156, 18], textColor: 255, halign: 'right' },
+          styles: { 
+            font: 'helvetica',
+            fontSize: 10,
+            halign: 'right',
+            cellPadding: 2.5,
+            textColor: [0, 0, 0],
+            lineColor: [200, 200, 200],
+            lineWidth: 0.1
+          },
+          headStyles: { 
+            fillColor: [211, 84, 0],
+            textColor: [255, 255, 255],
+            fontStyle: 'bold',
+            halign: 'right',
+            fontSize: 11
+          },
+          alternateRowStyles: {
+            fillColor: [245, 245, 245]
+          },
           margin: { left: 14, right: 14 },
           foot: [['', '', '', 'الإجمالي:', `${totalDebts.toLocaleString()} ر.س`]],
-          footStyles: { fillColor: [243, 156, 18], textColor: 255, halign: 'right', fontStyle: 'bold' },
+          footStyles: { 
+            fillColor: [211, 84, 0],
+            textColor: [255, 255, 255],
+            halign: 'right',
+            fontStyle: 'bold',
+            fontSize: 11
+          },
+          theme: 'grid'
         });
       }
 
