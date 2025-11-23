@@ -15,8 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import { addArabicFont } from '@/lib/arabic-pdf-font';
+import html2canvas from 'html2canvas';
 
 const Accounts = () => {
   const [accounts, setAccounts] = useState<any[]>([]);
@@ -661,51 +660,46 @@ const Accounts = () => {
     }
   };
 
-  // تصدير جميع البيانات إلى PDF
-  const exportAllDataToPDF = () => {
+  // تصدير جميع البيانات إلى PDF (مع دعم ممتاز للعربية عبر تحويل HTML إلى صورة)
+  const exportAllDataToPDF = async () => {
     try {
-      const doc = new jsPDF({
-        orientation: 'p',
-        unit: 'mm',
-        format: 'a4',
-        putOnlyUsedFonts: true,
-        compress: true
-      });
+      // إنشاء عنصر HTML مخفي يحتوي على التقرير الكامل بتنسيق عربي منسق
+      const reportElement = document.createElement('div');
+      reportElement.id = 'accounts-report-print';
+      reportElement.style.position = 'fixed';
+      reportElement.style.left = '-9999px';
+      reportElement.style.top = '0';
+      reportElement.style.width = '794px'; // تقريبًا عرض ورقة A4 بالبكسل
+      reportElement.style.background = '#ffffff';
+      reportElement.style.padding = '24px';
+      reportElement.style.direction = 'rtl';
+      reportElement.style.boxSizing = 'border-box';
+      reportElement.style.fontFamily = "'Cairo', 'Tajawal', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
       
-      // تفعيل دعم اللغة العربية والكتابة من اليمين لليسار
-      addArabicFont(doc);
-      
-      let yPos = 20;
-      
-      // العنوان الرئيسي بخط أكبر ومحاذاة للوسط
-      doc.setFontSize(20);
-      doc.setFont('Amiri', 'bold');
-      doc.text('تقرير شامل للنظام المحاسبي', doc.internal.pageSize.width / 2, yPos, { 
-        align: 'center',
-        lang: 'ar',
-        renderingMode: 'fill'
-      });
-      
-      yPos += 8;
-      doc.setFontSize(11);
-      doc.setFont('Amiri', 'normal');
-      doc.text(`تاريخ التقرير: ${new Date().toLocaleDateString('ar-SA')}`, doc.internal.pageSize.width / 2, yPos, { 
-        align: 'center',
-        lang: 'ar'
-      });
-      
-      yPos += 15;
+      const reportDate = new Date();
+      const dateStr = reportDate.toLocaleDateString('ar-SA');
+      const timeStr = reportDate.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
 
-      // ملخص الإيرادات والمصروفات
-      doc.setFontSize(14);
-      doc.setFont('Amiri', 'bold');
-      doc.text('الملخص المالي', doc.internal.pageSize.width - 14, yPos, { 
-        align: 'right',
-        lang: 'ar'
-      });
-      yPos += 8;
-      
-      const summaryData = [
+      let htmlContent = `
+        <div style="width: 100%; color: #2c3e50;">
+          <div style="text-align: center; margin-bottom: 16px;">
+            <h1 style="margin: 0 0 4px; font-size: 20px; font-weight: 800; letter-spacing: 0.5px;">تقرير شامل للنظام المحاسبي</h1>
+            <p style="margin: 0; font-size: 11px; color: #7f8c8d;">تاريخ التقرير: ${dateStr} - الساعة: ${timeStr}</p>
+          </div>
+
+          <div style="margin-bottom: 16px; padding: 12px 14px; border-radius: 10px; border: 1px solid #ecf0f1; background: linear-gradient(135deg, #f8fafc, #ffffff); box-shadow: 0 4px 10px rgba(0,0,0,0.03);">
+            <h2 style="margin: 0 0 10px; font-size: 14px; font-weight: 700; color: #2c3e50;">الملخص المالي</h2>
+            <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+              <thead>
+                <tr style="background: #2980b9; color: #ffffff;">
+                  <th style="padding: 6px 8px; text-align: right; border: 1px solid #21618c;">البيان</th>
+                  <th style="padding: 6px 8px; text-align: center; border: 1px solid #21618c;">القيمة</th>
+                </tr>
+              </thead>
+              <tbody>
+      `;
+
+      const summaryRows = [
         ['الإيرادات الشهرية', `${monthlyIncome.toLocaleString()} ر.س`],
         ['المصروفات الشهرية', `${monthlyExpenses.toLocaleString()} ر.س`],
         ['صافي الربح', `${netProfit.toLocaleString()} ر.س`],
@@ -713,254 +707,232 @@ const Accounts = () => {
         ['عدد الحسابات النشطة', accounts.length.toString()],
       ];
 
-      autoTable(doc, {
-        startY: yPos,
-        head: [['البيان', 'القيمة']],
-        body: summaryData,
-        styles: { 
-          font: 'Amiri',
-          fontStyle: 'normal',
-          fontSize: 11,
-          halign: 'right',
-          cellPadding: 3,
-          textColor: [0, 0, 0],
-          lineColor: [200, 200, 200],
-          lineWidth: 0.1
-        },
-        headStyles: { 
-          fillColor: [41, 128, 185],
-          textColor: [255, 255, 255],
-          fontStyle: 'bold',
-          halign: 'right',
-          fontSize: 12
-        },
-        alternateRowStyles: {
-          fillColor: [245, 245, 245]
-        },
-        margin: { left: 14, right: 14 },
-        tableWidth: 'auto',
-        theme: 'grid'
-      });
-      
-      yPos = (doc as any).lastAutoTable.finalY + 15;
-
-      // الحسابات المحاسبية
-      yPos = (doc as any).lastAutoTable.finalY + 15;
-      if (yPos > 240) {
-        doc.addPage();
-        yPos = 20;
-      }
-      doc.setFontSize(14);
-      doc.setFont('Amiri', 'bold');
-      doc.text('الحسابات المحاسبية', doc.internal.pageSize.width - 14, yPos, { 
-        align: 'right',
-        lang: 'ar'
-      });
-      yPos += 8;
-
-      const accountsData = accounts.map(acc => [
-        acc.account_name,
-        acc.account_type,
-        acc.account_number,
-        `${(acc.balance || 0).toLocaleString()} ر.س`
-      ]);
-
-      autoTable(doc, {
-        startY: yPos,
-        head: [['اسم الحساب', 'نوع الحساب', 'رقم الحساب', 'الرصيد']],
-        body: accountsData,
-        styles: { 
-          font: 'Amiri',
-          fontSize: 10,
-          halign: 'right',
-          cellPadding: 2.5,
-          textColor: [0, 0, 0],
-          lineColor: [200, 200, 200],
-          lineWidth: 0.1
-        },
-        headStyles: { 
-          fillColor: [41, 128, 185],
-          textColor: [255, 255, 255],
-          fontStyle: 'bold',
-          halign: 'right',
-          fontSize: 11
-        },
-        alternateRowStyles: {
-          fillColor: [245, 245, 245]
-        },
-        margin: { left: 14, right: 14 },
-        theme: 'grid'
+      summaryRows.forEach((row, index) => {
+        const bg = index % 2 === 0 ? '#f8f9fa' : '#ffffff';
+        htmlContent += `
+          <tr style="background: ${bg};">
+            <td style="padding: 5px 8px; text-align: right; border: 1px solid #dde3ea; font-weight: 600;">${row[0]}</td>
+            <td style="padding: 5px 8px; text-align: center; border: 1px solid #dde3ea; color: #16a085; font-weight: 700;">${row[1]}</td>
+          </tr>
+        `;
       });
 
-      yPos = (doc as any).lastAutoTable.finalY + 15;
+      htmlContent += `
+              </tbody>
+            </table>
+          </div>
+      `;
 
-      // القيود المحاسبية
-      yPos = (doc as any).lastAutoTable.finalY + 15;
-      if (yPos > 240 || accountEntries.length > 0) {
-        doc.addPage();
-        yPos = 20;
-      }
-      doc.setFontSize(14);
-      doc.setFont('Amiri', 'bold');
-      doc.text('القيود المحاسبية (آخر 50 قيد)', doc.internal.pageSize.width - 14, yPos, { 
-        align: 'right',
-        lang: 'ar'
-      });
-      yPos += 8;
+      // قسم الحسابات المحاسبية
+      if (accounts.length > 0) {
+        htmlContent += `
+          <div style="margin-bottom: 16px; padding: 10px 12px; border-radius: 10px; border: 1px solid #ecf0f1; background: #ffffff; box-shadow: 0 3px 8px rgba(0,0,0,0.02);">
+            <h2 style="margin: 0 0 8px; font-size: 13px; font-weight: 700; color: #2c3e50;">الحسابات المحاسبية</h2>
+            <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+              <thead>
+                <tr style="background: #34495e; color: #ffffff;">
+                  <th style="padding: 5px 6px; text-align: right; border: 1px solid #2c3e50;">اسم الحساب</th>
+                  <th style="padding: 5px 6px; text-align: center; border: 1px solid #2c3e50;">نوع الحساب</th>
+                  <th style="padding: 5px 6px; text-align: center; border: 1px solid #2c3e50;">رقم الحساب</th>
+                  <th style="padding: 5px 6px; text-align: center; border: 1px solid #2c3e50;">الرصيد</th>
+                </tr>
+              </thead>
+              <tbody>
+        `;
 
-      const entriesData = accountEntries.slice(0, 50).map(entry => [
-        entry.description || '',
-        entry.accounts?.account_name || '',
-        entry.reference_type || '',
-        entry.entry_date ? new Date(entry.entry_date).toLocaleDateString('ar-SA') : '',
-        entry.debit ? `${entry.debit.toLocaleString()} ر.س` : '-',
-        entry.credit ? `${entry.credit.toLocaleString()} ر.س` : '-'
-      ]);
-
-      if (entriesData.length > 0) {
-        autoTable(doc, {
-          startY: yPos,
-          head: [['الوصف', 'الحساب', 'النوع', 'التاريخ', 'مدين', 'دائن']],
-          body: entriesData,
-          styles: { 
-            font: 'Amiri',
-            fontSize: 9,
-            halign: 'right',
-            cellPadding: 2,
-            textColor: [0, 0, 0],
-            lineColor: [200, 200, 200],
-            lineWidth: 0.1
-          },
-          headStyles: { 
-            fillColor: [41, 128, 185],
-            textColor: [255, 255, 255],
-            fontStyle: 'bold',
-            halign: 'right',
-            fontSize: 10
-          },
-          alternateRowStyles: {
-            fillColor: [245, 245, 245]
-          },
-          margin: { left: 14, right: 14 },
-          theme: 'grid'
+        accounts.forEach((acc, index) => {
+          const bg = index % 2 === 0 ? '#fdfefe' : '#f8f9fa';
+          htmlContent += `
+            <tr style="background: ${bg};">
+              <td style="padding: 4px 6px; text-align: right; border: 1px solid #ecf0f1;">${acc.account_name || ''}</td>
+              <td style="padding: 4px 6px; text-align: center; border: 1px solid #ecf0f1;">${acc.account_type || ''}</td>
+              <td style="padding: 4px 6px; text-align: center; border: 1px solid #ecf0f1;">${acc.account_number || ''}</td>
+              <td style="padding: 4px 6px; text-align: center; border: 1px solid #ecf0f1; font-weight: 600; color: #27ae60;">${((acc.balance || 0).toLocaleString())} ر.س</td>
+            </tr>
+          `;
         });
-        yPos = (doc as any).lastAutoTable.finalY + 15;
+
+        htmlContent += `
+              </tbody>
+            </table>
+          </div>
+        `;
       }
 
-      // المصروفات
+      // قسم القيود المحاسبية (آخر 50 قيد)
+      if (accountEntries.length > 0) {
+        htmlContent += `
+          <div style="margin-bottom: 16px; padding: 10px 12px; border-radius: 10px; border: 1px solid #ecf0f1; background: #ffffff; box-shadow: 0 3px 8px rgba(0,0,0,0.02);">
+            <h2 style="margin: 0 0 8px; font-size: 13px; font-weight: 700; color: #2c3e50;">القيود المحاسبية (آخر 50 قيد)</h2>
+            <table style="width: 100%; border-collapse: collapse; font-size: 9px;">
+              <thead>
+                <tr style="background: #2980b9; color: #ffffff;">
+                  <th style="padding: 5px 4px; text-align: right; border: 1px solid #21618c;">الوصف</th>
+                  <th style="padding: 5px 4px; text-align: center; border: 1px solid #21618c;">الحساب</th>
+                  <th style="padding: 5px 4px; text-align: center; border: 1px solid #21618c;">النوع</th>
+                  <th style="padding: 5px 4px; text-align: center; border: 1px solid #21618c;">التاريخ</th>
+                  <th style="padding: 5px 4px; text-align: center; border: 1px solid #21618c;">مدين</th>
+                  <th style="padding: 5px 4px; text-align: center; border: 1px solid #21618c;">دائن</th>
+                </tr>
+              </thead>
+              <tbody>
+        `;
+
+        accountEntries.slice(0, 50).forEach((entry, index) => {
+          const bg = index % 2 === 0 ? '#fdfefe' : '#f8f9fa';
+          htmlContent += `
+            <tr style="background: ${bg};">
+              <td style="padding: 4px 4px; text-align: right; border: 1px solid #ecf0f1;">${entry.description || ''}</td>
+              <td style="padding: 4px 4px; text-align: center; border: 1px solid #ecf0f1;">${entry.accounts?.account_name || ''}</td>
+              <td style="padding: 4px 4px; text-align: center; border: 1px solid #ecf0f1;">${entry.reference_type || ''}</td>
+              <td style="padding: 4px 4px; text-align: center; border: 1px solid #ecf0f1;">${entry.entry_date ? new Date(entry.entry_date).toLocaleDateString('ar-SA') : ''}</td>
+              <td style="padding: 4px 4px; text-align: center; border: 1px solid #ecf0f1; color: #c0392b; font-weight: 600;">${entry.debit ? entry.debit.toLocaleString() + ' ر.س' : '-'}</td>
+              <td style="padding: 4px 4px; text-align: center; border: 1px solid #ecf0f1; color: #27ae60; font-weight: 600;">${entry.credit ? entry.credit.toLocaleString() + ' ر.س' : '-'}</td>
+            </tr>
+          `;
+        });
+
+        htmlContent += `
+              </tbody>
+            </table>
+          </div>
+        `;
+      }
+
+      // قسم المصروفات (آخر 50 مصروف)
       if (expenses.length > 0) {
-        if (yPos > 240) {
-          doc.addPage();
-          yPos = 20;
-        }
-        doc.setFontSize(14);
-        doc.setFont('Amiri', 'bold');
-        doc.text('المصروفات (آخر 50 مصروف)', doc.internal.pageSize.width - 14, yPos, { 
-          align: 'right',
-          lang: 'ar'
-        });
-        yPos += 8;
+        htmlContent += `
+          <div style="margin-bottom: 16px; padding: 10px 12px; border-radius: 10px; border: 1px solid #ecf0f1; background: #ffffff; box-shadow: 0 3px 8px rgba(0,0,0,0.02);">
+            <h2 style="margin: 0 0 8px; font-size: 13px; font-weight: 700; color: #2c3e50;">المصروفات (آخر 50 مصروف)</h2>
+            <table style="width: 100%; border-collapse: collapse; font-size: 9px;">
+              <thead>
+                <tr style="background: #c0392b; color: #ffffff;">
+                  <th style="padding: 5px 4px; text-align: right; border: 1px solid #922b21;">الوصف</th>
+                  <th style="padding: 5px 4px; text-align: center; border: 1px solid #922b21;">الفئة</th>
+                  <th style="padding: 5px 4px; text-align: center; border: 1px solid #922b21;">التاريخ</th>
+                  <th style="padding: 5px 4px; text-align: center; border: 1px solid #922b21;">طريقة الدفع</th>
+                  <th style="padding: 5px 4px; text-align: center; border: 1px solid #922b21;">المبلغ</th>
+                </tr>
+              </thead>
+              <tbody>
+        `;
 
-        const expensesData = expenses.slice(0, 50).map(exp => [
-          exp.description,
-          exp.expense_type,
-          new Date(exp.expense_date).toLocaleDateString('ar-SA'),
-          exp.payment_method || '',
-          `${(exp.amount || 0).toLocaleString()} ر.س`
-        ]);
-
-        autoTable(doc, {
-          startY: yPos,
-          head: [['الوصف', 'الفئة', 'التاريخ', 'طريقة الدفع', 'المبلغ']],
-          body: expensesData,
-          styles: { 
-            font: 'Amiri',
-            fontSize: 10,
-            halign: 'right',
-            cellPadding: 2.5,
-            textColor: [0, 0, 0],
-            lineColor: [200, 200, 200],
-            lineWidth: 0.1
-          },
-          headStyles: { 
-            fillColor: [192, 57, 43],
-            textColor: [255, 255, 255],
-            fontStyle: 'bold',
-            halign: 'right',
-            fontSize: 11
-          },
-          alternateRowStyles: {
-            fillColor: [245, 245, 245]
-          },
-          margin: { left: 14, right: 14 },
-          theme: 'grid'
+        expenses.slice(0, 50).forEach((exp, index) => {
+          const bg = index % 2 === 0 ? '#fdf2f2' : '#ffffff';
+          htmlContent += `
+            <tr style="background: ${bg};">
+              <td style="padding: 4px 4px; text-align: right; border: 1px solid #f5b7b1;">${exp.description || ''}</td>
+              <td style="padding: 4px 4px; text-align: center; border: 1px solid #f5b7b1;">${exp.expense_type || ''}</td>
+              <td style="padding: 4px 4px; text-align: center; border: 1px solid #f5b7b1;">${exp.expense_date ? new Date(exp.expense_date).toLocaleDateString('ar-SA') : ''}</td>
+              <td style="padding: 4px 4px; text-align: center; border: 1px solid #f5b7b1;">${exp.payment_method || ''}</td>
+              <td style="padding: 4px 4px; text-align: center; border: 1px solid #f5b7b1; font-weight: 600; color: #c0392b;">${(exp.amount || 0).toLocaleString()} ر.س</td>
+            </tr>
+          `;
         });
-        yPos = (doc as any).lastAutoTable.finalY + 15;
+
+        htmlContent += `
+              </tbody>
+            </table>
+          </div>
+        `;
       }
 
-      // العملاء المدينون
+      // قسم العملاء المدينين
       if (debtorInvoices.length > 0) {
-        if (yPos > 240) {
-          doc.addPage();
-          yPos = 20;
-        }
-        doc.setFontSize(14);
-        doc.setFont('Amiri', 'bold');
-        doc.text('العملاء المدينون', doc.internal.pageSize.width - 14, yPos, { 
-          align: 'right',
-          lang: 'ar'
-        });
-        yPos += 8;
+        htmlContent += `
+          <div style="margin-bottom: 8px; padding: 10px 12px; border-radius: 10px; border: 1px solid #ecf0f1; background: #ffffff; box-shadow: 0 3px 8px rgba(0,0,0,0.02);">
+            <h2 style="margin: 0 0 8px; font-size: 13px; font-weight: 700; color: #2c3e50;">العملاء المدينون</h2>
+            <table style="width: 100%; border-collapse: collapse; font-size: 9px;">
+              <thead>
+                <tr style="background: #d35400; color: #ffffff;">
+                  <th style="padding: 5px 4px; text-align: right; border: 1px solid #a04000;">اسم العميل</th>
+                  <th style="padding: 5px 4px; text-align: center; border: 1px solid #a04000;">عدد الطلبات</th>
+                  <th style="padding: 5px 4px; text-align: center; border: 1px solid #a04000;">إجمالي المبلغ</th>
+                  <th style="padding: 5px 4px; text-align: center; border: 1px solid #a04000;">المبلغ المدفوع</th>
+                  <th style="padding: 5px 4px; text-align: center; border: 1px solid #a04000;">المبلغ المستحق</th>
+                </tr>
+              </thead>
+              <tbody>
+        `;
 
-        const debtorsData = debtorInvoices.map(customer => [
-          customer.customer_name || 'غير محدد',
-          customer.total_orders?.toString() || '0',
-          `${(customer.total_amount || 0).toLocaleString()} ر.س`,
-          `${(customer.calculated_paid_amount || 0).toLocaleString()} ر.س`,
-          `${(customer.remaining_amount || 0).toLocaleString()} ر.س`
-        ]);
-
-        autoTable(doc, {
-          startY: yPos,
-          head: [['اسم العميل', 'عدد الطلبات', 'إجمالي المبلغ', 'المبلغ المدفوع', 'المبلغ المستحق']],
-          body: debtorsData,
-          styles: { 
-            font: 'Amiri',
-            fontSize: 10,
-            halign: 'right',
-            cellPadding: 2.5,
-            textColor: [0, 0, 0],
-            lineColor: [200, 200, 200],
-            lineWidth: 0.1
-          },
-          headStyles: { 
-            fillColor: [211, 84, 0],
-            textColor: [255, 255, 255],
-            fontStyle: 'bold',
-            halign: 'right',
-            fontSize: 11
-          },
-          alternateRowStyles: {
-            fillColor: [245, 245, 245]
-          },
-          margin: { left: 14, right: 14 },
-          foot: [['', '', '', 'الإجمالي:', `${totalDebts.toLocaleString()} ر.س`]],
-          footStyles: { 
-            fillColor: [211, 84, 0],
-            textColor: [255, 255, 255],
-            halign: 'right',
-            fontStyle: 'bold',
-            fontSize: 11
-          },
-          theme: 'grid'
+        debtorInvoices.forEach((customer, index) => {
+          const bg = index % 2 === 0 ? '#fef5e7' : '#ffffff';
+          htmlContent += `
+            <tr style="background: ${bg};">
+              <td style="padding: 4px 4px; text-align: right; border: 1px solid #f5cba7;">${customer.customer_name || 'غير محدد'}</td>
+              <td style="padding: 4px 4px; text-align: center; border: 1px solid #f5cba7;">${customer.total_orders?.toString() || '0'}</td>
+              <td style="padding: 4px 4px; text-align: center; border: 1px solid #f5cba7; font-weight: 600;">${(customer.total_amount || 0).toLocaleString()} ر.س</td>
+              <td style="padding: 4px 4px; text-align: center; border: 1px solid #f5cba7;">${(customer.calculated_paid_amount || 0).toLocaleString()} ر.س</td>
+              <td style="padding: 4px 4px; text-align: center; border: 1px solid #f5cba7; font-weight: 700; color: #c0392b;">${(customer.remaining_amount || 0).toLocaleString()} ر.س</td>
+            </tr>
+          `;
         });
+
+        htmlContent += `
+              </tbody>
+            </table>
+            <div style="margin-top: 6px; text-align: left; font-size: 10px; color: #d35400; font-weight: 700;">
+              إجمالي المبالغ المستحقة: ${totalDebts.toLocaleString()} ر.س
+            </div>
+          </div>
+        `;
       }
 
-      doc.save(`تقرير_النظام_المحاسبي_${new Date().toLocaleDateString('ar-SA').replace(/\//g, '-')}.pdf`);
+      // تذييل التقرير
+      htmlContent += `
+        <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid #ecf0f1; text-align: center; color: #7f8c8d; font-size: 9px;">
+          <p style="margin: 0;">تم إنشاء هذا التقرير من نظام الحسابات - وكالة إبداع واحتراف للدعاية والإعلان</p>
+        </div>
+      </div>
+      `;
+
+      reportElement.innerHTML = htmlContent;
+      document.body.appendChild(reportElement);
+
+      // تحويل HTML إلى صورة عالية الجودة مع دعم كامل للعربية
+      const canvas = await html2canvas(reportElement, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+        width: reportElement.scrollWidth,
+        height: reportElement.scrollHeight,
+      });
+
+      document.body.removeChild(reportElement);
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+      });
+
+      const imgWidth = 210;
+      const pageHeight = 297;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      // الصفحة الأولى
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      // صفحات إضافية عند الحاجة (بحد أقصى 3 صفحات للحفاظ على تقرير مدمج)
+      let pageCount = 1;
+      while (heightLeft > 0 && pageCount < 3) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+        pageCount++;
+      }
+
+      pdf.save(`تقرير_النظام_المحاسبي_${dateStr.replace(/\//g, '-')}.pdf`);
       
       toast({
         title: "تم التصدير",
-        description: "تم تصدير التقرير الشامل إلى PDF بنجاح",
+        description: "تم تصدير التقرير الشامل إلى PDF بنجاح (مع دعم كامل للعربية)",
       });
     } catch (error) {
       console.error('Error exporting to PDF:', error);
