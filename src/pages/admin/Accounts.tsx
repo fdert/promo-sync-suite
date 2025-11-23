@@ -679,7 +679,7 @@ const Accounts = () => {
       
       // العنوان الرئيسي بخط أكبر ومحاذاة للوسط
       doc.setFontSize(20);
-      doc.setFont('helvetica', 'bold');
+      doc.setFont('Amiri', 'bold');
       doc.text('تقرير شامل للنظام المحاسبي', doc.internal.pageSize.width / 2, yPos, { 
         align: 'center',
         lang: 'ar',
@@ -688,7 +688,7 @@ const Accounts = () => {
       
       yPos += 8;
       doc.setFontSize(11);
-      doc.setFont('helvetica', 'normal');
+      doc.setFont('Amiri', 'normal');
       doc.text(`تاريخ التقرير: ${new Date().toLocaleDateString('ar-SA')}`, doc.internal.pageSize.width / 2, yPos, { 
         align: 'center',
         lang: 'ar'
@@ -698,7 +698,7 @@ const Accounts = () => {
 
       // ملخص الإيرادات والمصروفات
       doc.setFontSize(14);
-      doc.setFont('helvetica', 'bold');
+      doc.setFont('Amiri', 'bold');
       doc.text('الملخص المالي', doc.internal.pageSize.width - 14, yPos, { 
         align: 'right',
         lang: 'ar'
@@ -718,7 +718,7 @@ const Accounts = () => {
         head: [['البيان', 'القيمة']],
         body: summaryData,
         styles: { 
-          font: 'helvetica',
+          font: 'Amiri',
           fontStyle: 'normal',
           fontSize: 11,
           halign: 'right',
@@ -751,7 +751,7 @@ const Accounts = () => {
         yPos = 20;
       }
       doc.setFontSize(14);
-      doc.setFont('helvetica', 'bold');
+      doc.setFont('Amiri', 'bold');
       doc.text('الحسابات المحاسبية', doc.internal.pageSize.width - 14, yPos, { 
         align: 'right',
         lang: 'ar'
@@ -770,7 +770,7 @@ const Accounts = () => {
         head: [['اسم الحساب', 'نوع الحساب', 'رقم الحساب', 'الرصيد']],
         body: accountsData,
         styles: { 
-          font: 'helvetica',
+          font: 'Amiri',
           fontSize: 10,
           halign: 'right',
           cellPadding: 2.5,
@@ -801,7 +801,7 @@ const Accounts = () => {
         yPos = 20;
       }
       doc.setFontSize(14);
-      doc.setFont('helvetica', 'bold');
+      doc.setFont('Amiri', 'bold');
       doc.text('القيود المحاسبية (آخر 50 قيد)', doc.internal.pageSize.width - 14, yPos, { 
         align: 'right',
         lang: 'ar'
@@ -823,7 +823,7 @@ const Accounts = () => {
           head: [['الوصف', 'الحساب', 'النوع', 'التاريخ', 'مدين', 'دائن']],
           body: entriesData,
           styles: { 
-            font: 'helvetica',
+            font: 'Amiri',
             fontSize: 9,
             halign: 'right',
             cellPadding: 2,
@@ -854,7 +854,7 @@ const Accounts = () => {
           yPos = 20;
         }
         doc.setFontSize(14);
-        doc.setFont('helvetica', 'bold');
+        doc.setFont('Amiri', 'bold');
         doc.text('المصروفات (آخر 50 مصروف)', doc.internal.pageSize.width - 14, yPos, { 
           align: 'right',
           lang: 'ar'
@@ -874,7 +874,7 @@ const Accounts = () => {
           head: [['الوصف', 'الفئة', 'التاريخ', 'طريقة الدفع', 'المبلغ']],
           body: expensesData,
           styles: { 
-            font: 'helvetica',
+            font: 'Amiri',
             fontSize: 10,
             halign: 'right',
             cellPadding: 2.5,
@@ -905,7 +905,7 @@ const Accounts = () => {
           yPos = 20;
         }
         doc.setFontSize(14);
-        doc.setFont('helvetica', 'bold');
+        doc.setFont('Amiri', 'bold');
         doc.text('العملاء المدينون', doc.internal.pageSize.width - 14, yPos, { 
           align: 'right',
           lang: 'ar'
@@ -925,7 +925,7 @@ const Accounts = () => {
           head: [['اسم العميل', 'عدد الطلبات', 'إجمالي المبلغ', 'المبلغ المدفوع', 'المبلغ المستحق']],
           body: debtorsData,
           styles: { 
-            font: 'helvetica',
+            font: 'Amiri',
             fontSize: 10,
             halign: 'right',
             cellPadding: 2.5,
