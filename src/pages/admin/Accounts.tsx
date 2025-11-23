@@ -16,7 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
-import { amiriFont } from '@/lib/arabic-pdf-font';
+import { addArabicFont } from '@/lib/arabic-pdf-font';
 
 const Accounts = () => {
   const [accounts, setAccounts] = useState<any[]>([]);
@@ -667,9 +667,7 @@ const Accounts = () => {
       const doc = new jsPDF('p', 'mm', 'a4');
       
       // إضافة الخط العربي
-      doc.addFileToVFS('Amiri-Regular.ttf', amiriFont);
-      doc.addFont('Amiri-Regular.ttf', 'Amiri', 'normal');
-      doc.setFont('Amiri');
+      addArabicFont(doc);
       doc.setR2L(true);
 
       let yPos = 20;
