@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import { addArabicFont } from '@/lib/arabic-pdf-font';
 
 const Accounts = () => {
@@ -693,7 +693,7 @@ const Accounts = () => {
         ['عدد الحسابات النشطة', accounts.length.toString()],
       ];
 
-      (doc as any).autoTable({
+      autoTable(doc, {
         startY: yPos,
         head: [['البيان', 'القيمة']],
         body: summaryData,
@@ -720,7 +720,7 @@ const Accounts = () => {
         `${(acc.balance || 0).toLocaleString()} ر.س`
       ]);
 
-      (doc as any).autoTable({
+      autoTable(doc, {
         startY: yPos,
         head: [['اسم الحساب', 'نوع الحساب', 'رقم الحساب', 'الرصيد']],
         body: accountsData,
@@ -750,7 +750,7 @@ const Accounts = () => {
       ]);
 
       if (entriesData.length > 0) {
-        (doc as any).autoTable({
+        autoTable(doc, {
           startY: yPos,
           head: [['الوصف', 'الحساب', 'النوع', 'التاريخ', 'مدين', 'دائن']],
           body: entriesData,
@@ -777,7 +777,7 @@ const Accounts = () => {
           `${(exp.amount || 0).toLocaleString()} ر.س`
         ]);
 
-        (doc as any).autoTable({
+        autoTable(doc, {
           startY: yPos,
           head: [['الوصف', 'الفئة', 'التاريخ', 'طريقة الدفع', 'المبلغ']],
           body: expensesData,
@@ -804,7 +804,7 @@ const Accounts = () => {
           `${(customer.remaining_amount || 0).toLocaleString()} ر.س`
         ]);
 
-        (doc as any).autoTable({
+        autoTable(doc, {
           startY: yPos,
           head: [['اسم العميل', 'عدد الطلبات', 'إجمالي المبلغ', 'المبلغ المدفوع', 'المبلغ المستحق']],
           body: debtorsData,
