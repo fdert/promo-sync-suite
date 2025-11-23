@@ -750,7 +750,10 @@ ${index + 1}. *المبلغ:* ${payment.amount.toLocaleString()} ر.س
 
       const totalBalance = filteredData().reduce((sum, c) => sum + c.outstanding_balance, 0);
       const totalOrders = filteredData().reduce((sum, c) => sum + c.unpaid_invoices_count, 0);
-      const overdueOrders = filteredOrders().filter(order => order.days_overdue > 30);
+      
+      // استخدام الطلبات المفلترة بدلاً من جلبها مرة أخرى
+      const allOrders = filteredOrders();
+      const overdueOrders = allOrders.filter(order => order.days_overdue > 30);
 
       const htmlContent = `
         <!DOCTYPE html>
@@ -857,16 +860,56 @@ ${index + 1}. *المبلغ:* ${payment.amount.toLocaleString()} ر.س
             </div>
           </div>
 
-          <h2 class="section-title">تفاصيل العملاء المدينون (${filteredData().length} عميل)</h2>
+          <h2 class="section-title">تفاصيل الطلبات غير المسددة (${allOrders.length} طلب)</h2>
           <table>
             <thead>
               <tr>
                 <th>#</th>
                 <th>اسم العميل</th>
-                <th>المبلغ المستحق</th>
-                <th>عدد الطلبات</th>
                 <th>رقم الجوال</th>
-                <th>تاريخ الاستحقاق</th>
+                <th>رقم الطلب</th>
+                <th>تاريخ الطلب</th>
+                <th>المبلغ الإجمالي</th>
+                <th>المبلغ المدفوع</th>
+                <th>المبلغ المتبقي</th>
+                <th>مدة التأخير</th>
+                <th>الحالة</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${allOrders.map((order, index) => {
+                const customerPhone = customerBalances.find(c => c.customer_name === order.customer_name);
+                const phone = customerPhone ? customerPhones[customerPhone.customer_id] || '-' : '-';
+                return `
+                  <tr style="${order.days_overdue > 30 ? 'background: #ffebee;' : ''}">
+                    <td>${index + 1}</td>
+                    <td>${order.customer_name}</td>
+                    <td>${phone}</td>
+                    <td><strong>${order.order_number}</strong></td>
+                    <td>${order.due_date ? format(new Date(order.due_date), 'dd/MM/yyyy', { locale: ar }) : '-'}</td>
+                    <td>${order.total_amount.toLocaleString('ar-SA')} ر.س</td>
+                    <td>${order.paid_amount.toLocaleString('ar-SA')} ر.س</td>
+                    <td><strong>${order.remaining_amount.toLocaleString('ar-SA')} ر.س</strong></td>
+                    <td style="color: ${order.days_overdue > 30 ? '#d32f2f' : order.days_overdue > 0 ? '#f57c00' : '#388e3c'};">
+                      ${order.days_overdue > 0 ? `${order.days_overdue} يوم` : 'في الموعد'}
+                    </td>
+                    <td>${order.status}</td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+          
+          <h2 class="section-title">ملخص العملاء المدينون (${filteredData().length} عميل)</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>اسم العميل</th>
+                <th>رقم الجوال</th>
+                <th>إجمالي المبالغ المستحقة</th>
+                <th>عدد الطلبات</th>
+                <th>أقرب تاريخ استحقاق</th>
               </tr>
             </thead>
             <tbody>
@@ -874,42 +917,15 @@ ${index + 1}. *المبلغ:* ${payment.amount.toLocaleString()} ر.س
                 <tr>
                   <td>${index + 1}</td>
                   <td>${customer.customer_name}</td>
-                  <td>${customer.outstanding_balance.toLocaleString('ar-SA')} ر.س</td>
-                  <td>${customer.unpaid_invoices_count}</td>
                   <td>${customerPhones[customer.customer_id] || '-'}</td>
+                  <td><strong>${customer.outstanding_balance.toLocaleString('ar-SA')} ر.س</strong></td>
+                  <td>${customer.unpaid_invoices_count}</td>
                   <td>${customer.earliest_due_date ? format(new Date(customer.earliest_due_date), 'dd/MM/yyyy', { locale: ar }) : '-'}</td>
                 </tr>
               `).join('')}
             </tbody>
           </table>
 
-          ${overdueOrders.length > 0 ? `
-            <h2 class="section-title">الطلبات المتأخرة أكثر من 30 يوم (${overdueOrders.length} طلب)</h2>
-            <table>
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>رقم الطلب</th>
-                  <th>اسم العميل</th>
-                  <th>المبلغ المتبقي</th>
-                  <th>تاريخ الطلب</th>
-                  <th>أيام التأخير</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${overdueOrders.map((order, index) => `
-                  <tr>
-                    <td>${index + 1}</td>
-                    <td>${order.order_number}</td>
-                    <td>${order.customer_name}</td>
-                    <td>${order.remaining_amount.toLocaleString('ar-SA')} ر.س</td>
-                    <td>${order.due_date ? format(new Date(order.due_date), 'dd/MM/yyyy', { locale: ar }) : '-'}</td>
-                    <td>${order.days_overdue} يوم</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          ` : ''}
 
           <div style="margin-top: 40px; text-align: center; color: #7f8c8d; font-size: 12px;">
             <p>تم إنشاء هذا التقرير تلقائياً - ${format(new Date(), 'dd/MM/yyyy HH:mm', { locale: ar })}</p>

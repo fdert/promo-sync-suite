@@ -262,18 +262,35 @@ const AccountsReceivableReview = () => {
         return;
       }
 
-      // جلب الطلبات المتأخرة
+      // جلب جميع الطلبات غير المسددة مع تفاصيل العملاء
       const { data: ordersData } = await supabase
         .from('order_payment_summary')
-        .select('*')
-        .gt('balance', 0);
+        .select(`
+          order_id,
+          order_number,
+          customer_id,
+          customer_name,
+          total_amount,
+          paid_amount,
+          balance,
+          created_at,
+          status
+        `)
+        .gt('balance', 0)
+        .order('customer_name', { ascending: true });
       
-      const overdueOrders = ordersData?.filter(order => {
-        const dueDate = order.created_at ? new Date(order.created_at) : null;
-        if (!dueDate) return false;
-        const daysOverdue = differenceInDays(new Date(), dueDate);
-        return daysOverdue > 30;
-      }) || [];
+      // حساب معلومات الطلبات المتأخرة
+      const ordersWithDetails = (ordersData || []).map(order => {
+        const orderDate = order.created_at ? new Date(order.created_at) : null;
+        const daysOverdue = orderDate ? differenceInDays(new Date(), orderDate) : 0;
+        return {
+          ...order,
+          order_date: orderDate,
+          days_overdue: daysOverdue
+        };
+      });
+      
+      const overdueOrders = ordersWithDetails.filter(order => order.days_overdue > 30);
 
       const htmlContent = `
         <!DOCTYPE html>
@@ -380,16 +397,52 @@ const AccountsReceivableReview = () => {
             </div>
           </div>
 
-          <h2 class="section-title">تفاصيل العملاء المدينون (${customerBalances.length} عميل)</h2>
+          <h2 class="section-title">تفاصيل الطلبات غير المسددة (${ordersWithDetails.length} طلب)</h2>
           <table>
             <thead>
               <tr>
                 <th>#</th>
                 <th>اسم العميل</th>
-                <th>المبلغ المستحق</th>
-                <th>عدد الطلبات</th>
                 <th>رقم الجوال</th>
-                <th>تاريخ الاستحقاق</th>
+                <th>رقم الطلب</th>
+                <th>تاريخ الطلب</th>
+                <th>المبلغ الإجمالي</th>
+                <th>المبلغ المدفوع</th>
+                <th>المبلغ المتبقي</th>
+                <th>مدة التأخير</th>
+                <th>الحالة</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${ordersWithDetails.map((order, index) => `
+                <tr style="${order.days_overdue > 30 ? 'background: #ffebee;' : ''}">
+                  <td>${index + 1}</td>
+                  <td>${order.customer_name}</td>
+                  <td>${customerPhones[order.customer_id] || '-'}</td>
+                  <td><strong>${order.order_number}</strong></td>
+                  <td>${order.order_date ? format(order.order_date, 'dd/MM/yyyy', { locale: ar }) : '-'}</td>
+                  <td>${order.total_amount.toLocaleString('ar-SA')} ر.س</td>
+                  <td>${(order.paid_amount || 0).toLocaleString('ar-SA')} ر.س</td>
+                  <td><strong>${order.balance.toLocaleString('ar-SA')} ر.س</strong></td>
+                  <td style="color: ${order.days_overdue > 30 ? '#d32f2f' : order.days_overdue > 0 ? '#f57c00' : '#388e3c'};">
+                    ${order.days_overdue > 0 ? `${order.days_overdue} يوم` : 'في الموعد'}
+                  </td>
+                  <td>${order.status}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          
+          <h2 class="section-title">ملخص العملاء المدينون (${customerBalances.length} عميل)</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>اسم العميل</th>
+                <th>رقم الجوال</th>
+                <th>إجمالي المبالغ المستحقة</th>
+                <th>عدد الطلبات</th>
+                <th>أقرب تاريخ استحقاق</th>
               </tr>
             </thead>
             <tbody>
@@ -397,46 +450,15 @@ const AccountsReceivableReview = () => {
                 <tr>
                   <td>${index + 1}</td>
                   <td>${customer.customer_name}</td>
-                  <td>${customer.outstanding_balance.toLocaleString('ar-SA')} ر.س</td>
-                  <td>${customer.unpaid_invoices_count}</td>
                   <td>${customerPhones[customer.customer_id] || '-'}</td>
+                  <td><strong>${customer.outstanding_balance.toLocaleString('ar-SA')} ر.س</strong></td>
+                  <td>${customer.unpaid_invoices_count}</td>
                   <td>${customer.earliest_due_date ? format(new Date(customer.earliest_due_date), 'dd/MM/yyyy', { locale: ar }) : '-'}</td>
                 </tr>
               `).join('')}
             </tbody>
           </table>
 
-          ${overdueOrders.length > 0 ? `
-            <h2 class="section-title">الطلبات المتأخرة أكثر من 30 يوم (${overdueOrders.length} طلب)</h2>
-            <table>
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>رقم الطلب</th>
-                  <th>اسم العميل</th>
-                  <th>المبلغ المتبقي</th>
-                  <th>تاريخ الطلب</th>
-                  <th>أيام التأخير</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${overdueOrders.map((order, index) => {
-                  const dueDate = order.created_at ? new Date(order.created_at) : null;
-                  const daysOverdue = dueDate ? differenceInDays(new Date(), dueDate) : 0;
-                  return `
-                    <tr>
-                      <td>${index + 1}</td>
-                      <td>${order.order_number}</td>
-                      <td>${order.customer_name}</td>
-                      <td>${order.balance.toLocaleString('ar-SA')} ر.س</td>
-                      <td>${dueDate ? format(dueDate, 'dd/MM/yyyy', { locale: ar }) : '-'}</td>
-                      <td>${daysOverdue} يوم</td>
-                    </tr>
-                  `;
-                }).join('')}
-              </tbody>
-            </table>
-          ` : ''}
 
           <div style="margin-top: 40px; text-align: center; color: #7f8c8d; font-size: 12px;">
             <p>تم إنشاء هذا التقرير تلقائياً - ${format(new Date(), 'dd/MM/yyyy HH:mm', { locale: ar })}</p>
