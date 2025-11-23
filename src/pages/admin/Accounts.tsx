@@ -23,6 +23,7 @@ const Accounts = () => {
   const [expenses, setExpenses] = useState<any[]>([]);
   const [debtorInvoices, setDebtorInvoices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
   const [isAddAccountOpen, setIsAddAccountOpen] = useState(false);
   const [isAddEntryOpen, setIsAddEntryOpen] = useState(false);
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
@@ -663,6 +664,38 @@ const Accounts = () => {
   // تصدير جميع البيانات إلى PDF (مع دعم ممتاز للعربية عبر تحويل HTML إلى صورة)
   const exportAllDataToPDF = async () => {
     try {
+      setExporting(true);
+
+      // Get filtered date range from the current filter settings
+      const { start, end } = getDateRange(dateFilter.period, dateFilter.startDate, dateFilter.endDate);
+
+      // Filter all data based on selected date range
+      const filteredAccountsData = accounts.filter(account => {
+        if (!account.created_at) return true;
+        const accountDate = new Date(account.created_at);
+        return accountDate >= start && accountDate <= end;
+      });
+
+      const filteredEntriesData = accountEntries.filter(entry => {
+        if (!entry.entry_date && !entry.created_at) return true;
+        const entryDate = new Date(entry.entry_date || entry.created_at);
+        return entryDate >= start && entryDate <= end;
+      });
+
+      const filteredExpensesData = expenses.filter(expense => {
+        if (!expense.expense_date && !expense.created_at) return true;
+        const expenseDate = new Date(expense.expense_date || expense.created_at);
+        return expenseDate >= start && expenseDate <= end;
+      });
+
+      const filteredDebtorsData = debtorInvoices;
+
+      // Calculate totals from filtered data (use already filtered income)
+      const totalRevenue = filteredIncome || 0;
+      const totalExpenses = filteredExpensesData.reduce((sum, e) => sum + (e.amount || 0), 0);
+      const totalDebt = filteredDebtorsData.reduce((sum, d) => sum + (d.remaining_amount || 0), 0);
+      const netProfit = totalRevenue - totalExpenses;
+
       // إنشاء عنصر HTML مخفي يحتوي على التقرير الكامل بتنسيق عربي منسق
       const reportElement = document.createElement('div');
       reportElement.id = 'accounts-report-print';
@@ -679,12 +712,17 @@ const Accounts = () => {
       const reportDate = new Date();
       const dateStr = reportDate.toLocaleDateString('ar-SA');
       const timeStr = reportDate.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
+      const periodText = dateFilter.period === 'current_month' ? 'الشهر الحالي' :
+                         dateFilter.period === 'last_month' ? 'الشهر الماضي' :
+                         dateFilter.period === 'current_year' ? 'السنة الحالية' :
+                         `من ${start.toLocaleDateString('ar-SA')} إلى ${end.toLocaleDateString('ar-SA')}`;
 
       let htmlContent = `
         <div style="width: 100%; color: #2c3e50;">
           <div style="text-align: center; margin-bottom: 16px;">
             <h1 style="margin: 0 0 4px; font-size: 20px; font-weight: 800; letter-spacing: 0.5px;">تقرير شامل للنظام المحاسبي</h1>
             <p style="margin: 0; font-size: 11px; color: #7f8c8d;">تاريخ التقرير: ${dateStr} - الساعة: ${timeStr}</p>
+            <p style="margin: 4px 0 0; font-size: 12px; color: #3498db; font-weight: 600;">الفترة المختارة: ${periodText}</p>
           </div>
 
           <div style="margin-bottom: 16px; padding: 12px 14px; border-radius: 10px; border: 1px solid #ecf0f1; background: linear-gradient(135deg, #f8fafc, #ffffff); box-shadow: 0 4px 10px rgba(0,0,0,0.03);">
@@ -700,11 +738,13 @@ const Accounts = () => {
       `;
 
       const summaryRows = [
-        ['الإيرادات الشهرية', `${monthlyIncome.toLocaleString()} ر.س`],
-        ['المصروفات الشهرية', `${monthlyExpenses.toLocaleString()} ر.س`],
+        ['الإيرادات', `${totalRevenue.toLocaleString()} ر.س`],
+        ['المصروفات', `${totalExpenses.toLocaleString()} ر.س`],
         ['صافي الربح', `${netProfit.toLocaleString()} ر.س`],
-        ['إجمالي الديون', `${totalDebts.toLocaleString()} ر.س`],
-        ['عدد الحسابات النشطة', accounts.length.toString()],
+        ['إجمالي الديون', `${totalDebt.toLocaleString()} ر.س`],
+        ['عدد الحسابات', filteredAccountsData.length.toString()],
+        ['عدد القيود المحاسبية', filteredEntriesData.length.toString()],
+        ['عدد المصروفات', filteredExpensesData.length.toString()],
       ];
 
       summaryRows.forEach((row, index) => {
@@ -724,7 +764,7 @@ const Accounts = () => {
       `;
 
       // قسم الحسابات المحاسبية
-      if (accounts.length > 0) {
+      if (filteredAccountsData.length > 0) {
         htmlContent += `
           <div style="margin-bottom: 16px; padding: 10px 12px; border-radius: 10px; border: 1px solid #ecf0f1; background: #ffffff; box-shadow: 0 3px 8px rgba(0,0,0,0.02);">
             <h2 style="margin: 0 0 8px; font-size: 13px; font-weight: 700; color: #2c3e50;">الحسابات المحاسبية</h2>
@@ -740,7 +780,7 @@ const Accounts = () => {
               <tbody>
         `;
 
-        accounts.forEach((acc, index) => {
+        filteredAccountsData.forEach((acc, index) => {
           const bg = index % 2 === 0 ? '#fdfefe' : '#f8f9fa';
           htmlContent += `
             <tr style="background: ${bg};">
@@ -759,11 +799,11 @@ const Accounts = () => {
         `;
       }
 
-      // قسم القيود المحاسبية (آخر 50 قيد)
-      if (accountEntries.length > 0) {
+      // قسم القيود المحاسبية
+      if (filteredEntriesData.length > 0) {
         htmlContent += `
           <div style="margin-bottom: 16px; padding: 10px 12px; border-radius: 10px; border: 1px solid #ecf0f1; background: #ffffff; box-shadow: 0 3px 8px rgba(0,0,0,0.02);">
-            <h2 style="margin: 0 0 8px; font-size: 13px; font-weight: 700; color: #2c3e50;">القيود المحاسبية (آخر 50 قيد)</h2>
+            <h2 style="margin: 0 0 8px; font-size: 13px; font-weight: 700; color: #2c3e50;">القيود المحاسبية (${filteredEntriesData.length} قيد)</h2>
             <table style="width: 100%; border-collapse: collapse; font-size: 9px;">
               <thead>
                 <tr style="background: #2980b9; color: #ffffff;">
@@ -778,7 +818,7 @@ const Accounts = () => {
               <tbody>
         `;
 
-        accountEntries.slice(0, 50).forEach((entry, index) => {
+        filteredEntriesData.forEach((entry, index) => {
           const bg = index % 2 === 0 ? '#fdfefe' : '#f8f9fa';
           htmlContent += `
             <tr style="background: ${bg};">
@@ -799,11 +839,11 @@ const Accounts = () => {
         `;
       }
 
-      // قسم المصروفات (آخر 50 مصروف)
-      if (expenses.length > 0) {
+      // قسم المصروفات
+      if (filteredExpensesData.length > 0) {
         htmlContent += `
           <div style="margin-bottom: 16px; padding: 10px 12px; border-radius: 10px; border: 1px solid #ecf0f1; background: #ffffff; box-shadow: 0 3px 8px rgba(0,0,0,0.02);">
-            <h2 style="margin: 0 0 8px; font-size: 13px; font-weight: 700; color: #2c3e50;">المصروفات (آخر 50 مصروف)</h2>
+            <h2 style="margin: 0 0 8px; font-size: 13px; font-weight: 700; color: #2c3e50;">المصروفات (${filteredExpensesData.length} مصروف)</h2>
             <table style="width: 100%; border-collapse: collapse; font-size: 9px;">
               <thead>
                 <tr style="background: #c0392b; color: #ffffff;">
@@ -817,7 +857,7 @@ const Accounts = () => {
               <tbody>
         `;
 
-        expenses.slice(0, 50).forEach((exp, index) => {
+        filteredExpensesData.forEach((exp, index) => {
           const bg = index % 2 === 0 ? '#fdf2f2' : '#ffffff';
           htmlContent += `
             <tr style="background: ${bg};">
@@ -838,7 +878,7 @@ const Accounts = () => {
       }
 
       // قسم العملاء المدينين
-      if (debtorInvoices.length > 0) {
+      if (filteredDebtorsData.length > 0) {
         htmlContent += `
           <div style="margin-bottom: 8px; padding: 10px 12px; border-radius: 10px; border: 1px solid #ecf0f1; background: #ffffff; box-shadow: 0 3px 8px rgba(0,0,0,0.02);">
             <h2 style="margin: 0 0 8px; font-size: 13px; font-weight: 700; color: #2c3e50;">العملاء المدينون</h2>
@@ -855,7 +895,7 @@ const Accounts = () => {
               <tbody>
         `;
 
-        debtorInvoices.forEach((customer, index) => {
+        filteredDebtorsData.forEach((customer, index) => {
           const bg = index % 2 === 0 ? '#fef5e7' : '#ffffff';
           htmlContent += `
             <tr style="background: ${bg};">
@@ -872,7 +912,7 @@ const Accounts = () => {
               </tbody>
             </table>
             <div style="margin-top: 6px; text-align: left; font-size: 10px; color: #d35400; font-weight: 700;">
-              إجمالي المبالغ المستحقة: ${totalDebts.toLocaleString()} ر.س
+              إجمالي المبالغ المستحقة: ${totalDebt.toLocaleString()} ر.س
             </div>
           </div>
         `;
@@ -928,14 +968,17 @@ const Accounts = () => {
         pageCount++;
       }
 
-      pdf.save(`تقرير_النظام_المحاسبي_${dateStr.replace(/\//g, '-')}.pdf`);
+      const fileName = `تقرير_النظام_المحاسبي_${periodText.replace(/\s+/g, '_')}_${dateStr.replace(/\//g, '-')}.pdf`;
+      pdf.save(fileName);
       
+      setExporting(false);
       toast({
         title: "تم التصدير",
-        description: "تم تصدير التقرير الشامل إلى PDF بنجاح (مع دعم كامل للعربية)",
+        description: `تم تصدير تقرير ${periodText} إلى PDF بنجاح مع دعم كامل للعربية`,
       });
     } catch (error) {
       console.error('Error exporting to PDF:', error);
+      setExporting(false);
       toast({
         title: "خطأ",
         description: "حدث خطأ في تصدير التقرير إلى PDF",
@@ -947,21 +990,61 @@ const Accounts = () => {
   // تصدير جميع البيانات إلى Excel
   const exportAllDataToExcel = () => {
     try {
+      setExporting(true);
+
+      // Get filtered date range from the current filter settings
+      const { start, end } = getDateRange(dateFilter.period, dateFilter.startDate, dateFilter.endDate);
+
+      // Filter all data based on selected date range
+      const filteredAccountsData = accounts.filter(account => {
+        if (!account.created_at) return true;
+        const accountDate = new Date(account.created_at);
+        return accountDate >= start && accountDate <= end;
+      });
+
+      const filteredEntriesData = accountEntries.filter(entry => {
+        if (!entry.entry_date && !entry.created_at) return true;
+        const entryDate = new Date(entry.entry_date || entry.created_at);
+        return entryDate >= start && entryDate <= end;
+      });
+
+      const filteredExpensesData = expenses.filter(expense => {
+        if (!expense.expense_date && !expense.created_at) return true;
+        const expenseDate = new Date(expense.expense_date || expense.created_at);
+        return expenseDate >= start && expenseDate <= end;
+      });
+
+      const filteredDebtorsData = debtorInvoices;
+
+      // Calculate totals from filtered data
+      const totalRevenue = filteredIncome || 0;
+      const totalExpenses = filteredExpensesData.reduce((sum, e) => sum + (e.amount || 0), 0);
+      const totalDebt = filteredDebtorsData.reduce((sum, d) => sum + (d.remaining_amount || 0), 0);
+      const netProfit = totalRevenue - totalExpenses;
+
+      const periodText = dateFilter.period === 'current_month' ? 'الشهر الحالي' :
+                         dateFilter.period === 'last_month' ? 'الشهر الماضي' :
+                         dateFilter.period === 'current_year' ? 'السنة الحالية' :
+                         `من ${start.toLocaleDateString('ar-SA')} إلى ${end.toLocaleDateString('ar-SA')}`;
+
       const wb = XLSX.utils.book_new();
 
       // ورقة الملخص المالي
       const summaryData = [
-        { 'البيان': 'الإيرادات الشهرية', 'القيمة': `${monthlyIncome.toLocaleString()} ر.س` },
-        { 'البيان': 'المصروفات الشهرية', 'القيمة': `${monthlyExpenses.toLocaleString()} ر.س` },
+        { 'البيان': 'الفترة', 'القيمة': periodText },
+        { 'البيان': 'الإيرادات', 'القيمة': `${totalRevenue.toLocaleString()} ر.س` },
+        { 'البيان': 'المصروفات', 'القيمة': `${totalExpenses.toLocaleString()} ر.س` },
         { 'البيان': 'صافي الربح', 'القيمة': `${netProfit.toLocaleString()} ر.س` },
-        { 'البيان': 'إجمالي الديون', 'القيمة': `${totalDebts.toLocaleString()} ر.س` },
-        { 'البيان': 'عدد الحسابات النشطة', 'القيمة': accounts.length },
+        { 'البيان': 'إجمالي الديون', 'القيمة': `${totalDebt.toLocaleString()} ر.س` },
+        { 'البيان': 'عدد الحسابات', 'القيمة': filteredAccountsData.length },
+        { 'البيان': 'عدد القيود المحاسبية', 'القيمة': filteredEntriesData.length },
+        { 'البيان': 'عدد المصروفات', 'القيمة': filteredExpensesData.length },
       ];
       const wsSummary = XLSX.utils.json_to_sheet(summaryData);
       XLSX.utils.book_append_sheet(wb, wsSummary, 'الملخص المالي');
 
       // ورقة الحسابات
-      const accountsData = accounts.map(acc => ({
+      const accountsData = filteredAccountsData.map(acc => ({
         'اسم الحساب': acc.account_name,
         'نوع الحساب': acc.account_type,
         'رقم الحساب': acc.account_number,
@@ -969,7 +1052,7 @@ const Accounts = () => {
       }));
       
       // إضافة صف الإجمالي للحسابات
-      const totalBalance = accounts.reduce((sum, acc) => sum + (acc.balance || 0), 0);
+      const totalBalance = filteredAccountsData.reduce((sum, acc) => sum + (acc.balance || 0), 0);
       accountsData.push({
         'اسم الحساب': 'الإجمالي',
         'نوع الحساب': '',
@@ -982,8 +1065,8 @@ const Accounts = () => {
       XLSX.utils.book_append_sheet(wb, wsAccounts, 'الحسابات');
 
       // ورقة القيود المحاسبية
-      if (accountEntries.length > 0) {
-        const entriesData = accountEntries.map(entry => ({
+      if (filteredEntriesData.length > 0) {
+        const entriesData = filteredEntriesData.map(entry => ({
           'الوصف': entry.description || '',
           'اسم الحساب': entry.accounts?.account_name || '',
           'نوع المرجع': entry.reference_type || '',
@@ -993,8 +1076,8 @@ const Accounts = () => {
         }));
         
         // إضافة صف الإجمالي للقيود
-        const totalDebit = accountEntries.reduce((sum, entry) => sum + (entry.debit || 0), 0);
-        const totalCredit = accountEntries.reduce((sum, entry) => sum + (entry.credit || 0), 0);
+        const totalDebit = filteredEntriesData.reduce((sum, entry) => sum + (entry.debit || 0), 0);
+        const totalCredit = filteredEntriesData.reduce((sum, entry) => sum + (entry.credit || 0), 0);
         entriesData.push({
           'الوصف': 'الإجمالي',
           'اسم الحساب': '',
@@ -1010,8 +1093,8 @@ const Accounts = () => {
       }
 
       // ورقة المصروفات
-      if (expenses.length > 0) {
-        const expensesData = expenses.map(exp => ({
+      if (filteredExpensesData.length > 0) {
+        const expensesData = filteredExpensesData.map(exp => ({
           'الوصف': exp.description,
           'الفئة': exp.expense_type,
           'التاريخ': new Date(exp.expense_date).toLocaleDateString('ar-SA'),
@@ -1020,13 +1103,13 @@ const Accounts = () => {
         }));
         
         // إضافة صف الإجمالي للمصروفات
-        const totalExpenses = expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
+        const totalExpensesRow = filteredExpensesData.reduce((sum, exp) => sum + (exp.amount || 0), 0);
         expensesData.push({
           'الوصف': 'إجمالي المصروفات',
           'الفئة': '',
           'التاريخ': '',
           'طريقة الدفع': '',
-          'المبلغ (ر.س)': totalExpenses
+          'المبلغ (ر.س)': totalExpensesRow
         });
         
         const wsExpenses = XLSX.utils.json_to_sheet(expensesData);
@@ -1035,8 +1118,8 @@ const Accounts = () => {
       }
 
       // ورقة العملاء المدينون
-      if (debtorInvoices.length > 0) {
-        const debtorsData = debtorInvoices.map(customer => ({
+      if (filteredDebtorsData.length > 0) {
+        const debtorsData = filteredDebtorsData.map(customer => ({
           'اسم العميل': customer.customer_name || 'غير محدد',
           'عدد الطلبات': customer.total_orders || 0,
           'إجمالي المبلغ (ر.س)': customer.total_amount || 0,
@@ -1050,7 +1133,7 @@ const Accounts = () => {
           'عدد الطلبات': '',
           'إجمالي المبلغ (ر.س)': '',
           'المبلغ المدفوع (ر.س)': '',
-          'المبلغ المستحق (ر.س)': totalDebts
+          'المبلغ المستحق (ر.س)': totalDebt
         });
         
         const wsDebtors = XLSX.utils.json_to_sheet(debtorsData);
@@ -1058,14 +1141,18 @@ const Accounts = () => {
         XLSX.utils.book_append_sheet(wb, wsDebtors, 'العملاء المدينون');
       }
 
-      XLSX.writeFile(wb, `تقرير_النظام_المحاسبي_${new Date().toLocaleDateString('ar-SA').replace(/\//g, '-')}.xlsx`);
+      const dateStr = new Date().toLocaleDateString('ar-SA').replace(/\//g, '-');
+      const fileName = `تقرير_النظام_المحاسبي_${periodText.replace(/\s+/g, '_')}_${dateStr}.xlsx`;
+      XLSX.writeFile(wb, fileName);
       
+      setExporting(false);
       toast({
         title: "تم التصدير",
-        description: "تم تصدير التقرير الشامل إلى Excel بنجاح",
+        description: `تم تصدير تقرير ${periodText} إلى Excel بنجاح`,
       });
     } catch (error) {
       console.error('Error exporting to Excel:', error);
+      setExporting(false);
       toast({
         title: "خطأ",
         description: "حدث خطأ في تصدير التقرير إلى Excel",
