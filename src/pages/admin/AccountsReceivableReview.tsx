@@ -4,11 +4,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon, AlertTriangle, Users, DollarSign, FileText, TrendingDown, ClipboardList, Eye } from 'lucide-react';
+import { CalendarIcon, AlertTriangle, Users, DollarSign, FileText, TrendingDown, ClipboardList, Eye, Download, Printer, FileSpreadsheet } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { format, differenceInDays } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { toast } from '@/hooks/use-toast';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 
 interface CustomerBalance {
   customer_id: string;
@@ -69,6 +73,7 @@ const AccountsReceivableReview = () => {
   });
   const [loading, setLoading] = useState(true);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const [customerPhones, setCustomerPhones] = useState<Record<string, string>>({});
   
   // Outstanding balance WhatsApp template (from message_templates)
   const [outstandingTemplate, setOutstandingTemplate] = useState<string | null>(null);
@@ -105,6 +110,21 @@ const AccountsReceivableReview = () => {
         
         // جلب طلبات العملاء المدينون
         const customerIds = balancesData.map(customer => customer.customer_id).filter(Boolean);
+        
+        // جلب أرقام الجوال
+        const { data: customersData } = await supabase
+          .from('customers')
+          .select('id, whatsapp, phone')
+          .in('id', customerIds);
+        
+        if (customersData) {
+          const phonesMap: Record<string, string> = {};
+          customersData.forEach(customer => {
+            phonesMap[customer.id] = customer.whatsapp || customer.phone || '-';
+          });
+          setCustomerPhones(phonesMap);
+        }
+        
         await fetchCustomerOrders(customerIds);
         await fetchCustomerPayments(customerIds);
       }
@@ -233,6 +253,150 @@ const AccountsReceivableReview = () => {
     }
   };
 
+  const exportToPDF = async () => {
+    try {
+      const doc = new jsPDF();
+      
+      // عنوان التقرير
+      doc.text('تقرير أرصدة العملاء المدينون', 105, 15, { align: 'center' });
+      doc.setFontSize(10);
+      doc.text(`التاريخ: ${format(new Date(), 'dd/MM/yyyy', { locale: ar })}`, 105, 22, { align: 'center' });
+      
+      // ملخص الأرصدة
+      doc.setFontSize(12);
+      doc.text('ملخص الأرصدة', 14, 35);
+      
+      const summaryData = [
+        ['إجمالي الطلبات', `${accountingSummary.total_invoiced.toLocaleString()} ر.س`],
+        ['إجمالي المدفوعات', `${accountingSummary.total_paid.toLocaleString()} ر.س`],
+        ['المبلغ المستحق', `${accountingSummary.total_outstanding.toLocaleString()} ر.س`],
+        ['رصيد الحساب', `${accountingSummary.account_balance.toLocaleString()} ر.س`]
+      ];
+      
+      autoTable(doc, {
+        startY: 40,
+        head: [['البيان', 'المبلغ']],
+        body: summaryData,
+        theme: 'grid',
+        styles: { font: 'helvetica', halign: 'right' },
+        headStyles: { fillColor: [41, 128, 185] }
+      });
+      
+      // جلب الطلبات لحساب المتأخرة أكثر من شهر
+      const { data: ordersData } = await supabase
+        .from('order_payment_summary')
+        .select('*')
+        .gt('balance', 0);
+      
+      const overdueOrders = ordersData?.filter(order => {
+        const dueDate = order.created_at ? new Date(order.created_at) : null;
+        if (!dueDate) return false;
+        const daysOverdue = differenceInDays(new Date(), dueDate);
+        return daysOverdue > 30;
+      }) || [];
+      
+      // تفاصيل العملاء
+      doc.setFontSize(12);
+      const startY = (doc as any).lastAutoTable.finalY + 15;
+      doc.text(`تفاصيل العملاء المدينون (${customerBalances.length})`, 14, startY);
+      doc.text(`الطلبات المتأخرة أكثر من شهر: ${overdueOrders.length}`, 14, startY + 7);
+      
+      const customersTableData = customerBalances.map(customer => [
+        customer.customer_name,
+        `${customer.outstanding_balance.toLocaleString()} ر.س`,
+        String(customer.unpaid_invoices_count),
+        customerPhones[customer.customer_id] || '-',
+        customer.earliest_due_date ? format(new Date(customer.earliest_due_date), 'dd/MM/yyyy', { locale: ar }) : '-'
+      ]);
+      
+      autoTable(doc, {
+        startY: startY + 12,
+        head: [['اسم العميل', 'المبلغ المستحق', 'عدد الطلبات', 'رقم الجوال', 'تاريخ الاستحقاق']],
+        body: customersTableData,
+        theme: 'striped',
+        styles: { font: 'helvetica', halign: 'right', fontSize: 8 },
+        headStyles: { fillColor: [52, 152, 219] }
+      });
+      
+      doc.save(`تقرير_العملاء_المدينون_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+      toast({ title: 'تم التصدير بنجاح', description: 'تم تصدير التقرير إلى PDF' });
+    } catch (error) {
+      console.error('Error exporting to PDF:', error);
+      toast({ title: 'خطأ', description: 'فشل تصدير التقرير', variant: 'destructive' });
+    }
+  };
+
+  const exportToExcel = async () => {
+    try {
+      // جلب الطلبات المتأخرة
+      const { data: ordersData } = await supabase
+        .from('order_payment_summary')
+        .select('*')
+        .gt('balance', 0);
+      
+      const overdueOrders = ordersData?.filter(order => {
+        const dueDate = order.created_at ? new Date(order.created_at) : null;
+        if (!dueDate) return false;
+        const daysOverdue = differenceInDays(new Date(), dueDate);
+        return daysOverdue > 30;
+      }) || [];
+      
+      // ورقة الملخص
+      const summarySheet = XLSX.utils.aoa_to_sheet([
+        ['تقرير أرصدة العملاء المدينون'],
+        [`التاريخ: ${format(new Date(), 'dd/MM/yyyy', { locale: ar })}`],
+        [],
+        ['البيان', 'المبلغ'],
+        ['إجمالي الطلبات', accountingSummary.total_invoiced],
+        ['إجمالي المدفوعات', accountingSummary.total_paid],
+        ['المبلغ المستحق', accountingSummary.total_outstanding],
+        ['رصيد الحساب', accountingSummary.account_balance],
+        [],
+        ['إحصائيات'],
+        ['عدد العملاء المدينون', customerBalances.length],
+        ['الطلبات المتأخرة أكثر من شهر', overdueOrders.length]
+      ]);
+      
+      // ورقة تفاصيل العملاء
+      const customersData = customerBalances.map(customer => ({
+        'اسم العميل': customer.customer_name,
+        'المبلغ المستحق': customer.outstanding_balance,
+        'عدد الطلبات': customer.unpaid_invoices_count,
+        'رقم الجوال': customerPhones[customer.customer_id] || '-',
+        'أقرب استحقاق': customer.earliest_due_date ? format(new Date(customer.earliest_due_date), 'dd/MM/yyyy') : '-',
+        'آخر استحقاق': customer.latest_due_date ? format(new Date(customer.latest_due_date), 'dd/MM/yyyy') : '-'
+      }));
+      const customersSheet = XLSX.utils.json_to_sheet(customersData);
+      
+      // ورقة الطلبات المتأخرة
+      const overdueData = overdueOrders.map(order => {
+        const dueDate = order.created_at ? new Date(order.created_at) : null;
+        return {
+          'رقم الطلب': order.order_number,
+          'اسم العميل': order.customer_name,
+          'المبلغ الإجمالي': order.total_amount,
+          'المبلغ المدفوع': order.paid_amount || 0,
+          'المبلغ المتبقي': order.balance,
+          'تاريخ الطلب': dueDate ? format(dueDate, 'dd/MM/yyyy') : '-',
+          'أيام التأخير': dueDate ? differenceInDays(new Date(), dueDate) : 0
+        };
+      });
+      const overdueSheet = XLSX.utils.json_to_sheet(overdueData);
+      
+      // إنشاء الملف
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, summarySheet, 'الملخص');
+      XLSX.utils.book_append_sheet(workbook, customersSheet, 'تفاصيل العملاء');
+      XLSX.utils.book_append_sheet(workbook, overdueSheet, 'الطلبات المتأخرة');
+      
+      XLSX.writeFile(workbook, `تقرير_العملاء_المدينون_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+      toast({ title: 'تم التصدير بنجاح', description: 'تم تصدير التقرير إلى Excel' });
+    } catch (error) {
+      console.error('Error exporting to Excel:', error);
+      toast({ title: 'خطأ', description: 'فشل تصدير التقرير', variant: 'destructive' });
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -257,10 +421,20 @@ const AccountsReceivableReview = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-foreground">مراجعة العملاء المدينون</h1>
-        <Button onClick={syncAccountBalance} variant="outline">
-          <TrendingDown className="h-4 w-4 mr-2" />
-          مزامنة الأرصدة
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={exportToPDF} variant="outline" size="sm">
+            <Printer className="h-4 w-4 mr-2" />
+            تصدير PDF
+          </Button>
+          <Button onClick={exportToExcel} variant="outline" size="sm">
+            <FileSpreadsheet className="h-4 w-4 mr-2" />
+            تصدير Excel
+          </Button>
+          <Button onClick={syncAccountBalance} variant="outline" size="sm">
+            <TrendingDown className="h-4 w-4 mr-2" />
+            مزامنة الأرصدة
+          </Button>
+        </div>
       </div>
 
       {/* ملخص الحسابات */}

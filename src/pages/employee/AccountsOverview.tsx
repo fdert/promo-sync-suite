@@ -16,6 +16,9 @@ import { format, differenceInDays, startOfDay, endOfDay, startOfMonth, endOfMont
 import { ar } from 'date-fns/locale';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 
 interface CustomerBalance {
   customer_id: string;
@@ -63,6 +66,7 @@ const AccountsOverview = () => {
   const [customerPayments, setCustomerPayments] = useState<Record<string, PaymentDetails[]>>({});
   const [loading, setLoading] = useState(true);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const [customerPhones, setCustomerPhones] = useState<Record<string, string>>({});
   
   // Search and filter states
   const [searchTerm, setSearchTerm] = useState('');
@@ -110,6 +114,21 @@ const AccountsOverview = () => {
         
         // جلب طلبات العملاء المدينون
         const customerIds = balancesData.map(customer => customer.customer_id).filter(Boolean);
+        
+        // جلب أرقام الجوال
+        const { data: customersData } = await supabase
+          .from('customers')
+          .select('id, whatsapp, phone')
+          .in('id', customerIds);
+        
+        if (customersData) {
+          const phonesMap: Record<string, string> = {};
+          customersData.forEach(customer => {
+            phonesMap[customer.id] = customer.whatsapp || customer.phone || '-';
+          });
+          setCustomerPhones(phonesMap);
+        }
+        
         await fetchCustomerOrders(customerIds);
         await fetchCustomerPayments(customerIds);
       }
@@ -720,6 +739,125 @@ ${index + 1}. *المبلغ:* ${payment.amount.toLocaleString()} ر.س
     setShowSummaryDialog(true);
   };
 
+  const exportToPDF = async () => {
+    try {
+      const doc = new jsPDF();
+      
+      // عنوان التقرير
+      doc.text('تقرير أرصدة العملاء المدينون', 105, 15, { align: 'center' });
+      doc.setFontSize(10);
+      doc.text(`التاريخ: ${format(new Date(), 'dd/MM/yyyy', { locale: ar })}`, 105, 22, { align: 'center' });
+      
+      // إحصائيات عامة
+      const totalBalance = filteredData().reduce((sum, c) => sum + c.outstanding_balance, 0);
+      const totalOrders = filteredData().reduce((sum, c) => sum + c.unpaid_invoices_count, 0);
+      
+      const overdueOrders = filteredOrders().filter(order => order.days_overdue > 30);
+      
+      doc.setFontSize(12);
+      doc.text('ملخص الأرصدة', 14, 35);
+      
+      const summaryData = [
+        ['عدد العملاء المدينون', String(filteredData().length)],
+        ['إجمالي المبالغ المستحقة', `${totalBalance.toLocaleString()} ر.س`],
+        ['إجمالي الطلبات', String(totalOrders)],
+        ['الطلبات المتأخرة أكثر من شهر', String(overdueOrders.length)]
+      ];
+      
+      autoTable(doc, {
+        startY: 40,
+        head: [['البيان', 'القيمة']],
+        body: summaryData,
+        theme: 'grid',
+        styles: { font: 'helvetica', halign: 'right' },
+        headStyles: { fillColor: [41, 128, 185] }
+      });
+      
+      // تفاصيل العملاء
+      doc.setFontSize(12);
+      const startY = (doc as any).lastAutoTable.finalY + 15;
+      doc.text('تفاصيل العملاء المدينون', 14, startY);
+      
+      const customersTableData = filteredData().map(customer => [
+        customer.customer_name,
+        `${customer.outstanding_balance.toLocaleString()} ر.س`,
+        String(customer.unpaid_invoices_count),
+        customerPhones[customer.customer_id] || '-',
+        customer.earliest_due_date ? format(new Date(customer.earliest_due_date), 'dd/MM/yyyy', { locale: ar }) : '-'
+      ]);
+      
+      autoTable(doc, {
+        startY: startY + 5,
+        head: [['اسم العميل', 'المبلغ المستحق', 'عدد الطلبات', 'رقم الجوال', 'تاريخ الاستحقاق']],
+        body: customersTableData,
+        theme: 'striped',
+        styles: { font: 'helvetica', halign: 'right', fontSize: 8 },
+        headStyles: { fillColor: [52, 152, 219] }
+      });
+      
+      doc.save(`تقرير_العملاء_المدينون_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+      toast({ title: 'تم التصدير بنجاح', description: 'تم تصدير التقرير إلى PDF' });
+    } catch (error) {
+      console.error('Error exporting to PDF:', error);
+      toast({ title: 'خطأ', description: 'فشل تصدير التقرير', variant: 'destructive' });
+    }
+  };
+
+  const exportToExcel = async () => {
+    try {
+      const totalBalance = filteredData().reduce((sum, c) => sum + c.outstanding_balance, 0);
+      const totalOrders = filteredData().reduce((sum, c) => sum + c.unpaid_invoices_count, 0);
+      const overdueOrders = filteredOrders().filter(order => order.days_overdue > 30);
+      
+      // ورقة الملخص
+      const summarySheet = XLSX.utils.aoa_to_sheet([
+        ['تقرير أرصدة العملاء المدينون'],
+        [`التاريخ: ${format(new Date(), 'dd/MM/yyyy', { locale: ar })}`],
+        [],
+        ['البيان', 'القيمة'],
+        ['عدد العملاء المدينون', filteredData().length],
+        ['إجمالي المبالغ المستحقة', totalBalance],
+        ['إجمالي الطلبات', totalOrders],
+        ['الطلبات المتأخرة أكثر من شهر', overdueOrders.length]
+      ]);
+      
+      // ورقة تفاصيل العملاء
+      const customersData = filteredData().map(customer => ({
+        'اسم العميل': customer.customer_name,
+        'المبلغ المستحق': customer.outstanding_balance,
+        'عدد الطلبات': customer.unpaid_invoices_count,
+        'رقم الجوال': customerPhones[customer.customer_id] || '-',
+        'أقرب استحقاق': customer.earliest_due_date ? format(new Date(customer.earliest_due_date), 'dd/MM/yyyy') : '-',
+        'آخر استحقاق': customer.latest_due_date ? format(new Date(customer.latest_due_date), 'dd/MM/yyyy') : '-'
+      }));
+      const customersSheet = XLSX.utils.json_to_sheet(customersData);
+      
+      // ورقة الطلبات المتأخرة
+      const overdueData = overdueOrders.map(order => ({
+        'رقم الطلب': order.order_number,
+        'اسم العميل': order.customer_name,
+        'المبلغ الإجمالي': order.total_amount,
+        'المبلغ المدفوع': order.paid_amount || 0,
+        'المبلغ المتبقي': order.remaining_amount,
+        'تاريخ الطلب': order.due_date ? format(new Date(order.due_date), 'dd/MM/yyyy') : '-',
+        'أيام التأخير': order.days_overdue
+      }));
+      const overdueSheet = XLSX.utils.json_to_sheet(overdueData);
+      
+      // إنشاء الملف
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, summarySheet, 'الملخص');
+      XLSX.utils.book_append_sheet(workbook, customersSheet, 'تفاصيل العملاء');
+      XLSX.utils.book_append_sheet(workbook, overdueSheet, 'الطلبات المتأخرة');
+      
+      XLSX.writeFile(workbook, `تقرير_العملاء_المدينون_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+      toast({ title: 'تم التصدير بنجاح', description: 'تم تصدير التقرير إلى Excel' });
+    } catch (error) {
+      console.error('Error exporting to Excel:', error);
+      toast({ title: 'خطأ', description: 'فشل تصدير التقرير', variant: 'destructive' });
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -744,14 +882,25 @@ ${index + 1}. *المبلغ:* ${payment.amount.toLocaleString()} ر.س
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-foreground">العملاء المدينون</h1>
-        <Button 
-          onClick={handleProcessPendingMessages}
-          variant="outline"
-          className="flex items-center gap-2"
-        >
-          <MessageSquare className="h-4 w-4" />
-          إرسال الرسائل المعلقة
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={exportToPDF} variant="outline" size="sm">
+            <Printer className="h-4 w-4 mr-2" />
+            تصدير PDF
+          </Button>
+          <Button onClick={exportToExcel} variant="outline" size="sm">
+            <FileSpreadsheet className="h-4 w-4 mr-2" />
+            تصدير Excel
+          </Button>
+          <Button 
+            onClick={handleProcessPendingMessages}
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-2"
+          >
+            <MessageSquare className="h-4 w-4" />
+            إرسال الرسائل المعلقة
+          </Button>
+        </div>
       </div>
 
       {/* Search and Filter Controls */}
