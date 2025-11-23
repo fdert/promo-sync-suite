@@ -14,6 +14,9 @@ import { Plus, TrendingUp, TrendingDown, DollarSign, CreditCard, Receipt, Calend
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import { amiriFont } from '@/lib/arabic-pdf-font';
 
 const Accounts = () => {
   const [accounts, setAccounts] = useState<any[]>([]);
@@ -658,6 +661,309 @@ const Accounts = () => {
     }
   };
 
+  // تصدير جميع البيانات إلى PDF
+  const exportAllDataToPDF = () => {
+    try {
+      const doc = new jsPDF('p', 'mm', 'a4');
+      
+      // إضافة الخط العربي
+      doc.addFileToVFS('Amiri-Regular.ttf', amiriFont);
+      doc.addFont('Amiri-Regular.ttf', 'Amiri', 'normal');
+      doc.setFont('Amiri');
+      doc.setR2L(true);
+
+      let yPos = 20;
+      
+      // العنوان الرئيسي
+      doc.setFontSize(18);
+      doc.text('تقرير شامل للنظام المحاسبي', doc.internal.pageSize.width / 2, yPos, { align: 'center' });
+      yPos += 10;
+      doc.setFontSize(12);
+      doc.text(`تاريخ التقرير: ${new Date().toLocaleDateString('ar-SA')}`, doc.internal.pageSize.width / 2, yPos, { align: 'center' });
+      yPos += 15;
+
+      // ملخص الإيرادات والمصروفات
+      doc.setFontSize(14);
+      doc.text('الملخص المالي', 14, yPos);
+      yPos += 8;
+      
+      const summaryData = [
+        ['الإيرادات الشهرية', `${monthlyIncome.toLocaleString()} ر.س`],
+        ['المصروفات الشهرية', `${monthlyExpenses.toLocaleString()} ر.س`],
+        ['صافي الربح', `${netProfit.toLocaleString()} ر.س`],
+        ['إجمالي الديون', `${totalDebts.toLocaleString()} ر.س`],
+        ['عدد الحسابات النشطة', accounts.length.toString()],
+      ];
+
+      (doc as any).autoTable({
+        startY: yPos,
+        head: [['البيان', 'القيمة']],
+        body: summaryData,
+        styles: { font: 'Amiri', fontSize: 10, halign: 'right' },
+        headStyles: { fillColor: [52, 152, 219], textColor: 255, halign: 'right' },
+        margin: { left: 14, right: 14 },
+      });
+      
+      yPos = (doc as any).lastAutoTable.finalY + 15;
+
+      // الحسابات المحاسبية
+      if (yPos > 240) {
+        doc.addPage();
+        yPos = 20;
+      }
+      doc.setFontSize(14);
+      doc.text('الحسابات المحاسبية', 14, yPos);
+      yPos += 8;
+
+      const accountsData = accounts.map(acc => [
+        acc.account_name,
+        acc.account_type,
+        acc.account_number,
+        `${(acc.balance || 0).toLocaleString()} ر.س`
+      ]);
+
+      (doc as any).autoTable({
+        startY: yPos,
+        head: [['اسم الحساب', 'نوع الحساب', 'رقم الحساب', 'الرصيد']],
+        body: accountsData,
+        styles: { font: 'Amiri', fontSize: 9, halign: 'right' },
+        headStyles: { fillColor: [52, 152, 219], textColor: 255, halign: 'right' },
+        margin: { left: 14, right: 14 },
+      });
+
+      yPos = (doc as any).lastAutoTable.finalY + 15;
+
+      // القيود المحاسبية
+      if (yPos > 240 || accountEntries.length > 0) {
+        doc.addPage();
+        yPos = 20;
+      }
+      doc.setFontSize(14);
+      doc.text('القيود المحاسبية (آخر 50 قيد)', 14, yPos);
+      yPos += 8;
+
+      const entriesData = accountEntries.slice(0, 50).map(entry => [
+        entry.description || '',
+        entry.accounts?.account_name || '',
+        entry.reference_type || '',
+        entry.entry_date ? new Date(entry.entry_date).toLocaleDateString('ar-SA') : '',
+        entry.debit ? `${entry.debit.toLocaleString()} ر.س` : '-',
+        entry.credit ? `${entry.credit.toLocaleString()} ر.س` : '-'
+      ]);
+
+      if (entriesData.length > 0) {
+        (doc as any).autoTable({
+          startY: yPos,
+          head: [['الوصف', 'الحساب', 'النوع', 'التاريخ', 'مدين', 'دائن']],
+          body: entriesData,
+          styles: { font: 'Amiri', fontSize: 8, halign: 'right' },
+          headStyles: { fillColor: [52, 152, 219], textColor: 255, halign: 'right' },
+          margin: { left: 14, right: 14 },
+        });
+        yPos = (doc as any).lastAutoTable.finalY + 15;
+      }
+
+      // المصروفات
+      if (expenses.length > 0) {
+        doc.addPage();
+        yPos = 20;
+        doc.setFontSize(14);
+        doc.text('المصروفات (آخر 50 مصروف)', 14, yPos);
+        yPos += 8;
+
+        const expensesData = expenses.slice(0, 50).map(exp => [
+          exp.description,
+          exp.expense_type,
+          new Date(exp.expense_date).toLocaleDateString('ar-SA'),
+          exp.payment_method || '',
+          `${(exp.amount || 0).toLocaleString()} ر.س`
+        ]);
+
+        (doc as any).autoTable({
+          startY: yPos,
+          head: [['الوصف', 'الفئة', 'التاريخ', 'طريقة الدفع', 'المبلغ']],
+          body: expensesData,
+          styles: { font: 'Amiri', fontSize: 9, halign: 'right' },
+          headStyles: { fillColor: [231, 76, 60], textColor: 255, halign: 'right' },
+          margin: { left: 14, right: 14 },
+        });
+        yPos = (doc as any).lastAutoTable.finalY + 15;
+      }
+
+      // العملاء المدينون
+      if (debtorInvoices.length > 0) {
+        doc.addPage();
+        yPos = 20;
+        doc.setFontSize(14);
+        doc.text('العملاء المدينون', 14, yPos);
+        yPos += 8;
+
+        const debtorsData = debtorInvoices.map(customer => [
+          customer.customer_name || 'غير محدد',
+          customer.total_orders?.toString() || '0',
+          `${(customer.total_amount || 0).toLocaleString()} ر.س`,
+          `${(customer.calculated_paid_amount || 0).toLocaleString()} ر.س`,
+          `${(customer.remaining_amount || 0).toLocaleString()} ر.س`
+        ]);
+
+        (doc as any).autoTable({
+          startY: yPos,
+          head: [['اسم العميل', 'عدد الطلبات', 'إجمالي المبلغ', 'المبلغ المدفوع', 'المبلغ المستحق']],
+          body: debtorsData,
+          styles: { font: 'Amiri', fontSize: 9, halign: 'right' },
+          headStyles: { fillColor: [243, 156, 18], textColor: 255, halign: 'right' },
+          margin: { left: 14, right: 14 },
+          foot: [['', '', '', 'الإجمالي:', `${totalDebts.toLocaleString()} ر.س`]],
+          footStyles: { fillColor: [243, 156, 18], textColor: 255, halign: 'right', fontStyle: 'bold' },
+        });
+      }
+
+      doc.save(`تقرير_النظام_المحاسبي_${new Date().toLocaleDateString('ar-SA').replace(/\//g, '-')}.pdf`);
+      
+      toast({
+        title: "تم التصدير",
+        description: "تم تصدير التقرير الشامل إلى PDF بنجاح",
+      });
+    } catch (error) {
+      console.error('Error exporting to PDF:', error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ في تصدير التقرير إلى PDF",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // تصدير جميع البيانات إلى Excel
+  const exportAllDataToExcel = () => {
+    try {
+      const wb = XLSX.utils.book_new();
+
+      // ورقة الملخص المالي
+      const summaryData = [
+        { 'البيان': 'الإيرادات الشهرية', 'القيمة': `${monthlyIncome.toLocaleString()} ر.س` },
+        { 'البيان': 'المصروفات الشهرية', 'القيمة': `${monthlyExpenses.toLocaleString()} ر.س` },
+        { 'البيان': 'صافي الربح', 'القيمة': `${netProfit.toLocaleString()} ر.س` },
+        { 'البيان': 'إجمالي الديون', 'القيمة': `${totalDebts.toLocaleString()} ر.س` },
+        { 'البيان': 'عدد الحسابات النشطة', 'القيمة': accounts.length },
+      ];
+      const wsSummary = XLSX.utils.json_to_sheet(summaryData);
+      XLSX.utils.book_append_sheet(wb, wsSummary, 'الملخص المالي');
+
+      // ورقة الحسابات
+      const accountsData = accounts.map(acc => ({
+        'اسم الحساب': acc.account_name,
+        'نوع الحساب': acc.account_type,
+        'رقم الحساب': acc.account_number,
+        'الرصيد (ر.س)': acc.balance || 0
+      }));
+      
+      // إضافة صف الإجمالي للحسابات
+      const totalBalance = accounts.reduce((sum, acc) => sum + (acc.balance || 0), 0);
+      accountsData.push({
+        'اسم الحساب': 'الإجمالي',
+        'نوع الحساب': '',
+        'رقم الحساب': '',
+        'الرصيد (ر.س)': totalBalance
+      });
+      
+      const wsAccounts = XLSX.utils.json_to_sheet(accountsData);
+      wsAccounts['!cols'] = [{ wch: 30 }, { wch: 20 }, { wch: 15 }, { wch: 20 }];
+      XLSX.utils.book_append_sheet(wb, wsAccounts, 'الحسابات');
+
+      // ورقة القيود المحاسبية
+      if (accountEntries.length > 0) {
+        const entriesData = accountEntries.map(entry => ({
+          'الوصف': entry.description || '',
+          'اسم الحساب': entry.accounts?.account_name || '',
+          'نوع المرجع': entry.reference_type || '',
+          'التاريخ': entry.entry_date ? new Date(entry.entry_date).toLocaleDateString('ar-SA') : '',
+          'مدين (ر.س)': entry.debit || 0,
+          'دائن (ر.س)': entry.credit || 0
+        }));
+        
+        // إضافة صف الإجمالي للقيود
+        const totalDebit = accountEntries.reduce((sum, entry) => sum + (entry.debit || 0), 0);
+        const totalCredit = accountEntries.reduce((sum, entry) => sum + (entry.credit || 0), 0);
+        entriesData.push({
+          'الوصف': 'الإجمالي',
+          'اسم الحساب': '',
+          'نوع المرجع': '',
+          'التاريخ': '',
+          'مدين (ر.س)': totalDebit,
+          'دائن (ر.س)': totalCredit
+        });
+        
+        const wsEntries = XLSX.utils.json_to_sheet(entriesData);
+        wsEntries['!cols'] = [{ wch: 30 }, { wch: 25 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }];
+        XLSX.utils.book_append_sheet(wb, wsEntries, 'القيود المحاسبية');
+      }
+
+      // ورقة المصروفات
+      if (expenses.length > 0) {
+        const expensesData = expenses.map(exp => ({
+          'الوصف': exp.description,
+          'الفئة': exp.expense_type,
+          'التاريخ': new Date(exp.expense_date).toLocaleDateString('ar-SA'),
+          'طريقة الدفع': exp.payment_method || '',
+          'المبلغ (ر.س)': exp.amount || 0
+        }));
+        
+        // إضافة صف الإجمالي للمصروفات
+        const totalExpenses = expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
+        expensesData.push({
+          'الوصف': 'إجمالي المصروفات',
+          'الفئة': '',
+          'التاريخ': '',
+          'طريقة الدفع': '',
+          'المبلغ (ر.س)': totalExpenses
+        });
+        
+        const wsExpenses = XLSX.utils.json_to_sheet(expensesData);
+        wsExpenses['!cols'] = [{ wch: 30 }, { wch: 20 }, { wch: 15 }, { wch: 20 }, { wch: 15 }];
+        XLSX.utils.book_append_sheet(wb, wsExpenses, 'المصروفات');
+      }
+
+      // ورقة العملاء المدينون
+      if (debtorInvoices.length > 0) {
+        const debtorsData = debtorInvoices.map(customer => ({
+          'اسم العميل': customer.customer_name || 'غير محدد',
+          'عدد الطلبات': customer.total_orders || 0,
+          'إجمالي المبلغ (ر.س)': customer.total_amount || 0,
+          'المبلغ المدفوع (ر.س)': customer.calculated_paid_amount || 0,
+          'المبلغ المستحق (ر.س)': customer.remaining_amount || 0
+        }));
+        
+        // إضافة صف الإجمالي للديون
+        debtorsData.push({
+          'اسم العميل': 'إجمالي المبالغ المستحقة',
+          'عدد الطلبات': '',
+          'إجمالي المبلغ (ر.س)': '',
+          'المبلغ المدفوع (ر.س)': '',
+          'المبلغ المستحق (ر.س)': totalDebts
+        });
+        
+        const wsDebtors = XLSX.utils.json_to_sheet(debtorsData);
+        wsDebtors['!cols'] = [{ wch: 30 }, { wch: 15 }, { wch: 20 }, { wch: 20 }, { wch: 20 }];
+        XLSX.utils.book_append_sheet(wb, wsDebtors, 'العملاء المدينون');
+      }
+
+      XLSX.writeFile(wb, `تقرير_النظام_المحاسبي_${new Date().toLocaleDateString('ar-SA').replace(/\//g, '-')}.xlsx`);
+      
+      toast({
+        title: "تم التصدير",
+        description: "تم تصدير التقرير الشامل إلى Excel بنجاح",
+      });
+    } catch (error) {
+      console.error('Error exporting to Excel:', error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ في تصدير التقرير إلى Excel",
+        variant: "destructive",
+      });
+    }
+  };
+
   // تصدير العملاء المدينين إلى PDF - طريقة بسيطة
   const exportDebtorsToPDF = () => {
     try {
@@ -1139,6 +1445,22 @@ const Accounts = () => {
           <p className="text-muted-foreground">إدارة الحسابات والقيود المحاسبية</p>
         </div>
         <div className="flex gap-2">
+          <Button 
+            variant="default" 
+            onClick={exportAllDataToPDF}
+            className="gap-2"
+          >
+            <Download className="h-4 w-4" />
+            تصدير PDF
+          </Button>
+          <Button 
+            variant="default" 
+            onClick={exportAllDataToExcel}
+            className="gap-2"
+          >
+            <FileSpreadsheet className="h-4 w-4" />
+            تصدير Excel
+          </Button>
           {userRole === 'admin' && (
             <>
               <Button 
