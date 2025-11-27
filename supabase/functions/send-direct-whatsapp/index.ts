@@ -51,8 +51,27 @@ Deno.serve(async (req) => {
     const digitsOnly = raw.replace(/[^\d]/g, '');
     const toE164 = raw.startsWith('+') ? raw.replace(/[^\d+]/g, '') : `+${digitsOnly}`;
 
-    // Queue message only (no direct webhook calls here)
-    const { error: insertError, data } = await supabase
+    // جلب webhook نشط من نوع outgoing
+    const { data: webhookData } = await supabase
+      .from('webhook_settings')
+      .select('webhook_url, webhook_name')
+      .eq('webhook_type', 'outgoing')
+      .eq('is_active', true)
+      .limit(1)
+      .single();
+
+    if (!webhookData?.webhook_url) {
+      console.error('No active outgoing webhook found');
+      return new Response(
+        JSON.stringify({ success: false, error: 'No active webhook configured' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    }
+
+    console.log('Using webhook:', webhookData.webhook_name || 'Unknown');
+
+    // Queue message first
+    const { error: insertError, data: msgData } = await supabase
       .from('whatsapp_messages')
       .insert({
         from_number: 'system',
@@ -69,21 +88,95 @@ Deno.serve(async (req) => {
       console.error('Error saving message record:', insertError);
       return new Response(
         JSON.stringify({ success: false, error: 'DB insert failed', details: insertError.message }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }
 
-    // Best-effort trigger queue processor (non-blocking for client success)
-    try {
-      await supabase.functions.invoke('process-whatsapp-queue', { body: { trigger: 'send-direct-whatsapp' } });
-    } catch (e) {
-      console.warn('process-whatsapp-queue invocation failed (ignored):', e?.message || e);
-    }
+    console.log('Message queued with ID:', msgData?.id);
 
-    return new Response(
-      JSON.stringify({ success: true, status: 'queued', message_id: data?.id }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-    );
+    // إرسال فوري للـ webhook
+    try {
+      const payload = {
+        messaging_product: 'whatsapp',
+        to: toE164.replace('+', ''),
+        type: 'text',
+        text: { body: message },
+        phone: toE164,
+        phoneNumber: toE164,
+        message: message,
+        messageText: message,
+        notification_type: 'outstanding_balance',
+        message_type: 'outstanding_balance',
+        timestamp: Math.floor(Date.now() / 1000)
+      };
+
+      console.log('Sending to webhook:', webhookData.webhook_url);
+      const webhookResponse = await fetch(webhookData.webhook_url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const responseText = await webhookResponse.text();
+      console.log('Webhook response status:', webhookResponse.status, 'body:', responseText);
+
+      if (webhookResponse.ok) {
+        // تحديث حالة الرسالة إلى sent
+        await supabase
+          .from('whatsapp_messages')
+          .update({ status: 'sent', sent_at: new Date().toISOString() })
+          .eq('id', msgData.id);
+
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            status: 'sent', 
+            message_id: msgData.id,
+            webhook_name: webhookData.webhook_name 
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        );
+      } else {
+        // فشل الإرسال
+        await supabase
+          .from('whatsapp_messages')
+          .update({ 
+            status: 'failed', 
+            error_message: `Webhook failed: ${webhookResponse.status} - ${responseText}` 
+          })
+          .eq('id', msgData.id);
+
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: 'Webhook request failed',
+            http_status: webhookResponse.status,
+            response_body: responseText
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        );
+      }
+    } catch (webhookError: any) {
+      console.error('Webhook error:', webhookError);
+      
+      // تحديث حالة الرسالة إلى failed
+      await supabase
+        .from('whatsapp_messages')
+        .update({ 
+          status: 'failed', 
+          error_message: `Webhook error: ${webhookError.message}` 
+        })
+        .eq('id', msgData.id);
+
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Webhook error', 
+          details: webhookError.message 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    }
   } catch (error: any) {
     console.error('General error in send-direct-whatsapp:', error);
     return new Response(
