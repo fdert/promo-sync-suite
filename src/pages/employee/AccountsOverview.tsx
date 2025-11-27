@@ -503,20 +503,27 @@ ${index + 1}. *المبلغ:* ${payment.amount.toLocaleString()} ر.س
       
       const phone = customer.whatsapp || customer.phone;
 
-      // متغيرات القالب
+      // متغيرات القالب لتقرير المديونيات
       const templateVars = {
         customer_name: customer.name,
-        total_due: selectedCustomerData.outstanding_balance,
-        unpaid_count: selectedCustomerData.unpaid_invoices_count,
-        nearest_due_date: selectedCustomerData.earliest_due_date ? format(new Date(selectedCustomerData.earliest_due_date), 'dd/MM/yyyy', { locale: ar }) : null
+        report_date: format(new Date(), 'dd/MM/yyyy - HH:mm', { locale: ar }),
+        total_due: `${selectedCustomerData.outstanding_balance.toLocaleString()} ر.س`,
+        unpaid_orders_count: String(selectedCustomerData.unpaid_invoices_count),
+        earliest_due_date: selectedCustomerData.earliest_due_date
+          ? format(new Date(selectedCustomerData.earliest_due_date), 'dd/MM/yyyy', { locale: ar })
+          : 'غير محدد',
       };
 
-      // إرسال مباشر عبر Edge Function الموثوقة مع اختيار أفضل Webhook
-      const { data: functionData, error: functionError } = await supabase.functions.invoke('send-direct-whatsapp', {
+      const summary = summaryText || generateOutstandingSummary(selectedCustomerData);
+
+      // إرسال عبر الدالة الموحدة مع تحديد نوع الويب هوك للعملاء المدينين
+      const { data: functionData, error: functionError } = await supabase.functions.invoke('send-whatsapp-simple', {
         body: {
           phone,
-          message: summaryText,
-        }
+          message: summary,
+          webhook_type: 'outstanding_balance_report',
+          template_vars: templateVars,
+        },
       });
       
       if (functionError || (!functionData?.success && functionData?.status !== 'sent')) {
@@ -572,23 +579,28 @@ ${index + 1}. *المبلغ:* ${payment.amount.toLocaleString()} ر.س
       // إعداد التقرير المالي
       const summary = generateOutstandingSummary(customer);
 
-      // متغيرات القالب
+      // متغيرات القالب لتقرير المديونيات
       const templateVars = {
         customer_name: customerData.name,
-        total_due: customer.outstanding_balance,
-        unpaid_count: customer.unpaid_invoices_count,
-        nearest_due_date: customer.earliest_due_date ? format(new Date(customer.earliest_due_date), 'dd/MM/yyyy', { locale: ar }) : null
+        report_date: format(new Date(), 'dd/MM/yyyy - HH:mm', { locale: ar }),
+        total_due: `${customer.outstanding_balance.toLocaleString()} ر.س`,
+        unpaid_orders_count: String(customer.unpaid_invoices_count),
+        earliest_due_date: customer.earliest_due_date
+          ? format(new Date(customer.earliest_due_date), 'dd/MM/yyyy', { locale: ar })
+          : 'غير محدد',
       };
       
       console.log('📊 التقرير المالي جاهز للإرسال');
       console.log('📱 الرقم المستهدف:', phoneNumber);
       
-      // استدعاء edge function مع تحديد نوع الويب هوك للعملاء المدينين
-      const { data: functionData, error: functionError } = await supabase.functions.invoke('send-direct-whatsapp', {
+      // استدعاء edge function الموحدة مع تحديد نوع الويب هوك للعملاء المدينين
+      const { data: functionData, error: functionError } = await supabase.functions.invoke('send-whatsapp-simple', {
         body: {
           phone: phoneNumber,
           message: summary,
-        }
+          webhook_type: 'outstanding_balance_report',
+          template_vars: templateVars,
+        },
       });
       
       if (functionError || (!functionData?.success && functionData?.status !== 'sent')) {
