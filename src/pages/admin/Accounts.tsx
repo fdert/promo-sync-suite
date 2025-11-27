@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -669,12 +669,8 @@ const Accounts = () => {
       // Get filtered date range from the current filter settings
       const { start, end } = getDateRange(dateFilter.period, dateFilter.startDate, dateFilter.endDate);
 
-      // Filter all data based on selected date range
-      const filteredAccountsData = accounts.filter(account => {
-        if (!account.created_at) return true;
-        const accountDate = new Date(account.created_at);
-        return accountDate >= start && accountDate <= end;
-      });
+      // استخدام الحسابات مع الأرصدة المفلترة
+      const filteredAccountsData = accountsWithFilteredBalances || [];
 
       const filteredEntriesData = accountEntries.filter(entry => {
         if (!entry.entry_date && !entry.created_at) return true;
@@ -995,12 +991,8 @@ const Accounts = () => {
       // Get filtered date range from the current filter settings
       const { start, end } = getDateRange(dateFilter.period, dateFilter.startDate, dateFilter.endDate);
 
-      // Filter all data based on selected date range
-      const filteredAccountsData = accounts.filter(account => {
-        if (!account.created_at) return true;
-        const accountDate = new Date(account.created_at);
-        return accountDate >= start && accountDate <= end;
-      });
+      // استخدام الحسابات مع الأرصدة المفلترة بدلاً من فلترة الحسابات بناءً على تاريخ الإنشاء
+      const filteredAccountsData = accountsWithFilteredBalances || [];
 
       const filteredEntriesData = accountEntries.filter(entry => {
         if (!entry.entry_date && !entry.created_at) return true;
@@ -1616,8 +1608,43 @@ const Accounts = () => {
   const netProfit = (monthlyIncome || 0) - (monthlyExpenses || 0);
   const filteredNetProfit = (filteredIncome || 0) - (filteredExpenses || 0);
 
-  // تجميع الحسابات حسب النوع
-  const accountsByType = accounts.reduce((acc: Record<string, any[]>, account) => {
+  // فلترة القيود المحاسبية حسب الفترة الزمنية
+  const filteredAccountEntries = useMemo(() => {
+    if (!accountEntries || accountEntries.length === 0) return [];
+    
+    const { start, end } = getDateRange(dateFilter.period, dateFilter.startDate, dateFilter.endDate);
+    
+    return accountEntries.filter((entry: any) => {
+      if (!entry.entry_date && !entry.created_at) return true;
+      const entryDate = new Date(entry.entry_date || entry.created_at);
+      return entryDate >= start && entryDate <= end;
+    });
+  }, [accountEntries, dateFilter]);
+
+  // حساب أرصدة الحسابات بناءً على القيود المفلترة
+  const accountsWithFilteredBalances = useMemo(() => {
+    if (!accounts || accounts.length === 0) return [];
+    
+    return accounts.map((account: any) => {
+      // حساب الرصيد من القيود المفلترة حسب الفترة
+      const accountFilteredEntries = filteredAccountEntries.filter(
+        (entry: any) => entry.account_id === account.id
+      );
+      
+      const filteredBalance = accountFilteredEntries.reduce(
+        (sum, entry: any) => sum + (Number(entry.debit) || 0) - (Number(entry.credit) || 0),
+        0
+      );
+      
+      return {
+        ...account,
+        balance: filteredBalance // استخدام الرصيد المحسوب من الفترة المفلترة
+      };
+    });
+  }, [accounts, filteredAccountEntries]);
+
+  // تجميع الحسابات حسب النوع (مع الأرصدة المفلترة)
+  const accountsByType = accountsWithFilteredBalances.reduce((acc: Record<string, any[]>, account) => {
     if (!acc[account.account_type]) {
       acc[account.account_type] = [];
     }
