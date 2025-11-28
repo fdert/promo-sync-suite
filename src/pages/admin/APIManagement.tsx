@@ -323,7 +323,107 @@ export default function APIManagement() {
 
       <Card>
         <CardHeader>
-          <CardTitle>روابط API</CardTitle>
+          <CardTitle>API الطلبات - دليل الاستخدام</CardTitle>
+          <CardDescription>كيفية الاستعلام عن الطلبات وحالتها</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6">
+            <div className="p-4 bg-muted rounded-lg">
+              <h4 className="font-semibold mb-2">الرابط الأساسي</h4>
+              <code className="text-sm">
+                https://pqrzkfpowjutylegdcxj.supabase.co/functions/v1/api-orders
+              </code>
+            </div>
+
+            <div className="space-y-4">
+              <div className="border-r-4 border-primary pr-4">
+                <h4 className="font-semibold mb-2">1️⃣ الاستعلام عن جميع الطلبات</h4>
+                <code className="text-sm block bg-muted p-3 rounded mb-2">
+                  GET /api-orders
+                </code>
+                <p className="text-sm text-muted-foreground mb-2">معاملات اختيارية:</p>
+                <ul className="text-sm space-y-1 mr-4">
+                  <li>• <code>status</code> - تصفية حسب الحالة</li>
+                  <li>• <code>customer_id</code> - تصفية حسب العميل</li>
+                  <li>• <code>limit</code> - عدد النتائج (افتراضي: 50)</li>
+                  <li>• <code>offset</code> - بداية النتائج (للترقيم)</li>
+                </ul>
+                <div className="mt-2 p-2 bg-muted rounded">
+                  <p className="text-xs font-semibold mb-1">مثال:</p>
+                  <code className="text-xs">
+                    GET /api-orders?status=مكتمل&limit=20
+                  </code>
+                </div>
+              </div>
+
+              <div className="border-r-4 border-secondary pr-4">
+                <h4 className="font-semibold mb-2">2️⃣ الاستعلام عن طلب محدد</h4>
+                <code className="text-sm block bg-muted p-3 rounded mb-2">
+                  GET /api-orders/:id
+                </code>
+                <p className="text-sm text-muted-foreground">
+                  يرجع تفاصيل كاملة للطلب بما في ذلك البنود والدفعات
+                </p>
+                <div className="mt-2 p-2 bg-muted rounded">
+                  <p className="text-xs font-semibold mb-1">مثال:</p>
+                  <code className="text-xs">
+                    GET /api-orders/123e4567-e89b-12d3-a456-426614174000
+                  </code>
+                </div>
+              </div>
+
+              <div className="border-r-4 border-accent pr-4">
+                <h4 className="font-semibold mb-2">3️⃣ إنشاء طلب جديد</h4>
+                <code className="text-sm block bg-muted p-3 rounded mb-2">
+                  POST /api-orders
+                </code>
+                <p className="text-sm text-muted-foreground mb-2">البيانات المطلوبة:</p>
+                <pre className="text-xs bg-muted p-3 rounded overflow-x-auto">{`{
+  "customer_id": "uuid",
+  "service_type_id": "uuid",
+  "items": [
+    {
+      "item_name": "اسم الصنف",
+      "quantity": 1,
+      "unit_price": 100
+    }
+  ],
+  "notes": "ملاحظات اختيارية"
+}`}</pre>
+              </div>
+
+              <div className="border-r-4 border-muted pr-4">
+                <h4 className="font-semibold mb-2">4️⃣ تحديث حالة الطلب</h4>
+                <code className="text-sm block bg-muted p-3 rounded mb-2">
+                  PUT /api-orders/:id
+                </code>
+                <p className="text-sm text-muted-foreground mb-2">الحالات المتاحة:</p>
+                <div className="flex flex-wrap gap-2">
+                  <Badge>جديد</Badge>
+                  <Badge>مؤكد</Badge>
+                  <Badge>قيد التنفيذ</Badge>
+                  <Badge>قيد المراجعة</Badge>
+                  <Badge>جاهز للتسليم</Badge>
+                  <Badge>مكتمل</Badge>
+                  <Badge>ملغي</Badge>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 bg-primary/10 rounded-lg">
+              <h4 className="font-semibold mb-2">⚠️ مهم: رأس الطلب المطلوب</h4>
+              <p className="text-sm mb-2">يجب إرفاق مفتاح API في رأس جميع الطلبات:</p>
+              <code className="text-sm block bg-background p-2 rounded">
+                x-api-key: sk_your_api_key_here
+              </code>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>روابط API الأخرى</CardTitle>
           <CardDescription>نقاط الوصول المتاحة</CardDescription>
         </CardHeader>
         <CardContent>
