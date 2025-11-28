@@ -179,6 +179,12 @@ const menuItems = [
     allowedRoles: ['admin', 'manager'] as UserRole[],
   },
   {
+    title: "إدارة API",
+    icon: Cog,
+    href: "/admin/api-management",
+    allowedRoles: ['admin'] as UserRole[],
+  },
+  {
     title: "موقع الوكالة",
     icon: Building2,
     href: "/admin/website",
