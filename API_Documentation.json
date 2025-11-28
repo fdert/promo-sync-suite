@@ -1,0 +1,527 @@
+{
+  "info": {
+    "name": "نظام إدارة الطلبات - API",
+    "description": "توثيق API الخاص بنظام إدارة الطلبات والعملاء والمدفوعات",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "item": [
+    {
+      "name": "Orders - الطلبات",
+      "item": [
+        {
+          "name": "Get All Orders - جلب جميع الطلبات",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "YOUR_API_KEY_HERE",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://pqrzkfpowjutylegdcxj.supabase.co/functions/v1/api-orders?limit=50&offset=0&status=pending",
+              "protocol": "https",
+              "host": ["pqrzkfpowjutylegdcxj", "supabase", "co"],
+              "path": ["functions", "v1", "api-orders"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50",
+                  "description": "عدد النتائج"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "بداية النتائج"
+                },
+                {
+                  "key": "status",
+                  "value": "pending",
+                  "description": "حالة الطلب (اختياري)"
+                },
+                {
+                  "key": "customer_id",
+                  "value": "",
+                  "description": "معرف العميل (اختياري)",
+                  "disabled": true
+                },
+                {
+                  "key": "from_date",
+                  "value": "",
+                  "description": "من تاريخ (YYYY-MM-DD) (اختياري)",
+                  "disabled": true
+                },
+                {
+                  "key": "to_date",
+                  "value": "",
+                  "description": "إلى تاريخ (YYYY-MM-DD) (اختياري)",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Order by ID - جلب طلب محدد",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "YOUR_API_KEY_HERE",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://pqrzkfpowjutylegdcxj.supabase.co/functions/v1/api-orders/:order_id",
+              "protocol": "https",
+              "host": ["pqrzkfpowjutylegdcxj", "supabase", "co"],
+              "path": ["functions", "v1", "api-orders", ":order_id"],
+              "variable": [
+                {
+                  "key": "order_id",
+                  "value": "ORDER_UUID_HERE"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Order - إنشاء طلب جديد",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "YOUR_API_KEY_HERE",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_id\": \"CUSTOMER_UUID\",\n  \"service_type_id\": \"SERVICE_UUID\",\n  \"total_amount\": 500,\n  \"notes\": \"ملاحظات الطلب\",\n  \"status\": \"pending\",\n  \"items\": [\n    {\n      \"item_name\": \"خدمة طباعة\",\n      \"quantity\": 1,\n      \"unit_price\": 500,\n      \"description\": \"وصف الخدمة\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "https://pqrzkfpowjutylegdcxj.supabase.co/functions/v1/api-orders",
+              "protocol": "https",
+              "host": ["pqrzkfpowjutylegdcxj", "supabase", "co"],
+              "path": ["functions", "v1", "api-orders"]
+            }
+          }
+        },
+        {
+          "name": "Update Order - تحديث طلب",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "YOUR_API_KEY_HERE",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"مكتمل\",\n  \"notes\": \"تم تحديث الطلب\",\n  \"delivery_date\": \"2025-01-15\"\n}"
+            },
+            "url": {
+              "raw": "https://pqrzkfpowjutylegdcxj.supabase.co/functions/v1/api-orders/:order_id",
+              "protocol": "https",
+              "host": ["pqrzkfpowjutylegdcxj", "supabase", "co"],
+              "path": ["functions", "v1", "api-orders", ":order_id"],
+              "variable": [
+                {
+                  "key": "order_id",
+                  "value": "ORDER_UUID_HERE"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Order - حذف طلب",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "YOUR_API_KEY_HERE",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://pqrzkfpowjutylegdcxj.supabase.co/functions/v1/api-orders/:order_id",
+              "protocol": "https",
+              "host": ["pqrzkfpowjutylegdcxj", "supabase", "co"],
+              "path": ["functions", "v1", "api-orders", ":order_id"],
+              "variable": [
+                {
+                  "key": "order_id",
+                  "value": "ORDER_UUID_HERE"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Customers - العملاء",
+      "item": [
+        {
+          "name": "Get All Customers - جلب جميع العملاء",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "YOUR_API_KEY_HERE",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://pqrzkfpowjutylegdcxj.supabase.co/functions/v1/api-customers?limit=50&offset=0",
+              "protocol": "https",
+              "host": ["pqrzkfpowjutylegdcxj", "supabase", "co"],
+              "path": ["functions", "v1", "api-customers"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "البحث في الاسم أو الهاتف",
+                  "disabled": true
+                },
+                {
+                  "key": "is_active",
+                  "value": "true",
+                  "description": "العملاء النشطون فقط",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Customer by ID - جلب عميل محدد",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "YOUR_API_KEY_HERE",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://pqrzkfpowjutylegdcxj.supabase.co/functions/v1/api-customers/:customer_id",
+              "protocol": "https",
+              "host": ["pqrzkfpowjutylegdcxj", "supabase", "co"],
+              "path": ["functions", "v1", "api-customers", ":customer_id"],
+              "variable": [
+                {
+                  "key": "customer_id",
+                  "value": "CUSTOMER_UUID_HERE"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Customer - إنشاء عميل جديد",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "YOUR_API_KEY_HERE",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"اسم العميل\",\n  \"phone\": \"+966501234567\",\n  \"whatsapp\": \"+966501234567\",\n  \"email\": \"customer@example.com\",\n  \"address\": \"العنوان الكامل\",\n  \"city\": \"الرياض\",\n  \"area\": \"حي النخيل\",\n  \"notes\": \"ملاحظات العميل\"\n}"
+            },
+            "url": {
+              "raw": "https://pqrzkfpowjutylegdcxj.supabase.co/functions/v1/api-customers",
+              "protocol": "https",
+              "host": ["pqrzkfpowjutylegdcxj", "supabase", "co"],
+              "path": ["functions", "v1", "api-customers"]
+            }
+          }
+        },
+        {
+          "name": "Update Customer - تحديث عميل",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "YOUR_API_KEY_HERE",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"اسم العميل المحدث\",\n  \"phone\": \"+966501234567\",\n  \"notes\": \"ملاحظات محدثة\"\n}"
+            },
+            "url": {
+              "raw": "https://pqrzkfpowjutylegdcxj.supabase.co/functions/v1/api-customers/:customer_id",
+              "protocol": "https",
+              "host": ["pqrzkfpowjutylegdcxj", "supabase", "co"],
+              "path": ["functions", "v1", "api-customers", ":customer_id"],
+              "variable": [
+                {
+                  "key": "customer_id",
+                  "value": "CUSTOMER_UUID_HERE"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Payments - المدفوعات",
+      "item": [
+        {
+          "name": "Get All Payments - جلب جميع المدفوعات",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "YOUR_API_KEY_HERE",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://pqrzkfpowjutylegdcxj.supabase.co/functions/v1/api-payments?limit=50&offset=0",
+              "protocol": "https",
+              "host": ["pqrzkfpowjutylegdcxj", "supabase", "co"],
+              "path": ["functions", "v1", "api-payments"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                },
+                {
+                  "key": "customer_id",
+                  "value": "",
+                  "description": "معرف العميل",
+                  "disabled": true
+                },
+                {
+                  "key": "order_id",
+                  "value": "",
+                  "description": "معرف الطلب",
+                  "disabled": true
+                },
+                {
+                  "key": "payment_type",
+                  "value": "",
+                  "description": "نوع الدفع",
+                  "disabled": true
+                },
+                {
+                  "key": "from_date",
+                  "value": "",
+                  "description": "من تاريخ",
+                  "disabled": true
+                },
+                {
+                  "key": "to_date",
+                  "value": "",
+                  "description": "إلى تاريخ",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Payment - إنشاء دفعة جديدة",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "YOUR_API_KEY_HERE",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_id\": \"CUSTOMER_UUID\",\n  \"order_id\": \"ORDER_UUID\",\n  \"amount\": 500,\n  \"payment_type\": \"cash\",\n  \"payment_date\": \"2025-01-10\",\n  \"reference_number\": \"REF-123\",\n  \"notes\": \"ملاحظات الدفعة\"\n}"
+            },
+            "url": {
+              "raw": "https://pqrzkfpowjutylegdcxj.supabase.co/functions/v1/api-payments",
+              "protocol": "https",
+              "host": ["pqrzkfpowjutylegdcxj", "supabase", "co"],
+              "path": ["functions", "v1", "api-payments"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reports - التقارير",
+      "item": [
+        {
+          "name": "Orders Summary - ملخص الطلبات",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "YOUR_API_KEY_HERE",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://pqrzkfpowjutylegdcxj.supabase.co/functions/v1/api-reports?type=orders_summary&from_date=2025-01-01&to_date=2025-01-31",
+              "protocol": "https",
+              "host": ["pqrzkfpowjutylegdcxj", "supabase", "co"],
+              "path": ["functions", "v1", "api-reports"],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "orders_summary"
+                },
+                {
+                  "key": "from_date",
+                  "value": "2025-01-01"
+                },
+                {
+                  "key": "to_date",
+                  "value": "2025-01-31"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Payments Summary - ملخص المدفوعات",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "YOUR_API_KEY_HERE",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://pqrzkfpowjutylegdcxj.supabase.co/functions/v1/api-reports?type=payments_summary&from_date=2025-01-01&to_date=2025-01-31",
+              "protocol": "https",
+              "host": ["pqrzkfpowjutylegdcxj", "supabase", "co"],
+              "path": ["functions", "v1", "api-reports"],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "payments_summary"
+                },
+                {
+                  "key": "from_date",
+                  "value": "2025-01-01"
+                },
+                {
+                  "key": "to_date",
+                  "value": "2025-01-31"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Customers Balance - أرصدة العملاء",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "YOUR_API_KEY_HERE",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://pqrzkfpowjutylegdcxj.supabase.co/functions/v1/api-reports?type=customers_balance",
+              "protocol": "https",
+              "host": ["pqrzkfpowjutylegdcxj", "supabase", "co"],
+              "path": ["functions", "v1", "api-reports"],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "customers_balance"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Daily Summary - الملخص اليومي",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "YOUR_API_KEY_HERE",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://pqrzkfpowjutylegdcxj.supabase.co/functions/v1/api-reports?type=daily_summary",
+              "protocol": "https",
+              "host": ["pqrzkfpowjutylegdcxj", "supabase", "co"],
+              "path": ["functions", "v1", "api-reports"],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "daily_summary"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
