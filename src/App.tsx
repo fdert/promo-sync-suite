@@ -48,6 +48,7 @@ import ReviewsManagement from "./pages/admin/ReviewsManagement";
 import GoogleMapsIntegration from "./pages/admin/GoogleMapsIntegration";
 import BarcodeSettings from "./pages/admin/BarcodeSettings";
 import FollowUpSettings from "./pages/admin/FollowUpSettings";
+import APIManagement from "./pages/admin/APIManagement";
 import EvaluationAnalytics from "./pages/admin/EvaluationAnalytics";
 import FinancialMovements from "./pages/admin/FinancialMovements";
 import EmployeeFinancialMovements from "./pages/employee/FinancialMovements";
@@ -179,9 +180,14 @@ const App = () => (
                     <GoogleMapsIntegration />
                   </RoleProtectedRoute>
                 } />
-                <Route path="bulk-whatsapp" element={
+                 <Route path="bulk-whatsapp" element={
                    <RoleProtectedRoute allowedRoles={['admin', 'manager'] as any}>
                     <BulkWhatsApp />
+                  </RoleProtectedRoute>
+                } />
+                <Route path="api-management" element={
+                  <RoleProtectedRoute allowedRoles={['admin']}>
+                    <APIManagement />
                   </RoleProtectedRoute>
                 } />
                  <Route path="customer-groups" element={

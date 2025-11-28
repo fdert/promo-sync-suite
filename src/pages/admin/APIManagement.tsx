@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -56,6 +56,10 @@ export default function APIManagement() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchApiKeys();
+  }, []);
 
   const generateApiKey = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -167,238 +171,233 @@ export default function APIManagement() {
       });
   };
 
-  useState(() => {
-    fetchApiKeys();
-  });
-
   return (
     <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold">إدارة API</h1>
-            <p className="text-muted-foreground">
-              إدارة مفاتيح API للتكامل مع الأنظمة الخارجية
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={downloadPostmanCollection} variant="outline">
-              <Download className="ml-2 h-4 w-4" />
-              تنزيل Postman Collection
-            </Button>
-            <Button onClick={() => setShowCreateDialog(true)}>
-              <Plus className="ml-2 h-4 w-4" />
-              مفتاح جديد
-            </Button>
-          </div>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold">إدارة API</h1>
+          <p className="text-muted-foreground">
+            إدارة مفاتيح API للتكامل مع الأنظمة الخارجية
+          </p>
         </div>
-
-        <div className="grid gap-6 md:grid-cols-3">
-          <Card>
-            <CardHeader>
-              <CardTitle>الطلبات API</CardTitle>
-              <CardDescription>عدد الطلبات الكلي</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">-</div>
-              <p className="text-xs text-muted-foreground">متاح قريباً</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>المفاتيح النشطة</CardTitle>
-              <CardDescription>عدد المفاتيح الفعالة</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {apiKeys.filter(k => k.is_active).length}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>آخر استخدام</CardTitle>
-              <CardDescription>آخر طلب API</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">-</div>
-              <p className="text-xs text-muted-foreground">لا توجد طلبات</p>
-            </CardContent>
-          </Card>
+        <div className="flex gap-2">
+          <Button onClick={downloadPostmanCollection} variant="outline">
+            <Download className="ml-2 h-4 w-4" />
+            تنزيل Postman Collection
+          </Button>
+          <Button onClick={() => setShowCreateDialog(true)}>
+            <Plus className="ml-2 h-4 w-4" />
+            مفتاح جديد
+          </Button>
         </div>
+      </div>
 
+      <div className="grid gap-6 md:grid-cols-3">
         <Card>
           <CardHeader>
-            <CardTitle>مفاتيح API</CardTitle>
-            <CardDescription>
-              قائمة جميع مفاتيح API المنشأة
-            </CardDescription>
+            <CardTitle>الطلبات API</CardTitle>
+            <CardDescription>عدد الطلبات الكلي</CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>اسم المفتاح</TableHead>
-                  <TableHead>المفتاح</TableHead>
-                  <TableHead>الحالة</TableHead>
-                  <TableHead>آخر استخدام</TableHead>
-                  <TableHead>تاريخ الإنشاء</TableHead>
-                  <TableHead>الإجراءات</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center">
-                      جاري التحميل...
-                    </TableCell>
-                  </TableRow>
-                ) : apiKeys.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center">
-                      لا توجد مفاتيح API
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  apiKeys.map((key) => (
-                    <TableRow key={key.id}>
-                      <TableCell className="font-medium">{key.key_name}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <code className="text-sm">
-                            {visibleKeys[key.id]
-                              ? key.api_key
-                              : `${key.api_key.substring(0, 10)}...${key.api_key.substring(key.api_key.length - 4)}`}
-                          </code>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => toggleKeyVisibility(key.id)}
-                          >
-                            {visibleKeys[key.id] ? (
-                              <EyeOff className="h-4 w-4" />
-                            ) : (
-                              <Eye className="h-4 w-4" />
-                            )}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => copyToClipboard(key.api_key)}
-                          >
-                            <Copy className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={key.is_active ? 'default' : 'secondary'}>
-                          {key.is_active ? 'نشط' : 'معطل'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {key.last_used_at
-                          ? format(new Date(key.last_used_at), 'PPp', { locale: ar })
-                          : 'لم يستخدم بعد'}
-                      </TableCell>
-                      <TableCell>
-                        {format(new Date(key.created_at), 'PPp', { locale: ar })}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => deleteApiKey(key.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+            <div className="text-2xl font-bold">-</div>
+            <p className="text-xs text-muted-foreground">متاح قريباً</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>روابط API</CardTitle>
-            <CardDescription>نقاط الوصول المتاحة</CardDescription>
+            <CardTitle>المفاتيح النشطة</CardTitle>
+            <CardDescription>عدد المفاتيح الفعالة</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 border rounded-lg">
-                <div>
-                  <p className="font-medium">إدارة الطلبات</p>
-                  <code className="text-sm text-muted-foreground">
-                    https://pqrzkfpowjutylegdcxj.supabase.co/functions/v1/api-orders
-                  </code>
-                </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => window.open('https://pqrzkfpowjutylegdcxj.supabase.co/functions/api-orders/logs', '_blank')}
-                >
-                  <ExternalLink className="ml-2 h-4 w-4" />
-                  السجلات
-                </Button>
-              </div>
-
-              <div className="flex items-center justify-between p-3 border rounded-lg">
-                <div>
-                  <p className="font-medium">إدارة العملاء</p>
-                  <code className="text-sm text-muted-foreground">
-                    https://pqrzkfpowjutylegdcxj.supabase.co/functions/v1/api-customers
-                  </code>
-                </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => window.open('https://pqrzkfpowjutylegdcxj.supabase.co/functions/api-customers/logs', '_blank')}
-                >
-                  <ExternalLink className="ml-2 h-4 w-4" />
-                  السجلات
-                </Button>
-              </div>
-
-              <div className="flex items-center justify-between p-3 border rounded-lg">
-                <div>
-                  <p className="font-medium">إدارة المدفوعات</p>
-                  <code className="text-sm text-muted-foreground">
-                    https://pqrzkfpowjutylegdcxj.supabase.co/functions/v1/api-payments
-                  </code>
-                </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => window.open('https://pqrzkfpowjutylegdcxj.supabase.co/functions/api-payments/logs', '_blank')}
-                >
-                  <ExternalLink className="ml-2 h-4 w-4" />
-                  السجلات
-                </Button>
-              </div>
-
-              <div className="flex items-center justify-between p-3 border rounded-lg">
-                <div>
-                  <p className="font-medium">التقارير والإحصائيات</p>
-                  <code className="text-sm text-muted-foreground">
-                    https://pqrzkfpowjutylegdcxj.supabase.co/functions/v1/api-reports
-                  </code>
-                </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => window.open('https://pqrzkfpowjutylegdcxj.supabase.co/functions/api-reports/logs', '_blank')}
-                >
-                  <ExternalLink className="ml-2 h-4 w-4" />
-                  السجلات
-                </Button>
-              </div>
+            <div className="text-2xl font-bold">
+              {apiKeys.filter(k => k.is_active).length}
             </div>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>آخر استخدام</CardTitle>
+            <CardDescription>آخر طلب API</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">-</div>
+            <p className="text-xs text-muted-foreground">لا توجد طلبات</p>
+          </CardContent>
+        </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>مفاتيح API</CardTitle>
+          <CardDescription>
+            قائمة جميع مفاتيح API المنشأة
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>اسم المفتاح</TableHead>
+                <TableHead>المفتاح</TableHead>
+                <TableHead>الحالة</TableHead>
+                <TableHead>آخر استخدام</TableHead>
+                <TableHead>تاريخ الإنشاء</TableHead>
+                <TableHead>الإجراءات</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center">
+                    جاري التحميل...
+                  </TableCell>
+                </TableRow>
+              ) : apiKeys.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center">
+                    لا توجد مفاتيح API
+                  </TableCell>
+                </TableRow>
+              ) : (
+                apiKeys.map((key) => (
+                  <TableRow key={key.id}>
+                    <TableCell className="font-medium">{key.key_name}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <code className="text-sm">
+                          {visibleKeys[key.id]
+                            ? key.api_key
+                            : `${key.api_key.substring(0, 10)}...${key.api_key.substring(key.api_key.length - 4)}`}
+                        </code>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => toggleKeyVisibility(key.id)}
+                        >
+                          {visibleKeys[key.id] ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => copyToClipboard(key.api_key)}
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={key.is_active ? 'default' : 'secondary'}>
+                        {key.is_active ? 'نشط' : 'معطل'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {key.last_used_at
+                        ? format(new Date(key.last_used_at), 'PPp', { locale: ar })
+                        : 'لم يستخدم بعد'}
+                    </TableCell>
+                    <TableCell>
+                      {format(new Date(key.created_at), 'PPp', { locale: ar })}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => deleteApiKey(key.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>روابط API</CardTitle>
+          <CardDescription>نقاط الوصول المتاحة</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-3 border rounded-lg">
+              <div>
+                <p className="font-medium">إدارة الطلبات</p>
+                <code className="text-sm text-muted-foreground">
+                  https://pqrzkfpowjutylegdcxj.supabase.co/functions/v1/api-orders
+                </code>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => window.open('https://supabase.com/dashboard/project/pqrzkfpowjutylegdcxj/functions/api-orders/logs', '_blank')}
+              >
+                <ExternalLink className="ml-2 h-4 w-4" />
+                السجلات
+              </Button>
+            </div>
+
+            <div className="flex items-center justify-between p-3 border rounded-lg">
+              <div>
+                <p className="font-medium">إدارة العملاء</p>
+                <code className="text-sm text-muted-foreground">
+                  https://pqrzkfpowjutylegdcxj.supabase.co/functions/v1/api-customers
+                </code>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => window.open('https://supabase.com/dashboard/project/pqrzkfpowjutylegdcxj/functions/api-customers/logs', '_blank')}
+              >
+                <ExternalLink className="ml-2 h-4 w-4" />
+                السجلات
+              </Button>
+            </div>
+
+            <div className="flex items-center justify-between p-3 border rounded-lg">
+              <div>
+                <p className="font-medium">إدارة المدفوعات</p>
+                <code className="text-sm text-muted-foreground">
+                  https://pqrzkfpowjutylegdcxj.supabase.co/functions/v1/api-payments
+                </code>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => window.open('https://supabase.com/dashboard/project/pqrzkfpowjutylegdcxj/functions/api-payments/logs', '_blank')}
+              >
+                <ExternalLink className="ml-2 h-4 w-4" />
+                السجلات
+              </Button>
+            </div>
+
+            <div className="flex items-center justify-between p-3 border rounded-lg">
+              <div>
+                <p className="font-medium">التقارير والإحصائيات</p>
+                <code className="text-sm text-muted-foreground">
+                  https://pqrzkfpowjutylegdcxj.supabase.co/functions/v1/api-reports
+                </code>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => window.open('https://supabase.com/dashboard/project/pqrzkfpowjutylegdcxj/functions/api-reports/logs', '_blank')}
+              >
+                <ExternalLink className="ml-2 h-4 w-4" />
+                السجلات
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
         <DialogContent>
@@ -436,6 +435,6 @@ export default function APIManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </AdminLayout>
+    </div>
   );
 }
