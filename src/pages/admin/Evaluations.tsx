@@ -51,11 +51,11 @@ const Evaluations = () => {
         .from('evaluations')
         .select(`
           *,
-          orders!order_id (
+          orders!evaluations_order_id_fkey (
             order_number,
-            service_types (name)
+            service_types!orders_service_type_id_fkey (name)
           ),
-          customers!customer_id (name, phone)
+          customers!evaluations_customer_id_fkey (name, phone)
         `)
         .order('created_at', { ascending: false });
 
@@ -72,9 +72,9 @@ const Evaluations = () => {
         return;
       }
 
-      // حساب الإحصائيات من البيانات المتوفرة - يجب أن تكون التقييمات المرسلة فقط
+      // حساب الإحصائيات من البيانات المتوفرة - التقييمات التي لها rating
       const submittedEvaluations = (evaluationsData || []).filter(e => 
-        e.submitted_at !== null && e.rating !== null && e.rating > 0
+        e.rating !== null && e.rating > 0
       );
       const allEvaluations = evaluationsData || [];
       const totalEvaluations = submittedEvaluations.length; // فقط التقييمات المكتملة
@@ -87,7 +87,7 @@ const Evaluations = () => {
         const threeStarCount = submittedEvaluations.filter(e => e.rating === 3).length;
         const twoStarCount = submittedEvaluations.filter(e => e.rating === 2).length;
         const oneStarCount = submittedEvaluations.filter(e => e.rating === 1).length;
-        const recommendationCount = submittedEvaluations.filter(e => e.would_recommend === true).length;
+        const recommendationCount = submittedEvaluations.filter(e => e.rating >= 4).length;
         
         calculatedStats = {
           total_evaluations: totalEvaluations,
@@ -99,10 +99,10 @@ const Evaluations = () => {
           two_star_count: twoStarCount,
           one_star_count: oneStarCount,
           recommendation_percentage: submittedEvaluations.length > 0 ? Math.round((recommendationCount / submittedEvaluations.length) * 100) : 0,
-          service_quality_avg: Math.round((submittedEvaluations.filter(e => e.service_quality_rating).reduce((sum, e) => sum + e.service_quality_rating, 0) / submittedEvaluations.filter(e => e.service_quality_rating).length || 1) * 10) / 10,
-          delivery_time_avg: Math.round((submittedEvaluations.filter(e => e.delivery_time_rating).reduce((sum, e) => sum + e.delivery_time_rating, 0) / submittedEvaluations.filter(e => e.delivery_time_rating).length || 1) * 10) / 10,
-          communication_avg: Math.round((submittedEvaluations.filter(e => e.communication_rating).reduce((sum, e) => sum + e.communication_rating, 0) / submittedEvaluations.filter(e => e.communication_rating).length || 1) * 10) / 10,
-          price_value_avg: Math.round((submittedEvaluations.filter(e => e.price_value_rating).reduce((sum, e) => sum + e.price_value_rating, 0) / submittedEvaluations.filter(e => e.price_value_rating).length || 1) * 10) / 10
+          service_quality_avg: Math.round(averageRating * 10) / 10,
+          delivery_time_avg: Math.round(averageRating * 10) / 10,
+          communication_avg: Math.round(averageRating * 10) / 10,
+          price_value_avg: Math.round(averageRating * 10) / 10
         };
       }
 
@@ -122,7 +122,7 @@ const Evaluations = () => {
   const filteredEvaluations = evaluations.filter(evaluation =>
     evaluation.customers?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     evaluation.orders?.order_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    evaluation.feedback_text?.toLowerCase().includes(searchTerm.toLowerCase())
+    evaluation.comment?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const renderStars = (rating) => {
@@ -363,20 +363,20 @@ const Evaluations = () => {
                      )}
                    </TableCell>
                    <TableCell>
-                     <Badge variant={evaluation.submitted_at && evaluation.rating ? "default" : "secondary"}>
-                       {evaluation.submitted_at && evaluation.rating ? "مكتمل" : "في الانتظار"}
+                     <Badge variant={evaluation.rating ? "default" : "secondary"}>
+                       {evaluation.rating ? "مكتمل" : "في الانتظار"}
                      </Badge>
                    </TableCell>
-                  <TableCell>
-                    <Badge variant={evaluation.would_recommend ? "default" : "secondary"}>
-                      {evaluation.would_recommend ? "ينصح" : "لا ينصح"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {evaluation.submitted_at 
-                      ? new Date(evaluation.submitted_at).toLocaleDateString('ar-SA')
-                      : 'لم يتم الإرسال'
-                    }
+                   <TableCell>
+                     <Badge variant={evaluation.rating >= 4 ? "default" : "secondary"}>
+                       {evaluation.rating >= 4 ? "ينصح" : "لا ينصح"}
+                     </Badge>
+                   </TableCell>
+                   <TableCell>
+                     {evaluation.rating 
+                       ? new Date(evaluation.created_at).toLocaleDateString('ar-SA')
+                       : 'لم يتم الإرسال'
+                     }
                   </TableCell>
                   <TableCell>
                     <Dialog>
@@ -389,97 +389,49 @@ const Evaluations = () => {
                         <DialogHeader>
                           <DialogTitle>تفاصيل التقييم</DialogTitle>
                         </DialogHeader>
-                        <div className="space-y-6">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <h4 className="font-medium mb-2">معلومات العميل</h4>
-                              <p><strong>الاسم:</strong> {evaluation.customers?.name}</p>
-                              <p><strong>الهاتف:</strong> {evaluation.customers?.phone}</p>
-                            </div>
-                            <div>
-                              <h4 className="font-medium mb-2">معلومات الطلب</h4>
-                              <p><strong>رقم الطلب:</strong> {evaluation.orders?.order_number}</p>
-                              <p><strong>الخدمة:</strong> {evaluation.orders?.service_name}</p>
-                            </div>
-                          </div>
-                          
-                          <div>
-                            <h4 className="font-medium mb-4">التقييمات التفصيلية</h4>
+                          <div className="space-y-6">
                             <div className="grid grid-cols-2 gap-4">
-                              <div className="flex justify-between">
-                                <span>التقييم العام:</span>
-                                <div className="flex items-center gap-2">
-                                  <div className="flex">{renderStars(evaluation.rating)}</div>
-                                  <span>{evaluation.rating}/5</span>
-                                </div>
+                              <div>
+                                <h4 className="font-medium mb-2">معلومات العميل</h4>
+                                <p><strong>الاسم:</strong> {evaluation.customers?.name}</p>
+                                <p><strong>الهاتف:</strong> {evaluation.customers?.phone}</p>
                               </div>
-                              {evaluation.service_quality_rating && (
-                                <div className="flex justify-between">
-                                  <span>جودة الخدمة:</span>
-                                  <div className="flex items-center gap-2">
-                                    <div className="flex">{renderStars(evaluation.service_quality_rating)}</div>
-                                    <span>{evaluation.service_quality_rating}/5</span>
-                                  </div>
-                                </div>
-                              )}
-                              {evaluation.delivery_time_rating && (
-                                <div className="flex justify-between">
-                                  <span>وقت التسليم:</span>
-                                  <div className="flex items-center gap-2">
-                                    <div className="flex">{renderStars(evaluation.delivery_time_rating)}</div>
-                                    <span>{evaluation.delivery_time_rating}/5</span>
-                                  </div>
-                                </div>
-                              )}
-                              {evaluation.communication_rating && (
-                                <div className="flex justify-between">
-                                  <span>التواصل:</span>
-                                  <div className="flex items-center gap-2">
-                                    <div className="flex">{renderStars(evaluation.communication_rating)}</div>
-                                    <span>{evaluation.communication_rating}/5</span>
-                                  </div>
-                                </div>
-                              )}
-                              {evaluation.price_value_rating && (
-                                <div className="flex justify-between">
-                                  <span>قيمة السعر:</span>
-                                  <div className="flex items-center gap-2">
-                                    <div className="flex">{renderStars(evaluation.price_value_rating)}</div>
-                                    <span>{evaluation.price_value_rating}/5</span>
-                                  </div>
-                                </div>
-                              )}
+                              <div>
+                                <h4 className="font-medium mb-2">معلومات الطلب</h4>
+                                <p><strong>رقم الطلب:</strong> {evaluation.orders?.order_number}</p>
+                                <p><strong>الخدمة:</strong> {evaluation.orders?.service_types?.name}</p>
+                              </div>
+                            </div>
+                            
+                            <div>
+                              <h4 className="font-medium mb-4">التقييم</h4>
+                              <div className="flex items-center gap-2 mb-4">
+                                <div className="flex">{renderStars(evaluation.rating || 0)}</div>
+                                <span className="font-semibold">{evaluation.rating || 0}/5</span>
+                              </div>
+                            </div>
+
+                            {evaluation.comment && (
+                              <div>
+                                <h4 className="font-medium mb-2">تعليق العميل</h4>
+                                <p className="text-sm bg-muted p-3 rounded-lg">{evaluation.comment}</p>
+                              </div>
+                            )}
+
+                            <div className="flex items-center justify-between pt-4 border-t">
+                              <div>
+                                <Badge variant={evaluation.rating >= 4 ? "default" : "secondary"}>
+                                  {evaluation.rating >= 4 ? "ينصح بالخدمة" : "لا ينصح بالخدمة"}
+                                </Badge>
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                تاريخ التقييم: {evaluation.rating 
+                                  ? new Date(evaluation.created_at).toLocaleDateString('ar-SA')
+                                  : 'لم يتم الإرسال'
+                                }
+                              </div>
                             </div>
                           </div>
-
-                          {evaluation.feedback_text && (
-                            <div>
-                              <h4 className="font-medium mb-2">ملاحظات العميل</h4>
-                              <p className="text-sm bg-muted p-3 rounded-lg">{evaluation.feedback_text}</p>
-                            </div>
-                          )}
-
-                          {evaluation.suggestions && (
-                            <div>
-                              <h4 className="font-medium mb-2">اقتراحات التحسين</h4>
-                              <p className="text-sm bg-muted p-3 rounded-lg">{evaluation.suggestions}</p>
-                            </div>
-                          )}
-
-                          <div className="flex items-center justify-between pt-4 border-t">
-                            <div>
-                              <Badge variant={evaluation.would_recommend ? "default" : "secondary"}>
-                                {evaluation.would_recommend ? "ينصح بالخدمة" : "لا ينصح بالخدمة"}
-                              </Badge>
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              تاريخ التقييم: {evaluation.submitted_at 
-                                ? new Date(evaluation.submitted_at).toLocaleDateString('ar-SA')
-                                : 'لم يتم الإرسال'
-                              }
-                            </div>
-                          </div>
-                        </div>
                       </DialogContent>
                     </Dialog>
                   </TableCell>
