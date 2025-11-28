@@ -49,29 +49,41 @@ const EvaluationAnalytics = () => {
   const fetchEvaluationsData = async () => {
     try {
       setLoading(true);
+      console.log('🔍 جاري جلب بيانات التقييمات...');
       
       // جلب التقييمات المكتملة فقط (التي تم إرسالها من العملاء)
       const { data: evaluationsData, error } = await supabase
         .from('evaluations')
         .select(`
           *,
-          orders!order_id (order_number, total_amount, service_types(name)),
-          customers!customer_id (name)
+          orders!evaluations_order_id_fkey (
+            order_number,
+            total_amount,
+            service_types!orders_service_type_id_fkey (name)
+          ),
+          customers!evaluations_customer_id_fkey (name)
         `)
         .not('submitted_at', 'is', null)
         .not('rating', 'is', null)
         .order('submitted_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ خطأ في جلب التقييمات:', error);
+        throw error;
+      }
+
+      console.log('✅ تم جلب التقييمات بنجاح:', evaluationsData?.length || 0);
 
       const submitted = evaluationsData || [];
+      
+      console.log('📊 عدد التقييمات المكتملة:', submitted.length);
       
       // حساب الإحصائيات
       if (submitted.length > 0) {
         const avgRating = submitted.reduce((sum: number, e: any) => sum + (e.rating || 0), 0) / submitted.length;
         const recommendCount = submitted.filter((e: any) => e.would_recommend).length;
         
-        setStats({
+        const calculatedStats = {
           total: submitted.length,
           avgRating: Math.round(avgRating * 100) / 100,
           recommendPercentage: Math.round((recommendCount / submitted.length) * 100),
@@ -79,17 +91,25 @@ const EvaluationAnalytics = () => {
           avgDeliveryTime: Math.round((submitted.reduce((sum: number, e: any) => sum + (e.delivery_time_rating || 0), 0) / submitted.length) * 10) / 10,
           avgCommunication: Math.round((submitted.reduce((sum: number, e: any) => sum + (e.communication_rating || 0), 0) / submitted.length) * 10) / 10,
           avgPriceValue: Math.round((submitted.reduce((sum: number, e: any) => sum + (e.price_value_rating || 0), 0) / submitted.length) * 10) / 10,
-        });
+        };
+        
+        console.log('📈 الإحصائيات المحسوبة:', calculatedStats);
+        setStats(calculatedStats);
+      } else {
+        console.log('⚠️ لا توجد تقييمات مكتملة');
+        setStats(null);
       }
       
       setEvaluations(submitted);
-    } catch (error) {
-      console.error('Error:', error);
+    } catch (error: any) {
+      console.error('❌ خطأ في جلب البيانات:', error);
       toast({
-        title: "خطأ",
-        description: "حدث خطأ في جلب البيانات",
+        title: "خطأ في جلب البيانات",
+        description: error.message || "حدث خطأ في جلب التقييمات. يرجى المحاولة مرة أخرى.",
         variant: "destructive",
       });
+      setEvaluations([]);
+      setStats(null);
     } finally {
       setLoading(false);
     }
