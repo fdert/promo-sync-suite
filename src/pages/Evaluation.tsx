@@ -43,14 +43,14 @@ const Evaluation = () => {
         .from('evaluations')
         .select(`
           *,
-          orders!order_id (
+          orders!evaluations_order_id_fkey (
             order_number,
             notes,
             total_amount,
             delivery_date,
-            service_types!service_type_id (name)
+            service_types!orders_service_type_id_fkey (name)
           ),
-          customers!customer_id (
+          customers!evaluations_customer_id_fkey (
             name,
             phone,
             whatsapp
@@ -83,19 +83,19 @@ const Evaluation = () => {
         });
       }
       
-      // إذا كان التقييم مرسل بالفعل، اعرض حالة الإرسال
-      if (evaluationData.submitted_at) {
+      // إذا كان التقييم مرسل بالفعل (rating موجود)
+      if (evaluationData.rating !== null && evaluationData.rating > 0) {
         setSubmitted(true);
         setRatings({
           rating: evaluationData.rating,
-          service_quality_rating: evaluationData.service_quality_rating || 5,
-          delivery_time_rating: evaluationData.delivery_time_rating || 5,
-          communication_rating: evaluationData.communication_rating || 5,
-          price_value_rating: evaluationData.price_value_rating || 5,
+          service_quality_rating: evaluationData.rating,
+          delivery_time_rating: evaluationData.rating,
+          communication_rating: evaluationData.rating,
+          price_value_rating: evaluationData.rating,
         });
-        setFeedback(evaluationData.feedback_text || "");
-        setSuggestions(evaluationData.suggestions || "");
-        setWouldRecommend(evaluationData.would_recommend);
+        setFeedback(evaluationData.comment || "");
+        setSuggestions("");
+        setWouldRecommend(evaluationData.rating >= 4);
       }
     } catch (error) {
       console.error('Error:', error);
@@ -114,14 +114,12 @@ const Evaluation = () => {
       console.log('Ratings:', ratings);
       console.log('Feedback:', feedback);
 
+      // تحديث التقييم باستخدام الأعمدة الموجودة فقط (rating و comment)
       const { error } = await supabase
         .from('evaluations')
         .update({
-          ...ratings,
-          feedback_text: feedback,
-          suggestions: suggestions,
-          would_recommend: wouldRecommend,
-          submitted_at: new Date().toISOString(),
+          rating: ratings.rating,
+          comment: feedback || suggestions || null,
         })
         .eq('evaluation_token', token);
 
