@@ -43,14 +43,14 @@ const Evaluation = () => {
         .from('evaluations')
         .select(`
           *,
-          orders!evaluations_order_id_fkey (
+          orders (
             order_number,
             notes,
             total_amount,
             delivery_date,
-            service_types!orders_service_type_id_fkey (name)
+            service_types (name)
           ),
-          customers!evaluations_customer_id_fkey (
+          customers (
             name,
             phone,
             whatsapp

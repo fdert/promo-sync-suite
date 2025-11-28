@@ -56,12 +56,12 @@ const EvaluationAnalytics = () => {
         .from('evaluations')
         .select(`
           *,
-          orders!evaluations_order_id_fkey (
+          orders (
             order_number,
             total_amount,
-            service_types!orders_service_type_id_fkey (name)
+            service_types (name)
           ),
-          customers!evaluations_customer_id_fkey (name)
+          customers (name)
         `)
         .not('rating', 'is', null)
         .order('created_at', { ascending: false });
