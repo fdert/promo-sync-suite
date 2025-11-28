@@ -51,7 +51,7 @@ const EvaluationAnalytics = () => {
       setLoading(true);
       console.log('🔍 جاري جلب بيانات التقييمات...');
       
-      // جلب التقييمات المكتملة فقط (التي تم إرسالها من العملاء)
+      // جلب التقييمات التي تم تقييمها (rating موجود)
       const { data: evaluationsData, error } = await supabase
         .from('evaluations')
         .select(`
@@ -63,9 +63,8 @@ const EvaluationAnalytics = () => {
           ),
           customers!evaluations_customer_id_fkey (name)
         `)
-        .not('submitted_at', 'is', null)
         .not('rating', 'is', null)
-        .order('submitted_at', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (error) {
         console.error('❌ خطأ في جلب التقييمات:', error);
@@ -78,19 +77,20 @@ const EvaluationAnalytics = () => {
       
       console.log('📊 عدد التقييمات المكتملة:', submitted.length);
       
-      // حساب الإحصائيات
+      // حساب الإحصائيات - استخدام البيانات الحالية
       if (submitted.length > 0) {
+        // استخدام rating الموجود و comment كـ feedback_text
         const avgRating = submitted.reduce((sum: number, e: any) => sum + (e.rating || 0), 0) / submitted.length;
-        const recommendCount = submitted.filter((e: any) => e.would_recommend).length;
+        const recommendCount = submitted.filter((e: any) => e.rating >= 4).length; // اعتبار 4+ كتوصية
         
         const calculatedStats = {
           total: submitted.length,
           avgRating: Math.round(avgRating * 100) / 100,
           recommendPercentage: Math.round((recommendCount / submitted.length) * 100),
-          avgServiceQuality: Math.round((submitted.reduce((sum: number, e: any) => sum + (e.service_quality_rating || 0), 0) / submitted.length) * 10) / 10,
-          avgDeliveryTime: Math.round((submitted.reduce((sum: number, e: any) => sum + (e.delivery_time_rating || 0), 0) / submitted.length) * 10) / 10,
-          avgCommunication: Math.round((submitted.reduce((sum: number, e: any) => sum + (e.communication_rating || 0), 0) / submitted.length) * 10) / 10,
-          avgPriceValue: Math.round((submitted.reduce((sum: number, e: any) => sum + (e.price_value_rating || 0), 0) / submitted.length) * 10) / 10,
+          avgServiceQuality: avgRating, // مؤقتاً حتى يتم إضافة الأعمدة
+          avgDeliveryTime: avgRating,
+          avgCommunication: avgRating,
+          avgPriceValue: avgRating,
         };
         
         console.log('📈 الإحصائيات المحسوبة:', calculatedStats);
@@ -119,16 +119,16 @@ const EvaluationAnalytics = () => {
     try {
       setAnalyzing(true);
       
-      // إعداد البيانات للتحليل
+      // إعداد البيانات للتحليل - استخدام الحقول الموجودة
       const analysisData = evaluations.map((e: any) => ({
         rating: e.rating,
-        service_quality: e.service_quality_rating,
-        delivery_time: e.delivery_time_rating,
-        communication: e.communication_rating,
-        price_value: e.price_value_rating,
-        would_recommend: e.would_recommend,
-        feedback: e.feedback_text,
-        suggestions: e.suggestions,
+        service_quality: e.rating, // مؤقتاً
+        delivery_time: e.rating,
+        communication: e.rating,
+        price_value: e.rating,
+        would_recommend: e.rating >= 4,
+        feedback: e.comment || '',
+        suggestions: '',
       }));
 
       const { data, error } = await supabase.functions.invoke('analyze-evaluations', {
@@ -321,11 +321,11 @@ const EvaluationAnalytics = () => {
                         {renderStars(evaluation.rating)}
                       </div>
                     </div>
-                    {evaluation.feedback_text && (
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {evaluation.feedback_text}
-                      </p>
-                    )}
+                   {evaluation.comment && (
+                    <p className="text-sm text-muted-foreground line-clamp-2">
+                      {evaluation.comment}
+                    </p>
+                  )}
                   </div>
                 ))}
               </CardContent>
@@ -373,19 +373,19 @@ const EvaluationAnalytics = () => {
                       التعليقات الإيجابية
                     </h3>
                     <div className="space-y-3">
-                      {evaluations
-                        .filter((e: any) => e.rating >= 4 && e.feedback_text)
-                        .slice(0, 3)
-                        .map((evaluation: any, idx) => (
+                 {evaluations
+                  .filter((e: any) => e.rating >= 4 && e.comment)
+                  .slice(0, 3)
+                  .map((evaluation: any, idx) => (
                           <Card key={idx}>
                             <CardContent className="p-4">
                               <div className="flex items-center gap-2 mb-2">
                                 <Badge variant="default">{evaluation.rating}/5</Badge>
                                 <span className="text-sm font-medium">{evaluation.customers?.name}</span>
                               </div>
-                              <p className="text-sm text-muted-foreground">
-                                {evaluation.feedback_text}
-                              </p>
+                            <p className="text-sm text-muted-foreground">
+                              {evaluation.comment}
+                            </p>
                             </CardContent>
                           </Card>
                         ))}
@@ -398,19 +398,19 @@ const EvaluationAnalytics = () => {
                       التعليقات السلبية
                     </h3>
                     <div className="space-y-3">
-                      {evaluations
-                        .filter((e: any) => e.rating <= 3 && e.feedback_text)
-                        .slice(0, 3)
-                        .map((evaluation: any, idx) => (
+                   {evaluations
+                    .filter((e: any) => e.rating <= 3 && e.comment)
+                    .slice(0, 3)
+                    .map((evaluation: any, idx) => (
                           <Card key={idx}>
                             <CardContent className="p-4">
                               <div className="flex items-center gap-2 mb-2">
                                 <Badge variant="destructive">{evaluation.rating}/5</Badge>
                                 <span className="text-sm font-medium">{evaluation.customers?.name}</span>
                               </div>
-                              <p className="text-sm text-muted-foreground">
-                                {evaluation.feedback_text}
-                              </p>
+                            <p className="text-sm text-muted-foreground">
+                              {evaluation.comment}
+                            </p>
                             </CardContent>
                           </Card>
                         ))}
