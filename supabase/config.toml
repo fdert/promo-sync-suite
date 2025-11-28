@@ -1,5 +1,17 @@
 project_id = "pqrzkfpowjutylegdcxj"
 
+[functions.api-orders]
+verify_jwt = false
+
+[functions.api-customers]
+verify_jwt = false
+
+[functions.api-payments]
+verify_jwt = false
+
+[functions.api-reports]
+verify_jwt = false
+
 [functions.notify-new-order]
 verify_jwt = false
 
