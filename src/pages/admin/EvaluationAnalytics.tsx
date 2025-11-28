@@ -50,6 +50,7 @@ const EvaluationAnalytics = () => {
     try {
       setLoading(true);
       
+      // جلب التقييمات المكتملة فقط (التي تم إرسالها من العملاء)
       const { data: evaluationsData, error } = await supabase
         .from('evaluations')
         .select(`
@@ -57,9 +58,9 @@ const EvaluationAnalytics = () => {
           orders!order_id (order_number, total_amount, service_types(name)),
           customers!customer_id (name)
         `)
-        .not('sent_at', 'is', null)
+        .not('submitted_at', 'is', null)
         .not('rating', 'is', null)
-        .order('created_at', { ascending: false });
+        .order('submitted_at', { ascending: false });
 
       if (error) throw error;
 
