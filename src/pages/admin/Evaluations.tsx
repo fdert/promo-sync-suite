@@ -51,11 +51,11 @@ const Evaluations = () => {
         .from('evaluations')
         .select(`
           *,
-          orders!evaluations_order_id_fkey (
+          orders (
             order_number,
-            service_types!orders_service_type_id_fkey (name)
+            service_types (name)
           ),
-          customers!evaluations_customer_id_fkey (name, phone)
+          customers (name, phone)
         `)
         .order('created_at', { ascending: false });
 
