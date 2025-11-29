@@ -581,55 +581,95 @@ export default function APIManagement() {
             <CardContent>
               <div className="space-y-4">
                 {webhooks.length > 0 ? (
-                  webhooks.map((webhook) => (
-                    <div
-                      key={webhook.id}
-                      className="flex items-center justify-between p-4 border rounded-lg"
-                    >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h4 className="font-semibold">{webhook.webhook_name}</h4>
-                          {webhook.is_active && (
-                            <Badge variant="default">مفعّل</Badge>
-                          )}
-                        </div>
-                        <p className="text-sm text-muted-foreground mb-2">
-                          {webhook.webhook_url}
-                        </p>
-                        {webhook.order_statuses && webhook.order_statuses.length > 0 ? (
-                          <div className="flex gap-1 flex-wrap">
-                            <span className="text-xs text-muted-foreground ml-2">الحالات المتابعة:</span>
-                            {webhook.order_statuses.map((status: string) => (
-                              <Badge key={status} variant="outline" className="text-xs">
-                                {status}
-                              </Badge>
-                            ))}
+                  webhooks.map((webhook) => {
+                    const curlCommand = `curl -X POST "${webhook.webhook_url}" \\
+  -H "Content-Type: application/json" \\${webhook.secret_key ? `\n  -H "X-Webhook-Secret: ${webhook.secret_key}" \\` : ''}
+  -d '{
+    "event": "order.status_changed",
+    "timestamp": "2024-01-15T10:30:00Z",
+    "data": {
+      "order_id": "uuid",
+      "order_number": "ORD-20240115-00001",
+      "old_status": "جديد",
+      "new_status": "مؤكد",
+      "customer_id": "uuid",
+      "customer_name": "اسم العميل",
+      "customer_phone": "0501234567",
+      "total_amount": 1500.00,
+      "delivery_date": "2024-01-20",
+      "notes": "ملاحظات الطلب"
+    }
+  }'`;
+
+                    return (
+                      <div
+                        key={webhook.id}
+                        className="p-4 border rounded-lg space-y-4"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <h4 className="font-semibold">{webhook.webhook_name}</h4>
+                              {webhook.is_active && (
+                                <Badge variant="default">مفعّل</Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground mb-2">
+                              {webhook.webhook_url}
+                            </p>
+                            {webhook.order_statuses && webhook.order_statuses.length > 0 ? (
+                              <div className="flex gap-1 flex-wrap">
+                                <span className="text-xs text-muted-foreground ml-2">الحالات المتابعة:</span>
+                                {webhook.order_statuses.map((status: string) => (
+                                  <Badge key={status} variant="outline" className="text-xs">
+                                    {status}
+                                  </Badge>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-xs text-muted-foreground">
+                                يتابع جميع تغييرات الحالات
+                              </p>
+                            )}
                           </div>
-                        ) : (
-                          <p className="text-xs text-muted-foreground">
-                            يتابع جميع تغييرات الحالات
-                          </p>
-                        )}
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => testWebhook(webhook.id)}
+                            >
+                              <TestTube className="h-4 w-4 ml-1" />
+                              اختبار
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => deleteWebhook(webhook.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+
+                        <div className="bg-muted rounded-lg p-3 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs font-semibold">أمر cURL للاختبار:</p>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => copyToClipboard(curlCommand)}
+                            >
+                              <Copy className="h-4 w-4 ml-1" />
+                              نسخ
+                            </Button>
+                          </div>
+                          <pre className="text-xs overflow-x-auto bg-background p-3 rounded">
+                            {curlCommand}
+                          </pre>
+                        </div>
                       </div>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => testWebhook(webhook.id)}
-                        >
-                          <TestTube className="h-4 w-4 ml-1" />
-                          اختبار
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => deleteWebhook(webhook.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))
+                    );
+                  })
                 ) : (
                   <p className="text-center text-muted-foreground py-8">
                     لا توجد webhooks مضافة بعد
