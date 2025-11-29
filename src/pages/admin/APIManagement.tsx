@@ -582,24 +582,22 @@ export default function APIManagement() {
               <div className="space-y-4">
                 {webhooks.length > 0 ? (
                   webhooks.map((webhook) => {
-                    const curlCommand = `curl -X POST "${webhook.webhook_url}" \\
-  -H "Content-Type: application/json" \\${webhook.secret_key ? `\n  -H "X-Webhook-Secret: ${webhook.secret_key}" \\` : ''}
-  -d '{
-    "event": "order.status_changed",
-    "timestamp": "2024-01-15T10:30:00Z",
-    "data": {
-      "order_id": "uuid",
-      "order_number": "ORD-20240115-00001",
-      "old_status": "جديد",
-      "new_status": "مؤكد",
-      "customer_id": "uuid",
-      "customer_name": "اسم العميل",
-      "customer_phone": "0501234567",
-      "total_amount": 1500.00,
-      "delivery_date": "2024-01-20",
-      "notes": "ملاحظات الطلب"
-    }
-  }'`;
+                    const payload = {
+                      event: "order.status_changed",
+                      timestamp: new Date().toISOString(),
+                      data: {
+                        order_id: "test-order-id",
+                        order_number: "ORD-20250101-00001",
+                        old_status: "جديد",
+                        new_status: "مؤكد",
+                        customer_id: "test-customer-id",
+                        customer_name: "عميل تجريبي"
+                      }
+                    };
+
+                    const curlCommand = `curl -X POST '${webhook.webhook_url}' \\
+  -H 'Content-Type: application/json'${webhook.secret_key ? ` \\\n  -H 'X-Webhook-Secret: ${webhook.secret_key}'` : ''} \\
+  -d '${JSON.stringify(payload)}'`;
 
                     return (
                       <div
