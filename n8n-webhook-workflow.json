@@ -1,0 +1,151 @@
+{
+  "name": "نظام استقبال إشعارات الطلبات",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "order-completed",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-node-1",
+      "name": "استقبال إشعار الطلب",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [250, 300],
+      "webhookId": "order-completed"
+    },
+    {
+      "parameters": {
+        "jsCode": "// معالجة البيانات الواردة من النظام\nconst webhookData = $input.item.json;\n\n// استخراج معلومات الطلب\nconst orderInfo = {\n  order_id: webhookData.order_id || webhookData.body?.order_id,\n  order_number: webhookData.order_number || webhookData.body?.order_number,\n  old_status: webhookData.old_status || webhookData.body?.old_status,\n  new_status: webhookData.new_status || webhookData.body?.new_status,\n  customer_id: webhookData.customer_id || webhookData.body?.customer_id,\n  customer_name: webhookData.customer_name || webhookData.body?.customer_name,\n  timestamp: new Date().toISOString()\n};\n\nconsole.log('تم استقبال إشعار طلب جديد:', orderInfo);\n\nreturn { json: orderInfo };"
+      },
+      "id": "code-node-1",
+      "name": "معالجة البيانات",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.new_status }}",
+              "operation": "equals",
+              "value2": "مكتمل"
+            }
+          ]
+        }
+      },
+      "id": "if-node-1",
+      "name": "هل الطلب مكتمل؟",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// يمكنك هنا إضافة أي عمليات خاصة بالطلبات المكتملة\n// مثل: إرسال بريد إلكتروني، تحديث نظام خارجي، إلخ\n\nconst orderData = $input.item.json;\n\nconsole.log('الطلب مكتمل - يمكن إضافة عمليات إضافية هنا');\nconsole.log('رقم الطلب:', orderData.order_number);\nconsole.log('اسم العميل:', orderData.customer_name);\n\nreturn {\n  json: {\n    ...orderData,\n    processed: true,\n    action: 'طلب مكتمل - تم المعالجة'\n  }\n};"
+      },
+      "id": "code-node-2",
+      "name": "معالجة الطلب المكتمل",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// معالجة الطلبات غير المكتملة\nconst orderData = $input.item.json;\n\nconsole.log('تحديث حالة الطلب:', orderData.new_status);\nconsole.log('رقم الطلب:', orderData.order_number);\n\nreturn {\n  json: {\n    ...orderData,\n    processed: true,\n    action: 'تحديث حالة - تم المعالجة'\n  }\n};"
+      },
+      "id": "code-node-3",
+      "name": "معالجة تحديث الحالة",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, message: 'تم استقبال الإشعار بنجاح', order_number: $json.order_number, timestamp: $json.timestamp } }}"
+      },
+      "id": "response-node-1",
+      "name": "إرسال الرد",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1050, 300]
+    }
+  ],
+  "connections": {
+    "استقبال إشعار الطلب": {
+      "main": [
+        [
+          {
+            "node": "معالجة البيانات",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "معالجة البيانات": {
+      "main": [
+        [
+          {
+            "node": "هل الطلب مكتمل؟",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "هل الطلب مكتمل؟": {
+      "main": [
+        [
+          {
+            "node": "معالجة الطلب المكتمل",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "معالجة تحديث الحالة",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "معالجة الطلب المكتمل": {
+      "main": [
+        [
+          {
+            "node": "إرسال الرد",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "معالجة تحديث الحالة": {
+      "main": [
+        [
+          {
+            "node": "إرسال الرد",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2025-01-01T00:00:00.000Z",
+  "versionId": "1"
+}
