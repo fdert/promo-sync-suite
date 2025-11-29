@@ -1,0 +1,184 @@
+{
+  "name": "إشعارات الطلبات - Order Webhooks",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "order-completed",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+      "name": "Webhook - استقبال الإشعار",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ],
+      "webhookId": "order-completed"
+    },
+    {
+      "parameters": {
+        "jsCode": "// معالجة البيانات الواردة من النظام\nconst input = $input.item.json;\n\n// دعم صيغ مختلفة للبيانات الواردة\nconst body = input.body || input;\n\nconst orderData = {\n  order_id: body.order_id || 'غير محدد',\n  order_number: body.order_number || 'غير محدد',\n  old_status: body.old_status || '',\n  new_status: body.new_status || '',\n  customer_id: body.customer_id || '',\n  customer_name: body.customer_name || 'غير محدد',\n  timestamp: new Date().toISOString(),\n  event_type: body.event || 'order.status_changed'\n};\n\nconsole.log('📦 تم استقبال إشعار طلب:');\nconsole.log('رقم الطلب:', orderData.order_number);\nconsole.log('الحالة الجديدة:', orderData.new_status);\nconsole.log('العميل:', orderData.customer_name);\n\nreturn [{ json: orderData }];"
+      },
+      "id": "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
+      "name": "معالجة البيانات",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.new_status }}",
+              "rightValue": "مكتمل",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f",
+      "name": "هل الطلب مكتمل؟",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// معالجة خاصة للطلبات المكتملة\nconst order = $input.item.json;\n\nconsole.log('✅ طلب مكتمل!');\nconsole.log('رقم الطلب:', order.order_number);\nconsole.log('العميل:', order.customer_name);\n\n// هنا يمكنك إضافة:\n// - إرسال إشعار للعميل\n// - تحديث نظام خارجي (CRM, ERP)\n// - إرسال بريد إلكتروني\n// - تسجيل في Google Sheets\n// - أي عملية أخرى\n\nreturn [{\n  json: {\n    ...order,\n    processed: true,\n    action: 'order_completed',\n    message: 'تمت معالجة الطلب المكتمل بنجاح'\n  }\n}];"
+      },
+      "id": "d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a",
+      "name": "معالجة الطلب المكتمل",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// معالجة تحديثات الحالة الأخرى\nconst order = $input.item.json;\n\nconsole.log('🔄 تحديث حالة الطلب');\nconsole.log('رقم الطلب:', order.order_number);\nconsole.log('من:', order.old_status, '→ إلى:', order.new_status);\n\n// هنا يمكنك معالجة الحالات الأخرى:\n// - مؤكد، قيد التنفيذ، قيد المراجعة، إلخ\n\nreturn [{\n  json: {\n    ...order,\n    processed: true,\n    action: 'status_update',\n    message: `تم تحديث حالة الطلب إلى: ${order.new_status}`\n  }\n}];"
+      },
+      "id": "e5f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8a9b",
+      "name": "معالجة تحديثات أخرى",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ {\n  \"success\": true,\n  \"message\": \"تم استقبال الإشعار ومعالجته بنجاح\",\n  \"data\": {\n    \"order_number\": $json.order_number,\n    \"status\": $json.new_status,\n    \"processed_at\": $json.timestamp,\n    \"action\": $json.action\n  }\n} }}",
+        "options": {}
+      },
+      "id": "f6a7b8c9-d0e1-4f2a-3b4c-5d6e7f8a9b0c",
+      "name": "إرسال الرد",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        300
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook - استقبال الإشعار": {
+      "main": [
+        [
+          {
+            "node": "معالجة البيانات",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "معالجة البيانات": {
+      "main": [
+        [
+          {
+            "node": "هل الطلب مكتمل؟",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "هل الطلب مكتمل؟": {
+      "main": [
+        [
+          {
+            "node": "معالجة الطلب المكتمل",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "معالجة تحديثات أخرى",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "معالجة الطلب المكتمل": {
+      "main": [
+        [
+          {
+            "node": "إرسال الرد",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "معالجة تحديثات أخرى": {
+      "main": [
+        [
+          {
+            "node": "إرسال الرد",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "lovable-system"
+  },
+  "id": "workflow-order-webhooks",
+  "tags": []
+}
