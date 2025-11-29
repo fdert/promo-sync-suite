@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تحميل Workflow لـ n8n</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+        .download-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 18px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-decoration: none;
+            display: inline-block;
+            margin: 20px 0;
+        }
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+        .icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+        .instructions {
+            text-align: right;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 30px;
+        }
+        .instructions h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+        .instructions ol {
+            padding-right: 20px;
+        }
+        .instructions li {
+            margin-bottom: 10px;
+            line-height: 1.6;
+            color: #555;
+        }
+        .success-msg {
+            background: #4caf50;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">📦</div>
+        <h1>Workflow جاهز للتحميل</h1>
+        <p class="subtitle">ملف n8n workflow كامل ومتوافق</p>
+        
+        <a href="/n8n-order-webhook-workflow.json" download="n8n-order-webhook-workflow.json" class="download-btn" id="downloadBtn">
+            ⬇️ تحميل الملف الآن
+        </a>
+        
+        <div class="success-msg" id="successMsg">
+            ✅ تم التحميل بنجاح! يمكنك الآن استيراد الملف في n8n
+        </div>
+
+        <div class="instructions">
+            <h3>📋 خطوات الاستيراد في n8n</h3>
+            <ol>
+                <li><strong>افتح n8n</strong> واذهب إلى قسم Workflows</li>
+                <li><strong>اضغط على زر Import</strong> (أعلى اليمين)</li>
+                <li><strong>اختر الملف</strong> الذي حملته للتو</li>
+                <li><strong>افتح الـ workflow</strong> بعد الاستيراد</li>
+                <li><strong>اضغط على node "Webhook"</strong> وانسخ Production URL</li>
+                <li><strong>فعّل الـ workflow</strong> بالضغط على زر Active</li>
+                <li><strong>ارجع للنظام</strong> والصق URL في إدارة API → Webhooks</li>
+                <li><strong>اختبر الاتصال</strong> من زر الاختبار في النظام</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('downloadBtn').addEventListener('click', function() {
+            setTimeout(function() {
+                document.getElementById('successMsg').style.display = 'block';
+            }, 500);
+        });
+    </script>
+</body>
+</html>
