@@ -12,7 +12,8 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { webhookId } = await req.json();
+    const body = await req.json();
+    const webhookId = body?.webhookId;
     console.log('Test webhook request for ID:', webhookId);
 
     if (!webhookId) {
@@ -42,7 +43,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Prepare test payload
     const testPayload = {
       event: 'order.status_changed',
       timestamp: new Date().toISOString(),
@@ -56,19 +56,17 @@ Deno.serve(async (req) => {
       },
     };
 
-    // Prepare headers
-    const headers: Record<string, string> = {
+    const headers: any = {
       'Content-Type': 'application/json',
     };
 
     if (webhook.secret_key) {
-      headers['X-Webhook-Secret'] = webhook.secret_key as string;
+      headers['X-Webhook-Secret'] = webhook.secret_key;
     }
 
     console.log('Testing webhook URL:', webhook.webhook_url);
     console.log('Payload:', JSON.stringify(testPayload));
 
-    // Send test request to webhook
     const response = await fetch(webhook.webhook_url as string, {
       method: 'POST',
       headers,
@@ -80,7 +78,6 @@ Deno.serve(async (req) => {
     console.log('Webhook response status:', response.status);
     console.log('Webhook response body:', responseText);
 
-    // Log the test in webhook_logs
     const { error: logError } = await supabase
       .from('webhook_logs')
       .insert({
