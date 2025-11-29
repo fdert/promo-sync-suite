@@ -254,10 +254,21 @@ export default function APIManagement() {
     }
   };
 
-  const testWebhook = async (webhookId: string) => {
+  const testWebhook = async (webhook: any) => {
     try {
-      const { data, error } = await supabase.functions.invoke('test-webhook-order', {
-        body: { webhookId }
+      const { data, error } = await supabase.functions.invoke('webhook-test', {
+        body: {
+          webhook_url: webhook.webhook_url,
+          event: 'order.status_changed',
+          test_data: {
+            order_id: 'test-order-id',
+            order_number: 'ORD-20250101-00001',
+            old_status: 'جديد',
+            new_status: 'مؤكد',
+            customer_id: 'test-customer-id',
+            customer_name: 'عميل تجريبي',
+          },
+        },
       });
 
       if (error) throw error;
@@ -265,12 +276,12 @@ export default function APIManagement() {
       if (data?.success) {
         toast({
           title: 'تم الاختبار بنجاح',
-          description: 'تم إرسال بيانات تجريبية إلى الـ Webhook',
+          description: data?.message || 'تم إرسال بيانات تجريبية إلى الـ Webhook',
         });
       } else {
         toast({
           title: 'فشل الاختبار',
-          description: data?.error || 'حدث خطأ أثناء الاختبار',
+          description: data?.error || data?.details || 'حدث خطأ أثناء الاختبار',
           variant: 'destructive',
         });
       }
@@ -614,7 +625,7 @@ export default function APIManagement() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => testWebhook(webhook.id)}
+                              onClick={() => testWebhook(webhook)}
                             >
                               <TestTube className="h-4 w-4 ml-1" />
                               اختبار
