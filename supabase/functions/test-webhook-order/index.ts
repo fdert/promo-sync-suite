@@ -1,8 +1,9 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.52.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
 Deno.serve(async (req) => {
@@ -12,21 +13,22 @@ Deno.serve(async (req) => {
 
   try {
     const { webhookId } = await req.json();
+    console.log('Test webhook request for ID:', webhookId);
 
     if (!webhookId) {
       return new Response(
-        JSON.stringify({ error: 'Webhook ID is required' }),
+        JSON.stringify({ success: false, error: 'Webhook ID is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+    const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
     // Fetch webhook details
-    const { data: webhook, error: webhookError } = await supabaseClient
+    const { data: webhook, error: webhookError } = await supabase
       .from('webhook_settings')
       .select('*')
       .eq('id', webhookId)
@@ -35,7 +37,7 @@ Deno.serve(async (req) => {
     if (webhookError || !webhook) {
       console.error('Error fetching webhook:', webhookError);
       return new Response(
-        JSON.stringify({ error: 'Webhook not found' }),
+        JSON.stringify({ success: false, error: 'Webhook not found' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -50,8 +52,8 @@ Deno.serve(async (req) => {
         old_status: 'جديد',
         new_status: 'مؤكد',
         customer_id: 'test-customer-id',
-        customer_name: 'عميل تجريبي'
-      }
+        customer_name: 'عميل تجريبي',
+      },
     };
 
     // Prepare headers
@@ -60,63 +62,63 @@ Deno.serve(async (req) => {
     };
 
     if (webhook.secret_key) {
-      headers['X-Webhook-Secret'] = webhook.secret_key;
+      headers['X-Webhook-Secret'] = webhook.secret_key as string;
     }
 
-    console.log('Testing webhook:', webhook.webhook_url);
-    console.log('Payload:', JSON.stringify(testPayload, null, 2));
+    console.log('Testing webhook URL:', webhook.webhook_url);
+    console.log('Payload:', JSON.stringify(testPayload));
 
     // Send test request to webhook
-    const response = await fetch(webhook.webhook_url, {
+    const response = await fetch(webhook.webhook_url as string, {
       method: 'POST',
       headers,
       body: JSON.stringify(testPayload),
     });
 
     const responseText = await response.text();
-    
-    console.log('Webhook response status:', response.status);
-    console.log('Webhook response:', responseText);
 
-    // Log the test
-    await supabaseClient
+    console.log('Webhook response status:', response.status);
+    console.log('Webhook response body:', responseText);
+
+    // Log the test in webhook_logs
+    const { error: logError } = await supabase
       .from('webhook_logs')
       .insert({
         webhook_setting_id: webhook.id,
         request_payload: testPayload,
         response_status: response.status,
         response_body: responseText,
-        error_message: response.ok ? null : `HTTP ${response.status}: ${response.statusText}`
+        error_message: response.ok ? null : `HTTP ${response.status}: ${response.statusText}`,
       });
+
+    if (logError) {
+      console.error('Error logging webhook test:', logError);
+    }
 
     if (!response.ok) {
       return new Response(
-        JSON.stringify({ 
+        JSON.stringify({
           success: false,
           error: `HTTP ${response.status}: ${response.statusText}`,
-          response: responseText
+          response: responseText,
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         success: true,
         message: 'تم إرسال الاختبار بنجاح',
         response: responseText,
-        status: response.status
+        status: response.status,
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-
   } catch (error) {
-    console.error('Error testing webhook:', error);
+    console.error('Error in test-webhook-order function:', error);
     return new Response(
-      JSON.stringify({ 
-        success: false,
-        error: error.message 
-      }),
+      JSON.stringify({ success: false, error: (error as Error).message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
