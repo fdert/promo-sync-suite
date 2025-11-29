@@ -255,45 +255,25 @@ export default function APIManagement() {
   };
 
   const testWebhook = async (webhookId: string) => {
-    const webhook = webhooks.find(w => w.id === webhookId);
-    if (!webhook) return;
-
     try {
-      const testPayload = {
-        event: 'order.status_changed',
-        timestamp: new Date().toISOString(),
-        data: {
-          order_id: 'test-order-id',
-          order_number: 'ORD-20250101-00001',
-          old_status: 'جديد',
-          new_status: 'مؤكد',
-          customer_id: 'test-customer-id',
-          customer_name: 'عميل تجريبي',
-        }
-      };
-
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
-
-      if (webhook.secret_key) {
-        headers['X-Webhook-Secret'] = webhook.secret_key;
-      }
-
-      const response = await fetch(webhook.webhook_url, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(testPayload),
+      const { data, error } = await supabase.functions.invoke('test-webhook-order', {
+        body: { webhookId }
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
+      if (error) throw error;
 
-      toast({
-        title: 'تم الاختبار بنجاح',
-        description: 'تم إرسال بيانات تجريبية إلى الـ Webhook',
-      });
+      if (data?.success) {
+        toast({
+          title: 'تم الاختبار بنجاح',
+          description: 'تم إرسال بيانات تجريبية إلى الـ Webhook',
+        });
+      } else {
+        toast({
+          title: 'فشل الاختبار',
+          description: data?.error || 'حدث خطأ أثناء الاختبار',
+          variant: 'destructive',
+        });
+      }
     } catch (error: any) {
       toast({
         title: 'فشل الاختبار',
