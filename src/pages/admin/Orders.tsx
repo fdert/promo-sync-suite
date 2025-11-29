@@ -888,6 +888,85 @@ ${companyName}`;
         }
       }
 
+      // إرسال webhook إلى n8n إذا كان مُفعّلاً
+      try {
+        const { data: webhookSettings } = await supabase
+          .from('webhook_settings')
+          .select('*')
+          .eq('webhook_type', 'order_status_change')
+          .eq('is_active', true)
+          .maybeSingle();
+
+        if (webhookSettings) {
+          // التحقق من أن الحالة الجديدة ضمن الحالات المتابعة
+          const shouldSendWebhook = !webhookSettings.order_statuses || 
+                                    webhookSettings.order_statuses.length === 0 || 
+                                    webhookSettings.order_statuses.includes(newStatus);
+
+          if (shouldSendWebhook) {
+            console.log('📤 إرسال webhook إلى n8n:', webhookSettings.webhook_url);
+            
+            // جلب بنود الطلب
+            const { data: orderItems } = await supabase
+              .from('order_items')
+              .select('*')
+              .eq('order_id', orderId);
+
+            const webhookPayload = {
+              event: 'order_status_changed',
+              timestamp: new Date().toISOString(),
+              order_id: orderId,
+              order_number: orderData.order_number,
+              old_status: orderData.status,
+              new_status: newStatus,
+              customer_id: orderData.customer_id,
+              customer_name: orderData.customers?.name,
+              customer_phone: customerWhatsapp,
+              service_name: orderData.service_name,
+              total_amount: orderData.total_amount,
+              paid_amount: orderData.paid_amount,
+              delivery_date: orderData.delivery_date,
+              estimated_delivery_time: orderData.estimated_delivery_time,
+              order_items: orderItems || [],
+              created_at: orderData.created_at
+            };
+
+            const webhookResponse = await fetch(webhookSettings.webhook_url, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                ...(webhookSettings.secret_key && {
+                  'X-Webhook-Secret': webhookSettings.secret_key
+                })
+              },
+              body: JSON.stringify(webhookPayload)
+            });
+
+            // تسجيل في webhook_logs
+            await supabase.from('webhook_logs').insert({
+              webhook_setting_id: webhookSettings.id,
+              request_payload: webhookPayload,
+              response_status: webhookResponse.status,
+              response_body: await webhookResponse.text().catch(() => null),
+              error_message: webhookResponse.ok ? null : 'فشل في إرسال الـ webhook'
+            });
+
+            if (webhookResponse.ok) {
+              console.log('✅ تم إرسال webhook إلى n8n بنجاح');
+            } else {
+              console.error('❌ فشل في إرسال webhook إلى n8n:', webhookResponse.status);
+            }
+          } else {
+            console.log('⏭️ الحالة الجديدة ليست ضمن الحالات المتابعة للـ webhook');
+          }
+        } else {
+          console.log('ℹ️ لا يوجد webhook مُفعّل لتغيير حالة الطلبات');
+        }
+      } catch (webhookError) {
+        console.error('❌ خطأ في إرسال webhook:', webhookError);
+        // لا نوقف العملية، فقط نسجل الخطأ
+      }
+
       toast({
         title: "تم تحديث الحالة",
         description: `تم تغيير حالة الطلب إلى ${newStatus}`,
