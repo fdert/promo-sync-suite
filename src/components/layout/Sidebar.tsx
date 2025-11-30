@@ -250,6 +250,12 @@ const menuItems = [
     href: "/admin/loyalty-settings",
     allowedRoles: ['admin', 'manager'] as UserRole[],
   },
+  {
+    title: "إدارة الأقساط",
+    icon: CreditCard,
+    href: "/admin/installment-plans",
+    allowedRoles: ['admin', 'manager', 'employee'] as UserRole[],
+  },
 ];
 
 const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {

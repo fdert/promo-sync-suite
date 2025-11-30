@@ -1,0 +1,370 @@
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Card, CardContent } from "@/components/ui/card";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon, Search } from "lucide-react";
+import { format } from "date-fns";
+import { ar } from "date-fns/locale";
+
+interface CreateInstallmentPlanProps {
+  onSuccess: () => void;
+}
+
+const CreateInstallmentPlan = ({ onSuccess }: CreateInstallmentPlanProps) => {
+  const { toast } = useToast();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [numberOfInstallments, setNumberOfInstallments] = useState("3");
+  const [firstPaymentDate, setFirstPaymentDate] = useState<Date>(new Date());
+  const [installmentDates, setInstallmentDates] = useState<Date[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // البحث عن الطلبات
+  const { data: orders, isLoading } = useQuery({
+    queryKey: ['orders-search', searchTerm],
+    queryFn: async () => {
+      if (!searchTerm || searchTerm.length < 2) return [];
+      
+      const { data, error } = await supabase
+        .from('orders')
+        .select(`
+          id,
+          order_number,
+          total_amount,
+          paid_amount,
+          customers (
+            id,
+            name,
+            phone,
+            whatsapp
+          )
+        `)
+        .or(`order_number.ilike.%${searchTerm}%`)
+        .eq('status', 'قيد التنفيذ')
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+      
+      // فلترة الطلبات التي ليس لها خطة تقسيط بالفعل
+      const ordersWithoutPlans = [];
+      for (const order of data || []) {
+        const { data: existingPlan } = await supabase
+          .from('installment_plans')
+          .select('id')
+          .eq('order_id', order.id)
+          .maybeSingle();
+        
+        if (!existingPlan) {
+          ordersWithoutPlans.push(order);
+        }
+      }
+      
+      return ordersWithoutPlans;
+    },
+    enabled: searchTerm.length >= 2
+  });
+
+  const calculateInstallmentDates = (numInstallments: number, startDate: Date) => {
+    const dates: Date[] = [];
+    for (let i = 0; i < numInstallments; i++) {
+      const date = new Date(startDate);
+      date.setMonth(date.getMonth() + i);
+      dates.push(date);
+    }
+    return dates;
+  };
+
+  const handleNumberOfInstallmentsChange = (value: string) => {
+    setNumberOfInstallments(value);
+    const dates = calculateInstallmentDates(parseInt(value), firstPaymentDate);
+    setInstallmentDates(dates);
+  };
+
+  const handleFirstPaymentDateChange = (date: Date | undefined) => {
+    if (date) {
+      setFirstPaymentDate(date);
+      const dates = calculateInstallmentDates(parseInt(numberOfInstallments), date);
+      setInstallmentDates(dates);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!selectedOrder) {
+      toast({
+        title: "خطأ",
+        description: "الرجاء اختيار طلب أولاً",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (installmentDates.length === 0) {
+      toast({
+        title: "خطأ",
+        description: "الرجاء تحديد عدد الأقساط وتاريخ أول دفعة",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      // حساب المبلغ المتبقي
+      const remainingAmount = (selectedOrder.total_amount || 0) - (selectedOrder.paid_amount || 0);
+      const installmentAmount = remainingAmount / parseInt(numberOfInstallments);
+
+      // إنشاء خطة التقسيط
+      const { data: plan, error: planError } = await supabase
+        .from('installment_plans')
+        .insert({
+          order_id: selectedOrder.id,
+          customer_id: selectedOrder.customers.id,
+          total_amount: remainingAmount,
+          number_of_installments: parseInt(numberOfInstallments),
+          created_by: user?.id,
+        })
+        .select()
+        .single();
+
+      if (planError) throw planError;
+
+      // إنشاء الأقساط
+      const installments = installmentDates.map((date, index) => ({
+        installment_plan_id: plan.id,
+        installment_number: index + 1,
+        amount: installmentAmount,
+        due_date: format(date, 'yyyy-MM-dd'),
+      }));
+
+      const { error: installmentsError } = await supabase
+        .from('installment_payments')
+        .insert(installments);
+
+      if (installmentsError) throw installmentsError;
+
+      // إرسال رسالة واتساب للعميل
+      const customerPhone = selectedOrder.customers.whatsapp || selectedOrder.customers.phone;
+      if (customerPhone) {
+        const installmentsList = installmentDates.map((date, index) => 
+          `القسط ${index + 1}: ${format(date, 'dd/MM/yyyy', { locale: ar })} - ${new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR' }).format(installmentAmount)}`
+        ).join('\n');
+
+        await supabase.from('whatsapp_messages').insert({
+          to_number: customerPhone,
+          message_content: `🎉 تم إنشاء خطة تقسيط لطلبك!\n\n` +
+            `📋 رقم الطلب: ${selectedOrder.order_number}\n` +
+            `💰 إجمالي المبلغ المتبقي: ${new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR' }).format(remainingAmount)}\n` +
+            `📅 عدد الأقساط: ${numberOfInstallments}\n\n` +
+            `تفاصيل الأقساط:\n${installmentsList}\n\n` +
+            `سيتم تذكيرك قبل كل دفعة بيومين وبيوم واحد.`,
+          customer_id: selectedOrder.customers.id,
+          status: 'pending',
+        });
+
+        // تشغيل معالج الرسائل
+        await fetch(`https://pqrzkfpowjutylegdcxj.supabase.co/functions/v1/process-whatsapp-queue`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxcnprZnBvd2p1dHlsZWdkY3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg4MzU5NzIsImV4cCI6MjA3NDQxMTk3Mn0.frZ6OBDDuqbXOmQUydyoLdCnI5n5_WnS96x2qMPNR78`,
+          },
+        });
+      }
+
+      toast({
+        title: "تم بنجاح",
+        description: "تم إنشاء خطة التقسيط وإرسال التفاصيل للعميل",
+      });
+
+      onSuccess();
+    } catch (error: any) {
+      console.error('Error creating installment plan:', error);
+      toast({
+        title: "خطأ",
+        description: error.message || "حدث خطأ أثناء إنشاء خطة التقسيط",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('ar-SA', {
+      style: 'currency',
+      currency: 'SAR',
+      minimumFractionDigits: 0,
+    }).format(amount || 0);
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* البحث عن الطلب */}
+      <div className="space-y-2">
+        <Label>البحث عن طلب</Label>
+        <div className="relative">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="ابحث برقم الطلب..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pr-10"
+          />
+        </div>
+        {isLoading && <p className="text-sm text-muted-foreground">جاري البحث...</p>}
+        {orders && orders.length > 0 && (
+          <div className="space-y-2 max-h-60 overflow-y-auto">
+            {orders.map((order: any) => (
+              <Card 
+                key={order.id} 
+                className={`cursor-pointer transition-all ${selectedOrder?.id === order.id ? 'border-primary bg-primary/5' : 'hover:border-primary/50'}`}
+                onClick={() => {
+                  setSelectedOrder(order);
+                  setSearchTerm("");
+                }}
+              >
+                <CardContent className="p-4">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-medium">{order.customers.name}</p>
+                      <p className="text-sm text-muted-foreground">{order.order_number}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {order.customers.phone || order.customers.whatsapp}
+                      </p>
+                    </div>
+                    <div className="text-left">
+                      <p className="text-sm text-muted-foreground">الإجمالي</p>
+                      <p className="font-medium">{formatCurrency(order.total_amount)}</p>
+                      <p className="text-sm text-success">مدفوع: {formatCurrency(order.paid_amount)}</p>
+                      <p className="text-sm text-warning">
+                        متبقي: {formatCurrency((order.total_amount || 0) - (order.paid_amount || 0))}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {selectedOrder && (
+        <>
+          {/* تفاصيل الطلب المختار */}
+          <Card className="bg-primary/5 border-primary">
+            <CardContent className="p-4">
+              <h3 className="font-medium mb-2">الطلب المختار</h3>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-muted-foreground">رقم الطلب</p>
+                  <p className="font-medium">{selectedOrder.order_number}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">العميل</p>
+                  <p className="font-medium">{selectedOrder.customers.name}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">المبلغ المتبقي</p>
+                  <p className="font-medium text-warning">
+                    {formatCurrency((selectedOrder.total_amount || 0) - (selectedOrder.paid_amount || 0))}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* إعدادات الأقساط */}
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>عدد الأقساط</Label>
+              <Select value={numberOfInstallments} onValueChange={handleNumberOfInstallmentsChange}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[2, 3, 4, 5, 6, 9, 12, 18, 24].map((num) => (
+                    <SelectItem key={num} value={num.toString()}>
+                      {num} أقساط
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>تاريخ أول قسط</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-start">
+                    <CalendarIcon className="ml-2 h-4 w-4" />
+                    {format(firstPaymentDate, 'PPP', { locale: ar })}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={firstPaymentDate}
+                    onSelect={handleFirstPaymentDateChange}
+                    initialFocus
+                    locale={ar}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+
+          {/* جدول الأقساط */}
+          {installmentDates.length > 0 && (
+            <Card>
+              <CardContent className="p-4">
+                <h3 className="font-medium mb-4">جدول الأقساط</h3>
+                <div className="space-y-2">
+                  {installmentDates.map((date, index) => {
+                    const amount = ((selectedOrder.total_amount || 0) - (selectedOrder.paid_amount || 0)) / parseInt(numberOfInstallments);
+                    return (
+                      <div key={index} className="flex justify-between items-center p-3 bg-muted rounded-lg">
+                        <span>القسط {index + 1}</span>
+                        <span className="text-muted-foreground">
+                          {format(date, 'dd/MM/yyyy', { locale: ar })}
+                        </span>
+                        <span className="font-medium">{formatCurrency(amount)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* زر الإنشاء */}
+          <Button 
+            onClick={handleSubmit} 
+            disabled={isSubmitting}
+            className="w-full"
+          >
+            {isSubmitting ? "جاري الإنشاء..." : "إنشاء خطة التقسيط وإرسال التفاصيل"}
+          </Button>
+        </>
+      )}
+    </div>
+  );
+};
+
+export default CreateInstallmentPlan;
