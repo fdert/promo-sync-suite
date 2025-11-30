@@ -144,6 +144,7 @@ const CreateInstallmentPlan = ({ onSuccess }: CreateInstallmentPlanProps) => {
 
       // توليد رقم عقد ورمز فريد
       const contractToken = crypto.randomUUID();
+      const contractNumber = `INS-${Date.now().toString().slice(-8)}`;
       
       // إنشاء خطة التقسيط
       const { data: plan, error: planError } = await supabase
@@ -154,7 +155,9 @@ const CreateInstallmentPlan = ({ onSuccess }: CreateInstallmentPlanProps) => {
           total_amount: remainingAmount,
           number_of_installments: parseInt(numberOfInstallments),
           created_by: user?.id,
-          notes: `رمز العقد: ${contractToken}`,
+          contract_number: contractNumber,
+          contract_token: contractToken,
+          contract_status: 'pending',
         })
         .select()
         .single();

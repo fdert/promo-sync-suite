@@ -25,10 +25,24 @@ const InstallmentContract = () => {
 
   const fetchContractDetails = async () => {
     try {
-      const { data: plans } = await supabase
+      const { data: planData, error: planError } = await supabase
         .from('installment_plans')
         .select(`
-          *,
+          id,
+          order_id,
+          customer_id,
+          total_amount,
+          number_of_installments,
+          status,
+          notes,
+          created_at,
+          updated_at,
+          created_by,
+          contract_number,
+          contract_token,
+          contract_status,
+          contract_confirmed_at,
+          contract_confirmed_ip,
           orders!inner (
             order_number,
             total_amount,
@@ -38,9 +52,11 @@ const InstallmentContract = () => {
               whatsapp
             )
           )
-        `);
+        `)
+        .eq('contract_token', token)
+        .single();
 
-      const planData = plans?.[0];
+      if (planError) throw planError;
       if (!planData) {
         toast({
           title: "خطأ",
@@ -133,7 +149,7 @@ const InstallmentContract = () => {
       )
       .join('');
 
-    const contractNumber = planData.id?.substring(0, 8).toUpperCase();
+    const contractNumber = planData.contract_number || planData.id?.substring(0, 8).toUpperCase();
     const customers = Array.isArray(planData.orders) ? planData.orders[0]?.customers?.[0] : planData.orders?.customers;
     const orderNumber = Array.isArray(planData.orders) ? planData.orders[0]?.order_number : planData.orders?.order_number;
 
@@ -164,7 +180,9 @@ const InstallmentContract = () => {
       const { error } = await supabase
         .from('installment_plans')
         .update({
-          notes: `عقد مؤكد بتاريخ ${new Date().toISOString()} من IP: ${ipAddress}`,
+          contract_status: 'confirmed',
+          contract_confirmed_at: new Date().toISOString(),
+          contract_confirmed_ip: ipAddress,
           status: 'active',
         })
         .eq('id', plan.id);
@@ -176,7 +194,7 @@ const InstallmentContract = () => {
         description: "تم تأكيد العقد بنجاح",
       });
 
-      setPlan({ ...plan, status: 'confirmed' });
+      setPlan({ ...plan, contract_status: 'confirmed' });
     } catch (error: any) {
       console.error('Error confirming contract:', error);
       toast({
@@ -206,7 +224,7 @@ const InstallmentContract = () => {
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      const contractNumber = plan.id?.substring(0, 8);
+      const contractNumber = plan.contract_number || plan.id?.substring(0, 8);
       pdf.save(`عقد_تقسيط_${contractNumber}.pdf`);
 
       toast({
@@ -257,7 +275,7 @@ const InstallmentContract = () => {
     );
   }
 
-  const isConfirmed = plan.status === 'confirmed' || plan.status === 'completed';
+  const isConfirmed = plan.contract_status === 'confirmed';
 
   return (
     <div className="min-h-screen bg-background py-8 px-4">
@@ -320,7 +338,10 @@ const InstallmentContract = () => {
 
         <div className="mt-6 text-center text-sm text-muted-foreground">
           <p>هذا العقد محمي ومُوثّق إلكترونياً</p>
-          <p>رقم العقد: {plan.id?.substring(0, 8).toUpperCase()}</p>
+          <p>رقم العقد: {plan.contract_number || plan.id?.substring(0, 8).toUpperCase()}</p>
+          {plan.contract_confirmed_at && (
+            <p className="mt-2">تاريخ التأكيد: {format(new Date(plan.contract_confirmed_at), 'dd/MM/yyyy HH:mm', { locale: ar })}</p>
+          )}
         </div>
       </div>
     </div>
