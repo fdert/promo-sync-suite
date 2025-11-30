@@ -171,32 +171,47 @@ const CreateInstallmentPlan = ({ onSuccess }: CreateInstallmentPlanProps) => {
 
       if (installmentsError) throw installmentsError;
 
-      // إرسال رسالة واتساب للعميل
+      // إرسال رسالة واتساب للعميل بالقالب
       const customerPhone = selectedOrder.customers.whatsapp || selectedOrder.customers.phone;
       if (customerPhone) {
         const installmentsList = installmentDates.map((date, index) => 
           `القسط ${index + 1}: ${format(date, 'dd/MM/yyyy', { locale: ar })} - ${new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR' }).format(installmentAmount)}`
         ).join('\n');
 
+        // جلب القالب من قاعدة البيانات
+        const { data: template } = await supabase
+          .from('message_templates')
+          .select('content')
+          .eq('name', 'installment_plan_created')
+          .eq('is_active', true)
+          .single();
+
+        let messageContent = template?.content || 
+          `🎉 تم إنشاء خطة تقسيط لطلبك!\n\n` +
+          `📋 رقم الطلب: {{order_number}}\n` +
+          `💰 إجمالي المبلغ المتبقي: {{total_amount}}\n` +
+          `📅 عدد الأقساط: {{number_of_installments}}\n\n` +
+          `تفاصيل الأقساط:\n{{installments_list}}\n\n` +
+          `سيتم تذكيرك قبل كل دفعة بيومين وبيوم واحد.`;
+
+        // استبدال المتغيرات
+        messageContent = messageContent
+          .replace(/\{\{order_number\}\}/g, selectedOrder.order_number)
+          .replace(/\{\{total_amount\}\}/g, formatCurrency(remainingAmount))
+          .replace(/\{\{number_of_installments\}\}/g, numberOfInstallments)
+          .replace(/\{\{installments_list\}\}/g, installmentsList);
+
         await supabase.from('whatsapp_messages').insert({
           to_number: customerPhone,
-          message_content: `🎉 تم إنشاء خطة تقسيط لطلبك!\n\n` +
-            `📋 رقم الطلب: ${selectedOrder.order_number}\n` +
-            `💰 إجمالي المبلغ المتبقي: ${new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR' }).format(remainingAmount)}\n` +
-            `📅 عدد الأقساط: ${numberOfInstallments}\n\n` +
-            `تفاصيل الأقساط:\n${installmentsList}\n\n` +
-            `سيتم تذكيرك قبل كل دفعة بيومين وبيوم واحد.`,
+          message_content: messageContent,
+          message_type: 'installment_plan',
           customer_id: selectedOrder.customers.id,
           status: 'pending',
         });
 
         // تشغيل معالج الرسائل
-        await fetch(`https://pqrzkfpowjutylegdcxj.supabase.co/functions/v1/process-whatsapp-queue`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxcnprZnBvd2p1dHlsZWdkY3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg4MzU5NzIsImV4cCI6MjA3NDQxMTk3Mn0.frZ6OBDDuqbXOmQUydyoLdCnI5n5_WnS96x2qMPNR78`,
-          },
+        await supabase.functions.invoke('process-whatsapp-queue', {
+          body: {}
         });
       }
 
