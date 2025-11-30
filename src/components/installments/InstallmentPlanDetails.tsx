@@ -225,28 +225,43 @@ const InstallmentPlanDetails = ({ planId, onUpdate }: InstallmentPlanDetailsProp
         // لا نفشل عملية تسجيل الدفعة بسبب خطأ في المحاسبة
       }
 
-      // إرسال رسالة واتساب للعميل
+      // إرسال رسالة واتساب للعميل بالقالب
       if (plan?.orders?.customers) {
         const customerPhone = plan.orders.customers.whatsapp || plan.orders.customers.phone;
         if (customerPhone) {
+          // جلب القالب من قاعدة البيانات
+          const { data: template } = await supabase
+            .from('message_templates')
+            .select('content')
+            .eq('name', 'installment_payment_received')
+            .eq('is_active', true)
+            .single();
+
+          let messageContent = template?.content || 
+            `✅ تم استلام دفعة القسط بنجاح!\n\n` +
+            `📋 رقم الطلب: {{order_number}}\n` +
+            `💰 المبلغ المدفوع: {{amount}}\n` +
+            `💳 طريقة الدفع: {{payment_method}}\n` +
+            `📅 التاريخ: {{payment_date}}\n\n` +
+            `شكراً لالتزامك بالسداد! 🙏`;
+
+          // استبدال المتغيرات
+          messageContent = messageContent
+            .replace(/\{\{order_number\}\}/g, plan.orders.order_number)
+            .replace(/\{\{amount\}\}/g, formatCurrency(selectedInstallment.amount))
+            .replace(/\{\{payment_method\}\}/g, selectedPaymentType)
+            .replace(/\{\{payment_date\}\}/g, format(new Date(), 'dd/MM/yyyy', { locale: ar }));
+
           await supabase.from('whatsapp_messages').insert({
             to_number: customerPhone,
-            message_content: `✅ تم استلام دفعة القسط بنجاح!\n\n` +
-              `📋 رقم الطلب: ${plan.orders.order_number}\n` +
-              `💰 المبلغ المدفوع: ${formatCurrency(selectedInstallment.amount)}\n` +
-              `💳 طريقة الدفع: ${selectedPaymentType}\n` +
-              `📅 التاريخ: ${format(new Date(), 'dd/MM/yyyy', { locale: ar })}\n\n` +
-              `شكراً لالتزامك بالسداد! 🙏`,
+            message_content: messageContent,
+            message_type: 'installment_payment',
             status: 'pending',
           });
 
           // تشغيل معالج الرسائل
-          await fetch(`https://pqrzkfpowjutylegdcxj.supabase.co/functions/v1/process-whatsapp-queue`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxcnprZnBvd2p1dHlsZWdkY3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg4MzU5NzIsImV4cCI6MjA3NDQxMTk3Mn0.frZ6OBDDuqbXOmQUydyoLdCnI5n5_WnS96x2qMPNR78`,
-            },
+          await supabase.functions.invoke('process-whatsapp-queue', {
+            body: {}
           });
         }
       }
@@ -285,23 +300,43 @@ const InstallmentPlanDetails = ({ planId, onUpdate }: InstallmentPlanDetailsProp
         return;
       }
 
+      // جلب رقم القسط
+      const installment = installments?.find(i => i.id === installmentId);
+      const installmentNumber = installment?.installment_number || '1';
+
+      // جلب القالب من قاعدة البيانات
+      const { data: template } = await supabase
+        .from('message_templates')
+        .select('content')
+        .eq('name', 'installment_reminder')
+        .eq('is_active', true)
+        .single();
+
+      let messageContent = template?.content || 
+        `🔔 تذكير بموعد دفع القسط\n\n` +
+        `📋 رقم الطلب: {{order_number}}\n` +
+        `💰 المبلغ المطلوب: {{amount}}\n` +
+        `📅 موعد الاستحقاق: {{due_date}}\n` +
+        `📝 رقم القسط: {{installment_number}}\n\n` +
+        `يرجى السداد في الموعد المحدد. شكراً لك! 🙏`;
+
+      // استبدال المتغيرات
+      messageContent = messageContent
+        .replace(/\{\{order_number\}\}/g, plan.orders.order_number)
+        .replace(/\{\{amount\}\}/g, formatCurrency(amount))
+        .replace(/\{\{due_date\}\}/g, format(new Date(dueDate), 'dd/MM/yyyy', { locale: ar }))
+        .replace(/\{\{installment_number\}\}/g, installmentNumber.toString());
+
       await supabase.from('whatsapp_messages').insert({
         to_number: customerPhone,
-        message_content: `🔔 تذكير بموعد دفع القسط\n\n` +
-          `📋 رقم الطلب: ${plan.orders.order_number}\n` +
-          `💰 المبلغ المطلوب: ${formatCurrency(amount)}\n` +
-          `📅 موعد الاستحقاق: ${format(new Date(dueDate), 'dd/MM/yyyy', { locale: ar })}\n\n` +
-          `يرجى السداد في الموعد المحدد. شكراً لك! 🙏`,
+        message_content: messageContent,
+        message_type: 'installment_reminder',
         status: 'pending',
       });
 
       // تشغيل معالج الرسائل
-      await fetch(`https://pqrzkfpowjutylegdcxj.supabase.co/functions/v1/process-whatsapp-queue`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxcnprZnBvd2p1dHlsZWdkY3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg4MzU5NzIsImV4cCI6MjA3NDQxMTk3Mn0.frZ6OBDDuqbXOmQUydyoLdCnI5n5_WnS96x2qMPNR78`,
-        },
+      await supabase.functions.invoke('process-whatsapp-queue', {
+        body: {}
       });
 
       toast({

@@ -49,6 +49,22 @@ serve(async (req) => {
       throw fetchError;
     }
 
+    // جلب قالب التذكير
+    const { data: template } = await supabase
+      .from('message_templates')
+      .select('content')
+      .eq('name', 'installment_reminder')
+      .eq('is_active', true)
+      .single();
+
+    const templateContent = template?.content || 
+      `🔔 تذكير بموعد دفع القسط\n\n` +
+      `📋 رقم الطلب: {{order_number}}\n` +
+      `💰 المبلغ المطلوب: {{amount}}\n` +
+      `📅 موعد الاستحقاق: {{due_date}}\n` +
+      `📝 رقم القسط: {{installment_number}}\n\n` +
+      `يرجى السداد في الموعد المحدد. شكراً لك! 🙏`;
+
     let remindersCount = 0;
 
     // معالجة كل قسط
@@ -86,18 +102,12 @@ serve(async (req) => {
         year: 'numeric',
       }).format(dueDate);
 
-      // إنشاء رسالة التذكير
-      const message = daysDiff === 2
-        ? `🔔 تذكير: موعد دفع القسط بعد يومين\n\n` +
-          `📋 رقم الطلب: ${orderNumber}\n` +
-          `💰 المبلغ المطلوب: ${formattedAmount}\n` +
-          `📅 موعد الاستحقاق: ${formattedDate}\n\n` +
-          `يرجى الاستعداد للسداد. شكراً لك! 🙏`
-        : `⚠️ تذكير مهم: موعد دفع القسط غداً!\n\n` +
-          `📋 رقم الطلب: ${orderNumber}\n` +
-          `💰 المبلغ المطلوب: ${formattedAmount}\n` +
-          `📅 موعد الاستحقاق: ${formattedDate}\n\n` +
-          `يرجى السداد في الموعد المحدد. شكراً لثقتك! 🙏`;
+      // تجهيز رسالة التذكير بالقالب
+      const message = templateContent
+        .replace(/\{\{order_number\}\}/g, orderNumber)
+        .replace(/\{\{amount\}\}/g, formattedAmount)
+        .replace(/\{\{due_date\}\}/g, formattedDate)
+        .replace(/\{\{installment_number\}\}/g, installment.installment_number.toString());
 
       // إدراج رسالة واتساب
       const { error: messageError } = await supabase
@@ -105,6 +115,7 @@ serve(async (req) => {
         .insert({
           to_number: customerPhone,
           message_content: message,
+          message_type: 'installment_reminder',
           customer_id: customer.id,
           status: 'pending',
         });
@@ -137,13 +148,8 @@ serve(async (req) => {
 
     // تشغيل معالج الرسائل إذا كان هناك رسائل
     if (remindersCount > 0) {
-      await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/process-whatsapp-queue`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
-        },
-        body: JSON.stringify({ source: 'installment-reminders' }),
+      await supabase.functions.invoke('process-whatsapp-queue', {
+        body: { source: 'installment-reminders' }
       });
     }
 
