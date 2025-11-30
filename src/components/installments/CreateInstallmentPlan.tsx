@@ -142,6 +142,9 @@ const CreateInstallmentPlan = ({ onSuccess }: CreateInstallmentPlanProps) => {
       const remainingAmount = (selectedOrder.total_amount || 0) - (selectedOrder.paid_amount || 0);
       const installmentAmount = remainingAmount / parseInt(numberOfInstallments);
 
+      // توليد رقم عقد ورمز فريد
+      const contractToken = crypto.randomUUID();
+      
       // إنشاء خطة التقسيط
       const { data: plan, error: planError } = await supabase
         .from('installment_plans')
@@ -151,6 +154,7 @@ const CreateInstallmentPlan = ({ onSuccess }: CreateInstallmentPlanProps) => {
           total_amount: remainingAmount,
           number_of_installments: parseInt(numberOfInstallments),
           created_by: user?.id,
+          notes: `رمز العقد: ${contractToken}`,
         })
         .select()
         .single();
@@ -171,12 +175,15 @@ const CreateInstallmentPlan = ({ onSuccess }: CreateInstallmentPlanProps) => {
 
       if (installmentsError) throw installmentsError;
 
-      // إرسال رسالة واتساب للعميل بالقالب
+      // إرسال رسالة واتساب للعميل مع رابط العقد
       const customerPhone = selectedOrder.customers.whatsapp || selectedOrder.customers.phone;
       if (customerPhone) {
         const installmentsList = installmentDates.map((date, index) => 
           `القسط ${index + 1}: ${format(date, 'dd/MM/yyyy', { locale: ar })} - ${new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR' }).format(installmentAmount)}`
         ).join('\n');
+
+        // رابط العقد
+        const contractUrl = `${window.location.origin}/installment-contract/${contractToken}`;
 
         // جلب القالب من قاعدة البيانات
         const { data: template } = await supabase
@@ -192,6 +199,7 @@ const CreateInstallmentPlan = ({ onSuccess }: CreateInstallmentPlanProps) => {
           `💰 إجمالي المبلغ المتبقي: {{total_amount}}\n` +
           `📅 عدد الأقساط: {{number_of_installments}}\n\n` +
           `تفاصيل الأقساط:\n{{installments_list}}\n\n` +
+          `📄 لعرض عقد التقسيط الإلكتروني والموافقة عليه:\n{{contract_url}}\n\n` +
           `سيتم تذكيرك قبل كل دفعة بيومين وبيوم واحد.`;
 
         // استبدال المتغيرات
@@ -199,7 +207,8 @@ const CreateInstallmentPlan = ({ onSuccess }: CreateInstallmentPlanProps) => {
           .replace(/\{\{order_number\}\}/g, selectedOrder.order_number)
           .replace(/\{\{total_amount\}\}/g, formatCurrency(remainingAmount))
           .replace(/\{\{number_of_installments\}\}/g, numberOfInstallments)
-          .replace(/\{\{installments_list\}\}/g, installmentsList);
+          .replace(/\{\{installments_list\}\}/g, installmentsList)
+          .replace(/\{\{contract_url\}\}/g, contractUrl);
 
         await supabase.from('whatsapp_messages').insert({
           to_number: customerPhone,
