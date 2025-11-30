@@ -69,13 +69,31 @@ const InstallmentPlanDetails = ({ planId, onUpdate }: InstallmentPlanDetailsProp
     try {
       const { data: { user } } = await supabase.auth.getUser();
       
-      // تحديث حالة القسط
+      // تسجيل الدفعة في جدول المدفوعات العامة
+      const { data: paymentData, error: paymentError } = await supabase
+        .from('payments')
+        .insert({
+          order_id: plan?.order_id,
+          customer_id: plan?.customer_id,
+          amount: amount,
+          payment_type: 'cash',
+          payment_date: new Date().toISOString().split('T')[0],
+          notes: `دفعة قسط - القسط رقم ${installmentId}`,
+          created_by: user?.id,
+        })
+        .select('id')
+        .single();
+
+      if (paymentError) throw paymentError;
+
+      // تحديث حالة القسط وربطه بالدفعة
       const { error: updateError } = await supabase
         .from('installment_payments')
         .update({
           status: 'paid',
           paid_amount: amount,
           paid_date: new Date().toISOString().split('T')[0],
+          payment_id: paymentData.id,
         })
         .eq('id', installmentId);
 
