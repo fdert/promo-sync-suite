@@ -86,6 +86,7 @@ interface Order {
   }[];
   remaining_amount?: number;
   calculated_paid_amount?: number;
+  has_installment_plan?: boolean;
 }
 
 interface Customer {
@@ -235,7 +236,7 @@ const Orders = () => {
 
       console.log('✅ تم جلب عدد الطلبات:', data?.length || 0);
       
-      // حساب المبلغ المدفوع لكل طلب
+      // حساب المبلغ المدفوع لكل طلب والتحقق من وجود خطة أقساط
       const ordersWithPayments = await Promise.all((data || []).map(async (order: any) => {
         const { data: payments } = await supabase
           .from('payments')
@@ -244,13 +245,22 @@ const Orders = () => {
         
         const totalPaid = payments?.reduce((sum, payment) => sum + payment.amount, 0) || 0;
         
+        // التحقق من وجود خطة أقساط نشطة
+        const { data: installmentPlan } = await supabase
+          .from('installment_plans')
+          .select('id, status')
+          .eq('order_id', order.id)
+          .in('status', ['active', 'overdue'])
+          .maybeSingle();
+        
         return {
           ...order,
           service_name: order.service_types?.name || order.service_name || 'غير محدد',
           due_date: order.delivery_date,
           paid_amount: totalPaid,
           calculated_paid_amount: totalPaid,
-          remaining_amount: (order.total_amount || 0) - totalPaid
+          remaining_amount: (order.total_amount || 0) - totalPaid,
+          has_installment_plan: !!installmentPlan
         };
       }));
       
@@ -1897,6 +1907,12 @@ ${companyName}`;
                     }>
                       {order.priority}
                     </Badge>
+                    {order.has_installment_plan && (
+                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300">
+                        <CreditCard className="h-3 w-3 ml-1" />
+                        خطة تقسيط
+                      </Badge>
+                    )}
                   </div>
                 </div>
                 
