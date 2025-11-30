@@ -38,7 +38,8 @@ const CreateInstallmentPlan = ({ onSuccess }: CreateInstallmentPlanProps) => {
     queryFn: async () => {
       if (!searchTerm || searchTerm.length < 2) return [];
       
-      const { data, error } = await supabase
+      // البحث في الطلبات والعملاء
+      const { data: allOrders, error } = await supabase
         .from('orders')
         .select(`
           id,
@@ -52,16 +53,28 @@ const CreateInstallmentPlan = ({ onSuccess }: CreateInstallmentPlanProps) => {
             whatsapp
           )
         `)
-        .or(`order_number.ilike.%${searchTerm}%`)
         .eq('status', 'قيد التنفيذ')
-        .order('created_at', { ascending: false })
-        .limit(10);
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       
+      // فلترة النتائج بناءً على البحث في اسم العميل أو رقم الطلب أو رقم الجوال
+      const filteredOrders = (allOrders || []).filter((order: any) => {
+        const searchLower = searchTerm.toLowerCase();
+        const orderNumber = order.order_number?.toLowerCase() || '';
+        const customerName = order.customers?.name?.toLowerCase() || '';
+        const phone = order.customers?.phone?.toLowerCase() || '';
+        const whatsapp = order.customers?.whatsapp?.toLowerCase() || '';
+        
+        return orderNumber.includes(searchLower) || 
+               customerName.includes(searchLower) || 
+               phone.includes(searchLower) || 
+               whatsapp.includes(searchLower);
+      });
+      
       // فلترة الطلبات التي ليس لها خطة تقسيط بالفعل
       const ordersWithoutPlans = [];
-      for (const order of data || []) {
+      for (const order of filteredOrders.slice(0, 10)) {
         const { data: existingPlan } = await supabase
           .from('installment_plans')
           .select('id')
