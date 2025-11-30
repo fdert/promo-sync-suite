@@ -12,9 +12,23 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { CheckCircle2, XCircle, Clock, Send } from "lucide-react";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
+import { useState } from "react";
 
 interface InstallmentPlanDetailsProps {
   planId: string;
@@ -23,6 +37,13 @@ interface InstallmentPlanDetailsProps {
 
 const InstallmentPlanDetails = ({ planId, onUpdate }: InstallmentPlanDetailsProps) => {
   const { toast } = useToast();
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [selectedInstallment, setSelectedInstallment] = useState<{
+    id: string;
+    amount: number;
+    number: number;
+  } | null>(null);
+  const [selectedPaymentType, setSelectedPaymentType] = useState<string>("");
 
   // جلب تفاصيل الخطة
   const { data: plan } = useQuery({
@@ -65,7 +86,38 @@ const InstallmentPlanDetails = ({ planId, onUpdate }: InstallmentPlanDetailsProp
     }
   });
 
-  const handleMarkAsPaid = async (installmentId: string, amount: number, installmentNumber: number) => {
+  // جلب أنواع الحسابات النشطة
+  const { data: accountTypes } = useQuery({
+    queryKey: ['active-account-types'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('accounts')
+        .select('account_type')
+        .eq('is_active', true)
+        .in('account_type', ['نقدية', 'بنك', 'الشبكة']);
+
+      if (error) throw error;
+      // إزالة التكرارات
+      return [...new Set(data.map(a => a.account_type))];
+    }
+  });
+
+  const openPaymentDialog = (installmentId: string, amount: number, installmentNumber: number) => {
+    setSelectedInstallment({ id: installmentId, amount, number: installmentNumber });
+    setSelectedPaymentType("");
+    setPaymentDialogOpen(true);
+  };
+
+  const handleConfirmPayment = async () => {
+    if (!selectedInstallment || !selectedPaymentType) {
+      toast({
+        title: "خطأ",
+        description: "يرجى اختيار طريقة الدفع",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       
@@ -80,16 +132,22 @@ const InstallmentPlanDetails = ({ planId, onUpdate }: InstallmentPlanDetailsProp
 
       console.log('خطة التقسيط:', plan);
       
+      const paymentTypeMap: Record<string, 'cash' | 'bank_transfer' | 'card'> = {
+        'نقدية': 'cash',
+        'بنك': 'bank_transfer',
+        'الشبكة': 'card',
+      };
+
       // تسجيل الدفعة في جدول المدفوعات العامة
       const { data: paymentData, error: paymentError } = await supabase
         .from('payments')
         .insert({
           order_id: plan.order_id,
           customer_id: plan.customer_id,
-          amount: amount,
-          payment_type: 'cash',
+          amount: selectedInstallment.amount,
+          payment_type: paymentTypeMap[selectedPaymentType] || 'cash',
           payment_date: new Date().toISOString().split('T')[0],
-          notes: `دفعة قسط ${installmentNumber} - خطة تقسيط`,
+          notes: `دفعة قسط ${selectedInstallment.number} - خطة تقسيط`,
           created_by: user?.id,
         })
         .select('id')
@@ -107,11 +165,11 @@ const InstallmentPlanDetails = ({ planId, onUpdate }: InstallmentPlanDetailsProp
         .from('installment_payments')
         .update({
           status: 'paid',
-          paid_amount: amount,
+          paid_amount: selectedInstallment.amount,
           paid_date: new Date().toISOString().split('T')[0],
           payment_id: paymentData.id,
         })
-        .eq('id', installmentId);
+        .eq('id', selectedInstallment.id);
 
       if (updateError) {
         console.error('خطأ في تحديث القسط:', updateError);
@@ -120,12 +178,7 @@ const InstallmentPlanDetails = ({ planId, onUpdate }: InstallmentPlanDetailsProp
 
       // إنشاء القيود المحاسبية بنفس منطق شاشة مدفوعات الطلب
       try {
-        const paymentType = 'cash' as const;
-
-        const accountType =
-          paymentType === 'cash' ? 'نقدية' :
-          paymentType === 'bank_transfer' ? 'بنك' :
-          paymentType === 'card' ? 'الشبكة' : 'نقدية';
+        const accountType = selectedPaymentType;
 
         const { data: cashAccount } = await supabase
           .from('accounts')
@@ -144,29 +197,24 @@ const InstallmentPlanDetails = ({ planId, onUpdate }: InstallmentPlanDetailsProp
           .single();
 
         if (cashAccount && receivableAccount) {
-          const paymentTypeLabel =
-            paymentType === 'cash' ? 'نقداً' :
-            paymentType === 'bank_transfer' ? 'تحويل بنكي' :
-            paymentType === 'card' ? 'الشبكة' : 'نقداً';
-
           await supabase.from('account_entries').insert([
             {
               account_id: cashAccount.id,
-              debit: amount,
+              debit: selectedInstallment.amount,
               credit: 0,
               reference_type: 'payment',
               reference_id: paymentData.id,
-              description: `دفعة قسط ${installmentNumber} للطلب - ${paymentTypeLabel}`,
+              description: `دفعة قسط ${selectedInstallment.number} للطلب - ${selectedPaymentType}`,
               entry_date: new Date().toISOString().split('T')[0],
               created_by: user?.id,
             },
             {
               account_id: receivableAccount.id,
               debit: 0,
-              credit: amount,
+              credit: selectedInstallment.amount,
               reference_type: 'payment',
               reference_id: paymentData.id,
-              description: `دفعة قسط ${installmentNumber} من العميل للطلب`,
+              description: `دفعة قسط ${selectedInstallment.number} من العميل للطلب`,
               entry_date: new Date().toISOString().split('T')[0],
               created_by: user?.id,
             },
@@ -185,7 +233,8 @@ const InstallmentPlanDetails = ({ planId, onUpdate }: InstallmentPlanDetailsProp
             to_number: customerPhone,
             message_content: `✅ تم استلام دفعة القسط بنجاح!\n\n` +
               `📋 رقم الطلب: ${plan.orders.order_number}\n` +
-              `💰 المبلغ المدفوع: ${formatCurrency(amount)}\n` +
+              `💰 المبلغ المدفوع: ${formatCurrency(selectedInstallment.amount)}\n` +
+              `💳 طريقة الدفع: ${selectedPaymentType}\n` +
               `📅 التاريخ: ${format(new Date(), 'dd/MM/yyyy', { locale: ar })}\n\n` +
               `شكراً لالتزامك بالسداد! 🙏`,
             status: 'pending',
@@ -207,6 +256,9 @@ const InstallmentPlanDetails = ({ planId, onUpdate }: InstallmentPlanDetailsProp
         description: "تم تسجيل الدفعة وإرسال إشعار للعميل",
       });
 
+      setPaymentDialogOpen(false);
+      setSelectedInstallment(null);
+      setSelectedPaymentType("");
       refetchInstallments();
       onUpdate();
     } catch (error: any) {
@@ -363,7 +415,7 @@ const InstallmentPlanDetails = ({ planId, onUpdate }: InstallmentPlanDetailsProp
                           <>
                             <Button
                               size="sm"
-                              onClick={() => handleMarkAsPaid(installment.id, installment.amount, installment.installment_number)}
+                              onClick={() => openPaymentDialog(installment.id, installment.amount, installment.installment_number)}
                             >
                               <CheckCircle2 className="h-4 w-4 ml-1" />
                               تسجيل الدفع
@@ -391,6 +443,55 @@ const InstallmentPlanDetails = ({ planId, onUpdate }: InstallmentPlanDetailsProp
           )}
         </CardContent>
       </Card>
+
+      {/* Dialog لاختيار طريقة الدفع */}
+      <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>تسجيل دفعة القسط</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                القسط رقم: <span className="font-medium text-foreground">{selectedInstallment?.number}</span>
+              </p>
+              <p className="text-sm text-muted-foreground">
+                المبلغ: <span className="font-medium text-foreground">{selectedInstallment && formatCurrency(selectedInstallment.amount)}</span>
+              </p>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">طريقة الدفع</label>
+              <Select value={selectedPaymentType} onValueChange={setSelectedPaymentType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="اختر طريقة الدفع" />
+                </SelectTrigger>
+                <SelectContent>
+                  {accountTypes?.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => setPaymentDialogOpen(false)}
+              >
+                إلغاء
+              </Button>
+              <Button
+                onClick={handleConfirmPayment}
+                disabled={!selectedPaymentType}
+              >
+                <CheckCircle2 className="h-4 w-4 ml-1" />
+                تأكيد الدفع
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
