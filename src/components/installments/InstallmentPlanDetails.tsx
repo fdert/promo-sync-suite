@@ -118,34 +118,63 @@ const InstallmentPlanDetails = ({ planId, onUpdate }: InstallmentPlanDetailsProp
         throw updateError;
       }
 
-      // تسجيل القيد المحاسبي
+      // إنشاء القيود المحاسبية بنفس منطق شاشة مدفوعات الطلب
       try {
-        // جلب حساب العميل أو إنشاؤه
-        const { data: customerAccount } = await supabase
+        const paymentType = 'cash' as const;
+
+        const accountType =
+          paymentType === 'cash' ? 'نقدية' :
+          paymentType === 'bank_transfer' ? 'بنك' :
+          paymentType === 'card' ? 'الشبكة' : 'نقدية';
+
+        const { data: cashAccount } = await supabase
           .from('accounts')
           .select('id')
-          .eq('account_type', 'customer')
-          .ilike('account_name', `%${plan.customer_id}%`)
-          .maybeSingle();
+          .eq('account_type', accountType)
+          .eq('is_active', true)
+          .limit(1)
+          .single();
 
-        if (customerAccount) {
-          // إدراج قيد دائن في حساب العميل (تقليل رصيده المدين)
-          await supabase
-            .from('account_entries')
-            .insert({
-              account_id: customerAccount.id,
-              credit: amount,
-              debit: 0,
-              description: `دفعة قسط ${installmentNumber} - طلب ${plan.orders.order_number}`,
+        const { data: receivableAccount } = await supabase
+          .from('accounts')
+          .select('id')
+          .eq('account_type', 'ذمم مدينة')
+          .eq('is_active', true)
+          .limit(1)
+          .single();
+
+        if (cashAccount && receivableAccount) {
+          const paymentTypeLabel =
+            paymentType === 'cash' ? 'نقداً' :
+            paymentType === 'bank_transfer' ? 'تحويل بنكي' :
+            paymentType === 'card' ? 'الشبكة' : 'نقداً';
+
+          await supabase.from('account_entries').insert([
+            {
+              account_id: cashAccount.id,
+              debit: amount,
+              credit: 0,
+              reference_type: 'payment',
+              reference_id: paymentData.id,
+              description: `دفعة قسط ${installmentNumber} للطلب - ${paymentTypeLabel}`,
               entry_date: new Date().toISOString().split('T')[0],
-              reference_type: 'installment_payment',
-              reference_id: installmentId,
               created_by: user?.id,
-            });
+            },
+            {
+              account_id: receivableAccount.id,
+              debit: 0,
+              credit: amount,
+              reference_type: 'payment',
+              reference_id: paymentData.id,
+              description: `دفعة قسط ${installmentNumber} من العميل للطلب`,
+              entry_date: new Date().toISOString().split('T')[0],
+              created_by: user?.id,
+            },
+          ]);
         }
       } catch (accountError) {
-        console.error('خطأ في تسجيل القيد المحاسبي:', accountError);
-        // لا نفشل العملية بسبب خطأ في المحاسبة
+        console.error('خطأ في تسجيل القيود المحاسبية:', accountError);
+        // لا نفشل عملية تسجيل الدفعة بسبب خطأ في المحاسبة
       }
 
       // إرسال رسالة واتساب للعميل
