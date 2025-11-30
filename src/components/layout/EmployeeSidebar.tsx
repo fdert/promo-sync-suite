@@ -128,6 +128,12 @@ const employeeMenuItems = [
     href: "/employee/loyalty",
     allowedRoles: ['employee'] as UserRole[],
   },
+  {
+    title: "إدارة الأقساط",
+    icon: CreditCard,
+    href: "/employee/installment-plans",
+    allowedRoles: ['employee'] as UserRole[],
+  },
 ];
 
 const EmployeeSidebar = ({ collapsed, onToggle }: SidebarProps) => {

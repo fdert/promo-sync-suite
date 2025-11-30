@@ -71,6 +71,8 @@ import DailyTasks from "./pages/employee/DailyTasks";
 import TasksMonitor from "./pages/admin/TasksMonitor";
 import UserActivityLogs from "./pages/admin/UserActivityLogs";
 import WhatsAppQRLogin from "./pages/admin/WhatsAppQRLogin";
+import InstallmentPlans from "./pages/admin/InstallmentPlans";
+import EmployeeInstallmentPlans from "./pages/employee/InstallmentPlans";
 
 const queryClient = new QueryClient();
 
@@ -112,6 +114,7 @@ const App = () => (
               <Route path="order-payments" element={<EmployeeOrderPaymentsList />} />
               <Route path="order-payments/:orderId" element={<EmployeeOrderPayments />} />
               <Route path="loyalty" element={<LoyaltyManagement />} />
+              <Route path="installment-plans" element={<EmployeeInstallmentPlans />} />
             </Route>
             <Route path="/admin" element={
               <ProtectedRoute>
@@ -210,6 +213,7 @@ const App = () => (
                      <LoyaltySettings />
                    </RoleProtectedRoute>
                  } />
+                 <Route path="installment-plans" element={<InstallmentPlans />} />
             </Route>
             <Route path="/evaluation/:token" element={<Evaluation />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
