@@ -53,7 +53,6 @@ const CreateInstallmentPlan = ({ onSuccess }: CreateInstallmentPlanProps) => {
             whatsapp
           )
         `)
-        .eq('status', 'قيد التنفيذ')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
