@@ -52,21 +52,7 @@ const InstallmentPlanDetails = ({ planId, onUpdate }: InstallmentPlanDetailsProp
       const { data, error } = await supabase
         .from('installment_plans')
         .select(`
-          id,
-          order_id,
-          customer_id,
-          total_amount,
-          number_of_installments,
-          status,
-          notes,
-          created_at,
-          updated_at,
-          created_by,
-          contract_number,
-          contract_token,
-          contract_status,
-          contract_confirmed_at,
-          contract_confirmed_ip,
+          *,
           orders (
             order_number,
             total_amount,
@@ -81,7 +67,7 @@ const InstallmentPlanDetails = ({ planId, onUpdate }: InstallmentPlanDetailsProp
         .single();
 
       if (error) throw error;
-      return data as any;
+      return data;
     }
   });
 
@@ -403,17 +389,18 @@ const InstallmentPlanDetails = ({ planId, onUpdate }: InstallmentPlanDetailsProp
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>معلومات الخطة</CardTitle>
-          {plan.contract_token && (
-            <Button
-              variant="outline"
-              onClick={() => {
-                window.open(`/installment-contract/${plan.contract_token}`, '_blank');
-              }}
-            >
-              <FileText className="h-4 w-4 ml-2" />
-              عرض العقد
-            </Button>
-          )}
+          <Button
+            variant="outline"
+            onClick={() => {
+              const contractToken = plan.notes?.match(/رمز العقد: ([a-f0-9-]+)/)?.[1];
+              if (contractToken) {
+                window.open(`/installment-contract/${contractToken}`, '_blank');
+              }
+            }}
+          >
+            <FileText className="h-4 w-4 ml-2" />
+            عرض العقد
+          </Button>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 gap-4">
@@ -432,17 +419,6 @@ const InstallmentPlanDetails = ({ planId, onUpdate }: InstallmentPlanDetailsProp
             <div>
               <p className="text-sm text-muted-foreground">عدد الأقساط</p>
               <p className="font-medium">{plan.number_of_installments} قسط</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">رقم العقد</p>
-              <p className="font-medium">{plan.contract_number || 'غير محدد'}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">حالة العقد</p>
-              <p className="font-medium">
-                {plan.contract_status === 'confirmed' ? '✅ مؤكد' : 
-                 plan.contract_status === 'pending' ? '⏳ قيد الانتظار' : 'غير محدد'}
-              </p>
             </div>
           </div>
         </CardContent>

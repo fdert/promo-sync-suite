@@ -155,9 +155,7 @@ const CreateInstallmentPlan = ({ onSuccess }: CreateInstallmentPlanProps) => {
           total_amount: remainingAmount,
           number_of_installments: parseInt(numberOfInstallments),
           created_by: user?.id,
-          contract_number: contractNumber,
-          contract_token: contractToken,
-          contract_status: 'pending',
+          notes: `رقم العقد: ${contractNumber} | رمز العقد: ${contractToken}`,
         })
         .select()
         .single();
