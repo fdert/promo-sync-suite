@@ -65,26 +65,42 @@ const InstallmentPlanDetails = ({ planId, onUpdate }: InstallmentPlanDetailsProp
     }
   });
 
-  const handleMarkAsPaid = async (installmentId: string, amount: number) => {
+  const handleMarkAsPaid = async (installmentId: string, amount: number, installmentNumber: number) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!plan) {
+        toast({
+          title: "خطأ",
+          description: "لا يمكن العثور على تفاصيل الخطة",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log('خطة التقسيط:', plan);
       
       // تسجيل الدفعة في جدول المدفوعات العامة
       const { data: paymentData, error: paymentError } = await supabase
         .from('payments')
         .insert({
-          order_id: plan?.order_id,
-          customer_id: plan?.customer_id,
+          order_id: plan.order_id,
+          customer_id: plan.customer_id,
           amount: amount,
           payment_type: 'cash',
           payment_date: new Date().toISOString().split('T')[0],
-          notes: `دفعة قسط - القسط رقم ${installmentId}`,
+          notes: `دفعة قسط ${installmentNumber} - خطة تقسيط`,
           created_by: user?.id,
         })
         .select('id')
         .single();
 
-      if (paymentError) throw paymentError;
+      if (paymentError) {
+        console.error('خطأ في إدراج الدفعة:', paymentError);
+        throw paymentError;
+      }
+
+      console.log('تم إدراج الدفعة:', paymentData);
 
       // تحديث حالة القسط وربطه بالدفعة
       const { error: updateError } = await supabase
@@ -97,7 +113,40 @@ const InstallmentPlanDetails = ({ planId, onUpdate }: InstallmentPlanDetailsProp
         })
         .eq('id', installmentId);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('خطأ في تحديث القسط:', updateError);
+        throw updateError;
+      }
+
+      // تسجيل القيد المحاسبي
+      try {
+        // جلب حساب العميل أو إنشاؤه
+        const { data: customerAccount } = await supabase
+          .from('accounts')
+          .select('id')
+          .eq('account_type', 'customer')
+          .ilike('account_name', `%${plan.customer_id}%`)
+          .maybeSingle();
+
+        if (customerAccount) {
+          // إدراج قيد دائن في حساب العميل (تقليل رصيده المدين)
+          await supabase
+            .from('account_entries')
+            .insert({
+              account_id: customerAccount.id,
+              credit: amount,
+              debit: 0,
+              description: `دفعة قسط ${installmentNumber} - طلب ${plan.orders.order_number}`,
+              entry_date: new Date().toISOString().split('T')[0],
+              reference_type: 'installment_payment',
+              reference_id: installmentId,
+              created_by: user?.id,
+            });
+        }
+      } catch (accountError) {
+        console.error('خطأ في تسجيل القيد المحاسبي:', accountError);
+        // لا نفشل العملية بسبب خطأ في المحاسبة
+      }
 
       // إرسال رسالة واتساب للعميل
       if (plan?.orders?.customers) {
@@ -285,7 +334,7 @@ const InstallmentPlanDetails = ({ planId, onUpdate }: InstallmentPlanDetailsProp
                           <>
                             <Button
                               size="sm"
-                              onClick={() => handleMarkAsPaid(installment.id, installment.amount)}
+                              onClick={() => handleMarkAsPaid(installment.id, installment.amount, installment.installment_number)}
                             >
                               <CheckCircle2 className="h-4 w-4 ml-1" />
                               تسجيل الدفع
