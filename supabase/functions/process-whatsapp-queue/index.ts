@@ -404,7 +404,7 @@ async function sendToWhatsAppService(message: any): Promise<boolean> {
             messageText: textMessage,
             text: textMessage,
             type: 'text',
-            message_type: 'text',
+            message_type: message.message_type || 'text',
             timestamp: Math.floor(Date.now() / 1000),
             customer_id: message.customer_id,
             message_id: message.id,
