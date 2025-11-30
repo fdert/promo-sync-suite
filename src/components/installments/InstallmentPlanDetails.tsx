@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CheckCircle2, XCircle, Clock, Send } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, Send, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 import { useState } from "react";
@@ -387,8 +387,20 @@ const InstallmentPlanDetails = ({ planId, onUpdate }: InstallmentPlanDetailsProp
     <div className="space-y-6">
       {/* معلومات الخطة */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>معلومات الخطة</CardTitle>
+          <Button
+            variant="outline"
+            onClick={() => {
+              const contractToken = plan.notes?.match(/رمز العقد: ([a-f0-9-]+)/)?.[1];
+              if (contractToken) {
+                window.open(`/installment-contract/${contractToken}`, '_blank');
+              }
+            }}
+          >
+            <FileText className="h-4 w-4 ml-2" />
+            عرض العقد
+          </Button>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 gap-4">

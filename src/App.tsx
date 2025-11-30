@@ -73,6 +73,7 @@ import UserActivityLogs from "./pages/admin/UserActivityLogs";
 import WhatsAppQRLogin from "./pages/admin/WhatsAppQRLogin";
 import InstallmentPlans from "./pages/admin/InstallmentPlans";
 import EmployeeInstallmentPlans from "./pages/employee/InstallmentPlans";
+import InstallmentContract from "./pages/InstallmentContract";
 
 const queryClient = new QueryClient();
 
@@ -216,6 +217,7 @@ const App = () => (
                  <Route path="installment-plans" element={<InstallmentPlans />} />
             </Route>
             <Route path="/evaluation/:token" element={<Evaluation />} />
+            <Route path="/installment-contract/:token" element={<InstallmentContract />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
