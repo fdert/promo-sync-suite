@@ -155,7 +155,7 @@ const CreateInstallmentPlan = ({ onSuccess }: CreateInstallmentPlanProps) => {
           total_amount: remainingAmount,
           number_of_installments: parseInt(numberOfInstallments),
           created_by: user?.id,
-          notes: `رقم العقد: ${contractNumber} | رمز العقد: ${contractToken}`,
+          notes: `CONTRACT_TOKEN:${contractToken}|CONTRACT_NUMBER:${contractNumber}`,
         })
         .select()
         .single();
@@ -183,8 +183,8 @@ const CreateInstallmentPlan = ({ onSuccess }: CreateInstallmentPlanProps) => {
           `القسط ${index + 1}: ${format(date, 'dd/MM/yyyy', { locale: ar })} - ${new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR' }).format(installmentAmount)}`
         ).join('\n');
 
-        // رابط العقد
-        const contractUrl = `${window.location.origin}/installment-contract/${contractToken}`;
+        // رابط العقد - استخدام رابط production مباشر
+        const contractUrl = `https://e5a7747a-0935-46df-9ea9-1308e76636dc.lovableproject.com/installment-contract/${contractToken}`;
 
         // جلب القالب من قاعدة البيانات
         const { data: template } = await supabase

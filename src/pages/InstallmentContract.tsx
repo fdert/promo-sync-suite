@@ -25,7 +25,7 @@ const InstallmentContract = () => {
 
   const fetchContractDetails = async () => {
     try {
-      // البحث عن الخطة باستخدام token في حقل notes
+      // البحث عن الخطة باستخدام token الدقيق في حقل notes
       const { data: plans } = await supabase
         .from('installment_plans')
         .select(`
@@ -40,13 +40,13 @@ const InstallmentContract = () => {
             )
           )
         `)
-        .ilike('notes', `%${token}%`);
+        .ilike('notes', `%CONTRACT_TOKEN:${token}%`);
 
       const planData = plans?.[0];
       if (!planData) {
         toast({
           title: "خطأ",
-          description: "العقد غير موجود",
+          description: "العقد غير موجود أو الرابط غير صحيح",
           variant: "destructive",
         });
         setLoading(false);
@@ -135,7 +135,7 @@ const InstallmentContract = () => {
       )
       .join('');
 
-    const contractNumber = planData.notes?.match(/رقم العقد: ([A-Z0-9-]+)/)?.[1] || planData.id?.substring(0, 8).toUpperCase();
+    const contractNumber = planData.notes?.match(/CONTRACT_NUMBER:([A-Z0-9-]+)/)?.[1] || planData.id?.substring(0, 8).toUpperCase();
     const customers = Array.isArray(planData.orders) ? planData.orders[0]?.customers?.[0] : planData.orders?.customers;
     const orderNumber = Array.isArray(planData.orders) ? planData.orders[0]?.order_number : planData.orders?.order_number;
 
@@ -208,7 +208,7 @@ const InstallmentContract = () => {
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      const contractNumber = plan.notes?.match(/رقم العقد: ([A-Z0-9-]+)/)?.[1] || plan.id?.substring(0, 8);
+      const contractNumber = plan.notes?.match(/CONTRACT_NUMBER:([A-Z0-9-]+)/)?.[1] || plan.id?.substring(0, 8);
       pdf.save(`عقد_تقسيط_${contractNumber}.pdf`);
 
       toast({
@@ -322,7 +322,7 @@ const InstallmentContract = () => {
 
         <div className="mt-6 text-center text-sm text-muted-foreground">
           <p>هذا العقد محمي ومُوثّق إلكترونياً</p>
-          <p>رقم العقد: {plan.notes?.match(/رقم العقد: ([A-Z0-9-]+)/)?.[1] || plan.id?.substring(0, 8).toUpperCase()}</p>
+          <p>رقم العقد: {plan.notes?.match(/CONTRACT_NUMBER:([A-Z0-9-]+)/)?.[1] || plan.id?.substring(0, 8).toUpperCase()}</p>
         </div>
       </div>
     </div>
