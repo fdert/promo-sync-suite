@@ -1,8 +1,8 @@
 import InstallmentPlansPage from "@/pages/admin/InstallmentPlans";
 
-// نفس الصفحة للموظفين مع نفس الصلاحيات
+// صفحة الموظفين - بدون صلاحيات الحذف والتعديل
 const EmployeeInstallmentPlans = () => {
-  return <InstallmentPlansPage />;
+  return <InstallmentPlansPage showActions={false} />;
 };
 
 export default EmployeeInstallmentPlans;

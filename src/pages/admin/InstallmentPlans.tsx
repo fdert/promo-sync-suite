@@ -36,7 +36,11 @@ import CreateInstallmentPlan from "@/components/installments/CreateInstallmentPl
 import InstallmentPlanDetails from "@/components/installments/InstallmentPlanDetails";
 import InstallmentPlanExport from "@/components/installments/InstallmentPlanExport";
 
-const InstallmentPlans = () => {
+interface InstallmentPlansProps {
+  showActions?: boolean;
+}
+
+const InstallmentPlans = ({ showActions = true }: InstallmentPlansProps) => {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPlan, setSelectedPlan] = useState<any>(null);
@@ -265,26 +269,30 @@ const InstallmentPlans = () => {
                           <FileText className="h-4 w-4 ml-2" />
                           التفاصيل
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedPlan(plan);
-                            setShowEditDialog(true);
-                          }}
-                        >
-                          <Edit className="h-4 w-4 ml-2" />
-                          تعديل
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setPlanToDelete(plan)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4 ml-2" />
-                          حذف
-                        </Button>
+                        {showActions && (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedPlan(plan);
+                                setShowEditDialog(true);
+                              }}
+                            >
+                              <Edit className="h-4 w-4 ml-2" />
+                              تعديل
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setPlanToDelete(plan)}
+                              className="text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 ml-2" />
+                              حذف
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
