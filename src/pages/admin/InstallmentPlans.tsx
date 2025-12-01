@@ -21,7 +21,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Search, Plus, FileText, Download } from "lucide-react";
+import { Search, Plus, FileText, Download, Trash2, Edit } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import CreateInstallmentPlan from "@/components/installments/CreateInstallmentPlan";
 import InstallmentPlanDetails from "@/components/installments/InstallmentPlanDetails";
 import InstallmentPlanExport from "@/components/installments/InstallmentPlanExport";
@@ -32,6 +42,9 @@ const InstallmentPlans = () => {
   const [selectedPlan, setSelectedPlan] = useState<any>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [planToDelete, setPlanToDelete] = useState<any>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // جلب خطط الأقساط
   const { data: plans, isLoading, refetch } = useQuery({
@@ -89,6 +102,46 @@ const InstallmentPlans = () => {
       title: "تم إنشاء خطة التقسيط",
       description: "تم إنشاء خطة التقسيط وإرسال التفاصيل للعميل بنجاح",
     });
+  };
+
+  const handleDeletePlan = async () => {
+    if (!planToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      // حذف الدفعات أولاً
+      const { error: paymentsError } = await supabase
+        .from('installment_payments')
+        .delete()
+        .eq('installment_plan_id', planToDelete.id);
+
+      if (paymentsError) throw paymentsError;
+
+      // حذف الخطة
+      const { error: planError } = await supabase
+        .from('installment_plans')
+        .delete()
+        .eq('id', planToDelete.id);
+
+      if (planError) throw planError;
+
+      toast({
+        title: "تم الحذف بنجاح",
+        description: "تم حذف خطة التقسيط بنجاح",
+      });
+
+      setPlanToDelete(null);
+      refetch();
+    } catch (error: any) {
+      console.error('Error deleting plan:', error);
+      toast({
+        title: "خطأ",
+        description: error.message || "حدث خطأ أثناء حذف خطة التقسيط",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -200,17 +253,39 @@ const InstallmentPlans = () => {
                     </TableCell>
                     <TableCell>{getStatusBadge(plan.plan_status)}</TableCell>
                     <TableCell>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedPlan(plan);
-                          setShowDetailsDialog(true);
-                        }}
-                      >
-                        <FileText className="h-4 w-4 ml-2" />
-                        التفاصيل
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedPlan(plan);
+                            setShowDetailsDialog(true);
+                          }}
+                        >
+                          <FileText className="h-4 w-4 ml-2" />
+                          التفاصيل
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedPlan(plan);
+                            setShowEditDialog(true);
+                          }}
+                        >
+                          <Edit className="h-4 w-4 ml-2" />
+                          تعديل
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setPlanToDelete(plan)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4 ml-2" />
+                          حذف
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -238,6 +313,51 @@ const InstallmentPlans = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* نافذة تعديل الخطة */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>تعديل خطة التقسيط</DialogTitle>
+          </DialogHeader>
+          {selectedPlan && (
+            <InstallmentPlanDetails 
+              planId={selectedPlan.id} 
+              onUpdate={() => {
+                refetch();
+                setShowEditDialog(false);
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* نافذة تأكيد الحذف */}
+      <AlertDialog open={!!planToDelete} onOpenChange={() => setPlanToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>تأكيد حذف خطة التقسيط</AlertDialogTitle>
+            <AlertDialogDescription>
+              هل أنت متأكد من حذف خطة التقسيط للعميل{" "}
+              <span className="font-bold">{planToDelete?.customer_name}</span>؟
+              <br />
+              <span className="text-destructive">
+                سيتم حذف جميع الدفعات المرتبطة بهذه الخطة. هذا الإجراء لا يمكن التراجع عنه.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeletePlan}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? "جاري الحذف..." : "حذف"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
