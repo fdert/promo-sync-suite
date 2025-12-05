@@ -503,14 +503,25 @@ ${index + 1}. *المبلغ:* ${payment.amount.toLocaleString()} ر.س
       
       const phone = customer.whatsapp || customer.phone;
 
+      // حساب عدد الطلبات غير المسددة وأقرب تاريخ استحقاق من unpaidOrders
+      const customerUnpaidOrders = unpaidOrders.filter(o => o.customer_name === selectedCustomerData.customer_name);
+      const unpaidCount = customerUnpaidOrders.length;
+      const earliestDueDate = customerUnpaidOrders.length > 0 
+        ? customerUnpaidOrders.reduce((earliest, order) => {
+            if (!order.due_date) return earliest;
+            const orderDate = new Date(order.due_date);
+            return !earliest || orderDate < earliest ? orderDate : earliest;
+          }, null as Date | null)
+        : null;
+
       // متغيرات القالب لتقرير المديونيات
       const templateVars = {
         customer_name: customer.name,
         report_date: format(new Date(), 'dd/MM/yyyy - HH:mm', { locale: ar }),
         total_due: `${selectedCustomerData.outstanding_balance.toLocaleString()} ر.س`,
-        unpaid_orders_count: String(selectedCustomerData.unpaid_invoices_count),
-        earliest_due_date: selectedCustomerData.earliest_due_date
-          ? format(new Date(selectedCustomerData.earliest_due_date), 'dd/MM/yyyy', { locale: ar })
+        unpaid_orders_count: String(unpaidCount),
+        earliest_due_date: earliestDueDate
+          ? format(earliestDueDate, 'dd/MM/yyyy', { locale: ar })
           : 'غير محدد',
       };
 
@@ -576,6 +587,17 @@ ${index + 1}. *المبلغ:* ${payment.amount.toLocaleString()} ر.س
       
       const phoneNumber = customerData.whatsapp || customerData.phone;
       
+      // حساب عدد الطلبات غير المسددة وأقرب تاريخ استحقاق من unpaidOrders
+      const customerUnpaidOrders = unpaidOrders.filter(o => o.customer_name === customer.customer_name);
+      const unpaidCount = customerUnpaidOrders.length;
+      const earliestDueDate = customerUnpaidOrders.length > 0 
+        ? customerUnpaidOrders.reduce((earliest, order) => {
+            if (!order.due_date) return earliest;
+            const orderDate = new Date(order.due_date);
+            return !earliest || orderDate < earliest ? orderDate : earliest;
+          }, null as Date | null)
+        : null;
+      
       // إعداد التقرير المالي
       const summary = generateOutstandingSummary(customer);
 
@@ -584,14 +606,15 @@ ${index + 1}. *المبلغ:* ${payment.amount.toLocaleString()} ر.س
         customer_name: customerData.name,
         report_date: format(new Date(), 'dd/MM/yyyy - HH:mm', { locale: ar }),
         total_due: `${customer.outstanding_balance.toLocaleString()} ر.س`,
-        unpaid_orders_count: String(customer.unpaid_invoices_count),
-        earliest_due_date: customer.earliest_due_date
-          ? format(new Date(customer.earliest_due_date), 'dd/MM/yyyy', { locale: ar })
+        unpaid_orders_count: String(unpaidCount),
+        earliest_due_date: earliestDueDate
+          ? format(earliestDueDate, 'dd/MM/yyyy', { locale: ar })
           : 'غير محدد',
       };
       
       console.log('📊 التقرير المالي جاهز للإرسال');
       console.log('📱 الرقم المستهدف:', phoneNumber);
+      console.log('📋 متغيرات القالب:', templateVars);
       
       // استدعاء edge function الموحدة مع تحديد نوع الويب هوك للعملاء المدينين
       const { data: functionData, error: functionError } = await supabase.functions.invoke('send-whatsapp-simple', {
