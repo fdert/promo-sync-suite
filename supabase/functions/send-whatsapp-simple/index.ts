@@ -205,6 +205,9 @@ Deno.serve(async (req) => {
     // بناء على السجلات الناجحة، يجب إرسال البيانات داخل غلاف "data" مع event
     const timestamp = Math.floor(Date.now() / 1000);
     
+    // إزالة + من الرقم لحقل msisdn (مطلوب لبعض تدفقات n8n)
+    const phoneWithoutPlus = cleanPhone.replace('+', '');
+    
     const messagePayload: Record<string, any> = {
       event: 'whatsapp_message_send',
       data: {
@@ -212,6 +215,9 @@ Deno.serve(async (req) => {
         phone: cleanPhone,
         phoneNumber: cleanPhone,
         to: cleanPhone,
+        
+        // حقل msisdn بدون + (مستخدم في الرسائل الناجحة)
+        msisdn: phoneWithoutPlus,
         
         // محتوى الرسالة
         message: message,
@@ -224,7 +230,8 @@ Deno.serve(async (req) => {
         message_id: messageData.id,
         from_number: 'system',
         timestamp: timestamp,
-        test: false
+        test: false,
+        source: 'send-whatsapp-simple'
       }
     };
 
@@ -365,6 +372,20 @@ Deno.serve(async (req) => {
     }
 
     const newStatus = response.ok ? 'sent' : 'failed';
+
+    // تسجيل في webhook_logs للتتبع
+    try {
+      await supabase.from('webhook_logs').insert({
+        webhook_setting_id: null, // سنحدده لاحقاً إذا لزم الأمر
+        request_payload: messagePayload,
+        response_status: response.status,
+        response_body: responseData,
+        error_message: !response.ok ? `${response.status} - ${responseData}` : null
+      });
+      console.log('📝 تم تسجيل الطلب في webhook_logs');
+    } catch (logError) {
+      console.error('فشل تسجيل webhook_logs:', logError);
+    }
 
     // تحديث حالة الرسالة
     const updateData: any = { status: newStatus };
