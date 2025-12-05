@@ -527,12 +527,12 @@ ${index + 1}. *المبلغ:* ${payment.amount.toLocaleString()} ر.س
 
       const summary = summaryText || generateOutstandingSummary(selectedCustomerData);
 
-      // إرسال عبر الدالة الموحدة مع تحديد نوع الويب هوك للعملاء المدينين
+      // إرسال عبر الدالة الموحدة - استخدام outgoing لأنه يعمل مع n8n
       const { data: functionData, error: functionError } = await supabase.functions.invoke('send-whatsapp-simple', {
         body: {
           phone,
           message: summary,
-          webhook_type: 'outstanding_balance_report',
+          webhook_type: 'outgoing',
           template_vars: templateVars,
         },
       });
@@ -616,12 +616,12 @@ ${index + 1}. *المبلغ:* ${payment.amount.toLocaleString()} ر.س
       console.log('📱 الرقم المستهدف:', phoneNumber);
       console.log('📋 متغيرات القالب:', templateVars);
       
-      // استدعاء edge function الموحدة مع تحديد نوع الويب هوك للعملاء المدينين
+      // استدعاء edge function الموحدة - استخدام outgoing لأنه يعمل مع n8n
       const { data: functionData, error: functionError } = await supabase.functions.invoke('send-whatsapp-simple', {
         body: {
           phone: phoneNumber,
           message: summary,
-          webhook_type: 'outstanding_balance_report',
+          webhook_type: 'outgoing',
           template_vars: templateVars,
         },
       });
