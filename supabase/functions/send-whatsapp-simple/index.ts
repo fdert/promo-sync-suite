@@ -201,23 +201,26 @@ Deno.serve(async (req) => {
 
     console.log('📡 استخدام ويب هوك:', primaryWebhook.webhook_name, `(${primaryWebhook.webhook_type})`);
 
-    // إعداد بيانات الرسالة للإرسال (يشمل حقول توافق إضافية)
+    // تنظيف رقم الهاتف - إزالة علامة + للتوافق مع WhatsApp API
+    const phoneWithoutPlus = cleanPhone.replace('+', '');
+    
+    // إعداد بيانات الرسالة للإرسال - بنية مبسطة ومتوافقة مع n8n
     const messagePayload: Record<string, any> = {
-      messaging_product: "whatsapp",
-      to: cleanPhone.replace('+', ''),
-      type: "text",
-      text: {
-        body: message
-      },
-      // توافق مع بعض تدفقات n8n القديمة
-      phone: cleanPhone,
-      to_number: cleanPhone,
-      message,
-      text_body: message,
-      // معلومات إضافية لتمييز نوع الرسالة
-      message_type: webhook_type || 'general',
-      notification_type: webhook_type || 'general',
-      template_name: webhook_type || 'default'
+      // الحقول الأساسية التي يتوقعها n8n
+      phone: phoneWithoutPlus,
+      message: message,
+      
+      // حقول إضافية للتوافق
+      to: phoneWithoutPlus,
+      to_number: phoneWithoutPlus,
+      phone_number: phoneWithoutPlus,
+      text: message,
+      body: message,
+      
+      // معلومات نوع الرسالة
+      type: 'text',
+      message_type: webhook_type || 'text',
+      webhook_type: webhook_type || 'outgoing'
     };
 
     // تمرير متغيرات القالب إن وُجدت من الطلب
@@ -226,40 +229,11 @@ Deno.serve(async (req) => {
       (messagePayload as any).template_vars = reqAny.template_vars;
       (messagePayload as any).variables = reqAny.template_vars; // توافق مع بعض تدفقات n8n
     }
-    // إذا كانت رسالة تقرير مديونيات، فعّل الإرسال عبر القالب مع إتاحة النص كاحتياطي
+    // إضافة متغيرات إضافية لرسائل تقرير المديونيات
     if (webhook_type === 'outstanding_balance_report') {
       messagePayload.is_financial_report = true;
       messagePayload.report_type = 'accounts_receivable';
-      messagePayload.message_category = 'financial_report';
-      // تلميحات صريحة للقالب
-      (messagePayload as any).event = 'outstanding_balance_report';
-      (messagePayload as any).template = 'outstanding_balance_report';
-      (messagePayload as any).template_name = 'outstanding_balance_report';
-      (messagePayload as any).template_key = 'outstanding_balance_report';
-      (messagePayload as any).webhook_type = 'outstanding_balance_report';
-      (messagePayload as any).use_template = true;
-      (messagePayload as any).template_language = 'ar_SA';
-      (messagePayload as any).channel_hint = 'template_preferred';
-      (messagePayload as any).hsm = true;
-      // بنية موحدة للقالب لمتوافقية أعلى مع n8n/مزود الواتساب
-      const tv = (messagePayload as any).template_vars || reqAny.template_vars || {};
-      (messagePayload as any).variables_array = Array.isArray(tv) ? tv : Object.values(tv || {});
-      (messagePayload as any).wa_template = {
-        name: 'outstanding_balance_report',
-        language: 'ar',
-        language_code: 'ar_SA',
-        variables: tv,
-        variables_array: (messagePayload as any).variables_array
-      };
-      // نص احتياطي في حال فشل القالب
-      (messagePayload as any).fallback_text = messagePayload.text?.body || (messagePayload as any).message || '';
-      console.log('🏷️ تفعيل الإرسال عبر القالب outstanding_balance_report مع نص احتياطي');
-    } else if (webhook_type) {
-      (messagePayload as any).event = webhook_type;
-      (messagePayload as any).template = webhook_type;
-      (messagePayload as any).webhook_type = webhook_type;
-      (messagePayload as any).template_key = webhook_type;
-      console.log('🏷️ إضافة تلميحات القالب:', webhook_type);
+      console.log('🏷️ تفعيل الإرسال عبر القالب outstanding_balance_report');
     }
  
     console.log('Sending message payload:', JSON.stringify(messagePayload, null, 2));
