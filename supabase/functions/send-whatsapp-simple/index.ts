@@ -201,38 +201,44 @@ Deno.serve(async (req) => {
 
     console.log('📡 استخدام ويب هوك:', primaryWebhook.webhook_name, `(${primaryWebhook.webhook_type})`);
 
-    // تنظيف رقم الهاتف - إزالة علامة + للتوافق مع WhatsApp API
-    const phoneWithoutPlus = cleanPhone.replace('+', '');
+    // إعداد بيانات الرسالة للإرسال - بنفس البنية التي تعمل مع n8n
+    // بناء على السجلات الناجحة، يجب إرسال البيانات داخل غلاف "data" مع event
+    const timestamp = Math.floor(Date.now() / 1000);
     
-    // إعداد بيانات الرسالة للإرسال - بنية مبسطة ومتوافقة مع n8n
     const messagePayload: Record<string, any> = {
-      // الحقول الأساسية التي يتوقعها n8n
-      phone: phoneWithoutPlus,
-      message: message,
-      
-      // حقول إضافية للتوافق
-      to: phoneWithoutPlus,
-      to_number: phoneWithoutPlus,
-      phone_number: phoneWithoutPlus,
-      text: message,
-      body: message,
-      
-      // معلومات نوع الرسالة
-      type: 'text',
-      message_type: webhook_type || 'text',
-      webhook_type: webhook_type || 'outgoing'
+      event: 'whatsapp_message_send',
+      data: {
+        // الحقول الأساسية التي يتوقعها n8n (مع علامة +)
+        phone: cleanPhone,
+        phoneNumber: cleanPhone,
+        to: cleanPhone,
+        
+        // محتوى الرسالة
+        message: message,
+        messageText: message,
+        text: message,
+        
+        // معلومات إضافية
+        type: 'text',
+        message_type: webhook_type || 'outgoing',
+        message_id: messageData.id,
+        from_number: 'system',
+        timestamp: timestamp,
+        test: false
+      }
     };
 
     // تمرير متغيرات القالب إن وُجدت من الطلب
     const reqAny = requestData as any;
     if (reqAny.template_vars && typeof reqAny.template_vars === 'object') {
-      (messagePayload as any).template_vars = reqAny.template_vars;
-      (messagePayload as any).variables = reqAny.template_vars; // توافق مع بعض تدفقات n8n
+      messagePayload.data.template_vars = reqAny.template_vars;
+      messagePayload.data.variables = reqAny.template_vars;
     }
+    
     // إضافة متغيرات إضافية لرسائل تقرير المديونيات
     if (webhook_type === 'outstanding_balance_report') {
-      messagePayload.is_financial_report = true;
-      messagePayload.report_type = 'accounts_receivable';
+      messagePayload.data.is_financial_report = true;
+      messagePayload.data.report_type = 'accounts_receivable';
       console.log('🏷️ تفعيل الإرسال عبر القالب outstanding_balance_report');
     }
  
