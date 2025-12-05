@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
     const cleanPhone = phoneToUse.replace(/[^\d+]/g, '');
     console.log(`Cleaned phone: ${cleanPhone}`);
 
-    // Insert message into whatsapp_messages table
+    // Insert message into whatsapp_messages table with correct message_type
     const { data: messageData, error: insertError } = await supabase
       .from('whatsapp_messages')
       .insert([
@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
           to_number: cleanPhone,
           message_content: message,
           status: 'pending',
-          message_type: 'text',
+          message_type: webhook_type || 'text',
           from_number: 'system',
           created_at: new Date().toISOString()
         }
