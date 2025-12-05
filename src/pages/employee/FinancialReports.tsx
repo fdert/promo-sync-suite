@@ -695,23 +695,7 @@ const FinancialReports = () => {
       </Card>
 
       {/* الملخص المالي */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">إجمالي الإيرادات</CardTitle>
-            <TrendingUp className="h-4 w-4 text-success" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-success">{financialData.income.toLocaleString()} ر.س</div>
-            <p className="text-xs text-muted-foreground">
-              {dateFilter.period === 'current_month' && 'هذا الشهر'}
-              {dateFilter.period === 'last_month' && 'الشهر الماضي'}
-              {dateFilter.period === 'current_year' && 'هذا العام'}
-              {dateFilter.period === 'custom' && 'الفترة المحددة'}
-            </p>
-          </CardContent>
-        </Card>
-        
+      <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">إجمالي المصروفات</CardTitle>
@@ -730,21 +714,6 @@ const FinancialReports = () => {
         
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">صافي الربح</CardTitle>
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${financialData.netProfit >= 0 ? 'text-success' : 'text-destructive'}`}>
-              {financialData.netProfit.toLocaleString()} ر.س
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {financialData.netProfit >= 0 ? 'ربح' : 'خسارة'}
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">العملاء المدينون</CardTitle>
             <DollarSign className="h-4 w-4 text-warning" />
           </CardHeader>
@@ -755,103 +724,10 @@ const FinancialReports = () => {
         </Card>
       </div>
 
-      <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="overview">نظرة عامة</TabsTrigger>
-          <TabsTrigger value="accounts">الحسابات</TabsTrigger>
+      <Tabs defaultValue="expenses" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-1">
           <TabsTrigger value="expenses">المصروفات</TabsTrigger>
-          <TabsTrigger value="detailed">تقرير تفصيلي</TabsTrigger>
         </TabsList>
-
-        <TabsContent value="overview" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>الأداء المالي</CardTitle>
-                <CardDescription>نسب الربحية والنمو</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span>نسبة الربح:</span>
-                    <span className={`font-bold ${financialData.income > 0 ? 'text-success' : 'text-muted-foreground'}`}>
-                      {financialData.income > 0 ? ((financialData.netProfit / financialData.income) * 100).toFixed(1) : 0}%
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>نسبة المصروفات:</span>
-                    <span className="font-bold text-destructive">
-                      {financialData.income > 0 ? ((financialData.expenses / financialData.income) * 100).toFixed(1) : 0}%
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>العملاء المدينون / الإيرادات:</span>
-                    <span className="font-bold text-warning">
-                      {financialData.income > 0 ? ((financialData.accountsReceivable / financialData.income) * 100).toFixed(1) : 0}%
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>تحليل التدفق النقدي</CardTitle>
-                <CardDescription>الوضع النقدي الحالي</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center py-2 border-b">
-                    <span>الإيرادات الواردة:</span>
-                    <span className="font-bold text-success">+{financialData.income.toLocaleString()} ر.س</span>
-                  </div>
-                  <div className="flex justify-between items-center py-2 border-b">
-                    <span>المصروفات الصادرة:</span>
-                    <span className="font-bold text-destructive">-{financialData.expenses.toLocaleString()} ر.س</span>
-                  </div>
-                  <div className="flex justify-between items-center py-2 border-t-2">
-                    <span className="font-bold">صافي التدفق النقدي:</span>
-                    <span className={`font-bold text-lg ${financialData.netProfit >= 0 ? 'text-success' : 'text-destructive'}`}>
-                      {financialData.netProfit >= 0 ? '+' : ''}{financialData.netProfit.toLocaleString()} ر.س
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="accounts" className="space-y-4">
-          <h2 className="text-xl font-semibold">أرصدة الحسابات</h2>
-          
-          {Object.entries(accountsByType).map(([type, accountList]: [string, any[]]) => (
-            <Card key={type}>
-              <CardHeader>
-                <CardTitle>{type}</CardTitle>
-                <CardDescription>
-                  إجمالي الرصيد: {(accountList as any[]).reduce((sum, acc) => sum + (acc.balance || 0), 0).toLocaleString()} ر.س
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {(accountList as any[]).map((account) => (
-                    <div key={account.id} className="flex justify-between items-center p-3 border rounded-lg">
-                      <div>
-                        <h3 className="font-medium">{account.account_name}</h3>
-                        <p className="text-sm text-muted-foreground">{account.description}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className={`text-lg font-bold ${account.balance >= 0 ? 'text-success' : 'text-destructive'}`}>
-                          {account.balance?.toLocaleString()} ر.س
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </TabsContent>
 
         <TabsContent value="expenses" className="space-y-4">
           <Card>
@@ -1085,93 +961,6 @@ const FinancialReports = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="detailed" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                تقرير مالي تفصيلي
-              </CardTitle>
-              <CardDescription>
-                التقرير للفترة: {dateFilter.period === 'current_month' && 'الشهر الحالي'}
-                {dateFilter.period === 'last_month' && 'الشهر الماضي'}
-                {dateFilter.period === 'current_year' && 'السنة الحالية'}
-                {dateFilter.period === 'custom' && `من ${dateFilter.startDate} إلى ${dateFilter.endDate}`}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                {/* ملخص الأرباح والخسائر */}
-                <div>
-                  <h3 className="text-lg font-semibold mb-3">قائمة الدخل</h3>
-                  <div className="space-y-2">
-                    <div className="flex justify-between py-2 border-b">
-                      <span>إجمالي الإيرادات</span>
-                      <span className="font-bold text-success">{financialData.income.toLocaleString()} ر.س</span>
-                    </div>
-                    <div className="flex justify-between py-2 border-b">
-                      <span>إجمالي المصروفات</span>
-                      <span className="font-bold text-destructive">({financialData.expenses.toLocaleString()}) ر.س</span>
-                    </div>
-                    <div className="flex justify-between py-3 border-t-2 border-gray-300">
-                      <span className="font-bold text-lg">صافي الربح/الخسارة</span>
-                      <span className={`font-bold text-xl ${financialData.netProfit >= 0 ? 'text-success' : 'text-destructive'}`}>
-                        {financialData.netProfit.toLocaleString()} ر.س
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* ملخص الميزانية */}
-                <div>
-                  <h3 className="text-lg font-semibold mb-3">الميزانية العمومية</h3>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div>
-                      <h4 className="font-medium mb-2 text-success">الأصول</h4>
-                      {accountsByType['أصول']?.map((account: any) => (
-                        <div key={account.id} className="flex justify-between py-1">
-                          <span className="text-sm">{account.account_name}</span>
-                          <span className="text-sm font-medium">{account.balance?.toLocaleString()} ر.س</span>
-                        </div>
-                      ))}
-                      <div className="border-t pt-2 mt-2">
-                        <div className="flex justify-between font-bold">
-                          <span>إجمالي الأصول</span>
-                          <span>{(accountsByType['أصول']?.reduce((sum, acc) => sum + (acc.balance || 0), 0) || 0).toLocaleString()} ر.س</span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <h4 className="font-medium mb-2 text-destructive">الخصوم وحقوق الملكية</h4>
-                      {accountsByType['خصوم']?.map((account: any) => (
-                        <div key={account.id} className="flex justify-between py-1">
-                          <span className="text-sm">{account.account_name}</span>
-                          <span className="text-sm font-medium">{account.balance?.toLocaleString()} ر.س</span>
-                        </div>
-                      ))}
-                      {accountsByType['حقوق ملكية']?.map((account: any) => (
-                        <div key={account.id} className="flex justify-between py-1">
-                          <span className="text-sm">{account.account_name}</span>
-                          <span className="text-sm font-medium">{account.balance?.toLocaleString()} ر.س</span>
-                        </div>
-                      ))}
-                      <div className="border-t pt-2 mt-2">
-                        <div className="flex justify-between font-bold">
-                          <span>إجمالي الخصوم وحقوق الملكية</span>
-                          <span>
-                            {((accountsByType['خصوم']?.reduce((sum, acc) => sum + (acc.balance || 0), 0) || 0) + 
-                              (accountsByType['حقوق ملكية']?.reduce((sum, acc) => sum + (acc.balance || 0), 0) || 0)).toLocaleString()} ر.س
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
       </Tabs>
 
       {/* Dialog لعرض صورة الإيصال */}
