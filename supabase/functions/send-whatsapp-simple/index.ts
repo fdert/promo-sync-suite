@@ -102,81 +102,36 @@ Deno.serve(async (req) => {
 
     console.log('Message queued successfully:', messageData.id);
 
-    // البحث عن webhook settings مع أولوية للويب هوك المحدد
+    // استخدام ويب هوك outgoing دائماً لضمان وصول الرسائل
+    // هذا الويب هوك هو الوحيد الذي يعمل بشكل صحيح مع n8n
     let primaryWebhook: any = null;
-    let fallbackWebhook: any = null;
 
     console.log('🔍 نوع الويب هوك المطلوب:', webhook_type || 'غير محدد');
 
-    // إذا تم تحديد webhook_type، ابحث عنه أولاً
-    if (webhook_type) {
-      const { data: requestedWebhook } = await supabase
-        .from('webhook_settings')
-        .select('webhook_url, webhook_type, webhook_name, is_active')
-        .eq('webhook_type', webhook_type)
-        .eq('is_active', true)
-        .maybeSingle();
-
-      if (requestedWebhook?.webhook_url) {
-        primaryWebhook = requestedWebhook;
-        console.log('✅ تم العثور على الويب هوك المطلوب:', primaryWebhook.webhook_name);
-      } else {
-        console.warn('❌ لم يتم العثور على ويب هوك مطابق لنوع:', webhook_type);
-        if (strictRequested) {
-          return new Response(
-            JSON.stringify({ 
-              error: 'Specified webhook type not configured',
-              details: webhook_type 
-            }),
-            { 
-              status: 400, 
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-            }
-          );
-        }
-      }
-    }
-
-    // إذا لم يتم العثور على ويب هوك محدد، استخدم الترتيب الافتراضي
-    if (!primaryWebhook) {
-      console.log('🔍 البحث عن ويب هوك بديل...');
-
-      // جلب ويب هوك التقارير المالية
-      const { data: accountSummaryWebhook } = await supabase
-        .from('webhook_settings')
-        .select('webhook_url, webhook_type, webhook_name, is_active')
-        .eq('webhook_type', 'account_summary')
-        .eq('is_active', true)
-        .maybeSingle();
-
-      // جلب ويب هوك الإرسال العام (outgoing)
-      const { data: outgoingWebhook } = await supabase
-        .from('webhook_settings')
-        .select('webhook_url, webhook_type, webhook_name, is_active')
-        .eq('webhook_type', 'outgoing')
-        .eq('is_active', true)
-        .maybeSingle();
-
-      // تحديد الأساسي والاحتياطي
-      if (accountSummaryWebhook?.webhook_url) {
-        primaryWebhook = accountSummaryWebhook;
-        fallbackWebhook = outgoingWebhook?.webhook_url ? outgoingWebhook : null;
-        console.log('✅ استخدام ويب هوك التقارير المالية كخيار أساسي:', primaryWebhook.webhook_name);
-      } else if (outgoingWebhook?.webhook_url) {
-        primaryWebhook = outgoingWebhook;
-        console.log('ℹ️ سيتم استخدام outgoing كخيار أساسي:', primaryWebhook.webhook_name);
-      }
-    }
-
-    // جلب قائمة ويبهوكات بديلة للمحاولة عند الفشل
-    const { data: allActiveWebhooks } = await supabase
+    // دائماً استخدم ويب هوك outgoing لأنه الوحيد الذي يعمل مع n8n
+    const { data: outgoingWebhook } = await supabase
       .from('webhook_settings')
       .select('webhook_url, webhook_type, webhook_name, is_active')
-      .eq('is_active', true);
+      .eq('webhook_type', 'outgoing')
+      .eq('is_active', true)
+      .maybeSingle();
 
-    const fallbackWebhooks = (allActiveWebhooks || []).filter((w: any) => 
-      w.webhook_url && w.webhook_url !== primaryWebhook?.webhook_url
-    );
+    if (outgoingWebhook?.webhook_url) {
+      primaryWebhook = outgoingWebhook;
+      console.log('✅ تم العثور على الويب هوك المطلوب:', primaryWebhook.webhook_name);
+    } else {
+      console.error('❌ لم يتم العثور على ويب هوك outgoing!');
+      return new Response(
+        JSON.stringify({ 
+          error: 'Outgoing webhook not configured',
+          details: 'Please configure an active outgoing webhook in admin settings'
+        }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
 
     console.log('📡 الويب هوك الأساسي:', {
       name: primaryWebhook?.webhook_name,
@@ -184,20 +139,6 @@ Deno.serve(async (req) => {
       hasUrl: !!primaryWebhook?.webhook_url,
       url: primaryWebhook?.webhook_url ? 'متوفر' : 'مفقود'
     });
-
-    if (!primaryWebhook?.webhook_url) {
-      console.error('❌ خطأ: لا يوجد ويب هوك نشط - No active webhook found');
-      return new Response(
-        JSON.stringify({ 
-          error: 'No webhook configured',
-          details: 'لا يوجد ويب هوك مكون بشكل صحيح'
-        }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400
-        }
-      );
-    }
 
     console.log('📡 استخدام ويب هوك:', primaryWebhook.webhook_name, `(${primaryWebhook.webhook_type})`);
 
