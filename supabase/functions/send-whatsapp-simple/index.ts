@@ -224,14 +224,16 @@ Deno.serve(async (req) => {
         messageText: message,
         text: message,
         
-        // معلومات إضافية
+        // معلومات إضافية - message_type يجب أن يكون "text" ليتطابق مع البنية الناجحة في n8n
         type: 'text',
-        message_type: webhook_type || 'outgoing',
+        message_type: 'text',
         message_id: messageData.id,
         from_number: 'system',
         timestamp: timestamp,
         test: false,
-        source: 'send-whatsapp-simple'
+        source: 'send-whatsapp-simple',
+        // حفظ نوع الويب هوك الأصلي كحقل منفصل
+        webhook_type_used: webhook_type || 'outgoing'
       }
     };
 
