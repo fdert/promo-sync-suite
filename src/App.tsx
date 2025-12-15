@@ -74,6 +74,7 @@ import WhatsAppQRLogin from "./pages/admin/WhatsAppQRLogin";
 import InstallmentPlans from "./pages/admin/InstallmentPlans";
 import EmployeeInstallmentPlans from "./pages/employee/InstallmentPlans";
 import InstallmentContract from "./pages/InstallmentContract";
+import SpecialInvoices from "./pages/admin/SpecialInvoices";
 
 const queryClient = new QueryClient();
 
@@ -215,6 +216,7 @@ const App = () => (
                    </RoleProtectedRoute>
                  } />
                  <Route path="installment-plans" element={<InstallmentPlans />} />
+                 <Route path="special-invoices" element={<SpecialInvoices />} />
             </Route>
             <Route path="/evaluation/:token" element={<Evaluation />} />
             <Route path="/installment-contract/:token" element={<InstallmentContract />} />

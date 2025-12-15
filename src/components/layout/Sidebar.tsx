@@ -83,6 +83,12 @@ const menuItems = [
     allowedRoles: ['admin', 'manager', 'employee'] as UserRole[],
   },
   {
+    title: "فواتير خاصة",
+    icon: FileText,
+    href: "/admin/special-invoices",
+    allowedRoles: ['admin', 'manager'] as UserRole[],
+  },
+  {
     title: "الحسابات",
     icon: DollarSign,
     href: "/admin/accounts",
