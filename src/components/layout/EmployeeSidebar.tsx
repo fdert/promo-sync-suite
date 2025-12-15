@@ -69,6 +69,12 @@ const employeeMenuItems = [
     allowedRoles: ['employee'] as UserRole[],
   },
   {
+    title: "الفواتير الخاصة",
+    icon: FileText,
+    href: "/employee/special-invoices",
+    allowedRoles: ['employee'] as UserRole[],
+  },
+  {
     title: "طلبات الطباعة",
     icon: Printer,
     href: "/employee/print-orders",
