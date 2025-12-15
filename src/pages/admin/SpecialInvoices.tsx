@@ -6,12 +6,59 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Trash2, Printer, Eye, Search, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 import JsBarcode from "jsbarcode";
+
+// دالة تحويل الرقم إلى كلمات عربية
+const numberToArabicWords = (num: number): string => {
+  const ones = ['', 'واحد', 'اثنان', 'ثلاثة', 'أربعة', 'خمسة', 'ستة', 'سبعة', 'ثمانية', 'تسعة', 'عشرة', 'أحد عشر', 'اثنا عشر', 'ثلاثة عشر', 'أربعة عشر', 'خمسة عشر', 'ستة عشر', 'سبعة عشر', 'ثمانية عشر', 'تسعة عشر'];
+  const tens = ['', '', 'عشرون', 'ثلاثون', 'أربعون', 'خمسون', 'ستون', 'سبعون', 'ثمانون', 'تسعون'];
+  const hundreds = ['', 'مائة', 'مائتان', 'ثلاثمائة', 'أربعمائة', 'خمسمائة', 'ستمائة', 'سبعمائة', 'ثمانمائة', 'تسعمائة'];
+  
+  if (num === 0) return 'صفر';
+  
+  const intPart = Math.floor(num);
+  const decimalPart = Math.round((num - intPart) * 100);
+  
+  const convertLessThanThousand = (n: number): string => {
+    if (n === 0) return '';
+    if (n < 20) return ones[n];
+    if (n < 100) {
+      const ten = Math.floor(n / 10);
+      const one = n % 10;
+      return one ? `${ones[one]} و${tens[ten]}` : tens[ten];
+    }
+    const hundred = Math.floor(n / 100);
+    const remainder = n % 100;
+    return remainder ? `${hundreds[hundred]} و${convertLessThanThousand(remainder)}` : hundreds[hundred];
+  };
+  
+  let result = '';
+  if (intPart >= 1000) {
+    const thousands = Math.floor(intPart / 1000);
+    const remainder = intPart % 1000;
+    if (thousands === 1) result = 'ألف';
+    else if (thousands === 2) result = 'ألفان';
+    else if (thousands <= 10) result = `${convertLessThanThousand(thousands)} آلاف`;
+    else result = `${convertLessThanThousand(thousands)} ألف`;
+    if (remainder) result += ` و${convertLessThanThousand(remainder)}`;
+  } else {
+    result = convertLessThanThousand(intPart);
+  }
+  
+  result += ' ريال سعودي';
+  if (decimalPart > 0) {
+    result += ` و${convertLessThanThousand(decimalPart)} هللة`;
+  }
+  
+  return result;
+};
+
 interface InvoiceItem {
   id?: string;
   item_name: string;
@@ -45,6 +92,7 @@ const SpecialInvoices = () => {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [viewingInvoice, setViewingInvoice] = useState<SpecialInvoice | null>(null);
   const [companyInfo, setCompanyInfo] = useState<any>({});
+  const [isTaxInclusive, setIsTaxInclusive] = useState(true); // السعر شامل الضريبة
   const { toast } = useToast();
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -142,10 +190,20 @@ const SpecialInvoices = () => {
   };
 
   const calculateTotals = () => {
-    const subtotal = items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
-    const taxAmount = (subtotal * formData.tax_rate) / 100;
-    const total = subtotal + taxAmount;
-    return { subtotal, taxAmount, total };
+    const itemsTotal = items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
+    if (isTaxInclusive) {
+      // السعر شامل الضريبة - الإجمالي هو نفس مجموع البنود
+      const total = itemsTotal;
+      const subtotal = total / (1 + formData.tax_rate / 100);
+      const taxAmount = total - subtotal;
+      return { subtotal, taxAmount, total };
+    } else {
+      // السعر غير شامل الضريبة
+      const subtotal = itemsTotal;
+      const taxAmount = (subtotal * formData.tax_rate) / 100;
+      const total = subtotal + taxAmount;
+      return { subtotal, taxAmount, total };
+    }
   };
 
   const handleCreateInvoice = async () => {
@@ -214,6 +272,7 @@ const SpecialInvoices = () => {
       notes: "",
     });
     setItems([{ item_name: "", description: "", quantity: 1, unit_price: 0, total: 0 }]);
+    setIsTaxInclusive(true);
   };
 
   const handleViewInvoice = async (invoice: SpecialInvoice) => {
@@ -245,6 +304,7 @@ const SpecialInvoices = () => {
     if (!printWindow) return;
 
     const barcodeDataUrl = generateVerificationBarcode(viewingInvoice.invoice_number);
+    const totalInWords = numberToArabicWords(viewingInvoice.total_amount);
 
     const itemsHtml = viewingInvoice.items?.map((item, index) => `
       <tr style="background: ${index % 2 === 0 ? '#ffffff' : '#f5f5f5'};">
@@ -271,7 +331,7 @@ const SpecialInvoices = () => {
         </style>
       </head>
       <body>
-        <div style="max-width: 800px; margin: 0 auto; border: 2px solid #333;">
+        <div style="max-width: 800px; margin: 0 auto;">
           <!-- Header -->
           <div style="background: #ffffff; color: #000; padding: 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #333;">
             <div style="text-align: right;">
@@ -314,7 +374,7 @@ const SpecialInvoices = () => {
 
           <!-- Total Due Box -->
           <div style="background: #f5f5f5; padding: 15px; text-align: center; border-bottom: 1px solid #ddd;">
-            <div style="font-size: 12px; color: #666;">Total due / المبلغ المستحق</div>
+            <div style="font-size: 12px; color: #666;">Total due (VAT Inclusive) / المبلغ المستحق (شامل الضريبة)</div>
             <div style="font-size: 28px; font-weight: bold; color: #000;">SAR ${viewingInvoice.total_amount.toFixed(2)}</div>
           </div>
 
@@ -336,18 +396,13 @@ const SpecialInvoices = () => {
 
           <!-- Summary -->
           <div style="display: flex; justify-content: flex-end; padding: 15px;">
-            <div style="width: 250px;">
-              <div style="display: flex; justify-content: space-between; padding: 5px 0; color: #000;">
-                <span>المجموع الفرعي:</span>
-                <span>SAR ${viewingInvoice.subtotal.toFixed(2)}</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; padding: 5px 0; color: #000;">
-                <span>الضريبة (${viewingInvoice.tax_rate}%):</span>
-                <span>SAR ${viewingInvoice.tax_amount.toFixed(2)}</span>
-              </div>
+            <div style="width: 300px;">
               <div style="display: flex; justify-content: space-between; padding: 10px 0; border-top: 2px solid #333; font-weight: bold; font-size: 16px; color: #000;">
-                <span>Total / الإجمالي:</span>
+                <span>الإجمالي (شامل الضريبة):</span>
                 <span>SAR ${viewingInvoice.total_amount.toFixed(2)}</span>
+              </div>
+              <div style="padding: 10px 0; font-size: 12px; color: #333; text-align: center; background: #f9f9f9; border-radius: 5px; margin-top: 5px;">
+                <strong>المبلغ كتابة:</strong> ${totalInWords}
               </div>
             </div>
           </div>
@@ -565,25 +620,34 @@ const SpecialInvoices = () => {
 
             {/* الإجماليات */}
             <div className="bg-muted p-4 rounded-lg">
-              <div className="flex justify-between mb-2">
-                <span>المجموع الفرعي:</span>
-                <span>{subtotal.toFixed(2)} ر.س</span>
+              <div className="flex items-center gap-2 mb-4">
+                <Checkbox
+                  id="tax-inclusive"
+                  checked={isTaxInclusive}
+                  onCheckedChange={(checked) => setIsTaxInclusive(checked as boolean)}
+                />
+                <Label htmlFor="tax-inclusive" className="cursor-pointer">
+                  السعر شامل الضريبة (الإجمالي يشمل ضريبة القيمة المضافة)
+                </Label>
               </div>
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <span>الضريبة ({formData.tax_rate}%):</span>
+                  <span>نسبة الضريبة:</span>
                   <Input
                     type="number"
                     className="w-16 h-8"
                     value={formData.tax_rate}
                     onChange={(e) => setFormData({ ...formData, tax_rate: Number(e.target.value) })}
                   />
+                  <span>%</span>
                 </div>
-                <span>{taxAmount.toFixed(2)} ر.س</span>
               </div>
               <div className="flex justify-between text-lg font-bold border-t pt-2">
-                <span>الإجمالي:</span>
+                <span>الإجمالي (شامل الضريبة):</span>
                 <span>{total.toFixed(2)} ر.س</span>
+              </div>
+              <div className="mt-2 text-sm text-muted-foreground text-center bg-background p-2 rounded">
+                <strong>المبلغ كتابة:</strong> {numberToArabicWords(total)}
               </div>
             </div>
 
@@ -619,7 +683,7 @@ const SpecialInvoices = () => {
 
           {viewingInvoice && (
             <div id="special-invoice-print" className="bg-white text-black">
-              <div className="invoice-container border-2 border-gray-800">
+              <div className="invoice-container">
                 {/* Header - White Background with Black Text */}
                 <div className="bg-white text-black p-5 flex justify-between items-center border-b-2 border-gray-800">
                   <div className="text-right">
@@ -664,7 +728,7 @@ const SpecialInvoices = () => {
 
                 {/* Total Due Box */}
                 <div className="bg-gray-100 p-4 text-center border-b">
-                  <div className="text-sm text-gray-500">Total due / المبلغ المستحق</div>
+                  <div className="text-sm text-gray-500">Total due (VAT Inclusive) / المبلغ المستحق (شامل الضريبة)</div>
                   <div className="text-3xl font-bold text-black">
                     SAR {viewingInvoice.total_amount.toFixed(2)}
                   </div>
@@ -696,18 +760,13 @@ const SpecialInvoices = () => {
 
                 {/* Summary */}
                 <div className="flex justify-end p-4">
-                  <div className="w-64">
-                    <div className="flex justify-between py-1 text-black">
-                      <span>المجموع الفرعي:</span>
-                      <span>{viewingInvoice.subtotal.toFixed(2)} SAR</span>
-                    </div>
-                    <div className="flex justify-between py-1 text-black">
-                      <span>الضريبة ({viewingInvoice.tax_rate}%):</span>
-                      <span>{viewingInvoice.tax_amount.toFixed(2)} SAR</span>
-                    </div>
+                  <div className="w-72">
                     <div className="flex justify-between py-2 border-t-2 border-gray-800 font-bold text-lg text-black">
-                      <span>Total / الإجمالي:</span>
+                      <span>الإجمالي (شامل الضريبة):</span>
                       <span>SAR {viewingInvoice.total_amount.toFixed(2)}</span>
+                    </div>
+                    <div className="mt-2 text-sm text-gray-700 text-center bg-gray-100 p-2 rounded">
+                      <strong>المبلغ كتابة:</strong> {numberToArabicWords(viewingInvoice.total_amount)}
                     </div>
                   </div>
                 </div>
