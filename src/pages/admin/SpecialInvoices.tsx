@@ -401,13 +401,13 @@ const SpecialInvoices = () => {
             </div>
           </div>
 
-          <!-- ZATCA QR Code Section -->
+          <!-- QR Code Section -->
           <div style="background: #f9f9f9; padding: 20px; text-align: center; border-top: 1px solid #ddd;">
             <div style="margin-bottom: 15px;">
-              <img src="${qrCodeDataUrl}" alt="ZATCA QR Code" style="width: 150px; height: 150px;" />
+              <img src="${qrCodeDataUrl}" alt="QR Code" style="width: 150px; height: 150px;" />
             </div>
-            <p style="font-size: 11px; color: #2563eb; font-weight: 500; margin-bottom: 5px;">This QR code is encoded as per ZATCA e-invoicing requirements</p>
-            <p style="font-size: 11px; color: #333; line-height: 1.6;">رمز الإستجابة السريعة مشفر بحسب متطلبات هيئة الزكاة<br/>والضريبة والجمارك للفوترة الإلكترونية</p>
+            <p style="font-size: 12px; color: #333; font-weight: 500; margin-bottom: 8px;">يمكنك التحقق من صحة الفاتورة بمسح رمز QR</p>
+            <p style="font-size: 11px; color: #666; line-height: 1.6;">هذه فاتورة إلكترونية ولا تحتاج إلى ختم</p>
           </div>
 
           <!-- Footer -->
@@ -765,7 +765,7 @@ const SpecialInvoices = () => {
                   </div>
                 </div>
 
-                {/* ZATCA QR Code Section */}
+                {/* QR Code Section */}
                 <div className="bg-gray-50 p-5 text-center border-t">
                   <div className="mb-4">
                     <QRCodeSVG 
@@ -774,8 +774,8 @@ const SpecialInvoices = () => {
                       className="mx-auto"
                     />
                   </div>
-                  <p className="text-sm text-blue-600 font-medium mb-1">This QR code is encoded as per ZATCA e-invoicing requirements</p>
-                  <p className="text-sm text-gray-700 leading-relaxed">رمز الإستجابة السريعة مشفر بحسب متطلبات هيئة الزكاة<br/>والضريبة والجمارك للفوترة الإلكترونية</p>
+                  <p className="text-sm text-gray-800 font-medium mb-2">يمكنك التحقق من صحة الفاتورة بمسح رمز QR</p>
+                  <p className="text-sm text-gray-600">هذه فاتورة إلكترونية ولا تحتاج إلى ختم</p>
                 </div>
 
                 {/* Footer */}
