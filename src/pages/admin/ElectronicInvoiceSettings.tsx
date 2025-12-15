@@ -42,12 +42,13 @@ const ElectronicInvoiceSettings = () => {
     try {
       const { data, error } = await supabase
         .from('website_settings')
-        .select('setting_value')
-        .eq('setting_key', 'electronic_invoice_settings')
+        .select('value')
+        .eq('key', 'electronic_invoice_settings')
         .single();
 
-      if (data && !error && data.setting_value) {
-        setSettings({ ...settings, ...(data.setting_value as Record<string, any>) });
+      if (data && !error && data.value) {
+        const parsedValue = typeof data.value === 'string' ? JSON.parse(data.value) : data.value;
+        setSettings({ ...settings, ...parsedValue });
       }
     } catch (error) {
       console.error('Error loading settings:', error);
@@ -63,7 +64,7 @@ const ElectronicInvoiceSettings = () => {
       const { data: existingSettings } = await supabase
         .from('website_settings')
         .select('id')
-        .eq('setting_key', 'electronic_invoice_settings')
+        .eq('key', 'electronic_invoice_settings')
         .single();
 
       let error;
@@ -73,19 +74,18 @@ const ElectronicInvoiceSettings = () => {
         const result = await supabase
           .from('website_settings')
           .update({
-            setting_value: settings as any,
+            value: JSON.stringify(settings),
             updated_at: new Date().toISOString()
           })
-          .eq('setting_key', 'electronic_invoice_settings');
+          .eq('key', 'electronic_invoice_settings');
         error = result.error;
       } else {
         // إنشاء إعدادات جديدة
         const result = await supabase
           .from('website_settings')
           .insert({
-            setting_key: 'electronic_invoice_settings',
-            setting_value: settings as any,
-            created_by: (await supabase.auth.getUser()).data.user?.id
+            key: 'electronic_invoice_settings',
+            value: JSON.stringify(settings)
           });
         error = result.error;
       }

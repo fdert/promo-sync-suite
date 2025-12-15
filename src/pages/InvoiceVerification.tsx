@@ -9,14 +9,16 @@ import { CheckCircle, XCircle, FileText } from 'lucide-react';
 interface Invoice {
   id: string;
   invoice_number: string;
-  amount: number;
+  subtotal: number;
   total_amount: number;
   tax_amount: number;
   status: string;
   issue_date: string;
   due_date: string;
   customer_name?: string;
-  company?: string;
+  customer_phone?: string;
+  customer_address?: string;
+  invoice_type: 'regular' | 'special';
 }
 
 const InvoiceVerification = () => {
@@ -30,20 +32,46 @@ const InvoiceVerification = () => {
       if (!verificationId) return;
 
       try {
+        // أولاً: البحث في الفواتير الخاصة
+        const { data: specialInvoice, error: specialError } = await supabase
+          .from('special_invoices')
+          .select('*')
+          .eq('id', verificationId)
+          .single();
+
+        if (specialInvoice && !specialError) {
+          setInvoice({
+            id: specialInvoice.id,
+            invoice_number: specialInvoice.invoice_number,
+            subtotal: specialInvoice.subtotal || 0,
+            total_amount: specialInvoice.total_amount || 0,
+            tax_amount: specialInvoice.tax_amount || 0,
+            status: 'صادرة',
+            issue_date: specialInvoice.issue_date,
+            due_date: specialInvoice.due_date || specialInvoice.issue_date,
+            customer_name: specialInvoice.customer_name,
+            customer_phone: specialInvoice.customer_phone,
+            customer_address: specialInvoice.customer_address,
+            invoice_type: 'special'
+          });
+          setIsValid(true);
+          setLoading(false);
+          return;
+        }
+
+        // ثانياً: البحث في الفواتير العادية
         const { data, error } = await supabase
           .from('invoices')
           .select(`
             id,
             invoice_number,
-            amount,
             total_amount,
-            tax_amount,
+            tax,
             status,
             issue_date,
             due_date,
             customers (
-              name,
-              company
+              name
             )
           `)
           .eq('id', verificationId)
@@ -53,9 +81,16 @@ const InvoiceVerification = () => {
           setIsValid(false);
         } else {
           setInvoice({
-            ...data,
+            id: data.id,
+            invoice_number: data.invoice_number,
+            subtotal: (data.total_amount || 0) - (data.tax || 0),
+            total_amount: data.total_amount || 0,
+            tax_amount: data.tax || 0,
+            status: data.status || 'draft',
+            issue_date: data.issue_date,
+            due_date: data.due_date || data.issue_date,
             customer_name: data.customers?.name,
-            company: data.customers?.company
+            invoice_type: 'regular'
           });
           setIsValid(true);
         }
@@ -119,11 +154,11 @@ const InvoiceVerification = () => {
                     </div>
                     <div>
                       <label className="text-sm font-medium text-muted-foreground">
-                        الحالة
+                        نوع الفاتورة
                       </label>
                       <div>
-                        <Badge variant={invoice.status === 'مدفوعة' ? 'default' : 'secondary'}>
-                          {invoice.status}
+                        <Badge variant={invoice.invoice_type === 'special' ? 'default' : 'secondary'}>
+                          {invoice.invoice_type === 'special' ? 'فاتورة خاصة' : 'فاتورة عادية'}
                         </Badge>
                       </div>
                     </div>
@@ -138,39 +173,44 @@ const InvoiceVerification = () => {
                         {new Date(invoice.issue_date).toLocaleDateString('ar-SA')}
                       </p>
                     </div>
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">
-                        تاريخ الاستحقاق
-                      </label>
-                      <p className="font-semibold">
-                        {new Date(invoice.due_date).toLocaleDateString('ar-SA')}
-                      </p>
-                    </div>
+                    {invoice.due_date && (
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">
+                          تاريخ الاستحقاق
+                        </label>
+                        <p className="font-semibold">
+                          {new Date(invoice.due_date).toLocaleDateString('ar-SA')}
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">
                       العميل
                     </label>
-                    <p className="font-semibold">
-                      {invoice.customer_name}
-                      {invoice.company && ` - ${invoice.company}`}
-                    </p>
+                    <p className="font-semibold">{invoice.customer_name}</p>
+                    {invoice.customer_phone && (
+                      <p className="text-sm text-muted-foreground">{invoice.customer_phone}</p>
+                    )}
+                    {invoice.customer_address && (
+                      <p className="text-sm text-muted-foreground">{invoice.customer_address}</p>
+                    )}
                   </div>
 
                   <div className="border-t pt-4">
                     <div className="grid grid-cols-3 gap-4 text-sm">
                       <div>
                         <label className="text-muted-foreground">المبلغ الأساسي</label>
-                        <p className="font-semibold">{invoice.amount.toLocaleString()} ر.س</p>
+                        <p className="font-semibold">{invoice.subtotal?.toLocaleString()} ر.س</p>
                       </div>
                       <div>
                         <label className="text-muted-foreground">الضريبة</label>
-                        <p className="font-semibold">{invoice.tax_amount.toLocaleString()} ر.س</p>
+                        <p className="font-semibold">{invoice.tax_amount?.toLocaleString()} ر.س</p>
                       </div>
                       <div>
                         <label className="text-muted-foreground">المجموع</label>
-                        <p className="font-bold text-lg">{invoice.total_amount.toLocaleString()} ر.س</p>
+                        <p className="font-bold text-lg">{invoice.total_amount?.toLocaleString()} ر.س</p>
                       </div>
                     </div>
                   </div>

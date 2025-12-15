@@ -115,17 +115,11 @@ const SpecialInvoices = () => {
     fetchCompanyInfo();
   }, []);
 
-  // Generate ZATCA TLV data for QR Code
-  const generateZatcaQRData = (invoice: SpecialInvoice): string => {
-    // بيانات ZATCA TLV format
-    const sellerName = companyInfo.name || "وكالة إبداع واحتراف للدعاية والإعلان";
-    const vatNumber = "301201976300003";
-    const timestamp = invoice.issue_date + "T00:00:00Z";
-    const totalAmount = invoice.total_amount.toFixed(2);
-    const vatAmount = (invoice.total_amount * 0.15 / 1.15).toFixed(2);
-    
-    // Simple concatenation for QR display (simplified version)
-    return `${sellerName}|${vatNumber}|${timestamp}|${totalAmount}|${vatAmount}|${invoice.invoice_number}`;
+  // Generate verification URL for QR Code
+  const generateVerificationUrl = (invoice: SpecialInvoice): string => {
+    // استخدام الرابط الحالي مع مسار التحقق
+    const baseUrl = window.location.origin;
+    return `${baseUrl}/verify/${invoice.id}`;
   };
 
   const fetchCompanyInfo = async () => {
@@ -296,7 +290,7 @@ const SpecialInvoices = () => {
     const printWindow = window.open('', '', 'width=800,height=600');
     if (!printWindow) return;
 
-    const qrData = generateZatcaQRData(viewingInvoice);
+    const qrData = generateVerificationUrl(viewingInvoice);
     const qrCodeDataUrl = await generateQRCodeDataUrl(qrData);
     const totalInWords = numberToArabicWords(viewingInvoice.total_amount);
 
@@ -769,7 +763,7 @@ const SpecialInvoices = () => {
                 <div className="bg-gray-50 p-5 text-center border-t">
                   <div className="mb-4">
                     <QRCodeSVG 
-                      value={generateZatcaQRData(viewingInvoice)} 
+                      value={generateVerificationUrl(viewingInvoice)}
                       size={150}
                       className="mx-auto"
                     />
