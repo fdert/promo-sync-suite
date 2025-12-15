@@ -207,53 +207,134 @@ const SpecialInvoices = () => {
   };
 
   const handlePrint = () => {
-    const printContent = document.getElementById('special-invoice-print');
-    if (!printContent) return;
+    if (!viewingInvoice) return;
 
     const printWindow = window.open('', '', 'width=800,height=600');
     if (!printWindow) return;
+
+    const itemsHtml = viewingInvoice.items?.map((item, index) => `
+      <tr style="background: ${index % 2 === 0 ? '#ffffff' : '#f9f9f9'};">
+        <td style="padding: 12px; text-align: center; border: 1px solid #ddd;">${index + 1}</td>
+        <td style="padding: 12px; text-align: right; border: 1px solid #ddd;">${item.item_name}</td>
+        <td style="padding: 12px; text-align: center; border: 1px solid #ddd;">${item.quantity}</td>
+        <td style="padding: 12px; text-align: center; border: 1px solid #ddd;">${item.unit_price.toFixed(2)}</td>
+        <td style="padding: 12px; text-align: center; border: 1px solid #ddd;">${item.total.toFixed(2)}</td>
+      </tr>
+    `).join('') || '';
 
     printWindow.document.write(`
       <!DOCTYPE html>
       <html dir="rtl" lang="ar">
       <head>
         <meta charset="UTF-8">
-        <title>فاتورة ضريبية مبسطة</title>
+        <title>فاتورة ضريبية مبسطة - ${viewingInvoice.invoice_number}</title>
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
-          body { font-family: 'Segoe UI', Tahoma, sans-serif; padding: 20px; direction: rtl; }
-          .invoice-container { max-width: 800px; margin: 0 auto; border: 2px solid #333; }
-          .header { background: #1a1a2e; color: white; padding: 20px; display: flex; justify-content: space-between; align-items: center; }
-          .header-title { text-align: center; }
-          .header-title h1 { font-size: 18px; margin-bottom: 5px; }
-          .header-title h2 { font-size: 14px; color: #aaa; }
-          .company-info { text-align: right; font-size: 12px; }
-          .invoice-details { padding: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; border-bottom: 1px solid #ddd; }
-          .detail-group label { font-size: 10px; color: #666; display: block; }
-          .detail-group span { font-size: 14px; font-weight: bold; }
-          .total-box { background: #f0f0f0; padding: 15px; text-align: center; border-bottom: 1px solid #ddd; }
-          .total-box .label { font-size: 12px; color: #666; }
-          .total-box .amount { font-size: 24px; font-weight: bold; color: #1a1a2e; }
-          .items-table { width: 100%; border-collapse: collapse; }
-          .items-table th { background: #2563eb; color: white; padding: 10px; text-align: center; font-size: 12px; }
-          .items-table td { padding: 10px; border: 1px solid #ddd; text-align: center; font-size: 12px; }
-          .items-table tr:nth-child(even) { background: #f9f9f9; }
-          .summary { padding: 15px; display: flex; justify-content: space-between; }
-          .summary-totals { text-align: left; }
-          .summary-totals div { margin: 5px 0; font-size: 14px; }
-          .summary-totals .total { font-size: 18px; font-weight: bold; color: #2563eb; border-top: 2px solid #2563eb; padding-top: 10px; }
-          .qr-section { text-align: center; padding: 10px; background: #f5f5f5; font-size: 10px; }
-          .footer { text-align: center; padding: 10px; font-size: 12px; color: #666; }
-          @media print { body { padding: 0; } .invoice-container { border: none; } }
+          body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; padding: 20px; direction: rtl; background: #fff; }
+          @media print {
+            body { padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          }
         </style>
       </head>
       <body>
-        ${printContent.innerHTML}
+        <div style="max-width: 800px; margin: 0 auto; border: 2px solid #333;">
+          <!-- Header -->
+          <div style="background: #1a1a2e; color: white; padding: 20px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="text-align: right;">
+              <h3 style="font-size: 18px; font-weight: bold; margin-bottom: 5px;">${companyInfo.name || "وكالة إبداع واحتراف للدعاية والإعلان"}</h3>
+              <p style="font-size: 12px; color: #aaa;">${companyInfo.subtitle || "Creative & professional advertising agency"}</p>
+            </div>
+            <div style="text-align: center;">
+              <h1 style="font-size: 20px; font-weight: bold;">فاتورة ضريبية مبسطة</h1>
+              <h2 style="font-size: 14px; color: #aaa;">Simplified Tax Invoice</h2>
+            </div>
+            ${companyInfo.logo ? `<img src="${companyInfo.logo}" alt="Logo" style="height: 60px; width: 60px; object-fit: contain;" />` : '<div style="width: 60px;"></div>'}
+          </div>
+
+          <!-- Invoice Details -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 15px; border-bottom: 1px solid #ddd;">
+            <div>
+              <div style="font-size: 10px; color: #666;">Invoice number / رقم الفاتورة</div>
+              <div style="font-size: 14px; font-weight: bold;">${viewingInvoice.invoice_number}</div>
+            </div>
+            <div>
+              <div style="font-size: 10px; color: #666;">Bill to / الفاتورة إلى</div>
+              <div style="font-size: 14px; font-weight: bold;">${viewingInvoice.customer_name}</div>
+            </div>
+            <div>
+              <div style="font-size: 10px; color: #666;">Date / التاريخ</div>
+              <div style="font-size: 14px; font-weight: bold;">${viewingInvoice.issue_date}</div>
+            </div>
+            <div>
+              <div style="font-size: 10px; color: #666;">المملكة العربية السعودية</div>
+            </div>
+            <div>
+              <div style="font-size: 10px; color: #666;">VAT number / الرقم الضريبي</div>
+              <div style="font-size: 14px; font-weight: bold;">301201976300003</div>
+            </div>
+            <div>
+              <div style="font-size: 10px; color: #666;">Due date / تاريخ الاستحقاق</div>
+              <div style="font-size: 14px; font-weight: bold;">${viewingInvoice.due_date || '-'}</div>
+            </div>
+          </div>
+
+          <!-- Total Due Box -->
+          <div style="background: #f0f0f0; padding: 15px; text-align: center; border-bottom: 1px solid #ddd;">
+            <div style="font-size: 12px; color: #666;">Total due / المبلغ المستحق</div>
+            <div style="font-size: 28px; font-weight: bold; color: #1a1a2e;">SAR ${viewingInvoice.total_amount.toFixed(2)}</div>
+          </div>
+
+          <!-- Items Table -->
+          <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr style="background: #2563eb; color: white;">
+                <th style="padding: 12px; text-align: center; border: 1px solid #2563eb;">Item</th>
+                <th style="padding: 12px; text-align: center; border: 1px solid #2563eb;">Description / الوصف</th>
+                <th style="padding: 12px; text-align: center; border: 1px solid #2563eb;">Quantity / الكمية</th>
+                <th style="padding: 12px; text-align: center; border: 1px solid #2563eb;">Price / السعر</th>
+                <th style="padding: 12px; text-align: center; border: 1px solid #2563eb;">Amount / المبلغ</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsHtml}
+            </tbody>
+          </table>
+
+          <!-- Summary -->
+          <div style="display: flex; justify-content: flex-end; padding: 15px;">
+            <div style="width: 250px;">
+              <div style="display: flex; justify-content: space-between; padding: 5px 0;">
+                <span>المجموع الفرعي:</span>
+                <span>SAR ${viewingInvoice.subtotal.toFixed(2)}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; padding: 5px 0;">
+                <span>الضريبة (${viewingInvoice.tax_rate}%):</span>
+                <span>SAR ${viewingInvoice.tax_amount.toFixed(2)}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; padding: 10px 0; border-top: 2px solid #2563eb; font-weight: bold; font-size: 16px; color: #2563eb;">
+                <span>Total / الإجمالي:</span>
+                <span>SAR ${viewingInvoice.total_amount.toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- QR Code Section -->
+          <div style="background: #f5f5f5; padding: 12px; text-align: center; font-size: 10px; border-top: 1px solid #ddd;">
+            <p>رمز الاستجابة السريعة مشفر بحسب متطلبات هيئة الزكاة والضريبة والجمارك للفاتورة الإلكترونية</p>
+            <p style="color: #666;">This QR code is encoded as per ZATCA e-invoicing requirements</p>
+          </div>
+
+          <!-- Footer -->
+          <div style="text-align: center; padding: 10px; font-size: 12px; color: #666; border-top: 1px solid #ddd;">
+            <p>${companyInfo.name || "وكالة إبداع واحتراف للدعاية والإعلان"}</p>
+            <p>Page 1 of 1 - ${viewingInvoice.invoice_number}</p>
+          </div>
+        </div>
       </body>
       </html>
     `);
     printWindow.document.close();
-    printWindow.print();
+    setTimeout(() => printWindow.print(), 250);
   };
 
   const filteredInvoices = invoices.filter(inv =>
