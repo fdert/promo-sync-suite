@@ -117,6 +117,7 @@ const App = () => (
               <Route path="order-payments/:orderId" element={<EmployeeOrderPayments />} />
               <Route path="loyalty" element={<LoyaltyManagement />} />
               <Route path="installment-plans" element={<EmployeeInstallmentPlans />} />
+              <Route path="special-invoices" element={<SpecialInvoices />} />
             </Route>
             <Route path="/admin" element={
               <ProtectedRoute>
