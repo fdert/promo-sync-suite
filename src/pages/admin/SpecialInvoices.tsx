@@ -1,19 +1,20 @@
 import { useState, useEffect, useRef } from "react";
+import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Trash2, Printer, Eye, Search, FileText } from "lucide-react";
+import { Plus, Trash2, Printer, Eye, Search, FileText, Pencil } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 import { QRCodeSVG } from "qrcode.react";
-
 // دالة تحويل الرقم إلى كلمات عربية
 const numberToArabicWords = (num: number): string => {
   const ones = ['', 'واحد', 'اثنان', 'ثلاثة', 'أربعة', 'خمسة', 'ستة', 'سبعة', 'ثمانية', 'تسعة', 'عشرة', 'أحد عشر', 'اثنا عشر', 'ثلاثة عشر', 'أربعة عشر', 'خمسة عشر', 'ستة عشر', 'سبعة عشر', 'ثمانية عشر', 'تسعة عشر'];
@@ -86,10 +87,17 @@ interface SpecialInvoice {
 }
 
 const SpecialInvoices = () => {
+  const location = useLocation();
+  const isAdminPanel = location.pathname.startsWith('/admin');
+  
   const [invoices, setInvoices] = useState<SpecialInvoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [invoiceToDelete, setInvoiceToDelete] = useState<SpecialInvoice | null>(null);
   const [viewingInvoice, setViewingInvoice] = useState<SpecialInvoice | null>(null);
   const [companyInfo, setCompanyInfo] = useState<any>({});
   const [isTaxInclusive, setIsTaxInclusive] = useState(true); // السعر شامل الضريبة
@@ -261,6 +269,120 @@ const SpecialInvoices = () => {
     });
     setItems([{ item_name: "", description: "", quantity: 1, unit_price: 0, total: 0 }]);
     setIsTaxInclusive(true);
+    setIsEditMode(false);
+    setEditingInvoiceId(null);
+  };
+
+  // فتح نموذج التعديل
+  const handleEditInvoice = async (invoice: SpecialInvoice) => {
+    const { data: itemsData } = await supabase
+      .from('special_invoice_items')
+      .select('*')
+      .eq('invoice_id', invoice.id);
+
+    setFormData({
+      customer_name: invoice.customer_name,
+      customer_phone: invoice.customer_phone || "",
+      customer_address: invoice.customer_address || "",
+      issue_date: invoice.issue_date,
+      due_date: invoice.due_date || invoice.issue_date,
+      tax_rate: invoice.tax_rate || 15,
+      notes: invoice.notes || "",
+    });
+    
+    setItems(itemsData?.map(item => ({
+      id: item.id,
+      item_name: item.item_name,
+      description: item.description || "",
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      total: item.total,
+    })) || [{ item_name: "", description: "", quantity: 1, unit_price: 0, total: 0 }]);
+    
+    setEditingInvoiceId(invoice.id);
+    setIsEditMode(true);
+    setIsCreateOpen(true);
+  };
+
+  // حفظ التعديلات
+  const handleUpdateInvoice = async () => {
+    if (!editingInvoiceId) return;
+
+    if (!formData.customer_name) {
+      toast({ title: "خطأ", description: "يرجى إدخال اسم العميل", variant: "destructive" });
+      return;
+    }
+
+    if (items.some(item => !item.item_name || item.unit_price <= 0)) {
+      toast({ title: "خطأ", description: "يرجى إكمال بيانات البنود", variant: "destructive" });
+      return;
+    }
+
+    const { subtotal, taxAmount, total } = calculateTotals();
+
+    const { error } = await supabase
+      .from('special_invoices')
+      .update({
+        customer_name: formData.customer_name,
+        customer_phone: formData.customer_phone,
+        customer_address: formData.customer_address,
+        issue_date: formData.issue_date,
+        due_date: formData.due_date,
+        subtotal,
+        tax_rate: formData.tax_rate,
+        tax_amount: taxAmount,
+        total_amount: total,
+        notes: formData.notes,
+      })
+      .eq('id', editingInvoiceId);
+
+    if (error) {
+      toast({ title: "خطأ", description: "فشل في تحديث الفاتورة", variant: "destructive" });
+      return;
+    }
+
+    // حذف البنود القديمة وإضافة الجديدة
+    await supabase.from('special_invoice_items').delete().eq('invoice_id', editingInvoiceId);
+    
+    const itemsData = items.map(item => ({
+      invoice_id: editingInvoiceId,
+      item_name: item.item_name,
+      description: item.description,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      total: item.quantity * item.unit_price,
+    }));
+
+    await supabase.from('special_invoice_items').insert(itemsData);
+
+    toast({ title: "تم بنجاح", description: "تم تحديث الفاتورة الخاصة" });
+    setIsCreateOpen(false);
+    resetForm();
+    fetchInvoices();
+  };
+
+  // حذف الفاتورة
+  const handleDeleteInvoice = async () => {
+    if (!invoiceToDelete) return;
+
+    // حذف البنود أولاً
+    await supabase.from('special_invoice_items').delete().eq('invoice_id', invoiceToDelete.id);
+    
+    // حذف الفاتورة
+    const { error } = await supabase
+      .from('special_invoices')
+      .delete()
+      .eq('id', invoiceToDelete.id);
+
+    if (error) {
+      toast({ title: "خطأ", description: "فشل في حذف الفاتورة", variant: "destructive" });
+    } else {
+      toast({ title: "تم بنجاح", description: "تم حذف الفاتورة الخاصة" });
+      fetchInvoices();
+    }
+    
+    setDeleteConfirmOpen(false);
+    setInvoiceToDelete(null);
   };
 
   const handleViewInvoice = async (invoice: SpecialInvoice) => {
@@ -480,6 +602,24 @@ const SpecialInvoices = () => {
                         <Button size="sm" variant="outline" onClick={() => handleViewInvoice(invoice)}>
                           <Eye className="h-4 w-4" />
                         </Button>
+                        {isAdminPanel && (
+                          <>
+                            <Button size="sm" variant="outline" onClick={() => handleEditInvoice(invoice)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => {
+                                setInvoiceToDelete(invoice);
+                                setDeleteConfirmOpen(true);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -494,7 +634,7 @@ const SpecialInvoices = () => {
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>إنشاء فاتورة خاصة جديدة</DialogTitle>
+            <DialogTitle>{isEditMode ? "تعديل الفاتورة الخاصة" : "إنشاء فاتورة خاصة جديدة"}</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-6">
@@ -650,8 +790,10 @@ const SpecialInvoices = () => {
             </div>
 
             <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setIsCreateOpen(false)}>إلغاء</Button>
-              <Button onClick={handleCreateInvoice}>إنشاء الفاتورة</Button>
+              <Button variant="outline" onClick={() => { setIsCreateOpen(false); resetForm(); }}>إلغاء</Button>
+              <Button onClick={isEditMode ? handleUpdateInvoice : handleCreateInvoice}>
+                {isEditMode ? "حفظ التعديلات" : "إنشاء الفاتورة"}
+              </Button>
             </div>
           </div>
         </DialogContent>
@@ -782,6 +924,29 @@ const SpecialInvoices = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* حوار تأكيد الحذف */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>تأكيد حذف الفاتورة</AlertDialogTitle>
+            <AlertDialogDescription>
+              هل أنت متأكد من حذف الفاتورة رقم "{invoiceToDelete?.invoice_number}"؟ 
+              <br />
+              هذا الإجراء لا يمكن التراجع عنه.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteInvoice}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              حذف الفاتورة
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
