@@ -38,11 +38,11 @@ Deno.serve(async (req) => {
   try {
     console.log('معالجة رسائل الواتس آب المعلقة...');
 
-    // جلب الرسائل المعلقة
+    // جلب الرسائل المعلقة (شاملة الفاشلة التي تحتاج إعادة محاولة)
     const { data: pendingMessages, error: fetchError } = await supabase
       .from('whatsapp_messages')
       .select('*')
-      .eq('status', 'pending')
+      .or('status.eq.pending,and(status.eq.failed,retry_count.lt.3)')
       .order('created_at', { ascending: true })
       .limit(10);
 
@@ -64,21 +64,31 @@ Deno.serve(async (req) => {
 
     console.log(`تم العثور على ${pendingMessages.length} رسائل معلقة`);
 
+    // جلب إعدادات المتابعة للإشعار بالفشل
+    const { data: followUpSettings } = await supabase
+      .from('follow_up_settings')
+      .select('*')
+      .single();
+
     const results = [];
+    const failedMessages = [];
 
     // معالجة كل رسالة
     for (const message of pendingMessages) {
       try {
         console.log(`معالجة الرسالة إلى ${message.to_number}`);
 
+        const currentRetryCount = message.retry_count || 0;
+        
         // إرسال الرسالة إلى خدمة الواتس آب
         const success = await sendToWhatsAppService(message);
 
         let newStatus = success ? 'sent' : 'failed';
 
-        // تحديث حالة الرسالة (بدون updated_at لأن العمود غير موجود)
+        // تحديث حالة الرسالة
         const updateData: any = { 
-          status: newStatus
+          status: newStatus,
+          retry_count: currentRetryCount + (success ? 0 : 1)
         };
         
         // إضافة sent_at فقط إذا تم الإرسال بنجاح
@@ -87,7 +97,16 @@ Deno.serve(async (req) => {
           console.log(`✅ تم إرسال الرسالة ${message.id} بنجاح - تحديث sent_at`);
         } else {
           updateData.error_message = 'فشل الإرسال إلى الويب هوك';
-          console.log(`❌ فشل إرسال الرسالة ${message.id} - لا يوجد sent_at`);
+          console.log(`❌ فشل إرسال الرسالة ${message.id} - محاولة ${currentRetryCount + 1}/3`);
+          
+          // إذا كانت آخر محاولة، أضف للقائمة الفاشلة
+          if (currentRetryCount + 1 >= 3) {
+            failedMessages.push({
+              to_number: message.to_number,
+              message_content: message.message_content?.substring(0, 100) + '...',
+              customer_id: message.customer_id
+            });
+          }
         }
         
         const { error: updateError } = await supabase
@@ -105,7 +124,8 @@ Deno.serve(async (req) => {
         results.push({
           message_id: message.id,
           to_number: message.to_number,
-          status: newStatus
+          status: newStatus,
+          retry_count: updateData.retry_count
         });
 
         console.log(`تم إرسال الرسالة ${message.id} بحالة: ${newStatus}`);
@@ -116,19 +136,40 @@ Deno.serve(async (req) => {
       } catch (messageError) {
         console.error(`خطأ في معالجة الرسالة ${message.id}:`, messageError);
         
-        // تحديث حالة الرسالة إلى failed
+        const currentRetryCount = message.retry_count || 0;
+        
+        // تحديث حالة الرسالة إلى failed مع زيادة عداد المحاولات
         await supabase
           .from('whatsapp_messages')
-          .update({ status: 'failed' })
+          .update({ 
+            status: 'failed',
+            retry_count: currentRetryCount + 1,
+            error_message: messageError.message
+          })
           .eq('id', message.id);
+
+        // إذا كانت آخر محاولة
+        if (currentRetryCount + 1 >= 3) {
+          failedMessages.push({
+            to_number: message.to_number,
+            message_content: message.message_content?.substring(0, 100) + '...',
+            customer_id: message.customer_id
+          });
+        }
 
         results.push({
           message_id: message.id,
           to_number: message.to_number,
           status: 'failed',
+          retry_count: currentRetryCount + 1,
           error: messageError.message
         });
       }
+    }
+
+    // إرسال إشعار للمسؤول إذا كان هناك رسائل فاشلة نهائياً
+    if (failedMessages.length > 0 && followUpSettings?.notify_whatsapp_failure && followUpSettings?.whatsapp_number) {
+      await notifyAdminAboutFailures(followUpSettings.whatsapp_number, failedMessages);
     }
 
     console.log('اكتملت المعالجة:', results);
@@ -667,5 +708,53 @@ async function sendCampaignWebhook(campaignId: string, sentCount: number, failed
 
   } catch (error) {
     console.error('خطأ في إرسال webhook الحملة:', error);
+  }
+}
+
+// دالة إشعار المسؤول عند فشل الرسائل
+async function notifyAdminAboutFailures(adminNumber: string, failedMessages: any[]): Promise<void> {
+  try {
+    console.log(`📢 إرسال إشعار للمسؤول عن ${failedMessages.length} رسائل فاشلة`);
+
+    const failedList = failedMessages.map((msg, i) => 
+      `${i + 1}. ${msg.to_number}`
+    ).join('\n');
+
+    const notificationMessage = `⚠️ تنبيه: فشل إرسال رسائل واتساب
+
+❌ عدد الرسائل الفاشلة: ${failedMessages.length}
+
+📋 الأرقام المتأثرة:
+${failedList}
+
+💡 السبب المحتمل:
+- الـ Webhook في n8n غير مفعل
+- مشكلة في الاتصال بالخادم
+
+🔧 الإجراء المطلوب:
+تحقق من إعدادات n8n وتأكد من تفعيل سير العمل
+
+⏰ الوقت: ${new Date().toLocaleString('ar-SA', { timeZone: 'Asia/Riyadh' })}`;
+
+    // إدراج رسالة الإشعار في الطابور (بدون إعادة محاولة لتجنب التكرار)
+    const { error } = await supabase
+      .from('whatsapp_messages')
+      .insert({
+        to_number: adminNumber,
+        message_content: notificationMessage,
+        message_type: 'admin_notification',
+        status: 'pending',
+        is_reply: false,
+        dedupe_key: `admin_failure_notify:${Date.now()}`
+      });
+
+    if (error) {
+      console.error('❌ فشل في إدراج إشعار المسؤول:', error);
+    } else {
+      console.log('✅ تم إدراج إشعار المسؤول في الطابور');
+    }
+
+  } catch (error) {
+    console.error('خطأ في إرسال إشعار المسؤول:', error);
   }
 }
