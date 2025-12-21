@@ -47,6 +47,14 @@ serve(async (req) => {
       );
     }
 
+    // منع التكرار إذا لم تتغير الحالة فعلياً
+    if (old_status && String(old_status) === String(new_status)) {
+      return new Response(
+        JSON.stringify({ success: true, skipped: true, reason: 'status_not_changed' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    }
+
     // جلب تفاصيل الطلب والعميل
     const { data: order, error: orderError } = await supabase
       .from('orders')
@@ -187,9 +195,39 @@ serve(async (req) => {
 
     console.log('📝 محتوى الرسالة المولدة من القالب:', messageContent.substring(0, 100) + '...');
 
+    // ✅ منع التكرار: نفس الطلب + نفس الحالة خلال نافذة قصيرة
+    // (هذا يمنع تكرار رسائل العميل وإدارة المتابعة إذا تم استدعاء الدالة عدة مرات)
+    const dedupeKey = `order_status_${order_id}_${new_status}`;
+    const dedupeSince = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+
+    const { data: existingMessage, error: existingErr } = await supabase
+      .from('whatsapp_messages')
+      .select('id, created_at, status')
+      .eq('dedupe_key', dedupeKey)
+      .gte('created_at', dedupeSince)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (existingErr) {
+      console.warn('⚠️ تعذر التحقق من التكرار (سيستمر الإرسال):', existingErr);
+    }
+
+    if (existingMessage?.id) {
+      return new Response(
+        JSON.stringify({
+          success: true,
+          deduped: true,
+          message: 'تم تجاهل الإرسال المكرر لنفس الحالة',
+          existing_message_id: existingMessage.id,
+          template_used: templateName,
+          to_number: toNumber
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    }
+
     // إدراج الرسالة في جدول whatsapp_messages
-    const dedupeKey = `order_status_${order_id}_${new_status}_${Date.now()}`;
-    
     const { data: insertedMessage, error: insertError } = await supabase
       .from('whatsapp_messages')
       .insert({
