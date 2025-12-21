@@ -1886,6 +1886,7 @@ export type Database = {
           message_type: string | null
           read_at: string | null
           reply_to_id: string | null
+          retry_count: number | null
           sent_at: string | null
           status: Database["public"]["Enums"]["message_status"] | null
           to_number: string
@@ -1905,6 +1906,7 @@ export type Database = {
           message_type?: string | null
           read_at?: string | null
           reply_to_id?: string | null
+          retry_count?: number | null
           sent_at?: string | null
           status?: Database["public"]["Enums"]["message_status"] | null
           to_number: string
@@ -1924,6 +1926,7 @@ export type Database = {
           message_type?: string | null
           read_at?: string | null
           reply_to_id?: string | null
+          retry_count?: number | null
           sent_at?: string | null
           status?: Database["public"]["Enums"]["message_status"] | null
           to_number?: string
