@@ -41,8 +41,12 @@ import {
   Tags,
   CheckSquare,
   Square,
+  Package,
+  AlertTriangle,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { OrderConsumablesDialog } from "@/components/OrderConsumablesDialog";
+import { OrderObstaclesDialog } from "@/components/OrderObstaclesDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Switch } from "@/components/ui/switch";
@@ -202,6 +206,12 @@ const Orders = () => {
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
+  
+  // حالات المستهلكات والمعوقات
+  const [isConsumablesDialogOpen, setIsConsumablesDialogOpen] = useState(false);
+  const [isObstaclesDialogOpen, setIsObstaclesDialogOpen] = useState(false);
+  const [selectedOrderForConsumables, setSelectedOrderForConsumables] = useState<Order | null>(null);
+  const [selectedOrderForObstacles, setSelectedOrderForObstacles] = useState<Order | null>(null);
   
   const { toast } = useToast();
   const { user } = useAuth();
@@ -2092,6 +2102,34 @@ ${companyName}`;
                     <Tags className="h-3 w-3 mr-1" />
                     ملصق
                   </Button>
+                  
+                  {/* تسجيل المستهلكات */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs bg-purple-50 hover:bg-purple-100 border-purple-300"
+                    onClick={() => {
+                      setSelectedOrderForConsumables(order);
+                      setIsConsumablesDialogOpen(true);
+                    }}
+                  >
+                    <Package className="h-3 w-3 mr-1" />
+                    مستهلكات
+                  </Button>
+                  
+                  {/* تسجيل المعوقات */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs bg-amber-50 hover:bg-amber-100 border-amber-300"
+                    onClick={() => {
+                      setSelectedOrderForObstacles(order);
+                      setIsObstaclesDialogOpen(true);
+                    }}
+                  >
+                    <AlertTriangle className="h-3 w-3 mr-1" />
+                    معوقات
+                  </Button>
                 </div>
               </div>
             </div>
@@ -3270,6 +3308,30 @@ ${companyName}`;
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* حوار المستهلكات */}
+      <OrderConsumablesDialog
+        isOpen={isConsumablesDialogOpen}
+        onClose={() => {
+          setIsConsumablesDialogOpen(false);
+          setSelectedOrderForConsumables(null);
+        }}
+        orderId={selectedOrderForConsumables?.id || ''}
+        orderNumber={selectedOrderForConsumables?.order_number || ''}
+      />
+
+      {/* حوار المعوقات */}
+      <OrderObstaclesDialog
+        isOpen={isObstaclesDialogOpen}
+        onClose={() => {
+          setIsObstaclesDialogOpen(false);
+          setSelectedOrderForObstacles(null);
+        }}
+        orderId={selectedOrderForObstacles?.id || ''}
+        orderNumber={selectedOrderForObstacles?.order_number || ''}
+        customerPhone={selectedOrderForObstacles?.customers?.whatsapp || selectedOrderForObstacles?.customers?.phone}
+        customerName={selectedOrderForObstacles?.customers?.name}
+      />
     </div>
   );
 };
