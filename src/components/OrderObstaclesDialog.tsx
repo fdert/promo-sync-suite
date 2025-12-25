@@ -261,7 +261,7 @@ export const OrderObstaclesDialog: React.FC<OrderObstaclesDialogProps> = ({
         .select('content')
         .eq('name', 'order_obstacles_notification')
         .eq('is_active', true)
-        .single();
+        .maybeSingle();
 
       let messageContent = template?.content || `⚠️ عزيزنا العميل
 
@@ -280,45 +280,113 @@ export const OrderObstaclesDialog: React.FC<OrderObstaclesDialogProps> = ({
       // استبدال المتغيرات
       messageContent = messageContent
         .replace(/{{order_number}}/g, orderNumber)
-        .replace(/{{obstacles_list}}/g, obstaclesList);
+        .replace(/{{obstacles_list}}/g, obstaclesList)
+        .replace(/{{customer_name}}/g, customerName || 'العميل الكريم');
 
       const cleanedPhone = cleanPhoneNumber(customerPhone);
+      const phoneDigits = cleanedPhone.replace(/[^\d]/g, '');
 
-      // إرسال عبر webhook
-      const { data: webhook } = await supabase
-        .from('webhook_settings')
-        .select('webhook_url')
-        .eq('webhook_type', 'whatsapp')
-        .eq('is_active', true)
-        .limit(1)
-        .maybeSingle();
+      // إضافة الرسالة لجدول الواتساب أولاً
+      const dedupeKey = `obstacles_${orderId}_${Date.now()}`;
+      
+      const { data: insertedMessage, error: insertError } = await supabase
+        .from('whatsapp_messages')
+        .insert({
+          to_number: cleanedPhone,
+          message_content: messageContent,
+          message_type: 'order_obstacles_notification',
+          status: 'pending',
+          is_reply: false,
+          dedupe_key: dedupeKey,
+        })
+        .select()
+        .single();
 
-      if (webhook?.webhook_url) {
-        await fetch(webhook.webhook_url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            event: 'order_obstacles_notification',
-            data: {
-              phone: cleanedPhone,
-              to: cleanedPhone,
-              message: messageContent,
-              order_number: orderNumber,
-              customer_name: customerName,
-            }
-          }),
-        });
+      if (insertError) {
+        console.error('Error inserting WhatsApp message:', insertError);
+        throw insertError;
       }
 
-      // إضافة الرسالة لجدول الواتساب
-      await supabase.from('whatsapp_messages').insert({
-        to_number: cleanedPhone,
-        message_content: messageContent,
-        message_type: 'text',
-        status: 'pending',
-        is_reply: false,
-        dedupe_key: `obstacles_${orderId}_${Date.now()}`,
-      });
+      console.log('تم إدراج رسالة المعوقات:', insertedMessage?.id);
+
+      // إرسال عبر webhook مباشرة
+      const { data: webhook } = await supabase
+        .from('webhook_settings')
+        .select('webhook_url, webhook_token')
+        .eq('webhook_type', 'outgoing')
+        .eq('is_active', true)
+        .maybeSingle();
+
+      // إذا لم يوجد webhook outgoing، جرب أي webhook نشط
+      let webhookToUse = webhook;
+      if (!webhookToUse?.webhook_url) {
+        const { data: anyWebhook } = await supabase
+          .from('webhook_settings')
+          .select('webhook_url, webhook_token')
+          .eq('is_active', true)
+          .limit(1)
+          .maybeSingle();
+        webhookToUse = anyWebhook;
+      }
+
+      if (webhookToUse?.webhook_url) {
+        const payload = {
+          event: 'order_obstacles_notification',
+          notification_type: 'order_obstacles_notification',
+          type: 'order_obstacles_notification',
+          source: 'order_obstacles_dialog',
+          timestamp: Math.floor(Date.now() / 1000),
+          data: {
+            phone: cleanedPhone,
+            to: cleanedPhone,
+            to_e164: cleanedPhone,
+            to_digits: phoneDigits,
+            msisdn: phoneDigits,
+            phoneNumber: cleanedPhone,
+            message: messageContent,
+            messageText: messageContent,
+            text: messageContent,
+            order_number: orderNumber,
+            customer_name: customerName || '',
+            obstacles_list: obstaclesList,
+            message_id: insertedMessage?.id,
+          }
+        };
+
+        console.log('إرسال payload للويب هوك:', JSON.stringify(payload, null, 2));
+
+        try {
+          const response = await fetch(webhookToUse.webhook_url, {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              ...(webhookToUse.webhook_token ? { 'Authorization': `Bearer ${webhookToUse.webhook_token}` } : {})
+            },
+            body: JSON.stringify(payload),
+          });
+
+          console.log('استجابة الويب هوك:', response.status, response.statusText);
+
+          if (response.ok) {
+            // تحديث حالة الرسالة إلى sent
+            await supabase
+              .from('whatsapp_messages')
+              .update({ status: 'sent', sent_at: new Date().toISOString() })
+              .eq('id', insertedMessage?.id);
+          }
+        } catch (webhookError) {
+          console.error('خطأ في إرسال الويب هوك:', webhookError);
+        }
+      }
+
+      // تشغيل معالج الواتساب كنسخة احتياطية
+      try {
+        await supabase.functions.invoke('process-whatsapp-queue', {
+          body: { source: 'order_obstacles_notification' }
+        });
+      } catch (e) {
+        console.log('Queue processing triggered');
+      }
 
       // تحديث حالة الإرسال للمعوقات
       for (const obstacle of unnotifiedObstacles) {
@@ -335,15 +403,6 @@ export const OrderObstaclesDialog: React.FC<OrderObstaclesDialogProps> = ({
         title: "تم الإرسال",
         description: "تم إرسال إشعار المعوقات للعميل عبر الواتساب",
       });
-
-      // تشغيل معالج الواتساب
-      try {
-        await supabase.functions.invoke('process-whatsapp-queue', {
-          body: { source: 'order_obstacles_notification' }
-        });
-      } catch (e) {
-        console.log('Queue processing triggered');
-      }
 
       await fetchObstacles();
     } catch (error) {
