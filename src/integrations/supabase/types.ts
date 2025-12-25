@@ -1118,6 +1118,57 @@ export type Database = {
         }
         Relationships: []
       }
+      order_consumables: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          material_name: string
+          notes: string | null
+          order_id: string
+          quantity: number
+          total: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          material_name: string
+          notes?: string | null
+          order_id: string
+          quantity?: number
+          total?: number
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          material_name?: string
+          notes?: string | null
+          order_id?: string
+          quantity?: number
+          total?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_consumables_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "order_payment_summary"
+            referencedColumns: ["order_id"]
+          },
+          {
+            foreignKeyName: "order_consumables_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           created_at: string | null
@@ -1159,6 +1210,54 @@ export type Database = {
           },
           {
             foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_obstacles: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          customer_notified: boolean
+          description: string
+          id: string
+          notified_at: string | null
+          obstacle_type: string
+          order_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          customer_notified?: boolean
+          description: string
+          id?: string
+          notified_at?: string | null
+          obstacle_type: string
+          order_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          customer_notified?: boolean
+          description?: string
+          id?: string
+          notified_at?: string | null
+          obstacle_type?: string
+          order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_obstacles_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "order_payment_summary"
+            referencedColumns: ["order_id"]
+          },
+          {
+            foreignKeyName: "order_obstacles_order_id_fkey"
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
