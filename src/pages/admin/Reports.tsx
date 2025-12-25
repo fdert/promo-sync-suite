@@ -6,14 +6,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from "recharts";
-import { Download, TrendingUp, TrendingDown, Users, DollarSign, FileText, Calendar, Filter } from "lucide-react";
+import { Download, TrendingUp, TrendingDown, Users, DollarSign, FileText, Calendar, Filter, ClipboardList } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import OrderDetailedReport from "@/components/OrderDetailedReport";
 
 const Reports = () => {
   const [selectedPeriod, setSelectedPeriod] = useState("month");
   const [selectedReport, setSelectedReport] = useState("overview");
+  const [activeTab, setActiveTab] = useState("financial");
   const [startDate, setStartDate] = useState(new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(false);
@@ -218,196 +221,215 @@ const Reports = () => {
           <h1 className="text-3xl font-bold text-foreground">التقارير والإحصائيات</h1>
           <p className="text-muted-foreground">تحليل شامل لأداء الأعمال والإيرادات</p>
         </div>
-        
-        <div className="flex flex-col sm:flex-row gap-2">
-          <div className="flex gap-2">
-            <div>
-              <Label htmlFor="start-date" className="text-xs">من تاريخ</Label>
-              <Input
-                id="start-date"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-40"
-              />
+      </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2 mb-6">
+          <TabsTrigger value="financial" className="gap-2">
+            <DollarSign className="h-4 w-4" />
+            التقرير المالي
+          </TabsTrigger>
+          <TabsTrigger value="orders" className="gap-2">
+            <ClipboardList className="h-4 w-4" />
+            تقرير الطلبات التفصيلي
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="financial" className="space-y-6">
+          <div className="flex flex-col sm:flex-row gap-2 print:hidden">
+            <div className="flex gap-2">
+              <div>
+                <Label htmlFor="start-date" className="text-xs">من تاريخ</Label>
+                <Input
+                  id="start-date"
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-40"
+                />
+              </div>
+              <div>
+                <Label htmlFor="end-date" className="text-xs">إلى تاريخ</Label>
+                <Input
+                  id="end-date"
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-40"
+                />
+              </div>
             </div>
-            <div>
-              <Label htmlFor="end-date" className="text-xs">إلى تاريخ</Label>
-              <Input
-                id="end-date"
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-40"
-              />
+            
+            <div className="flex gap-2 items-end">
+              <Button onClick={exportToCSV} variant="outline" className="gap-2">
+                <Download className="h-4 w-4" />
+                تصدير Excel
+              </Button>
+              <Button onClick={exportToPDF} className="gap-2">
+                <FileText className="h-4 w-4" />
+                تصدير PDF
+              </Button>
             </div>
           </div>
-          
-          <div className="flex gap-2 items-end">
-            <Button onClick={exportToCSV} variant="outline" className="gap-2">
-              <Download className="h-4 w-4" />
-              تصدير Excel
-            </Button>
-            <Button onClick={exportToPDF} className="gap-2">
-              <FileText className="h-4 w-4" />
-              تصدير PDF
-            </Button>
+
+          <div className="print:block hidden">
+            <h1 className="text-2xl font-bold text-center mb-4">التقرير المالي</h1>
+            <p className="text-center text-gray-600 mb-6">من {startDate} إلى {endDate}</p>
           </div>
-        </div>
-      </div>
 
-      <div className="print:block hidden">
-        <h1 className="text-2xl font-bold text-center mb-4">التقرير المالي</h1>
-        <p className="text-center text-gray-600 mb-6">من {startDate} إلى {endDate}</p>
-      </div>
+          {/* Key Metrics */}
+          <div className="grid gap-4 md:grid-cols-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">إجمالي الإيرادات</CardTitle>
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{reportData.totalRevenue.toLocaleString()} ر.س</div>
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <TrendingUp className="h-3 w-3 text-success" />
+                  خلال الفترة المحددة
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">إجمالي العملاء</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{reportData.totalCustomers}</div>
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <TrendingUp className="h-3 w-3 text-success" />
+                  عملاء نشطون
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">المشاريع المكتملة</CardTitle>
+                <FileText className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{reportData.completedProjects}</div>
+                <p className="text-xs text-muted-foreground">خلال الفترة</p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">متوسط قيمة المشروع</CardTitle>
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{reportData.averageProjectValue.toLocaleString()} ر.س</div>
+                <p className="text-xs text-muted-foreground">متوسط الإيرادات</p>
+              </CardContent>
+            </Card>
+          </div>
 
-      {/* Key Metrics */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">إجمالي الإيرادات</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{reportData.totalRevenue.toLocaleString()} ر.س</div>
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <TrendingUp className="h-3 w-3 text-success" />
-              خلال الفترة المحددة
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">إجمالي العملاء</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{reportData.totalCustomers}</div>
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <TrendingUp className="h-3 w-3 text-success" />
-              عملاء نشطون
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">المشاريع المكتملة</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{reportData.completedProjects}</div>
-            <p className="text-xs text-muted-foreground">خلال الفترة</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">متوسط قيمة المشروع</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{reportData.averageProjectValue.toLocaleString()} ر.س</div>
-            <p className="text-xs text-muted-foreground">متوسط الإيرادات</p>
-          </CardContent>
-        </Card>
-      </div>
+          {/* Revenue Chart */}
+          <Card>
+            <CardHeader>
+              <CardTitle>الإيرادات والمصروفات الشهرية</CardTitle>
+              <CardDescription>مقارنة الإيرادات والمصروفات على مدار الأشهر الماضية</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={reportData.monthlyRevenue}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="revenue" fill="hsl(var(--primary))" name="الإيرادات" />
+                  <Bar dataKey="expenses" fill="hsl(var(--destructive))" name="المصروفات" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
 
-      {/* Revenue Chart */}
-      <Card>
-        <CardHeader>
-          <CardTitle>الإيرادات والمصروفات الشهرية</CardTitle>
-          <CardDescription>مقارنة الإيرادات والمصروفات على مدار الأشهر الماضية</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={reportData.monthlyRevenue}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="revenue" fill="hsl(var(--primary))" name="الإيرادات" />
-              <Bar dataKey="expenses" fill="hsl(var(--destructive))" name="المصروفات" />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-
-      <div className="grid gap-6 md:grid-cols-1">
-        {/* Revenue vs Expenses Summary */}
-        <Card>
-          <CardHeader>
-            <CardTitle>ملخص الأداء المالي</CardTitle>
-            <CardDescription>مقارنة الإيرادات والمصروفات خلال الفترة المحددة</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="flex items-center justify-between p-4 border rounded-lg bg-success/5">
-                <div>
-                  <p className="text-sm text-muted-foreground">إجمالي الإيرادات</p>
-                  <p className="text-2xl font-bold text-success">{reportData.totalRevenue.toLocaleString()} ر.س</p>
-                </div>
-                <TrendingUp className="h-8 w-8 text-success" />
-              </div>
-              <div className="flex items-center justify-between p-4 border rounded-lg bg-destructive/5">
-                <div>
-                  <p className="text-sm text-muted-foreground">إجمالي المصروفات</p>
-                  <p className="text-2xl font-bold text-destructive">
-                    {reportData.expenses.reduce((sum: number, exp: any) => sum + (exp.amount || 0), 0).toLocaleString()} ر.س
-                  </p>
-                </div>
-                <TrendingDown className="h-8 w-8 text-destructive" />
-              </div>
-            </div>
-            <div className="mt-4 p-4 border rounded-lg bg-primary/5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">صافي الربح</p>
-                  <p className="text-2xl font-bold text-primary">
-                    {(reportData.totalRevenue - reportData.expenses.reduce((sum: number, exp: any) => sum + (exp.amount || 0), 0)).toLocaleString()} ر.س
-                  </p>
-                </div>
-                <DollarSign className="h-8 w-8 text-primary" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Top Customers */}
-      <Card>
-        <CardHeader>
-          <CardTitle>أفضل العملاء</CardTitle>
-          <CardDescription>العملاء الأكثر إيراداً خلال الفترة المحددة</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {reportData.topCustomers.map((customer: any, index) => (
-              <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold">
-                    {index + 1}
+          <div className="grid gap-6 md:grid-cols-1">
+            {/* Revenue vs Expenses Summary */}
+            <Card>
+              <CardHeader>
+                <CardTitle>ملخص الأداء المالي</CardTitle>
+                <CardDescription>مقارنة الإيرادات والمصروفات خلال الفترة المحددة</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="flex items-center justify-between p-4 border rounded-lg bg-success/5">
+                    <div>
+                      <p className="text-sm text-muted-foreground">إجمالي الإيرادات</p>
+                      <p className="text-2xl font-bold text-success">{reportData.totalRevenue.toLocaleString()} ر.س</p>
+                    </div>
+                    <TrendingUp className="h-8 w-8 text-success" />
                   </div>
-                  <div>
-                    <h3 className="font-medium">{customer.name}</h3>
-                    <p className="text-sm text-muted-foreground">{customer.projects} مشاريع</p>
+                  <div className="flex items-center justify-between p-4 border rounded-lg bg-destructive/5">
+                    <div>
+                      <p className="text-sm text-muted-foreground">إجمالي المصروفات</p>
+                      <p className="text-2xl font-bold text-destructive">
+                        {reportData.expenses.reduce((sum: number, exp: any) => sum + (exp.amount || 0), 0).toLocaleString()} ر.س
+                      </p>
+                    </div>
+                    <TrendingDown className="h-8 w-8 text-destructive" />
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-bold">{customer.revenue.toLocaleString()} ر.س</p>
-                  <Badge variant="outline">
-                    {reportData.totalRevenue > 0 ? ((customer.revenue / reportData.totalRevenue) * 100).toFixed(1) : 0}% من الإجمالي
-                  </Badge>
+                <div className="mt-4 p-4 border rounded-lg bg-primary/5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">صافي الربح</p>
+                      <p className="text-2xl font-bold text-primary">
+                        {(reportData.totalRevenue - reportData.expenses.reduce((sum: number, exp: any) => sum + (exp.amount || 0), 0)).toLocaleString()} ر.س
+                      </p>
+                    </div>
+                    <DollarSign className="h-8 w-8 text-primary" />
+                  </div>
                 </div>
-              </div>
-            ))}
-            {reportData.topCustomers.length === 0 && (
-              <p className="text-center text-muted-foreground py-4">لا توجد بيانات عملاء في الفترة المحددة</p>
-            )}
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
+
+          {/* Top Customers */}
+          <Card>
+            <CardHeader>
+              <CardTitle>أفضل العملاء</CardTitle>
+              <CardDescription>العملاء الأكثر إيراداً خلال الفترة المحددة</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {reportData.topCustomers.map((customer: any, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold">
+                        {index + 1}
+                      </div>
+                      <div>
+                        <h3 className="font-medium">{customer.name}</h3>
+                        <p className="text-sm text-muted-foreground">{customer.projects} مشاريع</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold">{customer.revenue.toLocaleString()} ر.س</p>
+                      <Badge variant="outline">
+                        {reportData.totalRevenue > 0 ? ((customer.revenue / reportData.totalRevenue) * 100).toFixed(1) : 0}% من الإجمالي
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+                {reportData.topCustomers.length === 0 && (
+                  <p className="text-center text-muted-foreground py-4">لا توجد بيانات عملاء في الفترة المحددة</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="orders">
+          <OrderDetailedReport />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
