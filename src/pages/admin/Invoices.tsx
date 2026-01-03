@@ -163,10 +163,70 @@ const Invoices = () => {
     setViewingInvoice(updatedInvoice);
   };
 
-  const handlePrintInvoice = async (invoice) => {
-    console.log('🖨️ بدء طباعة الفاتورة:', invoice.invoice_number);
-    console.log('📊 حالة الفاتورة الأولية:', invoice.status);
+  // دالة تحويل الرقم إلى كلمات عربية
+  const numberToArabicWords = (num: number): string => {
+    const ones = ['', 'واحد', 'اثنان', 'ثلاثة', 'أربعة', 'خمسة', 'ستة', 'سبعة', 'ثمانية', 'تسعة', 'عشرة', 'أحد عشر', 'اثنا عشر', 'ثلاثة عشر', 'أربعة عشر', 'خمسة عشر', 'ستة عشر', 'سبعة عشر', 'ثمانية عشر', 'تسعة عشر'];
+    const tens = ['', '', 'عشرون', 'ثلاثون', 'أربعون', 'خمسون', 'ستون', 'سبعون', 'ثمانون', 'تسعون'];
+    const hundreds = ['', 'مائة', 'مائتان', 'ثلاثمائة', 'أربعمائة', 'خمسمائة', 'ستمائة', 'سبعمائة', 'ثمانمائة', 'تسعمائة'];
     
+    if (num === 0) return 'صفر';
+    
+    const intPart = Math.floor(num);
+    const decimalPart = Math.round((num - intPart) * 100);
+    
+    const convertLessThanThousand = (n: number): string => {
+      if (n === 0) return '';
+      if (n < 20) return ones[n];
+      if (n < 100) {
+        const ten = Math.floor(n / 10);
+        const one = n % 10;
+        return one ? `${ones[one]} و${tens[ten]}` : tens[ten];
+      }
+      const hundred = Math.floor(n / 100);
+      const remainder = n % 100;
+      return remainder ? `${hundreds[hundred]} و${convertLessThanThousand(remainder)}` : hundreds[hundred];
+    };
+    
+    let result = '';
+    if (intPart >= 1000) {
+      const thousands = Math.floor(intPart / 1000);
+      const remainder = intPart % 1000;
+      if (thousands === 1) result = 'ألف';
+      else if (thousands === 2) result = 'ألفان';
+      else if (thousands <= 10) result = `${convertLessThanThousand(thousands)} آلاف`;
+      else result = `${convertLessThanThousand(thousands)} ألف`;
+      if (remainder) result += ` و${convertLessThanThousand(remainder)}`;
+    } else {
+      result = convertLessThanThousand(intPart);
+    }
+    
+    result += ' ريال سعودي';
+    if (decimalPart > 0) {
+      result += ` و${convertLessThanThousand(decimalPart)} هللة`;
+    }
+    
+    return result;
+  };
+
+  // دالة توليد QR Code كـ Data URL
+  const generateQRCodeDataUrl = async (data: string): Promise<string> => {
+    try {
+      const QRCode = await import('qrcode');
+      return await QRCode.toDataURL(data, {
+        width: 150,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#ffffff'
+        }
+      });
+    } catch (error) {
+      console.error('Error generating QR code:', error);
+      return '';
+    }
+  };
+
+  const handlePrintInvoice = async (invoice) => {
     // جلب بنود الفاتورة
     const { data: invoiceItems, error } = await supabase
       .from('invoice_items')
@@ -177,622 +237,149 @@ const Invoices = () => {
       console.error('Error fetching invoice items:', error);
     }
 
-    // جلب المدفوعات المرتبطة بالفاتورة
-    const { data: paymentsData, error: paymentsError } = await supabase
-      .from('payments')
-      .select('*')
-      .eq('invoice_id', invoice.id);
-
-    if (paymentsError) {
-      console.error('Error fetching payments:', paymentsError);
-    }
-
-    console.log('💰 المدفوعات المجلبة:', paymentsData);
-
-    // حساب إجمالي المدفوعات والحالة الفعلية
-    const totalPaid = paymentsData?.reduce((sum, payment) => sum + payment.amount, 0) || 0;
-    const hasPayments = paymentsData && paymentsData.length > 0;
-    
-    console.log('💵 إجمالي المدفوعات:', totalPaid);
-    console.log('💸 إجمالي الفاتورة:', invoice.total_amount);
-    console.log('📋 حالة الفاتورة الأصلية:', invoice.status);
-    
-    // تحديد الحالة الفعلية
-    let actualStatus;
-    
-    // إذا كانت الفاتورة محددة كـ "مدفوع" في قاعدة البيانات ولا توجد مدفوعات، استخدم الحالة الأصلية
-    if (invoice.status === 'مدفوع' && !hasPayments) {
-      actualStatus = 'مدفوعة';
-      console.log('🔄 استخدام الحالة الأصلية لأنه لا توجد مدفوعات مسجلة');
-    } else if (invoice.status === 'مدفوعة' && !hasPayments) {
-      actualStatus = 'مدفوعة';
-      console.log('🔄 استخدام الحالة الأصلية لأنه لا توجد مدفوعات مسجلة');
-    } else {
-      // حساب الحالة من المدفوعات الفعلية
-      if (hasPayments) {
-        if (totalPaid >= invoice.total_amount) {
-          actualStatus = 'مدفوعة';
-        } else if (totalPaid > 0) {
-          actualStatus = 'مدفوعة جزئياً';
-        } else {
-          actualStatus = 'قيد الانتظار';
-        }
-      } else {
-        actualStatus = 'قيد الانتظار';
-      }
-      console.log('🧮 حساب الحالة من المدفوعات');
-    }
-    
-    let actualPaymentType = 'دفع آجل';
-    
-    // استخدام نوع الدفع من آخر دفعة إذا وجدت
-    if (hasPayments && paymentsData.length > 0) {
-      const latestPayment = paymentsData.sort((a, b) => 
-        new Date(b.payment_date).getTime() - new Date(a.payment_date).getTime()
-      )[0];
-      actualPaymentType = latestPayment.payment_type;
-    }
-
-    console.log('✅ الحالة المحسوبة:', actualStatus);
-    console.log('🔄 نوع الدفع الفعلي:', actualPaymentType);
-
     const items = invoiceItems || [];
     
-    console.log('🎯 الحالة التي ستُستخدم في الطباعة:', actualStatus);
-    
-    // إنشاء محتوى HTML للطباعة
-    const printContent = `
+    // Generate QR Code
+    const verificationUrl = `${window.location.origin}/verify/${invoice.id}`;
+    const qrCodeDataUrl = await generateQRCodeDataUrl(verificationUrl);
+    const totalInWords = numberToArabicWords(invoice.total_amount || 0);
+
+    const itemsHtml = items.length > 0 
+      ? items.map((item, index) => `
+        <tr style="background: ${index % 2 === 0 ? '#ffffff' : '#f5f5f5'};">
+          <td style="padding: 12px; text-align: center; border: 1px solid #ddd;">${index + 1}</td>
+          <td style="padding: 12px; text-align: right; border: 1px solid #ddd;">${item.item_name}</td>
+          <td style="padding: 12px; text-align: center; border: 1px solid #ddd;">${item.quantity}</td>
+          <td style="padding: 12px; text-align: center; border: 1px solid #ddd;">${item.unit_price?.toFixed(2)}</td>
+          <td style="padding: 12px; text-align: center; border: 1px solid #ddd;">${(item.total || item.quantity * item.unit_price)?.toFixed(2)}</td>
+        </tr>
+      `).join('')
+      : `
+        <tr style="background: #ffffff;">
+          <td style="padding: 12px; text-align: center; border: 1px solid #ddd;">1</td>
+          <td style="padding: 12px; text-align: right; border: 1px solid #ddd;">خدمات عامة</td>
+          <td style="padding: 12px; text-align: center; border: 1px solid #ddd;">1</td>
+          <td style="padding: 12px; text-align: center; border: 1px solid #ddd;">${(invoice.total_amount / 1.15)?.toFixed(2)}</td>
+          <td style="padding: 12px; text-align: center; border: 1px solid #ddd;">${(invoice.total_amount / 1.15)?.toFixed(2)}</td>
+        </tr>
+      `;
+
+    const printWindow = window.open('', '', 'width=800,height=600');
+    if (!printWindow) return;
+
+    printWindow.document.write(`
       <!DOCTYPE html>
       <html dir="rtl" lang="ar">
       <head>
         <meta charset="UTF-8">
-        <title>فاتورة ${invoice.invoice_number}</title>
+        <title>فاتورة ضريبية مبسطة - ${invoice.invoice_number}</title>
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
-          
-          body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            font-size: 12px;
-            line-height: 1.4;
-            color: #2d3748;
-            background: white;
-            padding: 15mm;
-            min-height: 100vh;
-          }
-          
-          .invoice-container {
-            max-width: 190mm;
-            margin: 0 auto;
-            background: white;
-            border-radius: 8px;
-            overflow: hidden;
-            border: 1px solid #e2e8f0;
-          }
-          
-          .header {
-            background: white !important;
-            color: #1f2937 !important;
-            padding: 20px 25px;
-            position: relative;
-            border-bottom: 2px solid #e5e7eb;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-          
-          .header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            position: relative;
-          }
-          
-          .company-info {
-            flex: 1;
-            text-align: right;
-          }
-          
-          .company-name {
-            font-size: 18px;
-            font-weight: 700;
-            margin-bottom: 8px;
-            color: #1f2937;
-          }
-          
-          .company-details {
-            font-size: 11px;
-            line-height: 1.6;
-            color: #6b7280;
-          }
-          
-          .logo-section {
-            flex: 0 0 60px;
-            margin: 0 20px;
-            text-align: center;
-          }
-          
-          .company-logo {
-            max-width: 60px;
-            max-height: 60px;
-            object-fit: contain;
-            border-radius: 4px;
-          }
-          
-          .logo-placeholder {
-            width: 60px;
-            height: 60px;
-            border: 2px dashed #d1d5db;
-            border-radius: 4px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 10px;
-            color: #6b7280;
-          }
-          
-          .invoice-info {
-            flex: 1;
-            text-align: left;
-          }
-          
-          .invoice-title {
-            font-size: 20px;
-            font-weight: 700;
-            margin-bottom: 8px;
-            color: #1f2937;
-          }
-          
-          .invoice-details {
-            font-size: 11px;
-            line-height: 1.6;
-            color: #6b7280;
-          }
-          
-          .customer-section {
-            background: #f3f4f6 !important;
-            color: #374151 !important;
-            padding: 15px 25px;
-            margin: 0;
-            border-bottom: 2px solid #2563eb;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-          
-          .customer-name {
-            font-weight: 700;
-            margin-bottom: 5px;
-            font-size: 14px;
-            color: #1f2937;
-          }
-          
-          .content-section {
-            padding: 20px 25px;
-          }
-          
-          .items-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 20px;
-            border: 1px solid #d1d5db;
-          }
-          
-          .items-table th {
-            background: #2563eb !important;
-            color: #ffffff !important;
-            padding: 12px 10px;
-            font-weight: 700;
-            text-align: center;
-            border: 1px solid #d1d5db;
-            font-size: 11px;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-          
-          .items-table td {
-            padding: 10px;
-            border: 1px solid #d1d5db;
-            background: #ffffff;
-            text-align: center;
-            font-size: 11px;
-          }
-          
-          .items-table tr:nth-child(even) td {
-            background: #f9fafb;
-          }
-          
-          .item-name {
-            font-weight: 600;
-            color: #2d3748;
-            margin-bottom: 3px;
-            text-align: right;
-          }
-          
-          .item-description {
-            font-size: 10px;
-            color: #718096;
-            font-style: italic;
-            text-align: right;
-          }
-          
-          .summary-section {
-            background: #e5e7eb !important;
-            color: #374151 !important;
-            border-radius: 8px;
-            padding: 18px;
-            margin: 20px 0;
-            float: right;
-            width: 45%;
-            border: 1px solid #d1d5db;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-          
-          .total-with-stamp {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-top: 2px solid #1e40af;
-            padding: 20px 0;
-            margin: 20px 0;
-            clear: both;
-          }
-          
-          .total-amount {
-            font-size: 18px;
-            font-weight: 700;
-            color: #1e40af;
-          }
-          
-          .stamp-section {
-            text-align: center;
-          }
-          
-          .company-stamp {
-            max-width: 80px;
-            max-height: 60px;
-            object-fit: contain;
-          }
-          
-          .summary-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 6px 0;
-            border-bottom: 1px solid #d1d5db;
-            font-size: 12px;
-            color: #374151;
-          }
-          
-          .summary-row:last-child {
-            border-bottom: none;
-            font-size: 14px;
-            font-weight: 700;
-            padding-top: 10px;
-            border-top: 2px solid #2563eb;
-            color: #1e40af;
-          }
-          
-          .payment-info {
-            clear: both;
-            background: #dbeafe !important;
-            color: #1e40af !important;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 15px;
-            border: 1px solid #93c5fd;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-          
-          .payment-grid {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            font-size: 12px;
-          }
-          
-          .payment-details {
-            display: flex;
-            justify-content: space-between;
-            gap: 15px;
-            margin-top: 8px;
-            padding-top: 8px;
-            border-top: 1px dashed #93c5fd;
-          }
-          
-          .status-badge {
-            padding: 4px 12px;
-            border-radius: 15px;
-            font-size: 10px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-          }
-          
-          .status-paid { 
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-          }
-          .status-pending { 
-            background: #fff3cd;
-            color: #856404;
-            border: 1px solid #ffeaa7;
-          }
-          .status-partial { 
-            background: #cce7ff;
-            color: #0066cc;
-            border: 1px solid #99d6ff;
-          }
-          .status-overdue { 
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-          }
-          
-          .notes-section {
-            background: #f7fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 15px;
-            font-size: 11px;
-            line-height: 1.6;
-          }
-          
-          .footer {
-            background: #2563eb !important;
-            color: white !important;
-            text-align: center;
-            padding: 15px;
-            font-size: 12px;
-            position: relative;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-          
-          .footer-content {
-            position: relative;
-          }
-          
+          body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; padding: 20px; direction: rtl; background: #fff; color: #000; }
           @media print {
-            * {
-              -webkit-print-color-adjust: exact !important;
-              print-color-adjust: exact !important;
-            }
-            body { 
-              padding: 0 !important;
-              background: white !important;
-              font-size: 11px;
-            }
-            .invoice-container { 
-              border: none !important;
-              border-radius: 0 !important;
-              max-width: 100% !important;
-            }
-            @page { 
-              size: A4;
-              margin: 10mm;
-            }
-            .header { 
-              page-break-inside: avoid;
-              background: white !important;
-              color: #1f2937 !important;
-              border-bottom: 2px solid #e5e7eb !important;
-            }
-            .total-with-stamp {
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-              border-top: 2px solid #1e40af !important;
-              padding: 20px 0;
-              margin: 20px 0;
-              clear: both;
-              page-break-inside: avoid;
-            }
-            .total-amount {
-              font-size: 18px;
-              font-weight: 700;
-              color: #1e40af !important;
-            }
-            .company-stamp {
-              max-width: 80px;
-              max-height: 60px;
-              object-fit: contain;
-            }
-            .items-table th {
-              background: #2563eb !important;
-              color: white !important;
-            }
-            .summary-section {
-              background: #e5e7eb !important;
-              color: #374151 !important;
-            }
-            .payment-info {
-              background: #dbeafe !important;
-              color: #1e40af !important;
-            }
-            .footer {
-              background: #2563eb !important;
-              color: white !important;
-            }
-            .items-table { page-break-inside: avoid; }
-            .summary-section { page-break-inside: avoid; }
-            .content-section { padding: 15px 20px; }
+            body { padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           }
         </style>
       </head>
       <body>
-        <div class="invoice-container">
-          
+        <div style="max-width: 800px; margin: 0 auto;">
           <!-- Header -->
-          <div class="header">
-            <div class="header-content">
-              <div class="company-info">
-                <div class="company-name">${companyInfo.name}</div>
-                <div class="company-details">
-                  <div>${companyInfo.address}</div>
-                  <div>هاتف: ${companyInfo.phone}</div>
-                  <div>البريد: ${companyInfo.email}</div>
-                </div>
-              </div>
-              
-              <div class="logo-section">
-                ${companyInfo.logo ? 
-                  `<img src="${companyInfo.logo}" alt="شعار الشركة" class="company-logo">` : 
-                  '<div class="logo-placeholder">الشعار</div>'
-                }
-              </div>
-              
-              <div class="invoice-info">
-                <div class="invoice-title">فاتورة</div>
-                <div class="invoice-details">
-                  <div><strong>رقم:</strong> ${invoice.invoice_number}</div>
-                  <div><strong>التاريخ:</strong> ${new Date(invoice.issue_date).toLocaleDateString('ar-SA')}</div>
-                  <div><strong>الاستحقاق:</strong> ${new Date(invoice.due_date).toLocaleDateString('ar-SA')}</div>
-                </div>
-              </div>
+          <div style="background: #ffffff; color: #000; padding: 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #333;">
+            <div style="text-align: right;">
+              <h3 style="font-size: 18px; font-weight: bold; margin-bottom: 5px; color: #000;">${companyInfo.name || "وكالة إبداع واحتراف للدعاية والإعلان"}</h3>
+              <p style="font-size: 12px; color: #666;">للدعاية والإعلان</p>
+            </div>
+            <div style="text-align: center;">
+              <h1 style="font-size: 20px; font-weight: bold; color: #000;">فاتورة ضريبية مبسطة</h1>
+              <h2 style="font-size: 14px; color: #666;">Simplified Tax Invoice</h2>
+            </div>
+            ${companyInfo.logo ? `<img src="${companyInfo.logo}" alt="Logo" style="height: 60px; width: 60px; object-fit: contain;" />` : '<div style="width: 60px;"></div>'}
+          </div>
+
+          <!-- Invoice Details -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 15px; border-bottom: 1px solid #ddd;">
+            <div>
+              <div style="font-size: 10px; color: #666;">Invoice number / رقم الفاتورة</div>
+              <div style="font-size: 14px; font-weight: bold; color: #000;">${invoice.invoice_number}</div>
+            </div>
+            <div>
+              <div style="font-size: 10px; color: #666;">Bill to / الفاتورة إلى</div>
+              <div style="font-size: 14px; font-weight: bold; color: #000;">${invoice.customers?.name || 'غير محدد'}</div>
+              <div style="font-size: 10px; color: #666;">المملكة العربية السعودية</div>
+            </div>
+            <div>
+              <div style="font-size: 10px; color: #666;">Date / التاريخ</div>
+              <div style="font-size: 14px; font-weight: bold; color: #000;">${invoice.issue_date}</div>
+            </div>
+            <div>
+              <div style="font-size: 10px; color: #666;">Due date / تاريخ الاستحقاق</div>
+              <div style="font-size: 14px; font-weight: bold; color: #000;">${invoice.due_date || '-'}</div>
+            </div>
+            <div>
+              <div style="font-size: 10px; color: #666;">VAT number / الرقم الضريبي</div>
+              <div style="font-size: 14px; font-weight: bold; color: #000;">301201976300003</div>
             </div>
           </div>
-          
-          <!-- Customer Info -->
-          <div class="customer-section">
-            <div class="customer-name">العميل: ${invoice.customers?.name || 'غير محدد'}</div>
-            ${invoice.customers?.phone ? `<div>الهاتف: ${invoice.customers.phone}</div>` : ''}
-            ${invoice.customers?.address ? `<div>العنوان: ${invoice.customers.address}</div>` : ''}
+
+          <!-- Total Due Box -->
+          <div style="background: #f5f5f5; padding: 15px; text-align: center; border-bottom: 1px solid #ddd;">
+            <div style="font-size: 12px; color: #666;">Total due (VAT Inclusive) / المبلغ المستحق (شامل الضريبة)</div>
+            <div style="font-size: 28px; font-weight: bold; color: #000;">SAR ${invoice.total_amount?.toFixed(2)}</div>
           </div>
-          
-          <div class="content-section">
-          
+
           <!-- Items Table -->
-          <table class="items-table">
+          <table style="width: 100%; border-collapse: collapse;">
             <thead>
-              <tr>
-                <th style="width: 20%;">الإجمالي (ر.س)</th>
-                <th style="width: 17%;">السعر (ر.س)</th>
-                <th style="width: 15%;">الكمية</th>
-                <th style="width: 40%;">اسم البند / الخدمة</th>
-                <th style="width: 8%;">م</th>
+              <tr style="background: #6b7280; color: white;">
+                <th style="padding: 12px; text-align: center; border: 1px solid #6b7280;">Item</th>
+                <th style="padding: 12px; text-align: center; border: 1px solid #6b7280;">Description / الوصف</th>
+                <th style="padding: 12px; text-align: center; border: 1px solid #6b7280;">Quantity / الكمية</th>
+                <th style="padding: 12px; text-align: center; border: 1px solid #6b7280;">Price / السعر</th>
+                <th style="padding: 12px; text-align: center; border: 1px solid #6b7280;">Amount / المبلغ</th>
               </tr>
             </thead>
             <tbody>
-              ${items && items.length > 0 ? 
-                items.map((item, index) => `
-                  <tr>
-                    <td>${item.total_amount?.toLocaleString('ar-SA')}</td>
-                    <td>${item.unit_price?.toLocaleString('ar-SA')}</td>
-                    <td>${item.quantity}</td>
-                    <td style="text-align: right;">
-                      <div class="item-name">${item.item_name}</div>
-                      ${item.description ? `<div class="item-description">${item.description}</div>` : ''}
-                    </td>
-                    <td>${index + 1}</td>
-                  </tr>
-                `).join('') :
-                `<tr>
-                  <td>${invoice.amount?.toLocaleString('ar-SA')}</td>
-                  <td>${invoice.amount?.toLocaleString('ar-SA')}</td>
-                  <td>1</td>
-                  <td style="text-align: right;">
-                    <div class="item-name">خدمات عامة</div>
-                    <div class="item-description">${invoice.notes || 'خدمات متنوعة'}</div>
-                  </td>
-                  <td>1</td>
-                </tr>`
-              }
+              ${itemsHtml}
             </tbody>
           </table>
-          
+
           <!-- Summary -->
-          <div class="summary-section">
-            <div class="summary-row">
-              <span>المجموع الفرعي:</span>
-              <span>${invoice.amount?.toLocaleString('ar-SA')} ر.س</span>
-            </div>
-            <div class="summary-row">
-              <span>ضريبة القيمة المضافة (15%):</span>
-              <span>${invoice.tax_amount?.toLocaleString('ar-SA')} ر.س</span>
-            </div>
-            <div class="summary-row">
-              <span>إجمالي المبلغ المستحق:</span>
-              <span>${invoice.total_amount?.toLocaleString('ar-SA')} ر.س</span>
-            </div>
-          </div>
-          
-          <!-- Payment Info -->
-          <div class="payment-info">
-            <div class="payment-grid">
-              <div><strong>الحالة:</strong> 
-                <span class="status-badge ${
-                  actualStatus === 'مدفوعة' ? 'status-paid' : 
-                  actualStatus === 'مدفوعة جزئياً' ? 'status-partial' :
-                  actualStatus === 'قيد الانتظار' ? 'status-pending' : 
-                  'status-overdue'
-                }">${actualStatus}</span>
+          <div style="display: flex; justify-content: flex-end; padding: 15px;">
+            <div style="width: 300px;">
+              <div style="display: flex; justify-content: space-between; padding: 10px 0; border-top: 2px solid #333; font-weight: bold; font-size: 16px; color: #000;">
+                <span>الإجمالي (شامل الضريبة):</span>
+                <span>SAR ${invoice.total_amount?.toFixed(2)}</span>
               </div>
-              ${totalPaid > 0 ? `
-                <div class="payment-details">
-                  <div><strong>المبلغ المدفوع:</strong> ${totalPaid.toFixed(2)} ر.س</div>
-                  <div><strong>المبلغ المتبقي:</strong> ${(invoice.total_amount - totalPaid).toFixed(2)} ر.س</div>
-                </div>
-              ` : ''}
+              <div style="padding: 10px 0; font-size: 12px; color: #333; text-align: center; background: #f9f9f9; border-radius: 5px; margin-top: 5px;">
+                <strong>المبلغ كتابة:</strong> ${totalInWords}
+              </div>
             </div>
           </div>
-          
-          <!-- Total with Stamp -->
-          <div class="total-with-stamp">
-            <div class="total-amount">
-              المجموع الكلي: ${invoice.total_amount?.toLocaleString('ar-SA')} ر.س
+
+          <!-- QR Code Section -->
+          <div style="background: #f9f9f9; padding: 20px; text-align: center; border-top: 1px solid #ddd;">
+            <div style="margin-bottom: 15px;">
+              <img src="${qrCodeDataUrl}" alt="QR Code" style="width: 150px; height: 150px;" />
             </div>
-            <div class="stamp-section">
-              ${companyInfo.stamp ? `<img src="${companyInfo.stamp}" alt="ختم الوكالة" class="company-stamp" />` : ''}
-            </div>
+            <p style="font-size: 12px; color: #333; font-weight: 500; margin-bottom: 8px;">يمكنك التحقق من صحة الفاتورة بمسح رمز QR</p>
+            <p style="font-size: 11px; color: #666; line-height: 1.6;">هذه فاتورة إلكترونية ولا تحتاج إلى ختم</p>
           </div>
-          
-          <!-- Notes -->
-          ${invoice.notes ? `
-            <div class="notes-section">
-              <strong>ملاحظات:</strong><br>
-              ${invoice.notes}
-            </div>
-          ` : ''}
-          
-          </div>
-          
+
           <!-- Footer -->
-          <div class="footer">
-            <div class="footer-content">
-              شكراً لثقتكم بنا
-              ${companyInfo.tagline ? `<br><em>"${companyInfo.tagline}"</em>` : ''}
-            </div>
+          <div style="text-align: center; padding: 10px; font-size: 12px; color: #666; border-top: 1px solid #ddd;">
+            <p>${companyInfo.name || "وكالة إبداع واحتراف للدعاية والإعلان"}</p>
+            <p>Page 1 of 1 - ${invoice.invoice_number}</p>
           </div>
-          
         </div>
-        
-        <script>
-          window.onload = function() {
-            window.print();
-            setTimeout(function() {
-              window.close();
-            }, 1000);
-          }
-        </script>
       </body>
       </html>
-    `;
-    
-    // فتح نافذة جديدة للطباعة
-    const printWindow = window.open('', '_blank', 'width=800,height=600');
-    printWindow.document.write(printContent);
+    `);
     printWindow.document.close();
-    
-    console.log('🖼️ تم إنشاء محتوى الطباعة بالحالة:', actualStatus);
-    console.log('📋 HTML content includes status:', printContent.includes(actualStatus));
-    
-    // إغلاق نافذة الطباعة
-    setPrintingInvoice(null);
-    
+    setTimeout(() => printWindow.print(), 250);
+
     toast({
       title: "تم إعداد الطباعة",
-      description: `تم إعداد طباعة الفاتورة ${invoice.invoice_number} بالحالة: ${actualStatus}`,
+      description: `تم إعداد طباعة الفاتورة ${invoice.invoice_number}`,
     });
   };
 
