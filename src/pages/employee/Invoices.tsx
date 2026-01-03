@@ -171,12 +171,71 @@ const Invoices = () => {
     setViewingInvoice(updatedInvoice);
   };
 
+  // دالة تحويل الرقم إلى كلمات عربية
+  const numberToArabicWords = (num: number): string => {
+    const ones = ['', 'واحد', 'اثنان', 'ثلاثة', 'أربعة', 'خمسة', 'ستة', 'سبعة', 'ثمانية', 'تسعة', 'عشرة', 'أحد عشر', 'اثنا عشر', 'ثلاثة عشر', 'أربعة عشر', 'خمسة عشر', 'ستة عشر', 'سبعة عشر', 'ثمانية عشر', 'تسعة عشر'];
+    const tens = ['', '', 'عشرون', 'ثلاثون', 'أربعون', 'خمسون', 'ستون', 'سبعون', 'ثمانون', 'تسعون'];
+    const hundreds = ['', 'مائة', 'مائتان', 'ثلاثمائة', 'أربعمائة', 'خمسمائة', 'ستمائة', 'سبعمائة', 'ثمانمائة', 'تسعمائة'];
+    
+    if (num === 0) return 'صفر';
+    
+    const intPart = Math.floor(num);
+    const decimalPart = Math.round((num - intPart) * 100);
+    
+    const convertLessThanThousand = (n: number): string => {
+      if (n === 0) return '';
+      if (n < 20) return ones[n];
+      if (n < 100) {
+        const ten = Math.floor(n / 10);
+        const one = n % 10;
+        return one ? `${ones[one]} و${tens[ten]}` : tens[ten];
+      }
+      const hundred = Math.floor(n / 100);
+      const remainder = n % 100;
+      return remainder ? `${hundreds[hundred]} و${convertLessThanThousand(remainder)}` : hundreds[hundred];
+    };
+    
+    let result = '';
+    if (intPart >= 1000) {
+      const thousands = Math.floor(intPart / 1000);
+      const remainder = intPart % 1000;
+      if (thousands === 1) result = 'ألف';
+      else if (thousands === 2) result = 'ألفان';
+      else if (thousands <= 10) result = `${convertLessThanThousand(thousands)} آلاف`;
+      else result = `${convertLessThanThousand(thousands)} ألف`;
+      if (remainder) result += ` و${convertLessThanThousand(remainder)}`;
+    } else {
+      result = convertLessThanThousand(intPart);
+    }
+    
+    result += ' ريال سعودي';
+    if (decimalPart > 0) {
+      result += ` و${convertLessThanThousand(decimalPart)} هللة`;
+    }
+    
+    return result;
+  };
+
+  // دالة توليد QR Code كـ Data URL
+  const generateQRCodeDataUrl = async (data: string): Promise<string> => {
+    try {
+      const QRCode = await import('qrcode');
+      return await QRCode.toDataURL(data, {
+        width: 150,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#ffffff'
+        }
+      });
+    } catch (error) {
+      console.error('Error generating QR code:', error);
+      return '';
+    }
+  };
+
   // دالة طباعة الفاتورة
   const handlePrintInvoice = async (invoice) => {
-    console.log('🖨️ بدء طباعة الفاتورة:', invoice.invoice_number);
-    console.log('📋 بيانات الفاتورة الكاملة:', invoice);
-    console.log('🔑 معرف الفاتورة:', invoice.id);
-    
     const { data: invoiceItems, error } = await supabase
       .from('invoice_items')
       .select('*')
@@ -186,22 +245,147 @@ const Invoices = () => {
       console.error('Error fetching invoice items:', error);
     }
 
-    const updatedInvoice = {
-      ...invoice,
-      items: invoiceItems || [],
-      actual_status: invoice.payment_status,
-      actual_payment_type: invoice.payment_type
-    };
+    const items = invoiceItems || [];
+    
+    // Generate QR Code
+    const verificationUrl = `${window.location.origin}/verify/${invoice.id}`;
+    const qrCodeDataUrl = await generateQRCodeDataUrl(verificationUrl);
+    const totalInWords = numberToArabicWords(invoice.total_amount || 0);
 
-    console.log('📄 الفاتورة المحدثة للطباعة:', updatedInvoice);
-    console.log('🆔 معرف الفاتورة في البيانات المحدثة:', updatedInvoice.id);
+    const itemsHtml = items.length > 0 
+      ? items.map((item, index) => `
+        <tr style="background: ${index % 2 === 0 ? '#ffffff' : '#f5f5f5'};">
+          <td style="padding: 12px; text-align: center; border: 1px solid #ddd;">${index + 1}</td>
+          <td style="padding: 12px; text-align: right; border: 1px solid #ddd;">${item.item_name}</td>
+          <td style="padding: 12px; text-align: center; border: 1px solid #ddd;">${item.quantity}</td>
+          <td style="padding: 12px; text-align: center; border: 1px solid #ddd;">${item.unit_price?.toFixed(2)}</td>
+          <td style="padding: 12px; text-align: center; border: 1px solid #ddd;">${(item.total || item.quantity * item.unit_price)?.toFixed(2)}</td>
+        </tr>
+      `).join('')
+      : `
+        <tr style="background: #ffffff;">
+          <td style="padding: 12px; text-align: center; border: 1px solid #ddd;">1</td>
+          <td style="padding: 12px; text-align: right; border: 1px solid #ddd;">خدمات عامة</td>
+          <td style="padding: 12px; text-align: center; border: 1px solid #ddd;">1</td>
+          <td style="padding: 12px; text-align: center; border: 1px solid #ddd;">${(invoice.total_amount / 1.15)?.toFixed(2)}</td>
+          <td style="padding: 12px; text-align: center; border: 1px solid #ddd;">${(invoice.total_amount / 1.15)?.toFixed(2)}</td>
+        </tr>
+      `;
 
-    setPrintingInvoice(updatedInvoice);
-    setTimeout(() => {
-      window.print();
-      setPrintingInvoice(null);
-      updatePrintCount(invoice.id);
-    }, 100);
+    const printWindow = window.open('', '', 'width=800,height=600');
+    if (!printWindow) return;
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html dir="rtl" lang="ar">
+      <head>
+        <meta charset="UTF-8">
+        <title>فاتورة ضريبية مبسطة - ${invoice.invoice_number}</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; padding: 20px; direction: rtl; background: #fff; color: #000; }
+          @media print {
+            body { padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          }
+        </style>
+      </head>
+      <body>
+        <div style="max-width: 800px; margin: 0 auto;">
+          <!-- Header -->
+          <div style="background: #ffffff; color: #000; padding: 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #333;">
+            <div style="text-align: right;">
+              <h3 style="font-size: 18px; font-weight: bold; margin-bottom: 5px; color: #000;">${companyInfo.name || "وكالة إبداع واحتراف للدعاية والإعلان"}</h3>
+              <p style="font-size: 12px; color: #666;">للدعاية والإعلان</p>
+            </div>
+            <div style="text-align: center;">
+              <h1 style="font-size: 20px; font-weight: bold; color: #000;">فاتورة ضريبية مبسطة</h1>
+              <h2 style="font-size: 14px; color: #666;">Simplified Tax Invoice</h2>
+            </div>
+            ${companyInfo.logo ? `<img src="${companyInfo.logo}" alt="Logo" style="height: 60px; width: 60px; object-fit: contain;" />` : '<div style="width: 60px;"></div>'}
+          </div>
+
+          <!-- Invoice Details -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 15px; border-bottom: 1px solid #ddd;">
+            <div>
+              <div style="font-size: 10px; color: #666;">Invoice number / رقم الفاتورة</div>
+              <div style="font-size: 14px; font-weight: bold; color: #000;">${invoice.invoice_number}</div>
+            </div>
+            <div>
+              <div style="font-size: 10px; color: #666;">Bill to / الفاتورة إلى</div>
+              <div style="font-size: 14px; font-weight: bold; color: #000;">${invoice.customers?.name || 'غير محدد'}</div>
+              <div style="font-size: 10px; color: #666;">المملكة العربية السعودية</div>
+            </div>
+            <div>
+              <div style="font-size: 10px; color: #666;">Date / التاريخ</div>
+              <div style="font-size: 14px; font-weight: bold; color: #000;">${invoice.issue_date}</div>
+            </div>
+            <div>
+              <div style="font-size: 10px; color: #666;">Due date / تاريخ الاستحقاق</div>
+              <div style="font-size: 14px; font-weight: bold; color: #000;">${invoice.due_date || '-'}</div>
+            </div>
+            <div>
+              <div style="font-size: 10px; color: #666;">VAT number / الرقم الضريبي</div>
+              <div style="font-size: 14px; font-weight: bold; color: #000;">301201976300003</div>
+            </div>
+          </div>
+
+          <!-- Total Due Box -->
+          <div style="background: #f5f5f5; padding: 15px; text-align: center; border-bottom: 1px solid #ddd;">
+            <div style="font-size: 12px; color: #666;">Total due (VAT Inclusive) / المبلغ المستحق (شامل الضريبة)</div>
+            <div style="font-size: 28px; font-weight: bold; color: #000;">SAR ${invoice.total_amount?.toFixed(2)}</div>
+          </div>
+
+          <!-- Items Table -->
+          <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr style="background: #6b7280; color: white;">
+                <th style="padding: 12px; text-align: center; border: 1px solid #6b7280;">Item</th>
+                <th style="padding: 12px; text-align: center; border: 1px solid #6b7280;">Description / الوصف</th>
+                <th style="padding: 12px; text-align: center; border: 1px solid #6b7280;">Quantity / الكمية</th>
+                <th style="padding: 12px; text-align: center; border: 1px solid #6b7280;">Price / السعر</th>
+                <th style="padding: 12px; text-align: center; border: 1px solid #6b7280;">Amount / المبلغ</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsHtml}
+            </tbody>
+          </table>
+
+          <!-- Summary -->
+          <div style="display: flex; justify-content: flex-end; padding: 15px;">
+            <div style="width: 300px;">
+              <div style="display: flex; justify-content: space-between; padding: 10px 0; border-top: 2px solid #333; font-weight: bold; font-size: 16px; color: #000;">
+                <span>الإجمالي (شامل الضريبة):</span>
+                <span>SAR ${invoice.total_amount?.toFixed(2)}</span>
+              </div>
+              <div style="padding: 10px 0; font-size: 12px; color: #333; text-align: center; background: #f9f9f9; border-radius: 5px; margin-top: 5px;">
+                <strong>المبلغ كتابة:</strong> ${totalInWords}
+              </div>
+            </div>
+          </div>
+
+          <!-- QR Code Section -->
+          <div style="background: #f9f9f9; padding: 20px; text-align: center; border-top: 1px solid #ddd;">
+            <div style="margin-bottom: 15px;">
+              <img src="${qrCodeDataUrl}" alt="QR Code" style="width: 150px; height: 150px;" />
+            </div>
+            <p style="font-size: 12px; color: #333; font-weight: 500; margin-bottom: 8px;">يمكنك التحقق من صحة الفاتورة بمسح رمز QR</p>
+            <p style="font-size: 11px; color: #666; line-height: 1.6;">هذه فاتورة إلكترونية ولا تحتاج إلى ختم</p>
+          </div>
+
+          <!-- Footer -->
+          <div style="text-align: center; padding: 10px; font-size: 12px; color: #666; border-top: 1px solid #ddd;">
+            <p>${companyInfo.name || "وكالة إبداع واحتراف للدعاية والإعلان"}</p>
+            <p>Page 1 of 1 - ${invoice.invoice_number}</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+    setTimeout(() => printWindow.print(), 250);
+
+    updatePrintCount(invoice.id);
   };
 
   // دالة تحديث عدد مرات الطباعة
